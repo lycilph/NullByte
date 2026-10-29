@@ -145,7 +145,6 @@ internal class Program
 
         Console.WriteLine("Saved. Bye.");
         await Task.Delay(500);
-        Console.ReadKey();
     }
 
     private static void PrintHelp()
@@ -179,17 +178,13 @@ internal class Program
     private static void PrintStatus(GameSession session)
     {
         var s = session.State;
-        // TODO
-        //double income = EconomySystem.IncomePerTick(s);
-        //double xpInto = s.Xp - ProgressionSystem.TotalXpForLevel(s.Level);
-        //double xpNeed = ProgressionSystem.XpForLevelUp(s.Level);
+        double income = EconomySystem.IncomePerTick(s);
+        double xpInto = s.Xp - ProgressionSystem.TotalXpForLevel(s.Level);
+        double xpNeed = ProgressionSystem.XpForLevelUp(s.Level);
 
         Console.WriteLine($"== STATUS  t{s.GameTick} ==");
-        // TODO
-        //Console.WriteLine($"  Money: ${s.Money:0.##}   (+${income:0.###}/tick)");
-        //Console.WriteLine($"  Level: {s.Level}   XP: {xpInto:0.#} / {xpNeed:0.#}");
-        Console.WriteLine($"  Money: ${s.Money:0.##}");
-        Console.WriteLine($"  Level: {s.Level}");
+        Console.WriteLine($"  Money: ${s.Money:0.##}   (+${income:0.###}/tick)");
+        Console.WriteLine($"  Level: {s.Level}   XP: {xpInto:0.#} / {xpNeed:0.#}");
         Console.WriteLine($"  Hack slots: {s.ActiveHacks.Count}/{HackSystem.MaxConcurrentHacks(s)}");
 
         if (s.ActiveHacks.Count > 0)
