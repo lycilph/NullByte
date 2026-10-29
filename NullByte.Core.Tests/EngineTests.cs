@@ -49,6 +49,34 @@ public class EngineTests
     }
 
     [Fact]
+    public void RigRequirements_BlockHack()
+    {
+        // corp-vpn requires CPU level 5 (and only player level 4)
+        var session = Session();
+        session.State.Level = 10;
+        session.State.UpgradeLevels["cpu"] = 4;
+
+        session.Submit(new StartHackCommand("corp-vpn"));
+        session.Tick();
+
+        Assert.Empty(session.State.ActiveHacks);
+        Assert.Contains(session.State.EventLog, e => e.Contains("CPU level 5"));
+    }
+
+    [Fact]
+    public void RigRequirements_Met_HackSucceeds()
+    {
+        var session = Session();
+        session.State.Level = 10;
+        session.State.UpgradeLevels["cpu"] = 5;
+
+        session.Submit(new StartHackCommand("corp-vpn"));
+        session.Tick();
+
+        Assert.Single(session.State.ActiveHacks);
+    }
+
+    [Fact]
     public void Ram_AddsConcurrentSlots()
     {
         var session = Session();

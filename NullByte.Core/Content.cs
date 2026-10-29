@@ -12,7 +12,9 @@ public sealed record TargetDef(
     int MinLevel,
     int DurationTicks,
     double MoneyReward,
-    double XpReward);
+    double XpReward, 
+    int RequiredCpu = 0,
+    int RequiredRam = 0);
 
 public sealed record UpgradeDef(
     string Id,

@@ -19,6 +19,13 @@ public sealed class GameState
 
     /// <summary>Hacks currently running, with rewards frozen at start time.</summary>
     public List<ActiveHack> ActiveHacks { get; internal set; } = [];
+    
+    /// <summary>
+    /// Total events ever logged. The log list is a trimmed window, so a
+    /// reader must track this total to know which entries it has already
+    /// consumed after trims (a list index alone silently breaks at cap).
+    /// </summary>
+    public long EventsLogged { get; internal set; }
 
     /// <summary>Rolling event log; the UI reads this. Capped to 50 entries.</summary>
     public List<string> EventLog { get; } = [];
@@ -26,6 +33,7 @@ public sealed class GameState
     internal void Log(string message)
     {
         EventLog.Add($"[t{GameTick}] {message}");
+        EventsLogged++;
         if (EventLog.Count > 50)
             EventLog.RemoveAt(0);
     }

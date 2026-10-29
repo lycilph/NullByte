@@ -7,14 +7,15 @@
 
 public static class HackSystem
 {
+    public static int RigCpu(GameState s) => s.UpgradeLevels.GetValueOrDefault("cpu");
+    public static int RigRam(GameState s) => s.UpgradeLevels.GetValueOrDefault("ram");
+
     /// <summary>RAM: one slot per level, plus the base slot.</summary>
-    public static int MaxConcurrentHacks(GameState s)
-        => 1 + s.UpgradeLevels.GetValueOrDefault("ram");
+    public static int MaxConcurrentHacks(GameState s) => 1 + RigRam(s);
 
     /// <summary>CPU: 5% faster hacks per level, multiplicative.</summary>
     public static int HackDuration(TargetDef t, GameState s)
-        => Math.Max(1, (int)Math.Round(
-               t.DurationTicks * Math.Pow(0.95, s.UpgradeLevels.GetValueOrDefault("cpu"))));
+        => Math.Max(1, (int)Math.Round(t.DurationTicks * Math.Pow(0.95, RigCpu(s))));
 
     public static void StartHack(GameState s, GameContent c, string targetId)
     {
@@ -27,6 +28,18 @@ public static class HackSystem
         if (s.Level < t.MinLevel)
         {
             s.Log($"{t.Name}: security too high (needs level {t.MinLevel}).");
+            return;
+        }
+
+        // Rig thresholds: some targets need hardware, not just skill.
+        if (t.RequiredCpu > 0 && RigCpu(s) < t.RequiredCpu)
+        {
+            s.Log($"{t.Name}: intrusion trace too fast — needs CPU level {t.RequiredCpu}.");
+            return;
+        }
+        if (t.RequiredRam > 0 && RigRam(s) < t.RequiredRam)
+        {
+            s.Log($"{t.Name}: payload too large — needs RAM level {t.RequiredRam}.");
             return;
         }
         if (s.ActiveHacks.Count >= MaxConcurrentHacks(s))

@@ -29,16 +29,29 @@ public static class ContentLoader
     public const string DefaultContentJson = @"
 {
   ""targets"": [
-    { ""id"": ""webmail"",       ""name"": ""webmail.acme.local"",  ""minLevel"": 1,  ""durationTicks"": 30,  ""moneyReward"": 15,   ""xpReward"": 5 },
-    { ""id"": ""forum-db"",      ""name"": ""forum.db.leak"",        ""minLevel"": 2,  ""durationTicks"": 45,  ""moneyReward"": 45,   ""xpReward"": 12 },
-    { ""id"": ""corp-vpn"",      ""name"": ""corp-vpn.node07"",       ""minLevel"": 4,  ""durationTicks"": 60,  ""moneyReward"": 150,  ""xpReward"": 30 },
-    { ""id"": ""city-bank"",     ""name"": ""city-bank.core"",        ""minLevel"": 7,  ""durationTicks"": 90,  ""moneyReward"": 600,  ""xpReward"": 80 },
-    { ""id"": ""broker"",        ""name"": ""darknet-broker"",        ""minLevel"": 10, ""durationTicks"": 120, ""moneyReward"": 2500, ""xpReward"": 250 }
+    { ""id"": ""webmail"",       ""name"": ""webmail.acme.local"",  ""minLevel"": 1,  ""durationTicks"": 30,  ""moneyReward"": 15,     ""xpReward"": 5 },
+    { ""id"": ""forum-db"",      ""name"": ""forum.db.leak"",        ""minLevel"": 2,  ""durationTicks"": 45,  ""moneyReward"": 45,     ""xpReward"": 12 },
+    { ""id"": ""pub-records"",   ""name"": ""public-records.gov"",   ""minLevel"": 3,  ""durationTicks"": 50,  ""moneyReward"": 90,     ""xpReward"": 20 },
+    { ""id"": ""corp-vpn"",      ""name"": ""corp-vpn.node07"",       ""minLevel"": 4,  ""durationTicks"": 60,  ""moneyReward"": 150,    ""xpReward"": 30,   ""requiredCpu"": 5 },
+    { ""id"": ""hotel-keys"",    ""name"": ""hotel-keycards"",        ""minLevel"": 5,  ""durationTicks"": 70,  ""moneyReward"": 260,    ""xpReward"": 45 },
+    { ""id"": ""isp-router"",    ""name"": ""isp-router.edge"",       ""minLevel"": 6,  ""durationTicks"": 80,  ""moneyReward"": 420,    ""xpReward"": 60,   ""requiredCpu"": 10 },
+    { ""id"": ""city-bank"",     ""name"": ""city-bank.core"",        ""minLevel"": 7,  ""durationTicks"": 90,  ""moneyReward"": 600,    ""xpReward"": 80,   ""requiredRam"": 3 },
+    { ""id"": ""wallet-farm"",   ""name"": ""crypto-wallet.farm"",    ""minLevel"": 8,  ""durationTicks"": 100, ""moneyReward"": 900,    ""xpReward"": 110,  ""requiredCpu"": 15 },
+    { ""id"": ""hospital-db"",   ""name"": ""hospital-records"",      ""minLevel"": 9,  ""durationTicks"": 110, ""moneyReward"": 1300,   ""xpReward"": 140 },
+    { ""id"": ""sat-uplink"",    ""name"": ""sat-uplink.alpha"",      ""minLevel"": 10, ""durationTicks"": 120, ""moneyReward"": 1900,   ""xpReward"": 180,  ""requiredCpu"": 20, ""requiredRam"": 4 },
+    { ""id"": ""broker"",        ""name"": ""darknet-broker"",        ""minLevel"": 10, ""durationTicks"": 120, ""moneyReward"": 2500,   ""xpReward"": 250 },
+    { ""id"": ""bounty-board"",  ""name"": ""bounty-board"",          ""minLevel"": 11, ""durationTicks"": 130, ""moneyReward"": 3400,   ""xpReward"": 300 },
+    { ""id"": ""stock-ex"",      ""name"": ""stock-exchange.dm"",     ""minLevel"": 12, ""durationTicks"": 150, ""moneyReward"": 5200,   ""xpReward"": 400,  ""requiredRam"": 6 },
+    { ""id"": ""fed-reserve"",   ""name"": ""fed-reserve.node"",      ""minLevel"": 13, ""durationTicks"": 180, ""moneyReward"": 9000,   ""xpReward"": 600,  ""requiredCpu"": 30 },
+    { ""id"": ""orbital-relay"", ""name"": ""orbital-relay"",         ""minLevel"": 14, ""durationTicks"": 220, ""moneyReward"": 16000,  ""xpReward"": 850,  ""requiredCpu"": 35, ""requiredRam"": 8 },
+    { ""id"": ""ghost-server"",  ""name"": ""ghost-server.42"",       ""minLevel"": 15, ""durationTicks"": 260, ""moneyReward"": 30000,  ""xpReward"": 1200 },
+    { ""id"": ""blacksite"",     ""name"": ""blacksite.vault"",       ""minLevel"": 16, ""durationTicks"": 300, ""moneyReward"": 60000,  ""xpReward"": 2000, ""requiredCpu"": 45, ""requiredRam"": 10 },
+    { ""id"": ""singularity"",   ""name"": ""singularity-core"",      ""minLevel"": 18, ""durationTicks"": 360, ""moneyReward"": 150000, ""xpReward"": 4000, ""requiredCpu"": 50, ""requiredRam"": 10 }
   ],
   ""upgrades"": [
-    { ""id"": ""cpu"",    ""name"": ""CPU Core"",        ""description"": ""-5% hack duration per level"",       ""baseCost"": 50,   ""growthRate"": 1.15, ""maxLevel"": 50 },
-    { ""id"": ""ram"",    ""name"": ""RAM Module"",      ""description"": ""+1 concurrent hack slot per level"", ""baseCost"": 200,  ""growthRate"": 1.35, ""maxLevel"": 10 },
-    { ""id"": ""botnet"", ""name"": ""Botnet Node"",     ""description"": ""passive income, scales per level"",   ""baseCost"": 100,  ""growthRate"": 1.25, ""maxLevel"": 50 }
+    { ""id"": ""cpu"",    ""name"": ""CPU Core"",        ""description"": ""-5% hack duration per level"",            ""baseCost"": 50,   ""growthRate"": 1.15, ""maxLevel"": 50 },
+    { ""id"": ""ram"",    ""name"": ""RAM Module"",      ""description"": ""+1 concurrent hack slot per level"",      ""baseCost"": 200,  ""growthRate"": 1.35, ""maxLevel"": 10 },
+    { ""id"": ""botnet"", ""name"": ""Botnet Node"",     ""description"": ""passive income, scales per level"",       ""baseCost"": 100,  ""growthRate"": 1.25, ""maxLevel"": 50 }
   ]
 }
 ";

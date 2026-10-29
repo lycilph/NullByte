@@ -51,20 +51,26 @@ internal class Program
         });
 
         // -- Event printer: drains the EventLog twice a second --
-        int nextEvent = 0;
+        // Consumes by TOTALS, not list positions: the log is a trimmed
+        // window, so a list index goes stale once entries start dropping
+        // off the front. Mapping: entry i lives at log[i - (total - Count)].
+        long nextEvent = 0;
         var printer = Task.Run(async () =>
         {
             while (!cts.IsCancellationRequested)
             {
                 await Task.Delay(500, cts.Token);
                 var log = session.State.EventLog;
-                if (nextEvent > log.Count)
-                    nextEvent = log.Count; // log was trimmed
+                long total = session.State.EventsLogged;
+                long firstKept = total - log.Count;      // absolute index of log[0]
+                long from = Math.Max(nextEvent, firstKept);
+
                 lock (ConsoleLock)
                 {
-                    while (nextEvent < log.Count)
-                        Console.WriteLine("  " + log[nextEvent++]);
+                    for (long i = from; i < total; i++)
+                        Console.WriteLine("  " + log[(int)(i - firstKept)]);
                 }
+                nextEvent = total;
             }
         });
 
@@ -156,10 +162,26 @@ internal class Program
     private static void PrintTargets(GameSession session)
     {
         Console.WriteLine("TARGETS");
+        var s = session.State;
+        int cpu = s.UpgradeLevels.GetValueOrDefault("cpu");
+        int ram = s.UpgradeLevels.GetValueOrDefault("ram");
+
         foreach (var t in session.Content.Targets)
         {
-            string status = session.State.Level >= t.MinLevel ? "OK" : $"lvl {t.MinLevel}";
-            Console.WriteLine($"  {t.Id,-12} {t.Name,-22} ${t.MoneyReward,-8:0.#}  {t.XpReward,5:0.#} xp  {t.DurationTicks} ticks  [{status}]");
+            string status;
+            if (s.Level >= t.MinLevel && cpu >= t.RequiredCpu && ram >= t.RequiredRam)
+            {
+                status = "OK";
+            }
+            else
+            {
+                var req = new List<string>();
+                if (s.Level < t.MinLevel) req.Add($"lvl {t.MinLevel}");
+                if (cpu < t.RequiredCpu) req.Add($"cpu {t.RequiredCpu}");
+                if (ram < t.RequiredRam) req.Add($"ram {t.RequiredRam}");
+                status = "needs " + string.Join(", ", req);
+            }
+            Console.WriteLine($"  {t.Id,-14} {t.Name,-22} ${t.MoneyReward,-9:0.#}  {t.XpReward,5:0.#} xp  {t.DurationTicks,3} ticks  [{status}]");
         }
     }
 
@@ -186,6 +208,7 @@ internal class Program
         Console.WriteLine($"  Money: ${s.Money:0.##}   (+${income:0.###}/tick)");
         Console.WriteLine($"  Level: {s.Level}   XP: {xpInto:0.#} / {xpNeed:0.#}");
         Console.WriteLine($"  Hack slots: {s.ActiveHacks.Count}/{HackSystem.MaxConcurrentHacks(s)}");
+        Console.WriteLine($"  Rig: cpu {s.UpgradeLevels.GetValueOrDefault("cpu")} | ram {s.UpgradeLevels.GetValueOrDefault("ram")} | botnet {s.UpgradeLevels.GetValueOrDefault("botnet")}");
 
         if (s.ActiveHacks.Count > 0)
         {
