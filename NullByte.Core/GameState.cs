@@ -19,6 +19,12 @@ public sealed class GameState
     /// <summary>0-days: prestige currency earned by burning your identity.</summary>
     public long ZeroDays { get; internal set; }
 
+    /// <summary>
+    /// Monotonic lifetime burn counter. Cosmetic — not saved — but lets the
+    /// UI detect "a burn happened" by poll-and-compare (cursor pattern).
+    /// </summary>
+    public int Burns { get; internal set; }
+    
     /// <summary>Total ticks since the game started (100 ms per tick).</summary>
     public long GameTick { get; internal set; }
 

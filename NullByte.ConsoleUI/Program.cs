@@ -8,31 +8,13 @@ namespace NullByte.ConsoleUI;
 internal class Program
 {
     private static readonly Random bootRng = new();
-    private static readonly object consoleLock = new();
+    private static readonly Lock consoleLock = new();
 
     static async Task Main()
     {
         var content = ContentLoader.Load();
 
-        Console.WriteLine("=== NULLBYTE ===");
-        Console.WriteLine(@"
-      ___           ___           ___       ___       ___           ___           ___           ___     
-     /\__\         /\__\         /\__\     /\__\     /\  \         |\__\         /\  \         /\  \    
-    /::|  |       /:/  /        /:/  /    /:/  /    /::\  \        |:|  |        \:\  \       /::\  \   
-   /:|:|  |      /:/  /        /:/  /    /:/  /    /:/\:\  \       |:|  |         \:\  \     /:/\:\  \  
-  /:/|:|  |__   /:/  /  ___   /:/  /    /:/  /    /::\~\:\__\      |:|__|__       /::\  \   /::\~\:\  \ 
- /:/ |:| /\__\ /:/__/  /\__\ /:/__/    /:/__/    /:/\:\ \:|__|     /::::\__\     /:/\:\__\ /:/\:\ \:\__\
- \/__|:|/:/  / \:\  \ /:/  / \:\  \    \:\  \    \:\~\:\/:/  /    /:/~~/~       /:/  \/__/ \:\~\:\ \/__/
-     |:/:/  /   \:\  /:/  /   \:\  \    \:\  \    \:\ \::/  /    /:/  /        /:/  /       \:\ \:\__\  
-     |::/  /     \:\/:/  /     \:\  \    \:\  \    \:\/:/  /     \/__/         \/__/         \:\ \/__/  
-     /:/  /       \::/  /       \:\__\    \:\__\    \::/__/                                   \:\__\    
-     \/__/         \/__/         \/__/     \/__/     ~~                                        \/__/");
-        Console.WriteLine();
-        BootLine("booting rig", 21);
-        BootLine("establishing tunnel", 13);
-        BootLine("wiping fingerprints", 13);
-        BootLine("loading contacts", 16);
-        Console.WriteLine();
+        RunBootSequence();
 
         // -- Load save + offline catch-up --
         GameSession session;
@@ -73,11 +55,27 @@ internal class Program
         // window, so a list index goes stale once entries start dropping
         // off the front. Mapping: entry i lives at log[i - (total - Count)].
         long nextEvent = 0;
+        int handledBurns = session.State.Burns;
         var printer = Task.Run(async () =>
         {
             while (!cts.IsCancellationRequested)
             {
                 await Task.Delay(500, cts.Token);
+
+                // -- Burn detection (cursor pattern): a new identity gets a
+                // fresh boot. Skip the stale log backlog — the boot animation
+                // IS the announcement; pre-burn events don't matter anymore.
+                if (session.State.Burns != handledBurns)
+                {
+                    handledBurns = session.State.Burns;
+                    lock (consoleLock)
+                    {
+                        RunBootSequence();
+                        PrintHelp();
+                        nextEvent = session.State.EventsLogged;
+                    }
+                }
+
                 var log = session.State.EventLog;
                 long total = session.State.EventsLogged;
                 long firstKept = total - log.Count;      // absolute index of log[0]
@@ -217,6 +215,34 @@ internal class Program
 
         Console.WriteLine("Saved. Bye.");
         await Task.Delay(500);
+    }
+
+    /// <summary>
+    /// Full boot: clear screen, banner, animated lines. Run at startup and
+    /// again after an identity burn — a fresh identity gets a fresh boot.
+    /// </summary>
+    private static void RunBootSequence()
+    {
+        Console.Clear();
+        Console.WriteLine("=== NULLBYTE ===");
+        Console.WriteLine(@"
+      ___           ___           ___       ___       ___           ___           ___           ___     
+     /\__\         /\__\         /\__\     /\__\     /\  \         |\__\         /\  \         /\  \    
+    /::|  |       /:/  /        /:/  /    /:/  /    /::\  \        |:|  |        \:\  \       /::\  \   
+   /:|:|  |      /:/  /        /:/  /    /:/  /    /:/\:\  \       |:|  |         \:\  \     /:/\:\  \  
+  /:/|:|  |__   /:/  /  ___   /:/  /    /:/  /    /::\~\:\__\      |:|__|__       /::\  \   /::\~\:\  \ 
+ /:/ |:| /\__\ /:/__/  /\__\ /:/__/    /:/__/    /:/\:\ \:|__|     /::::\__\     /:/\:\__\ /:/\:\ \:\__\
+ \/__|:|/:/  / \:\  \ /:/  / \:\  \    \:\  \    \:\~\:\/:/  /    /:/~~/~       /:/  \/__/ \:\~\:\ \/__/
+     |:/:/  /   \:\  /:/  /   \:\  \    \:\  \    \:\ \::/  /    /:/  /        /:/  /       \:\ \:\__\  
+     |::/  /     \:\/:/  /     \:\  \    \:\  \    \:\/:/  /     \/__/         \/__/         \:\ \/__/  
+     /:/  /       \::/  /       \:\__\    \:\__\    \::/__/                                   \:\__\    
+     \/__/         \/__/         \/__/     \/__/     ~~                                        \/__/");
+        Console.WriteLine();
+        BootLine("booting rig", 21);
+        BootLine("establishing tunnel", 13);
+        BootLine("wiping fingerprints", 13);
+        BootLine("loading contacts", 16);
+        Console.WriteLine();
     }
 
     /// <summary>

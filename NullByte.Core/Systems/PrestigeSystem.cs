@@ -61,6 +61,7 @@ public static class PrestigeSystem
         }
 
         s.ZeroDays += tokens;
+        s.Burns++;
 
         // Wipe the run (keep: stats, achievements, 0-days, implants).
         s.Money = SeedMoney(s);
