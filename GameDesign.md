@@ -111,10 +111,9 @@ Nullbyte.sln
 - Console UI: `hack <target>`, `buy <upgrade>`, `status`, `save`
 - *Exit test:* a full playthrough loop feels satisfying for 30 min.
 
-### Phase 2 — Progression & content depth
+### Phase 2 — Progression 
 - 15–20 targets with "security levels" (some require meeting rig thresholds)
 - Skill tree: spend XP on perks (hack speed, batch hacking, offline %)
-- Missions/contracts (timed objectives with rewards) — first "content drip"
 - Event log / terminal flavor text (hacker theme sells the fantasy)
 - Achievements and stats page
 - *Exit test:* returning after a day feels rewarding.
@@ -135,8 +134,9 @@ Nullbyte.sln
 - Runtime errors halt one script, never the game; cache compiled scripts per save (Roslyn warm-up ~1–2 s once)
 - *Exit test:* a player script can play the early game unattended; save/load round-trips and the script reconverges.
 
-### Phase 5 - Factions
+### Phase 5 - Factions & content depth
 - Factions with reputation grind → unique upgrades (Bitburner staple)
+- Missions/contracts (timed objectives with rewards) — first "content drip"
 - *Exit test:* Exploring factions is rewarding game play wise
 
 ### Phase 6 — World & late game
