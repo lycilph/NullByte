@@ -66,6 +66,14 @@ public static class ContentLoader
     { ""id"": ""bank-job"",     ""name"": ""Bank Job"",           ""description"": ""Hack city-bank"",            ""stat"": ""targetHacks:city-bank"",     ""goal"": 1 },
     { ""id"": ""deep-end"",     ""name"": ""Too Deep"",           ""description"": ""Hack ghost-server.42"",      ""stat"": ""targetHacks:ghost-server"",  ""goal"": 1 }
   ],
+  ""contracts"": [
+    { ""id"": ""warmup"",    ""name"": ""Warm-Up"",          ""description"": ""Complete 5 hacks"",             ""stat"": ""hacks"",                 ""goal"": 5,    ""durationTicks"": 1200, ""rewardMoney"": 500,   ""rewardXp"": 50 },
+    { ""id"": ""spree"",     ""name"": ""Spree"",            ""description"": ""Complete 10 hacks fast"",       ""stat"": ""hacks"",                 ""goal"": 10,   ""durationTicks"": 900,  ""rewardMoney"": 1500,  ""rewardXp"": 120 },
+    { ""id"": ""payday"",    ""name"": ""Payday"",           ""description"": ""Earn $2,000"",                  ""stat"": ""moneyEarned"",           ""goal"": 2000, ""durationTicks"": 1800, ""rewardMoney"": 800,   ""rewardXp"": 80 },
+    { ""id"": ""cleaner"",   ""name"": ""Hardware Fetish"",  ""description"": ""Buy 3 rig upgrades"",           ""stat"": ""upgradesBought"",        ""goal"": 3,    ""durationTicks"": 1500, ""rewardMoney"": 1000,  ""rewardXp"": 60 },
+    { ""id"": ""bankrun"",   ""name"": ""Bank Run"",         ""description"": ""Hack city-bank 3 times"",       ""stat"": ""targetHacks:city-bank"", ""goal"": 3,    ""durationTicks"": 2400, ""rewardMoney"": 4000,  ""rewardXp"": 300 },
+    { ""id"": ""prodigy"",   ""name"": ""Prodigy"",          ""description"": ""Level up twice"",               ""stat"": ""level"",                 ""goal"": 2,    ""durationTicks"": 3000, ""rewardMoney"": 2500,  ""rewardXp"": 200 }
+  ],
   ""flavor"": {
     ""hackStart"": [
       ""Routing through {target} — proxy chain established"",

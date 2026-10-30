@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Windows.Input;
 using NullByte.Core.Commands;
 using NullByte.Core.Systems;
 
@@ -41,7 +40,10 @@ public sealed class GameSession
         AchievementsSystem.Tick(State, Content);
 
         if (!isFastforward)
+        {
             AtmosphereSystem.Tick(State, Content);
+            ContractsSystem.Tick(State, Content);
+        }
 
         State.GameTick++;
     }

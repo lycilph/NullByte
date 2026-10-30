@@ -52,17 +52,34 @@ public sealed record FlavorContent(
     List<string> HackComplete,
     List<string> Idle);
 
+/// <summary>
+/// Timed bonus objective. Progress = StatValue gain from acceptance until
+/// Goal is reached, within DurationTicks. Missing the deadline just loses
+/// the reward — contracts are pure bonus.
+/// </summary>
+public sealed record ContractDef(
+    string Id,
+    string Name,
+    string Description,
+    string Stat,
+    double Goal,
+    int DurationTicks,
+    double RewardMoney,
+    double RewardXp);
+    
 public sealed class GameContent
 {
     public List<TargetDef> Targets { get; init; } = [];
     public List<UpgradeDef> Upgrades { get; init; } = [];
     public List<PerkDef> Perks { get; init; } = [];
     public List<AchievementDef> Achievements { get; init; } = [];
+    public List<ContractDef> Contracts { get; init; } = [];
     public FlavorContent Flavor { get; init; } = new([], [], []);
 
     public TargetDef? FindTarget(string id) => Targets.Find(t => t.Id == id);
     public UpgradeDef? FindUpgrade(string id) => Upgrades.Find(u => u.Id == id);
     public PerkDef? FindPerk(string id) => Perks.Find(u => u.Id == id);
+    public ContractDef? FindContract(string id) => Contracts.Find(c => c.Id == id);
 
     /// <summary>
     /// Fails fast on content mistakes (duplicate ids, bad values) instead of
@@ -72,7 +89,8 @@ public sealed class GameContent
     {
         foreach (var group in new[] { Targets.Select(t => (id: t.Id, name: t.Name)),
                                       Upgrades.Select(u => (id: u.Id, name: u.Name)),
-                                      Perks.Select(u => (id: u.Id, name: u.Name))})
+                                      Perks.Select(u => (id: u.Id, name: u.Name)),
+                                      Contracts.Select(u => (id: u.Id, name: u.Name))})
         {
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var (id, name) in group)
@@ -90,5 +108,8 @@ public sealed class GameContent
         foreach (var p in Perks)
             if (p.MaxLevel < 1)
                 throw new InvalidContentException($"Perk '{p.Id}' has invalid values.");
+        foreach (var c in Contracts)
+            if (c.DurationTicks < 1 || c.RewardMoney < 0 || c.RewardXp < 0)
+                throw new InvalidContentException($"Contract '{c.Id}' has invalid values.");
     }
 }

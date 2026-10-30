@@ -33,6 +33,12 @@ public sealed class GameState
 
     /// <summary>Ids of earned achievements.</summary>
     public HashSet<string> Achievements { get; internal set; } = [];
+    
+    /// <summary>Contracts currently open for acceptance.</summary>
+    public List<ContractOfferState> ContractOffers { get; internal set; } = [];
+
+    /// <summary>Accepted contracts running against their deadlines.</summary>
+    public List<ActiveContractState> ActiveContracts { get; internal set; } = [];
 
     /// <summary>
     /// Total events ever logged. The log list is a trimmed window, so a
@@ -73,4 +79,26 @@ public sealed class GameStats
 
     /// <summary>Completed hacks per target id, e.g. ["city-bank"] = 12.</summary>
     [JsonInclude] public Dictionary<string, int> HacksPerTarget { get; internal set; } = [];
+
+    [JsonInclude] public int ContractsSucceeded { get; internal set; }
+    [JsonInclude] public int ContractsFailed { get; internal set; }
+}
+
+
+/// <summary>A contract on the board, not yet accepted. Serialized with the save.</summary>
+public sealed class ContractOfferState
+{
+    [JsonInclude] public string DefId { get; internal set; } = "";
+}
+
+/// <summary>
+/// An accepted contract: deadline countdown plus the stat baseline
+/// snapshot taken at acceptance (progress = current - baseline).
+/// Serialized with the save.
+/// </summary>
+public sealed class ActiveContractState
+{
+    [JsonInclude] public string DefId { get; internal set; } = "";
+    [JsonInclude] public int DeadlineRemaining { get; internal set; }
+    [JsonInclude] public double StartStat { get; internal set; }
 }

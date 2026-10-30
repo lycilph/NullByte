@@ -155,6 +155,17 @@ internal class Program
                         PrintAchievements(session);
                         break;
 
+                    case "contracts":
+                        PrintContracts(session);
+                        break;
+
+                    case "accept":
+                        if (args.Length < 2)
+                            Console.WriteLine("Usage: accept <contract-id>  (see 'contracts')");
+                        else
+                            session.Submit(new AcceptContractCommand(args[1]));
+                        break;
+
                     case "save":
                         SaveSystem.Save(session.State);
                         Console.WriteLine("Saved.");
@@ -232,15 +243,46 @@ internal class Program
         Console.WriteLine($"  Money earned:  ${s.Stats.MoneyEarned:0.##} (current: ${s.Money:0.##})");
         Console.WriteLine($"  Upgrades:      {s.Stats.UpgradesBought} bought");
         Console.WriteLine($"  Perks:         {s.PerkLevels.Values.Sum()} levels trained");
+        Console.WriteLine($"  Contracts:     {s.Stats.ContractsSucceeded} succeeded / {s.Stats.ContractsFailed} failed");
 
         var favorites = s.Stats.HacksPerTarget.OrderByDescending(kv => kv.Value).Take(3).ToList();
         if (favorites.Count > 0)
             Console.WriteLine($"  Favorite marks: {string.Join(", ", favorites.Select(kv => $"{kv.Key} x{kv.Value}"))}");
     }
 
+    private static void PrintContracts(GameSession session)
+    {
+        var s = session.State;
+        Console.WriteLine("CONTRACTS — timed bonus objectives; missing a deadline just loses the bonus");
+
+        if (s.ActiveContracts.Count > 0)
+        {
+            Console.WriteLine("  Active:");
+            foreach (var a in s.ActiveContracts)
+            {
+                var def = session.Content.FindContract(a.DefId);
+                if (def is null) continue;
+                double progress = ContractsSystem.Progress(s, session.Content, a);
+                Console.WriteLine($"    {def.Name,-16} {progress:0.#}/{def.Goal:0.#} — {a.DeadlineRemaining} ticks left  (+${def.RewardMoney:0.##}, +{def.RewardXp:0.#} xp)");
+            }
+        }
+
+        if (s.ContractOffers.Count > 0)
+        {
+            Console.WriteLine("  Open offers:");
+            foreach (var o in s.ContractOffers)
+            {
+                var def = session.Content.FindContract(o.DefId);
+                if (def is null) continue;
+                Console.WriteLine($"    {def.Id,-16} {def.Name,-16} {def.Description,-28} (+${def.RewardMoney:0.##}, +{def.RewardXp:0.#} xp, {def.DurationTicks} ticks)");
+            }
+            Console.WriteLine("  Accept with: accept <id>");
+        }
+    }
+
     private static void PrintHelp()
     {
-        Console.WriteLine("Commands: hack <id> | buy <id> | skill <id> | targets | upgrades | perks | achievements | stats | status | save | quit | help");
+        Console.WriteLine("Commands: hack <id> | buy <id> | skill <id> | accept <id> | targets | upgrades | perks | contracts | achievements | stats | status | save | quit | help");
         Console.WriteLine("Start here: 'targets' then 'hack webmail'\n");
     }
 

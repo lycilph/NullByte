@@ -291,6 +291,72 @@ public class EngineTests
         }
     }
 
+    // -- Contracts --
+
+    /// <summary>Makes the offer board deterministic for tests.</summary>
+    private static void ForceOffer(GameSession session, string defId)
+    {
+        session.State.ContractOffers.Clear();
+        session.State.ContractOffers.Add(new ContractOfferState { DefId = defId });
+    }
+
+    [Fact]
+    public void Contract_CompletesAndPaysBonus()
+    {
+        var session = Session();
+        ForceOffer(session, "warmup"); // complete 5 hacks, deadline 1200 ticks
+        session.Submit(new AcceptContractCommand("warmup"));
+        session.Tick(); // accept applied
+
+        for (int i = 0; i < 5; i++)
+        {
+            session.Submit(new StartHackCommand("webmail"));
+            session.FastForward(31);
+        }
+
+        Assert.Empty(session.State.ActiveContracts);
+        Assert.Contains(session.State.EventLog, e => e.Contains("CONTRACT COMPLETE"));
+        Assert.Equal(5 * 15 + 500, session.State.Money, 3); // hack money + bonus
+    }
+
+    [Fact]
+    public void Contract_FailsOnExpiryWithNoPenalty()
+    {
+        var session = Session();
+        ForceOffer(session, "warmup");
+        session.Submit(new AcceptContractCommand("warmup"));
+        session.Tick();
+        session.State.ActiveContracts[0].DeadlineRemaining = 1;
+
+        session.FastForward(2); // deadline runs out
+
+        Assert.Empty(session.State.ActiveContracts);
+        Assert.Contains(session.State.EventLog, e => e.Contains("Contract failed"));
+        Assert.Equal(0.0, session.State.Money, 3); // pure bonus: nothing lost
+    }
+
+    [Fact]
+    public void Contracts_OffersRefillUpToMax()
+    {
+        var session = Session();
+        session.FastForward(5);
+
+        Assert.Equal(ContractsSystem.MaxOffers, session.State.ContractOffers.Count);
+        Assert.Equal(ContractsSystem.MaxOffers,
+            session.State.ContractOffers.Select(o => o.DefId).Distinct().Count());
+    }
+
+    [Fact]
+    public void Accept_RequiresOpenOffer()
+    {
+        var session = Session();
+        session.State.ContractOffers.Clear();
+        session.Submit(new AcceptContractCommand("warmup"));
+        session.Tick();
+
+        Assert.Empty(session.State.ActiveContracts);
+    }
+
     // -- Save / load & offline --
 
     [Fact]

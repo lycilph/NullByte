@@ -20,6 +20,8 @@ public sealed class SaveData
     public Dictionary<string, int> PerkLevels { get; set; } = [];
     public GameStats? Stats { get; set; }
     public List<string> Achievements { get; set; } = [];
+    public List<ContractOfferState> ContractOffers { get; set; } = [];
+    public List<ActiveContractState> ActiveContracts { get; set; } = [];
     public List<ActiveHack> ActiveHacks { get; set; } = [];
 }
 
@@ -49,6 +51,8 @@ public static class SaveSystem
             PerkLevels = new Dictionary<string, int>(state.PerkLevels),
             Stats = state.Stats,
             Achievements = [.. state.Achievements],
+            ContractOffers = [.. state.ContractOffers],
+            ActiveContracts = [.. state.ActiveContracts],
             ActiveHacks = [.. state.ActiveHacks],
         };
         File.WriteAllText(path, JsonSerializer.Serialize(data, options));
@@ -87,6 +91,8 @@ public static class SaveSystem
             PerkLevels = data.PerkLevels ?? [],
             Stats = data.Stats ?? new GameStats(),
             Achievements = data.Achievements?.ToHashSet() ?? [],
+            ContractOffers = data.ContractOffers ?? [],
+            ActiveContracts = data.ActiveContracts ?? [],
             ActiveHacks = data.ActiveHacks ?? [],
         };
 
