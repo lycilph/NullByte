@@ -12,6 +12,8 @@ internal class Program
 
     static async Task Main()
     {
+        var content = ContentLoader.Load();
+
         Console.WriteLine("=== NULLBYTE ===");
         Console.WriteLine(@"
       ___           ___           ___       ___       ___           ___           ___           ___     
@@ -24,14 +26,13 @@ internal class Program
      |:/:/  /   \:\  /:/  /   \:\  \    \:\  \    \:\ \::/  /    /:/  /        /:/  /       \:\ \:\__\  
      |::/  /     \:\/:/  /     \:\  \    \:\  \    \:\/:/  /     \/__/         \/__/         \:\ \/__/  
      /:/  /       \::/  /       \:\__\    \:\__\    \::/__/                                   \:\__\    
-     \/__/         \/__/         \/__/     \/__/     ~~                                        \/__/\n");
+     \/__/         \/__/         \/__/     \/__/     ~~                                        \/__/");
+        Console.WriteLine();
         BootLine("booting rig", 21);
         BootLine("establishing tunnel", 13);
         BootLine("wiping fingerprints", 13);
         BootLine("loading contacts", 16);
         Console.WriteLine();
-
-        var content = ContentLoader.Load();
 
         // -- Load save + offline catch-up --
         GameSession session;
@@ -143,6 +144,24 @@ internal class Program
                             session.Submit(new SpendSkillCommand(args[1]));
                         break;
 
+                    case "prestige":
+                        if (args.Length >= 2 && args[1] == "confirm")
+                            session.Submit(new PrestigeCommand());
+                        else
+                            PrintPrestige(session);
+                        break;
+
+                    case "implants":
+                        PrintImplants(session);
+                        break;
+
+                    case "implant":
+                        if (args.Length < 2)
+                            Console.WriteLine("Usage: implant <id>  (see 'implants')");
+                        else
+                            session.Submit(new ImplantCommand(args[1]));
+                        break;
+
                     case "status":
                         PrintStatus(session);
                         break;
@@ -238,12 +257,14 @@ internal class Program
         var time = TimeSpan.FromMilliseconds(s.GameTick * GameSession.TickMs);
 
         Console.WriteLine($"== STATS ==");
-        Console.WriteLine($"  Time played:   {time:hh\\:mm\\:ss}  ({s.GameTick} ticks)");
-        Console.WriteLine($"  Hacks done:    {s.Stats.TotalHacks}");
-        Console.WriteLine($"  Money earned:  ${s.Stats.MoneyEarned:0.##} (current: ${s.Money:0.##})");
-        Console.WriteLine($"  Upgrades:      {s.Stats.UpgradesBought} bought");
-        Console.WriteLine($"  Perks:         {s.PerkLevels.Values.Sum()} levels trained");
-        Console.WriteLine($"  Contracts:     {s.Stats.ContractsCompleted} completed / {s.Stats.ContractsFailed} failed");
+        Console.WriteLine($"  Time played:    {time:hh\\:mm\\:ss}  ({s.GameTick} ticks)");
+        Console.WriteLine($"  Prestige count: {s.Stats.PrestigeCount}");
+        Console.WriteLine($"  Hacks done:     {s.Stats.TotalHacks}");
+        Console.WriteLine($"  Money earned:   ${s.Stats.MoneyEarned:0.##} (current: ${s.Money:0.##})");
+        Console.WriteLine($"  Upgrades:       {s.Stats.UpgradesBought} bought");
+        Console.WriteLine($"  Perks:          {s.PerkLevels.Values.Sum()} levels trained");
+        Console.WriteLine($"  Implant:        {s.PrestigeLevels.Values.Sum()} implants installed");
+        Console.WriteLine($"  Contracts:      {s.Stats.ContractsCompleted} completed / {s.Stats.ContractsFailed} failed");
 
         var favorites = s.Stats.HacksPerTarget.OrderByDescending(kv => kv.Value).Take(3).ToList();
         if (favorites.Count > 0)
@@ -279,10 +300,42 @@ internal class Program
             Console.WriteLine("  Accept with: accept <id>");
         }
     }
+    private static void PrintPrestige(GameSession session)
+    {
+        var s = session.State;
+        Console.WriteLine("== PRESTIGE ==");
+        Console.WriteLine($"  0-days: {s.ZeroDays}");
+
+        if (!PrestigeSystem.Unlocked(s))
+        {
+            Console.WriteLine($"  Identity burning unlocks at level {PrestigeSystem.UnlockLevel} (you are level {s.Level}).");
+            return;
+        }
+
+        long tokens = PrestigeSystem.TokensForLevel(s.Level);
+        Console.WriteLine($"  Burn your identity NOW for +{tokens} 0-days.");
+        Console.WriteLine("  Wipes: money, XP, level, skill points, rig, perks, contracts.");
+        Console.WriteLine("  Keeps: 0-days, implants, achievements, lifetime stats.");
+        Console.WriteLine("  Confirm with: prestige confirm   |   Spend tokens: 'implants'");
+    }
+
+    private static void PrintImplants(GameSession session)
+    {
+        var s = session.State;
+        Console.WriteLine($"IMPLANTS — 0-days available: {s.ZeroDays}");
+        foreach (var i in session.Content.Implants)
+        {
+            int owned = s.PrestigeLevels.GetValueOrDefault(i.Id);
+            long cost = (long)Math.Ceiling(i.BaseCost * Math.Pow(i.GrowthRate, owned));
+            string maxed = owned >= i.MaxLevel ? " MAX" : $" next: {cost} 0-days";
+            Console.WriteLine($"  {i.Id,-11} {i.Name,-20} lvl {owned,2}/{i.MaxLevel,-2} {maxed,-16} {i.Description}");
+        }
+        Console.WriteLine("  Install with: implant <id>   (survive identity burns)");
+    }
 
     private static void PrintHelp()
     {
-        Console.WriteLine("Commands: hack <id> | buy <id> | skill <id> | accept <id> | targets | upgrades | perks | contracts | achievements | stats | status | save | quit | help");
+        Console.WriteLine("Commands: hack <id> | buy <id> | skill <id> | accept <id> | implant <id> | prestige [confirm] | targets | upgrades | perks | contracts | implants | achievements | stats | status | save | quit | help");
         Console.WriteLine("Start here: 'targets' then 'hack webmail'\n");
     }
 

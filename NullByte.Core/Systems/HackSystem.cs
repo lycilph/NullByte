@@ -7,19 +7,23 @@
 
 public static class HackSystem
 {
-    public static int RigCpu(GameState s) => s.UpgradeLevels.GetValueOrDefault("cpu");
     public static int RigRam(GameState s) => s.UpgradeLevels.GetValueOrDefault("ram");
+    public static int RigCpu(GameState s) => s.UpgradeLevels.GetValueOrDefault("cpu");
+    
+    public static double SpeedMult(GameState s)
+        => Math.Pow(0.95, s.UpgradeLevels.GetValueOrDefault("cpu"));
 
-    /// <summary>RAM: one slot per level, plus the base slot (multitask adds extra slots)</summary>
+    /// <summary>RAM gives one slot per level, plus Multitasking perk levels.</summary>
     public static int MaxConcurrentHacks(GameState s) 
         => 1 + RigRam(s) + s.PerkLevels.GetValueOrDefault("multitask");
 
-    /// <summary>CPU: 5% faster hacks per level, multiplicative. Overclock give 3% faster hacks</summary>
+    /// <summary>CPU: 5%/lvl; Overclock perk: 3%/lvl; Neural implant: 3%/lvl.</summary>
     public static int HackDuration(TargetDef t, GameState s)
         => Math.Max(1, (int)Math.Round(
             t.DurationTicks 
-            * Math.Pow(0.95, RigCpu(s))
-            * Math.Pow(0.97, s.PerkLevels.GetValueOrDefault("overclock"))));
+            * SpeedMult(s)
+            * ProgressionSystem.SpeedMult(s)
+            * PrestigeSystem.SpeedMult(s)));
 
     public static void StartHack(GameState s, GameContent c, string targetId)
     {
@@ -59,8 +63,12 @@ public static class HackSystem
             TargetName = t.Name,
             TicksRemaining = duration,
             TotalTicks = duration,
-            MoneyReward = t.MoneyReward * (1 + 0.1 * s.PerkLevels.GetValueOrDefault("ransom")),
-            XpReward = t.XpReward * (1 + 0.1 * s.PerkLevels.GetValueOrDefault("datamine")),
+            MoneyReward = t.MoneyReward 
+                * ProgressionSystem.MoneyMult(s)
+                * PrestigeSystem.MoneyMult(s),
+            XpReward = t.XpReward 
+                * ProgressionSystem.XpMult(s)
+                * PrestigeSystem.XpMult(s),
         });
 
         string flavor = Flavor.Pick(c.Flavor.HackStart);

@@ -7,6 +7,13 @@
 
 public static class ProgressionSystem
 {
+    public static double MoneyMult(GameState s)
+        => 1 + 0.1 * s.PerkLevels.GetValueOrDefault("ransom");
+    public static double XpMult(GameState s)
+        => 1 + 0.1 * s.PerkLevels.GetValueOrDefault("datamine");
+    public static double SpeedMult(GameState s)
+        => Math.Pow(0.97, s.PerkLevels.GetValueOrDefault("overclock"));
+
     /// <summary>XP needed to go from 'currentLevel' to currentLevel+1.</summary>
     public static double XpForLevelUp(int currentLevel)
         => 100 * Math.Pow(1.5, currentLevel - 1);

@@ -16,6 +16,9 @@ public sealed class GameState
     /// <summary>Spendable points earned on level-up; buy perks with these.</summary>
     public int SkillPoints { get; internal set; }
 
+    /// <summary>0-days: prestige currency earned by burning your identity.</summary>
+    public long ZeroDays { get; internal set; }
+
     /// <summary>Total ticks since the game started (100 ms per tick).</summary>
     public long GameTick { get; internal set; }
 
@@ -39,6 +42,9 @@ public sealed class GameState
 
     /// <summary>Accepted contracts running against their deadlines.</summary>
     public List<ActiveContractState> ActiveContracts { get; internal set; } = [];
+
+    /// <summary>Owned level per implant id (prestige upgrades; survive resets).</summary>
+    public Dictionary<string, int> PrestigeLevels { get; internal set; } = [];
 
     /// <summary>
     /// Total events ever logged. The log list is a trimmed window, so a
@@ -82,6 +88,8 @@ public sealed class GameStats
 
     [JsonInclude] public int ContractsCompleted { get; internal set; }
     [JsonInclude] public int ContractsFailed { get; internal set; }
+
+    [JsonInclude] public int PrestigeCount { get; internal set; }
 }
 
 

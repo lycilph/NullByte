@@ -311,12 +311,18 @@ public class EngineTests
         for (int i = 0; i < 5; i++)
         {
             session.Submit(new StartHackCommand("webmail"));
-            session.FastForward(31);
+            Forward(session, 31);
         }
 
         Assert.Empty(session.State.ActiveContracts);
         Assert.Contains(session.State.EventLog, e => e.Contains("CONTRACT COMPLETE"));
         Assert.Equal(5 * 15 + 500, session.State.Money, 3); // hack money + bonus
+    }
+
+    private static void Forward(GameSession session, long ticks)
+    {
+        for (long i = 0; i < ticks; i++)
+            session.Tick();
     }
 
     [Fact]
@@ -328,7 +334,7 @@ public class EngineTests
         session.Tick();
         session.State.ActiveContracts[0].DeadlineRemaining = 1;
 
-        session.FastForward(2); // deadline runs out
+        Forward(session, 2); // Must use this, as fastforward skips the contracts update
 
         Assert.Empty(session.State.ActiveContracts);
         Assert.Contains(session.State.EventLog, e => e.Contains("Contract failed"));
@@ -339,7 +345,7 @@ public class EngineTests
     public void Contracts_OffersRefillUpToMax()
     {
         var session = Session();
-        session.FastForward(5);
+        Forward(session, 5); // Must use this, as fastforward skips the contracts update
 
         Assert.Equal(ContractsSystem.MaxOffers, session.State.ContractOffers.Count);
         Assert.Equal(ContractsSystem.MaxOffers,
@@ -355,6 +361,81 @@ public class EngineTests
         session.Tick();
 
         Assert.Empty(session.State.ActiveContracts);
+    }
+
+    // -- Prestige --
+
+    [Fact]
+    public void Prestige_TokenCurveDoublesEveryTwoLevels()
+    {
+        Assert.Equal(0, PrestigeSystem.TokensForLevel(9));
+        Assert.Equal(1, PrestigeSystem.TokensForLevel(10));
+        Assert.Equal(2, PrestigeSystem.TokensForLevel(12));
+        Assert.Equal(4, PrestigeSystem.TokensForLevel(14));
+        Assert.Equal(32, PrestigeSystem.TokensForLevel(20));
+    }
+
+    [Fact]
+    public void Prestige_LockedBelowUnlockLevel()
+    {
+        var session = Session();
+        session.State.UpgradeLevels["cpu"] = 5;
+
+        session.Submit(new PrestigeCommand());
+        session.Tick();
+
+        Assert.Equal(1, session.State.Level);            // nothing happened
+        Assert.Equal(5, session.State.UpgradeLevels["cpu"]);
+        Assert.Equal(0, session.State.ZeroDays);
+        Assert.Contains(session.State.EventLog, e => e.Contains("requires level 10"));
+    }
+
+    [Fact]
+    public void Prestige_ResetGrantsTokensAndWipesProgress()
+    {
+        var session = Session();
+        session.State.Level = 12;
+        session.State.UpgradeLevels["cpu"] = 5;
+        session.State.ZeroDays = 1;
+        session.State.Stats.TotalHacks = 40;
+        session.State.Achievements.Add("first-blood");
+
+        session.Submit(new PrestigeCommand());
+        session.Tick();
+
+        Assert.Equal(3, session.State.ZeroDays);           // 1 held + 2 earned
+        Assert.Equal(1, session.State.Level);
+        Assert.Equal(0.0, session.State.Money, 3);         // no Burner Fund yet
+        Assert.Empty(session.State.UpgradeLevels);
+        Assert.Equal(40, session.State.Stats.TotalHacks);  // lifetime kept
+        Assert.Contains("first-blood", session.State.Achievements);
+    }
+
+    [Fact]
+    public void Implant_CostsZeroDaysAndApplies()
+    {
+        var session = Session();
+        session.State.ZeroDays = 5;
+
+        session.Submit(new ImplantCommand("notoriety"));   // base cost 1
+        session.Tick();
+
+        Assert.Equal(1, session.State.PrestigeLevels["notoriety"]);
+        Assert.Equal(4, session.State.ZeroDays);
+        Assert.Equal(1.1, PrestigeSystem.MoneyMult(session.State), 3);
+    }
+
+    [Fact]
+    public void BurnerFund_SeedsMoneyAfterBurn()
+    {
+        var session = Session();
+        session.State.PrestigeLevels["burner"] = 2;       // 250 * (9 - 1)
+        session.State.Level = 12;
+
+        session.Submit(new PrestigeCommand());
+        session.Tick();
+
+        Assert.Equal(250 * 8, session.State.Money, 3);
     }
 
     // -- Save / load & offline --

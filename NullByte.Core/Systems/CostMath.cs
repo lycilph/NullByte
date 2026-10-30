@@ -7,4 +7,7 @@ public static class CostMath
 {
     public static double UpgradeCost(UpgradeDef def, int owned)
         => def.BaseCost * Math.Pow(def.GrowthRate, owned);
+
+    public static long ImplantCost(ImplantDef def, int owned)
+       => (long)Math.Ceiling(def.BaseCost * Math.Pow(def.GrowthRate, owned));
 }

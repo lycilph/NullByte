@@ -66,7 +66,19 @@ public sealed record ContractDef(
     int DurationTicks,
     double RewardMoney,
     double RewardXp);
-    
+
+/// <summary>
+/// Prestige upgrade bought with 0-days. Survives identity burns.
+/// Cost = BaseCost * GrowthRate^owned (in 0-days).
+/// </summary>
+public sealed record ImplantDef(
+    string Id,
+    string Name,
+    string Description,
+    double BaseCost,
+    double GrowthRate,
+    int MaxLevel);
+
 public sealed class GameContent
 {
     public List<TargetDef> Targets { get; init; } = [];
@@ -74,12 +86,14 @@ public sealed class GameContent
     public List<PerkDef> Perks { get; init; } = [];
     public List<AchievementDef> Achievements { get; init; } = [];
     public List<ContractDef> Contracts { get; init; } = [];
+    public List<ImplantDef> Implants { get; init; } = [];
     public FlavorContent Flavor { get; init; } = new([], [], []);
 
     public TargetDef? FindTarget(string id) => Targets.Find(t => t.Id == id);
     public UpgradeDef? FindUpgrade(string id) => Upgrades.Find(u => u.Id == id);
     public PerkDef? FindPerk(string id) => Perks.Find(u => u.Id == id);
     public ContractDef? FindContract(string id) => Contracts.Find(c => c.Id == id);
+    public ImplantDef? FindImplant(string id) => Implants.Find(i => i.Id == id);
 
     /// <summary>
     /// Fails fast on content mistakes (duplicate ids, bad values) instead of
@@ -90,7 +104,8 @@ public sealed class GameContent
         foreach (var group in new[] { Targets.Select(t => (id: t.Id, name: t.Name)),
                                       Upgrades.Select(u => (id: u.Id, name: u.Name)),
                                       Perks.Select(u => (id: u.Id, name: u.Name)),
-                                      Contracts.Select(u => (id: u.Id, name: u.Name))})
+                                      Contracts.Select(u => (id: u.Id, name: u.Name)),
+                                      Implants.Select(u => (id: u.Id, name: u.Name))})
         {
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var (id, name) in group)
@@ -111,5 +126,8 @@ public sealed class GameContent
         foreach (var c in Contracts)
             if (c.DurationTicks < 1 || c.RewardMoney < 0 || c.RewardXp < 0)
                 throw new InvalidContentException($"Contract '{c.Id}' has invalid values.");
+        foreach (var i in Implants)
+            if (i.MaxLevel < 1 || i.GrowthRate <= 1 || i.BaseCost < 1)
+                throw new InvalidContentException($"Implant '{i.Id}' has invalid values.");
     }
 }

@@ -15,9 +15,11 @@ public sealed class SaveData
     public double Xp { get; set; }
     public int Level { get; set; }
     public int SkillPoints { get; set; }
+    public long ZeroDays { get; set; }
     public long GameTick { get; set; }
     public Dictionary<string, int> UpgradeLevels { get; set; } = [];
     public Dictionary<string, int> PerkLevels { get; set; } = [];
+    public Dictionary<string, int> PrestigeLevels { get; set; } = [];
     public GameStats? Stats { get; set; }
     public List<string> Achievements { get; set; } = [];
     public List<ContractOfferState> ContractOffers { get; set; } = [];
@@ -46,9 +48,11 @@ public static class SaveSystem
             Xp = state.Xp,
             Level = state.Level,
             SkillPoints = state.SkillPoints,
+            ZeroDays = state.ZeroDays,
             GameTick = state.GameTick,
             UpgradeLevels = new Dictionary<string, int>(state.UpgradeLevels),
             PerkLevels = new Dictionary<string, int>(state.PerkLevels),
+            PrestigeLevels = new Dictionary<string, int>(state.PrestigeLevels),
             Stats = state.Stats,
             Achievements = [.. state.Achievements],
             ContractOffers = [.. state.ContractOffers],
@@ -86,9 +90,11 @@ public static class SaveSystem
             Xp = data.Xp,
             Level = data.Level,
             SkillPoints = data.SkillPoints,
+            ZeroDays = data.ZeroDays,
             GameTick = data.GameTick,
             UpgradeLevels = data.UpgradeLevels ?? [],
             PerkLevels = data.PerkLevels ?? [],
+            PrestigeLevels = data.PrestigeLevels ?? [],
             Stats = data.Stats ?? new GameStats(),
             Achievements = data.Achievements?.ToHashSet() ?? [],
             ContractOffers = data.ContractOffers ?? [],

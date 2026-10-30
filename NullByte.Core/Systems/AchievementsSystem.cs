@@ -28,6 +28,7 @@ public static class AchievementsSystem
             "upgradesBought" => s.Stats.UpgradesBought,
             "contractsCompleted" => s.Stats.ContractsCompleted,
             "contractsFailed" => s.Stats.ContractsFailed,
+            "prestigeCount" => s.Stats.PrestigeCount,
             _ => 0,
         };
     }

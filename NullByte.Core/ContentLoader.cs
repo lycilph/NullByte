@@ -57,16 +57,18 @@ public static class ContentLoader
     { ""id"": ""multitask"", ""name"": ""Multitasking"",  ""description"": ""+1 hack slot per level"",         ""maxLevel"": 3 }
   ],
   ""achievements"": [
-    { ""id"": ""first-blood"",  ""name"": ""First Blood"",        ""description"": ""Complete your first hack"",   ""stat"": ""hacks"",                     ""goal"": 1 },
-    { ""id"": ""hacks-100"",    ""name"": ""Serial Intruder"",    ""description"": ""Complete 100 hacks"",         ""stat"": ""hacks"",                     ""goal"": 100 },
-    { ""id"": ""money-10k"",    ""name"": ""Payday"",             ""description"": ""Earn $10,000 total"",         ""stat"": ""moneyEarned"",               ""goal"": 10000 },
-    { ""id"": ""level-5"",      ""name"": ""Moving Up"",          ""description"": ""Reach level 5"",              ""stat"": ""level"",                     ""goal"": 5 },
-    { ""id"": ""level-10"",     ""name"": ""Ghost in the Wires"", ""description"": ""Reach level 10"",             ""stat"": ""level"",                     ""goal"": 10 },
-    { ""id"": ""upgrader"",     ""name"": ""Hardware Nerd"",      ""description"": ""Buy 10 rig upgrades"",        ""stat"": ""upgradesBought"",            ""goal"": 10 },
-    { ""id"": ""bank-job"",     ""name"": ""Bank Job"",           ""description"": ""Hack city-bank"",             ""stat"": ""targetHacks:city-bank"",     ""goal"": 1 },
-    { ""id"": ""deep-end"",     ""name"": ""Too Deep"",           ""description"": ""Hack ghost-server.42"",       ""stat"": ""targetHacks:ghost-server"",  ""goal"": 1 },
-    { ""id"": ""fixer"",        ""name"": ""Fixer"",              ""description"": ""Complete 5 contracts"",       ""stat"": ""contractsCompleted"",        ""goal"": 5 },
-    { ""id"": ""burnt"",        ""name"": ""Burned"",             ""description"": ""Fail 3 contracts"",           ""stat"": ""contractsFailed"",           ""goal"": 3 }
+    { ""id"": ""first-blood"",   ""name"": ""First Blood"",        ""description"": ""Complete your first hack"",    ""stat"": ""hacks"",                     ""goal"": 1 },
+    { ""id"": ""hacks-100"",     ""name"": ""Serial Intruder"",    ""description"": ""Complete 100 hacks"",          ""stat"": ""hacks"",                     ""goal"": 100 },
+    { ""id"": ""money-10k"",     ""name"": ""Payday"",             ""description"": ""Earn $10,000 total"",          ""stat"": ""moneyEarned"",               ""goal"": 10000 },
+    { ""id"": ""level-5"",       ""name"": ""Moving Up"",          ""description"": ""Reach level 5"",               ""stat"": ""level"",                     ""goal"": 5 },
+    { ""id"": ""level-10"",      ""name"": ""Ghost in the Wires"", ""description"": ""Reach level 10"",              ""stat"": ""level"",                     ""goal"": 10 },
+    { ""id"": ""upgrader"",      ""name"": ""Hardware Nerd"",      ""description"": ""Buy 10 rig upgrades"",         ""stat"": ""upgradesBought"",            ""goal"": 10 },
+    { ""id"": ""bank-job"",      ""name"": ""Bank Job"",           ""description"": ""Hack city-bank"",              ""stat"": ""targetHacks:city-bank"",     ""goal"": 1 },
+    { ""id"": ""deep-end"",      ""name"": ""Too Deep"",           ""description"": ""Hack ghost-server.42"",        ""stat"": ""targetHacks:ghost-server"",  ""goal"": 1 },
+    { ""id"": ""fixer"",         ""name"": ""Fixer"",              ""description"": ""Complete 5 contracts"",        ""stat"": ""contractsCompleted"",        ""goal"": 5 },
+    { ""id"": ""burnt"",         ""name"": ""Burned"",             ""description"": ""Fail 3 contracts"",            ""stat"": ""contractsFailed"",           ""goal"": 3 },
+    { ""id"": ""baby-steps"",    ""name"": ""Baby steps"",         ""description"": ""Prestige for the first time"", ""stat"": ""prestigeCount"",             ""goal"": 1 },
+    { ""id"": ""master-hacker"", ""name"": ""Master Hacker"",      ""description"": ""Prestige 5 times"",            ""stat"": ""prestigeCount"",             ""goal"": 5 }
   ],
   ""contracts"": [
     { ""id"": ""warmup"",    ""name"": ""Warm-Up"",          ""description"": ""Complete 5 hacks"",             ""stat"": ""hacks"",                 ""goal"": 5,    ""durationTicks"": 1200, ""rewardMoney"": 500,   ""rewardXp"": 50 },
@@ -75,6 +77,12 @@ public static class ContentLoader
     { ""id"": ""cleaner"",   ""name"": ""Hardware Fetish"",  ""description"": ""Buy 3 rig upgrades"",           ""stat"": ""upgradesBought"",        ""goal"": 3,    ""durationTicks"": 1500, ""rewardMoney"": 1000,  ""rewardXp"": 60 },
     { ""id"": ""bankrun"",   ""name"": ""Bank Run"",         ""description"": ""Hack city-bank 3 times"",       ""stat"": ""targetHacks:city-bank"", ""goal"": 3,    ""durationTicks"": 2400, ""rewardMoney"": 4000,  ""rewardXp"": 300 },
     { ""id"": ""prodigy"",   ""name"": ""Prodigy"",          ""description"": ""Level up twice"",               ""stat"": ""level"",                 ""goal"": 2,    ""durationTicks"": 3000, ""rewardMoney"": 2500,  ""rewardXp"": 200 }
+  ],
+  ""implants"": [
+    { ""id"": ""notoriety"", ""name"": ""Dark Web Notoriety"", ""description"": ""+10% hack money per level"",   ""baseCost"": 1, ""growthRate"": 2,   ""maxLevel"": 15 },
+    { ""id"": ""blackice"",  ""name"": ""Black ICE"",          ""description"": ""+10% XP per level"",           ""baseCost"": 1, ""growthRate"": 2,   ""maxLevel"": 15 },
+    { ""id"": ""neural"",    ""name"": ""Neural Overclock"",   ""description"": ""-3% hack duration per level"", ""baseCost"": 2, ""growthRate"": 2,   ""maxLevel"": 10 },
+    { ""id"": ""burner"",    ""name"": ""Burner Fund"",        ""description"": ""seed money on identity burn"", ""baseCost"": 3, ""growthRate"": 2.5, ""maxLevel"": 10 }
   ],
   ""flavor"": {
     ""hackStart"": [
