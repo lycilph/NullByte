@@ -52,6 +52,13 @@ public static class ContentLoader
     { ""id"": ""cpu"",    ""name"": ""CPU Core"",        ""description"": ""-5% hack duration per level"",            ""baseCost"": 50,   ""growthRate"": 1.15, ""maxLevel"": 50 },
     { ""id"": ""ram"",    ""name"": ""RAM Module"",      ""description"": ""+1 concurrent hack slot per level"",      ""baseCost"": 200,  ""growthRate"": 1.35, ""maxLevel"": 10 },
     { ""id"": ""botnet"", ""name"": ""Botnet Node"",     ""description"": ""passive income, scales per level"",       ""baseCost"": 100,  ""growthRate"": 1.25, ""maxLevel"": 50 }
+  ],
+  ""perks"": [
+    { ""id"": ""overclock"", ""name"": ""Overclock"",     ""description"": ""-3% hack duration per level"",   ""maxLevel"": 10 },
+    { ""id"": ""ransom"",    ""name"": ""Ransomware"",    ""description"": ""+10% hack money per level"",     ""maxLevel"": 10 },
+    { ""id"": ""datamine"",  ""name"": ""Data Mining"",   ""description"": ""+10% XP gain per level"",         ""maxLevel"": 10 },
+    { ""id"": ""scavenger"", ""name"": ""Scavenger"",     ""description"": ""+10% botnet income per level"",   ""maxLevel"": 10 },
+    { ""id"": ""multitask"", ""name"": ""Multitasking"",  ""description"": ""+1 hack slot per level"",         ""maxLevel"": 3 }
   ]
 }
 ";

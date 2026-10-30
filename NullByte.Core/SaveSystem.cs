@@ -14,9 +14,11 @@ public sealed class SaveData
     public double Money { get; set; }
     public double Xp { get; set; }
     public int Level { get; set; }
+    public int SkillPoints { get; set; }
     public long GameTick { get; set; }
-    public Dictionary<string, int> UpgradeLevels { get; set; } = new();
-    public List<ActiveHack> ActiveHacks { get; set; } = new();
+    public Dictionary<string, int> UpgradeLevels { get; set; } = [];
+    public Dictionary<string, int> PerkLevels { get; set; } = [];
+    public List<ActiveHack> ActiveHacks { get; set; } = [];
 }
 
 
@@ -39,8 +41,10 @@ public static class SaveSystem
             Money = state.Money,
             Xp = state.Xp,
             Level = state.Level,
+            SkillPoints = state.SkillPoints,
             GameTick = state.GameTick,
             UpgradeLevels = new Dictionary<string, int>(state.UpgradeLevels),
+            PerkLevels = new Dictionary<string, int>(state.PerkLevels),
             ActiveHacks = [.. state.ActiveHacks],
         };
         File.WriteAllText(path, JsonSerializer.Serialize(data, Options));
@@ -73,9 +77,11 @@ public static class SaveSystem
             Money = data.Money,
             Xp = data.Xp,
             Level = data.Level,
+            SkillPoints = data.SkillPoints,
             GameTick = data.GameTick,
-            UpgradeLevels = data.UpgradeLevels ?? new(),
-            ActiveHacks = data.ActiveHacks ?? new(),
+            UpgradeLevels = data.UpgradeLevels ?? [],
+            PerkLevels = data.PerkLevels ?? [],
+            ActiveHacks = data.ActiveHacks ?? [],
         };
 
         var elapsed = DateTimeOffset.UtcNow - data.SavedAtUtc;

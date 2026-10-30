@@ -119,8 +119,7 @@ Nullbyte.sln
 - Achievements and stats page
 - *Exit test:* returning after a day feels rewarding.
 
-### Phase 3 — Factions & prestige
-- Factions with reputation grind → unique upgrades (Bitburner staple)
+### Phase 3 — prestige
 - Prestige/reset layer ("burn your identity"): reset for permanent multipliers
 - Second currency, exponential-tier prestige upgrades
 - More content data + a content validator tool so balance mistakes surface early
@@ -136,7 +135,11 @@ Nullbyte.sln
 - Runtime errors halt one script, never the game; cache compiled scripts per save (Roslyn warm-up ~1–2 s once)
 - *Exit test:* a player script can play the early game unattended; save/load round-trips and the script reconverges.
 
-### Phase 5 — World & late game
+### Phase 5 - Factions
+- Factions with reputation grind → unique upgrades (Bitburner staple)
+- *Exit test:* Exploring factions is rewarding game play wise
+
+### Phase 6 — World & late game
 - Persistent "network map" world (nodes to conquer, turf mechanics)
 - Multiplayer-adjacent features (leaderboards via exported saves, weekly challenges)
 - Blazor/Avalonia UI with a real terminal window and live graphs

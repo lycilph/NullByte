@@ -115,6 +115,17 @@ internal class Program
                         PrintUpgrades(session);
                         break;
 
+                    case "perks":
+                        PrintPerks(session);
+                        break;
+
+                    case "skill":
+                        if (args.Length < 2)
+                            Console.WriteLine("Usage: skill <perk-id>  (see 'perks')");
+                        else
+                            session.Submit(new SpendSkillCommand(args[1]));
+                        break;
+
                     case "status":
                         PrintStatus(session);
                         break;
@@ -155,7 +166,7 @@ internal class Program
 
     private static void PrintHelp()
     {
-        Console.WriteLine("Commands: hack <id> | buy <id> | targets | upgrades | status | save | quit | help");
+        Console.WriteLine("Commands: hack <id> | buy <id> | skill <id> | targets | upgrades | perks | status | save | quit | help");
         Console.WriteLine("Start here: 'targets' then 'hack webmail'\n");
     }
 
@@ -196,6 +207,16 @@ internal class Program
             Console.WriteLine($"  {u.Id,-8} {u.Name,-14} lvl {owned,2}/{u.MaxLevel,-2} {maxed,-18} {u.Description}");
         }
     }
+    private static void PrintPerks(GameSession session)
+    {
+        Console.WriteLine($"SKILL TREE — points available: {session.State.SkillPoints}");
+        foreach (var p in session.Content.Perks)
+        {
+            int owned = session.State.PerkLevels.GetValueOrDefault(p.Id);
+            Console.WriteLine($"  {p.Id,-11} {p.Name,-14} lvl {owned,2}/{p.MaxLevel,-2}  {p.Description}");
+        }
+        Console.WriteLine("Spend with: skill <id>");
+    }
 
     private static void PrintStatus(GameSession session)
     {
@@ -206,7 +227,7 @@ internal class Program
 
         Console.WriteLine($"== STATUS  t{s.GameTick} ==");
         Console.WriteLine($"  Money: ${s.Money:0.##}   (+${income:0.###}/tick)");
-        Console.WriteLine($"  Level: {s.Level}   XP: {xpInto:0.#} / {xpNeed:0.#}");
+        Console.WriteLine($"  Level: {s.Level}   XP: {xpInto:0.#} / {xpNeed:0.#}   Skill points: {s.SkillPoints}");
         Console.WriteLine($"  Hack slots: {s.ActiveHacks.Count}/{HackSystem.MaxConcurrentHacks(s)}");
         Console.WriteLine($"  Rig: cpu {s.UpgradeLevels.GetValueOrDefault("cpu")} | ram {s.UpgradeLevels.GetValueOrDefault("ram")} | botnet {s.UpgradeLevels.GetValueOrDefault("botnet")}");
 

@@ -25,7 +25,8 @@ public static class ProgressionSystem
         while (s.Xp >= TotalXpForLevel(s.Level + 1))
         {
             s.Level++;
-            s.Log($"Level up! Now level {s.Level}.");
+            s.SkillPoints++;
+            s.Log($"Level up! Now level {s.Level}. +1 skill point (see 'perks').");
         }
     }
 }

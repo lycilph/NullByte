@@ -24,13 +24,21 @@ public sealed record UpgradeDef(
     double GrowthRate,
     int MaxLevel);
 
+public sealed record PerkDef(
+    string Id,
+    string Name,
+    string Description,
+    int MaxLevel);
+
 public sealed class GameContent
 {
-    public List<TargetDef> Targets { get; init; } = new();
-    public List<UpgradeDef> Upgrades { get; init; } = new();
+    public List<TargetDef> Targets { get; init; } = [];
+    public List<UpgradeDef> Upgrades { get; init; } = [];
+    public List<PerkDef> Perks { get; init; } = [];
 
     public TargetDef? FindTarget(string id) => Targets.Find(t => t.Id == id);
     public UpgradeDef? FindUpgrade(string id) => Upgrades.Find(u => u.Id == id);
+    public PerkDef? FindPerk(string id) => Perks.Find(u => u.Id == id);
 
     /// <summary>
     /// Fails fast on content mistakes (duplicate ids, bad values) instead of
@@ -39,7 +47,8 @@ public sealed class GameContent
     public void Validate()
     {
         foreach (var group in new[] { Targets.Select(t => (id: t.Id, name: t.Name)),
-                                     Upgrades.Select(u => (id: u.Id, name: u.Name)) })
+                                      Upgrades.Select(u => (id: u.Id, name: u.Name)),
+                                      Perks.Select(u => (id: u.Id, name: u.Name))})
         {
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var (id, name) in group)
@@ -54,5 +63,8 @@ public sealed class GameContent
         foreach (var u in Upgrades)
             if (u.BaseCost < 0 || u.GrowthRate <= 1 || u.MaxLevel < 1)
                 throw new InvalidContentException($"Upgrade '{u.Id}' has invalid values.");
+        foreach (var p in Perks)
+            if (p.MaxLevel < 1)
+                throw new InvalidContentException($"Perk '{p.Id}' has invalid values.");
     }
 }

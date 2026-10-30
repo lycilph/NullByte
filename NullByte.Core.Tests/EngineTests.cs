@@ -76,6 +76,68 @@ public class EngineTests
         Assert.Single(session.State.ActiveHacks);
     }
 
+    // -- Skill tree --
+
+    [Fact]
+    public void LevelUp_GrantsSkillPoint()
+    {
+        var session = Session();
+        session.State.Xp = 101; // 100 xp needed for level 2
+        session.Tick();
+
+        Assert.Equal(2, session.State.Level);
+        Assert.Equal(1, session.State.SkillPoints);
+    }
+
+    [Fact]
+    public void SkillPerk_CanBeBoughtAndApplied()
+    {
+        var session = Session();
+        session.State.SkillPoints = 2;
+
+        session.Submit(new SpendSkillCommand("multitask"));
+        session.Tick();
+
+        Assert.Equal(1, session.State.SkillPoints);
+        Assert.Equal(1, session.State.PerkLevels["multitask"]);
+        Assert.Equal(2, HackSystem.MaxConcurrentHacks(session.State)); // base + perk
+    }
+
+    [Fact]
+    public void SkillPerk_WithoutPoints_IsRefused()
+    {
+        var session = Session();
+        session.Submit(new SpendSkillCommand("overclock"));
+        session.Tick();
+
+        Assert.Equal(0, session.State.PerkLevels.GetValueOrDefault("overclock"));
+        Assert.Contains(session.State.EventLog, e => e.Contains("No skill points"));
+    }
+
+    [Fact]
+    public void OverclockPerk_ReducesDuration()
+    {
+        var session = Session();
+        var webmail = Content().FindTarget("webmail")!;
+        session.State.PerkLevels["overclock"] = 10;
+
+        Assert.Equal(22, HackSystem.HackDuration(webmail, session.State)); // 30 * 0.97^10
+    }
+    
+    [Fact]
+    public void RansomPerk_BoostsReward()
+    {
+        var session = Session();
+        session.State.PerkLevels["ransom"] = 5; // +50% money
+
+        session.Submit(new StartHackCommand("webmail"));
+        session.Tick();
+
+        Assert.Equal(15 * 1.5, session.State.ActiveHacks[0].MoneyReward, 3);
+    }
+
+    // -- Upgrades --
+
     [Fact]
     public void Ram_AddsConcurrentSlots()
     {

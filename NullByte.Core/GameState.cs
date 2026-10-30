@@ -11,11 +11,17 @@ public sealed class GameState
     public double Xp { get; internal set; }
     public int Level { get; internal set; } = 1;
 
+    /// <summary>Spendable points earned on level-up; buy perks with these.</summary>
+    public int SkillPoints { get; internal set; }
+
     /// <summary>Total ticks since the game started (100 ms per tick).</summary>
     public long GameTick { get; internal set; }
 
     /// <summary>Owned level per upgrade id, e.g. ["cpu"] = 3.</summary>
     public Dictionary<string, int> UpgradeLevels { get; internal set; } = [];
+    
+    /// <summary>Owned level per perk id (skill tree).</summary>
+    public Dictionary<string, int> PerkLevels { get; internal set; } = [];
 
     /// <summary>Hacks currently running, with rewards frozen at start time.</summary>
     public List<ActiveHack> ActiveHacks { get; internal set; } = [];

@@ -10,12 +10,16 @@ public static class HackSystem
     public static int RigCpu(GameState s) => s.UpgradeLevels.GetValueOrDefault("cpu");
     public static int RigRam(GameState s) => s.UpgradeLevels.GetValueOrDefault("ram");
 
-    /// <summary>RAM: one slot per level, plus the base slot.</summary>
-    public static int MaxConcurrentHacks(GameState s) => 1 + RigRam(s);
+    /// <summary>RAM: one slot per level, plus the base slot (multitask adds extra slots)</summary>
+    public static int MaxConcurrentHacks(GameState s) 
+        => 1 + RigRam(s) + s.PerkLevels.GetValueOrDefault("multitask");
 
-    /// <summary>CPU: 5% faster hacks per level, multiplicative.</summary>
+    /// <summary>CPU: 5% faster hacks per level, multiplicative. Overclock give 3% faster hacks</summary>
     public static int HackDuration(TargetDef t, GameState s)
-        => Math.Max(1, (int)Math.Round(t.DurationTicks * Math.Pow(0.95, RigCpu(s))));
+        => Math.Max(1, (int)Math.Round(
+            t.DurationTicks 
+            * Math.Pow(0.95, RigCpu(s))
+            * Math.Pow(0.97, s.PerkLevels.GetValueOrDefault("overclock"))));
 
     public static void StartHack(GameState s, GameContent c, string targetId)
     {
@@ -55,8 +59,8 @@ public static class HackSystem
             TargetName = t.Name,
             TicksRemaining = duration,
             TotalTicks = duration,
-            MoneyReward = t.MoneyReward,
-            XpReward = t.XpReward,
+            MoneyReward = t.MoneyReward * (1 + 0.1 * s.PerkLevels.GetValueOrDefault("ransom")),
+            XpReward = t.XpReward * (1 + 0.1 * s.PerkLevels.GetValueOrDefault("datamine")),
         });
         s.Log($"Hack started on {t.Name} ({duration} ticks).");
     }
