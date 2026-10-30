@@ -80,7 +80,7 @@ public sealed class GameStats
     /// <summary>Completed hacks per target id, e.g. ["city-bank"] = 12.</summary>
     [JsonInclude] public Dictionary<string, int> HacksPerTarget { get; internal set; } = [];
 
-    [JsonInclude] public int ContractsSucceeded { get; internal set; }
+    [JsonInclude] public int ContractsCompleted { get; internal set; }
     [JsonInclude] public int ContractsFailed { get; internal set; }
 }
 

@@ -26,6 +26,8 @@ public static class AchievementsSystem
             "moneyEarned" => s.Stats.MoneyEarned,
             "level" => s.Level,
             "upgradesBought" => s.Stats.UpgradesBought,
+            "contractsCompleted" => s.Stats.ContractsCompleted,
+            "contractsFailed" => s.Stats.ContractsFailed,
             _ => 0,
         };
     }

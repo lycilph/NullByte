@@ -59,12 +59,14 @@ public static class ContentLoader
   ""achievements"": [
     { ""id"": ""first-blood"",  ""name"": ""First Blood"",        ""description"": ""Complete your first hack"",   ""stat"": ""hacks"",                     ""goal"": 1 },
     { ""id"": ""hacks-100"",    ""name"": ""Serial Intruder"",    ""description"": ""Complete 100 hacks"",         ""stat"": ""hacks"",                     ""goal"": 100 },
-    { ""id"": ""money-10k"",    ""name"": ""Payday"",             ""description"": ""Earn $10,000 total"",         ""stat"": ""moneyEarned"",              ""goal"": 10000 },
+    { ""id"": ""money-10k"",    ""name"": ""Payday"",             ""description"": ""Earn $10,000 total"",         ""stat"": ""moneyEarned"",               ""goal"": 10000 },
     { ""id"": ""level-5"",      ""name"": ""Moving Up"",          ""description"": ""Reach level 5"",              ""stat"": ""level"",                     ""goal"": 5 },
     { ""id"": ""level-10"",     ""name"": ""Ghost in the Wires"", ""description"": ""Reach level 10"",             ""stat"": ""level"",                     ""goal"": 10 },
-    { ""id"": ""upgrader"",     ""name"": ""Hardware Nerd"",      ""description"": ""Buy 10 rig upgrades"",       ""stat"": ""upgradesBought"",            ""goal"": 10 },
-    { ""id"": ""bank-job"",     ""name"": ""Bank Job"",           ""description"": ""Hack city-bank"",            ""stat"": ""targetHacks:city-bank"",     ""goal"": 1 },
-    { ""id"": ""deep-end"",     ""name"": ""Too Deep"",           ""description"": ""Hack ghost-server.42"",      ""stat"": ""targetHacks:ghost-server"",  ""goal"": 1 }
+    { ""id"": ""upgrader"",     ""name"": ""Hardware Nerd"",      ""description"": ""Buy 10 rig upgrades"",        ""stat"": ""upgradesBought"",            ""goal"": 10 },
+    { ""id"": ""bank-job"",     ""name"": ""Bank Job"",           ""description"": ""Hack city-bank"",             ""stat"": ""targetHacks:city-bank"",     ""goal"": 1 },
+    { ""id"": ""deep-end"",     ""name"": ""Too Deep"",           ""description"": ""Hack ghost-server.42"",       ""stat"": ""targetHacks:ghost-server"",  ""goal"": 1 },
+    { ""id"": ""fixer"",        ""name"": ""Fixer"",              ""description"": ""Complete 5 contracts"",       ""stat"": ""contractsCompleted"",        ""goal"": 5 },
+    { ""id"": ""burnt"",        ""name"": ""Burned"",             ""description"": ""Fail 3 contracts"",           ""stat"": ""contractsFailed"",           ""goal"": 3 }
   ],
   ""contracts"": [
     { ""id"": ""warmup"",    ""name"": ""Warm-Up"",          ""description"": ""Complete 5 hacks"",             ""stat"": ""hacks"",                 ""goal"": 5,    ""durationTicks"": 1200, ""rewardMoney"": 500,   ""rewardXp"": 50 },

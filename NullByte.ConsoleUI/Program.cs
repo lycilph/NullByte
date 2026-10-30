@@ -243,7 +243,7 @@ internal class Program
         Console.WriteLine($"  Money earned:  ${s.Stats.MoneyEarned:0.##} (current: ${s.Money:0.##})");
         Console.WriteLine($"  Upgrades:      {s.Stats.UpgradesBought} bought");
         Console.WriteLine($"  Perks:         {s.PerkLevels.Values.Sum()} levels trained");
-        Console.WriteLine($"  Contracts:     {s.Stats.ContractsSucceeded} succeeded / {s.Stats.ContractsFailed} failed");
+        Console.WriteLine($"  Contracts:     {s.Stats.ContractsCompleted} completed / {s.Stats.ContractsFailed} failed");
 
         var favorites = s.Stats.HacksPerTarget.OrderByDescending(kv => kv.Value).Take(3).ToList();
         if (favorites.Count > 0)

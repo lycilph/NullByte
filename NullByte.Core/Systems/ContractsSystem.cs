@@ -82,7 +82,7 @@ public static class ContractsSystem
             {
                 s.Money += def.RewardMoney;
                 s.Xp += def.RewardXp;
-                s.Stats.ContractsSucceeded++;
+                s.Stats.ContractsCompleted++;
                 s.Log($"CONTRACT COMPLETE: {def.Name} — bonus +${def.RewardMoney:0.##}, +{def.RewardXp:0.#} XP.");
                 s.ActiveContracts.RemoveAt(i);
                 continue;
