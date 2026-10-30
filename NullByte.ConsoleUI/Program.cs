@@ -2,6 +2,7 @@
 using NullByte.Core;
 using NullByte.Core.Commands;
 using NullByte.Core.Systems;
+using NullByte.Scripting;
 
 namespace NullByte.ConsoleUI;
 
@@ -34,6 +35,9 @@ internal class Program
         {
             session = new GameSession(content);
         }
+        
+        // -- Scripting: Roslyn runtime + restart persisted scripts --
+        var scripting = new ScriptingSystem(session);
 
         // -- The game loop: 100 ms fixed ticks on a background task --
         var cts = new CancellationTokenSource();
@@ -44,6 +48,7 @@ internal class Program
                 while (!cts.IsCancellationRequested)
                 {
                     session.Tick();
+                    scripting.Tick();   // releases the script barrier, once per tick
                     await Task.Delay(GameSession.TickMs, cts.Token);
                 }
             }
@@ -181,6 +186,56 @@ internal class Program
                             Console.WriteLine("Usage: accept <contract-id>  (see 'contracts')");
                         else
                             session.Submit(new AcceptContractCommand(args[1]));
+                        break;
+
+                    // TODO: Implement this
+                    case "run":
+                        Console.WriteLine("Not implemented yet.");
+                        //if (args.Length < 2)
+                        //{
+                        //    Console.WriteLine("Usage: run <script-name>  (runs scripts/<name>.cs)");
+                        //}
+                        //else if (scripting.Find(args[1])?.IsRunning == true)
+                        //{
+                        //    Console.WriteLine($"'{args[1]}' is already running. 'stop {args[1]}' first.");
+                        //}
+                        //else if (!File.Exists(ScriptPersistence.SourcePath(args[1])))
+                        //{
+                        //    Console.WriteLine($"No file at {ScriptPersistence.SourcePath(args[1])}");
+                        //}
+                        //else
+                        //{
+                        //    // Retire any stopped/errored instance with this name
+                        //    // so the list doesn't accumulate duplicates.
+                        //    scripting.Stop(args[1]);
+                        //    pendingRun = StartScriptAsync(scripting, args[1]);
+                        //}
+                        break;
+
+                    // TODO: Implement this
+                    case "stop":
+                        Console.WriteLine("Not implemented yet.");
+                        //if (args.Length < 2)
+                        //    Console.WriteLine("Usage: stop <script-name>");
+                        //else
+                        //    scripting.Stop(args[1]);
+                        break;
+
+                    // TODO: Implement this
+                    case "scripts":
+                        Console.WriteLine("Not implemented yet.");
+                        //if (scripting.Scripts.Count == 0)
+                        //{
+                        //    Console.WriteLine("No scripts. Write scripts/<name>.cs, then 'run <name>'.");
+                        //    break;
+                        //}
+                        //foreach (var s in scripting.Scripts)
+                        //{
+                        //    string status = s.IsRunning ? "RUNNING"
+                        //                  : s.Error is not null ? "ERROR"
+                        //                  : "STOPPED";
+                        //    Console.WriteLine($"  {s.Name,-16} [{status}]");
+                        //}
                         break;
 
                     case "save":
@@ -361,7 +416,8 @@ internal class Program
 
     private static void PrintHelp()
     {
-        Console.WriteLine("Commands: hack <id> | buy <id> | skill <id> | accept <id> | implant <id> | prestige [confirm] | targets | upgrades | perks | contracts | implants | achievements | stats | status | save | quit | help");
+        Console.WriteLine("Commands: hack <id> | buy <id> | skill <id> | accept <id> | implant <id> | prestige [confirm] | run <name> | stop <name> | scripts | targets | upgrades | perks | contracts | implants | achievements | stats | status | save | quit | help");
+        Console.WriteLine("Scripts: write scripts/<name>.cs (C#, globals expose 'api'), then 'run <name>' — e.g. await api.Hack(\"webmail\");"); 
         Console.WriteLine("Start here: 'targets' then 'hack webmail'\n");
     }
 
