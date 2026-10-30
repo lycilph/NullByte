@@ -206,6 +206,31 @@ public class EngineTests
         Assert.Equal(10.0, session.State.Money, 3); // 60 - 50
     }
 
+    // -- Flavor --
+
+    [Fact]
+    public void Flavor_TemplatesAreFilled()
+    {
+        string filled = Flavor.Fill("Siphoned ${money} out of {target}",
+                                    target: "bank", money: 42.5, xp: 3);
+        Assert.Equal("Siphoned $42,5 out of bank", filled);
+    }
+
+    [Fact]
+    public void Flavor_PickHandlesEmptyPool()
+    {
+        Assert.Equal("", Flavor.Pick(new List<string>()));
+    }
+
+    [Fact]
+    public void DefaultContent_IncludesFlavorPools()
+    {
+        var content = Content();
+        Assert.NotEmpty(content.Flavor.HackStart);
+        Assert.NotEmpty(content.Flavor.HackComplete);
+        Assert.NotEmpty(content.Flavor.Idle);
+    }
+
     // -- Save / load & offline --
 
     [Fact]

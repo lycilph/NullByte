@@ -30,11 +30,22 @@ public sealed record PerkDef(
     string Description,
     int MaxLevel);
 
+/// <summary>
+/// Terminal flavor templates. Placeholders: {target}, {money}, {xp}.
+/// Theme is content, not code — rewrite these in content.json to re-skin
+/// the game without touching the engine.
+/// </summary>
+public sealed record FlavorContent(
+    List<string> HackStart,
+    List<string> HackComplete,
+    List<string> Idle);
+
 public sealed class GameContent
 {
     public List<TargetDef> Targets { get; init; } = [];
     public List<UpgradeDef> Upgrades { get; init; } = [];
     public List<PerkDef> Perks { get; init; } = [];
+    public FlavorContent Flavor { get; init; } = new([], [], []);
 
     public TargetDef? FindTarget(string id) => Targets.Find(t => t.Id == id);
     public UpgradeDef? FindUpgrade(string id) => Upgrades.Find(u => u.Id == id);

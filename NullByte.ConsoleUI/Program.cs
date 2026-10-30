@@ -7,12 +7,29 @@ namespace NullByte.ConsoleUI;
 
 internal class Program
 {
-    private static readonly object ConsoleLock = new();
+    private static readonly Random bootRng = new();
+    private static readonly object consoleLock = new();
 
     static async Task Main()
     {
         Console.WriteLine("=== NULLBYTE ===");
-        Console.WriteLine("A hack, a tick, a dollar.\n");
+        Console.WriteLine(@"
+      ___           ___           ___       ___       ___           ___           ___           ___     
+     /\__\         /\__\         /\__\     /\__\     /\  \         |\__\         /\  \         /\  \    
+    /::|  |       /:/  /        /:/  /    /:/  /    /::\  \        |:|  |        \:\  \       /::\  \   
+   /:|:|  |      /:/  /        /:/  /    /:/  /    /:/\:\  \       |:|  |         \:\  \     /:/\:\  \  
+  /:/|:|  |__   /:/  /  ___   /:/  /    /:/  /    /::\~\:\__\      |:|__|__       /::\  \   /::\~\:\  \ 
+ /:/ |:| /\__\ /:/__/  /\__\ /:/__/    /:/__/    /:/\:\ \:|__|     /::::\__\     /:/\:\__\ /:/\:\ \:\__\
+ \/__|:|/:/  / \:\  \ /:/  / \:\  \    \:\  \    \:\~\:\/:/  /    /:/~~/~       /:/  \/__/ \:\~\:\ \/__/
+     |:/:/  /   \:\  /:/  /   \:\  \    \:\  \    \:\ \::/  /    /:/  /        /:/  /       \:\ \:\__\  
+     |::/  /     \:\/:/  /     \:\  \    \:\  \    \:\/:/  /     \/__/         \/__/         \:\ \/__/  
+     /:/  /       \::/  /       \:\__\    \:\__\    \::/__/                                   \:\__\    
+     \/__/         \/__/         \/__/     \/__/     ~~                                        \/__/\n");
+        BootLine("booting rig", 21);
+        BootLine("establishing tunnel", 13);
+        BootLine("wiping fingerprints", 13);
+        BootLine("loading contacts", 16);
+        Console.WriteLine();
 
         var content = ContentLoader.Load();
 
@@ -65,7 +82,7 @@ internal class Program
                 long firstKept = total - log.Count;      // absolute index of log[0]
                 long from = Math.Max(nextEvent, firstKept);
 
-                lock (ConsoleLock)
+                lock (consoleLock)
                 {
                     for (long i = from; i < total; i++)
                         Console.WriteLine("  " + log[(int)(i - firstKept)]);
@@ -80,7 +97,7 @@ internal class Program
         bool running = true;
         while (running)
         {
-            Console.Write("> ");
+            Console.Write("nullbyte@rig:~$ ");
             string? line = Console.ReadLine();
             if (line is null)
                 break;
@@ -89,7 +106,7 @@ internal class Program
             if (args.Length == 0)
                 continue;
 
-            lock (ConsoleLock)
+            lock (consoleLock)
             {
                 switch (args[0].ToLowerInvariant())
                 {
@@ -162,6 +179,26 @@ internal class Program
 
         Console.WriteLine("Saved. Bye.");
         await Task.Delay(500);
+    }
+
+    /// <summary>
+    /// Types a boot line dot by dot with a random delay per dot, so the rig
+    /// feels like it's actually churning. Occasional longer pauses make it
+    /// feel organic rather than metronomic.
+    /// </summary>
+    private static void BootLine(string label, int dotCount)
+    {
+        Console.Write($"{label} ");
+        for (int i = 0; i < dotCount; i++)
+        {
+            Console.Write('.');
+            int delay = bootRng.Next(20, 80);
+            if (bootRng.Next(10) == 0)
+                delay += bootRng.Next(150, 400); // rare hiccup
+            Thread.Sleep(delay);
+        }
+        Thread.Sleep(bootRng.Next(60, 180));      // beat before OK
+        Console.Write(" [ OK ]\n");
     }
 
     private static void PrintHelp()

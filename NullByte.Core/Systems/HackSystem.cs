@@ -62,10 +62,14 @@ public static class HackSystem
             MoneyReward = t.MoneyReward * (1 + 0.1 * s.PerkLevels.GetValueOrDefault("ransom")),
             XpReward = t.XpReward * (1 + 0.1 * s.PerkLevels.GetValueOrDefault("datamine")),
         });
-        s.Log($"Hack started on {t.Name} ({duration} ticks).");
+
+        string flavor = Flavor.Pick(c.Flavor.HackStart);
+        s.Log(flavor.Length == 0
+            ? $"Hack started on {t.Name} ({duration} ticks)."
+            : $"{Flavor.Fill(flavor, target: t.Name)} ({duration} ticks)");
     }
 
-    public static void Tick(GameState s)
+    public static void Tick(GameState s, GameContent c)
     {
         for (int i = s.ActiveHacks.Count - 1; i >= 0; i--)
         {
@@ -75,7 +79,12 @@ public static class HackSystem
             {
                 s.Money += h.MoneyReward;
                 s.Xp += h.XpReward;
-                s.Log($"Hack on {h.TargetName} complete: +${h.MoneyReward:0.##}, +{h.XpReward:0.#} XP");
+
+                string flavor = Flavor.Pick(c.Flavor.HackComplete);
+                s.Log(flavor.Length == 0
+                    ? $"Hack on {h.TargetName} complete: +${h.MoneyReward:0.##}, +{h.XpReward:0.#} XP"
+                    : Flavor.Fill(flavor, target: h.TargetName, money: h.MoneyReward, xp: h.XpReward));
+
                 s.ActiveHacks.RemoveAt(i);
             }
         }

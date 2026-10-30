@@ -6,12 +6,6 @@ public static class ContentLoader
 {
     public const string FileName = "content.json";
 
-    // Case-insensitive lets the JSON use camelCase while records use PascalCase.
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNameCaseInsensitive = true,
-    };
-
     /// <summary>Loads content.json if present, otherwise the built-in default.</summary>
     public static GameContent Load()
         => File.Exists(FileName) ? FromJson(File.ReadAllText(FileName))
@@ -19,7 +13,9 @@ public static class ContentLoader
 
     public static GameContent FromJson(string json)
     {
-        var content = JsonSerializer.Deserialize<GameContent>(json, Options)
+        // Case-insensitive lets the JSON use camelCase while records use PascalCase.
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var content = JsonSerializer.Deserialize<GameContent>(json, options)
             ?? throw new InvalidContentException("Empty or invalid content JSON");
         content.Validate();
         return content;
@@ -59,7 +55,31 @@ public static class ContentLoader
     { ""id"": ""datamine"",  ""name"": ""Data Mining"",   ""description"": ""+10% XP gain per level"",         ""maxLevel"": 10 },
     { ""id"": ""scavenger"", ""name"": ""Scavenger"",     ""description"": ""+10% botnet income per level"",   ""maxLevel"": 10 },
     { ""id"": ""multitask"", ""name"": ""Multitasking"",  ""description"": ""+1 hack slot per level"",         ""maxLevel"": 3 }
-  ]
+  ],
+  ""flavor"": {
+    ""hackStart"": [
+      ""Routing through {target} — proxy chain established"",
+      ""Injecting payload into {target}"",
+      ""Scanning {target} for open ports... found 3"",
+      ""Social-engineering the admin of {target}"",
+      ""Squatting on {target}'s maintenance backdoor""
+    ],
+    ""hackComplete"": [
+      ""Root shell on {target} — dumped records worth ${money} ({xp} XP)"",
+      ""{target} owned. Credentials sold for ${money} ({xp} XP)"",
+      ""Siphoned ${money} out of {target} ({xp} XP)"",
+      ""Backdoor planted on {target}. Extracted ${money} and {xp} XP""
+    ],
+    ""idle"": [
+      ""A rival crew pinged your node. They moved on."",
+      ""Your botnet nodes check in. All quiet."",
+      ""ISP throttling detected in your sector."",
+      ""You spot a watcher in IRC. Probably nothing."",
+      ""Rain on the window. The rig hums along."",
+      ""Someone is port-scanning the neighborhood router."",
+      ""The vending machine downstairs is out of energy drinks again.""
+    ]
+  }
 }
 ";
 }

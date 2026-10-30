@@ -30,14 +30,17 @@ public sealed class GameSession
     public void Submit(IGameCommand command) => inbox.Enqueue(command);
 
     /// <summary>Advance exactly one tick. The only place state mutates.</summary>
-    public void Tick()
+    public void Tick(bool isFastforward = false)
     {
         while (inbox.TryDequeue(out var cmd))
             cmd.Apply(State, Content);
         
-        HackSystem.Tick(State);
+        HackSystem.Tick(State, Content);
         EconomySystem.Tick(State);
         ProgressionSystem.Tick(State);
+
+        if (!isFastforward)
+            AtmosphereSystem.Tick(State, Content);
 
         State.GameTick++;
     }
@@ -49,6 +52,6 @@ public sealed class GameSession
     public void FastForward(long ticks)
     {
         for (long i = 0; i < ticks; i++)
-            Tick();
+            Tick(true);
     }
 }
