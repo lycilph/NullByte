@@ -1,4 +1,6 @@
-﻿namespace NullByte.Core;
+﻿using System.Text.Json.Serialization;
+
+namespace NullByte.Core;
 
 /// <summary>
 /// All mutable game data. Systems read and write this; the UI never touches
@@ -26,6 +28,12 @@ public sealed class GameState
     /// <summary>Hacks currently running, with rewards frozen at start time.</summary>
     public List<ActiveHack> ActiveHacks { get; internal set; } = [];
     
+    /// <summary>Lifetime totals for the stats page and achievement checks.</summary>
+    public GameStats Stats { get; internal set; } = new();
+
+    /// <summary>Ids of earned achievements.</summary>
+    public HashSet<string> Achievements { get; internal set; } = [];
+
     /// <summary>
     /// Total events ever logged. The log list is a trimmed window, so a
     /// reader must track this total to know which entries it has already
@@ -54,4 +62,15 @@ public sealed class ActiveHack
     public int TotalTicks { get; init; }
     public double MoneyReward { get; init; }
     public double XpReward { get; init; }
+}
+
+/// <summary>Lifetime counters; serialized with the save.</summary>
+public sealed class GameStats
+{
+    [JsonInclude] public int TotalHacks { get; internal set; }
+    [JsonInclude] public double MoneyEarned { get; internal set; }
+    [JsonInclude] public int UpgradesBought { get; internal set; }
+
+    /// <summary>Completed hacks per target id, e.g. ["city-bank"] = 12.</summary>
+    [JsonInclude] public Dictionary<string, int> HacksPerTarget { get; internal set; } = [];
 }

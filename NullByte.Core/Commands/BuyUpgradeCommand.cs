@@ -35,6 +35,9 @@ public sealed record BuyUpgradeCommand(string UpgradeId) : IGameCommand
 
         state.Money -= cost;
         state.UpgradeLevels[def.Id] = owned + 1;
+
+        state.Stats.UpgradesBought++;
+
         state.Log($"Bought {def.Name} level {owned + 1} for ${cost:0.##}.");
     }
 }

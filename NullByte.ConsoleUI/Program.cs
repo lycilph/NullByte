@@ -147,6 +147,14 @@ internal class Program
                         PrintStatus(session);
                         break;
 
+                    case "stats":
+                        PrintStats(session);
+                        break;
+
+                    case "achievements":
+                        PrintAchievements(session);
+                        break;
+
                     case "save":
                         SaveSystem.Save(session.State);
                         Console.WriteLine("Saved.");
@@ -201,9 +209,38 @@ internal class Program
         Console.Write(" [ OK ]\n");
     }
 
+    private static void PrintAchievements(GameSession session)
+    {
+        var s = session.State;
+        var c = session.Content;
+        Console.WriteLine($"ACHIEVEMENTS — {s.Achievements.Count}/{c.Achievements.Count} earned");
+        foreach (var a in c.Achievements)
+        {
+            string mark = s.Achievements.Contains(a.Id) ? "[x]" : "[ ]";
+            Console.WriteLine($"  {mark} {a.Name,-20} {a.Description}");
+        }
+    }
+
+    private static void PrintStats(GameSession session)
+    {
+        var s = session.State;
+        var time = TimeSpan.FromMilliseconds(s.GameTick * GameSession.TickMs);
+
+        Console.WriteLine($"== STATS ==");
+        Console.WriteLine($"  Time played:   {time:hh\\:mm\\:ss}  ({s.GameTick} ticks)");
+        Console.WriteLine($"  Hacks done:    {s.Stats.TotalHacks}");
+        Console.WriteLine($"  Money earned:  ${s.Stats.MoneyEarned:0.##} (current: ${s.Money:0.##})");
+        Console.WriteLine($"  Upgrades:      {s.Stats.UpgradesBought} bought");
+        Console.WriteLine($"  Perks:         {s.PerkLevels.Values.Sum()} levels trained");
+
+        var favorites = s.Stats.HacksPerTarget.OrderByDescending(kv => kv.Value).Take(3).ToList();
+        if (favorites.Count > 0)
+            Console.WriteLine($"  Favorite marks: {string.Join(", ", favorites.Select(kv => $"{kv.Key} x{kv.Value}"))}");
+    }
+
     private static void PrintHelp()
     {
-        Console.WriteLine("Commands: hack <id> | buy <id> | skill <id> | targets | upgrades | perks | status | save | quit | help");
+        Console.WriteLine("Commands: hack <id> | buy <id> | skill <id> | targets | upgrades | perks | achievements | stats | status | save | quit | help");
         Console.WriteLine("Start here: 'targets' then 'hack webmail'\n");
     }
 

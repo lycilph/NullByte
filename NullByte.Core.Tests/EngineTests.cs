@@ -231,6 +231,66 @@ public class EngineTests
         Assert.NotEmpty(content.Flavor.Idle);
     }
 
+    // -- Achievements & stats --
+
+    [Fact]
+    public void Stats_TrackHackCompletion()
+    {
+        var session = Session();
+        session.Submit(new StartHackCommand("webmail"));
+        session.FastForward(31);
+
+        Assert.Equal(1, session.State.Stats.TotalHacks);
+        Assert.Equal(1, session.State.Stats.HacksPerTarget["webmail"]);
+        Assert.Equal(15.0, session.State.Stats.MoneyEarned, 3);
+    }
+
+    [Fact]
+    public void Achievement_AwardedExactlyOnce()
+    {
+        var session = Session();
+        session.Submit(new StartHackCommand("webmail"));
+        session.FastForward(31);
+
+        Assert.Contains("first-blood", session.State.Achievements);
+        Assert.Single(session.State.Achievements);
+        Assert.Contains(session.State.EventLog, e => e.Contains("First Blood"));
+    }
+
+    [Fact]
+    public void TargetAchievement_RequiresSpecificTarget()
+    {
+        var session = Session();
+        session.State.Level = 10;
+        session.Submit(new StartHackCommand("webmail"));
+        session.FastForward(31);
+
+        Assert.DoesNotContain("bank-job", session.State.Achievements);
+    }
+
+    [Fact]
+    public void StatsAndAchievements_SurviveRoundTrip()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"nbtest-{Guid.NewGuid():N}.json");
+        try
+        {
+            var session = Session();
+            session.Submit(new StartHackCommand("webmail"));
+            session.FastForward(31);
+            SaveSystem.Save(session.State, path);
+
+            var loaded = SaveSystem.Load(path);
+            Assert.NotNull(loaded);
+
+            Assert.Equal(1, loaded!.Value.State.Stats.TotalHacks);
+            Assert.Contains("first-blood", loaded.Value.State.Achievements);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     // -- Save / load & offline --
 
     [Fact]

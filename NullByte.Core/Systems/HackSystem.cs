@@ -80,6 +80,12 @@ public static class HackSystem
                 s.Money += h.MoneyReward;
                 s.Xp += h.XpReward;
 
+                // Update stats
+                s.Stats.TotalHacks++;
+                s.Stats.MoneyEarned += h.MoneyReward;
+                s.Stats.HacksPerTarget[h.TargetId] =
+                    s.Stats.HacksPerTarget.GetValueOrDefault(h.TargetId) + 1;
+
                 string flavor = Flavor.Pick(c.Flavor.HackComplete);
                 s.Log(flavor.Length == 0
                     ? $"Hack on {h.TargetName} complete: +${h.MoneyReward:0.##}, +{h.XpReward:0.#} XP"

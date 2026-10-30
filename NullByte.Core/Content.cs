@@ -31,6 +31,18 @@ public sealed record PerkDef(
     int MaxLevel);
 
 /// <summary>
+/// Achievement: unlocks when StatValue(state, Stat) reaches Goal.
+/// Stat keys: "hacks", "moneyEarned", "level", "upgradesBought",
+/// "targetHacks:&lt;targetId&gt;".
+/// </summary>
+public sealed record AchievementDef(
+    string Id,
+    string Name,
+    string Description,
+    string Stat,
+    double Goal);
+
+/// <summary>
 /// Terminal flavor templates. Placeholders: {target}, {money}, {xp}.
 /// Theme is content, not code — rewrite these in content.json to re-skin
 /// the game without touching the engine.
@@ -45,6 +57,7 @@ public sealed class GameContent
     public List<TargetDef> Targets { get; init; } = [];
     public List<UpgradeDef> Upgrades { get; init; } = [];
     public List<PerkDef> Perks { get; init; } = [];
+    public List<AchievementDef> Achievements { get; init; } = [];
     public FlavorContent Flavor { get; init; } = new([], [], []);
 
     public TargetDef? FindTarget(string id) => Targets.Find(t => t.Id == id);

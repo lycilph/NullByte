@@ -18,6 +18,8 @@ public sealed class SaveData
     public long GameTick { get; set; }
     public Dictionary<string, int> UpgradeLevels { get; set; } = [];
     public Dictionary<string, int> PerkLevels { get; set; } = [];
+    public GameStats? Stats { get; set; }
+    public List<string> Achievements { get; set; } = [];
     public List<ActiveHack> ActiveHacks { get; set; } = [];
 }
 
@@ -27,7 +29,7 @@ public static class SaveSystem
     public const string SaveFile = "save.json";
     public static readonly TimeSpan OfflineCap = TimeSpan.FromHours(8);
 
-    private static readonly JsonSerializerOptions Options = new()
+    private static readonly JsonSerializerOptions options = new()
     {
         WriteIndented = true,
     };
@@ -45,9 +47,11 @@ public static class SaveSystem
             GameTick = state.GameTick,
             UpgradeLevels = new Dictionary<string, int>(state.UpgradeLevels),
             PerkLevels = new Dictionary<string, int>(state.PerkLevels),
+            Stats = state.Stats,
+            Achievements = [.. state.Achievements],
             ActiveHacks = [.. state.ActiveHacks],
         };
-        File.WriteAllText(path, JsonSerializer.Serialize(data, Options));
+        File.WriteAllText(path, JsonSerializer.Serialize(data, options));
     }
 
     /// <summary>
@@ -81,6 +85,8 @@ public static class SaveSystem
             GameTick = data.GameTick,
             UpgradeLevels = data.UpgradeLevels ?? [],
             PerkLevels = data.PerkLevels ?? [],
+            Stats = data.Stats ?? new GameStats(),
+            Achievements = data.Achievements?.ToHashSet() ?? [],
             ActiveHacks = data.ActiveHacks ?? [],
         };
 

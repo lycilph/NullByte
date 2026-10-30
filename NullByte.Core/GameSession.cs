@@ -38,6 +38,7 @@ public sealed class GameSession
         HackSystem.Tick(State, Content);
         EconomySystem.Tick(State);
         ProgressionSystem.Tick(State);
+        AchievementsSystem.Tick(State, Content);
 
         if (!isFastforward)
             AtmosphereSystem.Tick(State, Content);
