@@ -233,7 +233,7 @@ internal class Program
                     case "run":
                         if (args.Length < 2)
                         {
-                            Console.WriteLine("Usage: run <script-name>  (runs scripts/<name>.cs)");
+                            Console.WriteLine("Usage: run <script-name> [parameters] (runs scripts/<name>.cs)");
                         }
                         else if (scripting.Find(args[1])?.IsRunning == true)
                         {
@@ -245,10 +245,12 @@ internal class Program
                         }
                         else
                         {
+                            var script_parameters = args[2..];
+
                             // Retire any stopped/errored instance with this name
                             // so the list doesn't accumulate duplicates.
                             scripting.Stop(args[1]);
-                            pendingRun = StartScriptAsync(scripting, args[1]);
+                            pendingRun = StartScriptAsync(scripting, args[1], script_parameters);
                         }
                         break;
 
@@ -309,11 +311,19 @@ internal class Program
     /// ConsoleLock (Roslyn compile takes real time) and re-acquires the lock
     /// only to report the outcome.
     /// </summary>
-    private static async Task StartScriptAsync(ScriptingSystem scripting, string name)
+    private static async Task StartScriptAsync(ScriptingSystem scripting, string name, string[] parameters)
     {
         try
         {
-            await scripting.StartAsync(name, File.ReadAllText(ScriptPersistence.SourcePath(name)));
+            ScriptData? data = null;
+            if (parameters.Length > 0)
+            {
+                data = new ScriptData();
+                for (int i = 0; i < parameters.Length; i++)
+                    data.SetStr($"param{i}", parameters[i]);
+            }
+
+            await scripting.StartAsync(name, File.ReadAllText(ScriptPersistence.SourcePath(name)), data);
             lock (consoleLock) { Console.WriteLine($"'{name}' running."); }
         }
         catch (ScriptCompileException ex)
@@ -488,7 +498,7 @@ internal class Program
 
     private static void PrintHelp()
     {
-        Console.WriteLine("Commands: hack <id> | buy <id> | skill <id> | accept <id> | implant <id> | prestige [confirm] | run <name> | stop <name> | scripts | targets | upgrades | perks | contracts | implants | achievements | stats | status | save | quit | help");
+        Console.WriteLine("Commands: hack <id> | buy <id> | skill <id> | accept <id> | implant <id> | prestige [confirm] | run <name> [parameters] | stop <name> | scripts | targets | upgrades | perks | contracts | implants | achievements | stats | status | save | quit | help");
         Console.WriteLine("Scripts: write scripts/<name>.cs (C#, globals expose 'api'), then 'run <name>' — e.g. await api.Hack(\"webmail\");"); 
         Console.WriteLine("Start here: 'targets' then 'hack webmail'\n");
     }
