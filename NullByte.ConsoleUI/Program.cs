@@ -61,6 +61,7 @@ internal class Program
         // off the front. Mapping: entry i lives at log[i - (total - Count)].
         long nextEvent = 0;
         int handledBurns = session.State.Burns;
+        var scriptCursors = new Dictionary<string, long>();
         var printer = Task.Run(async () =>
         {
             while (!cts.IsCancellationRequested)
@@ -92,6 +93,28 @@ internal class Program
                         Console.WriteLine("  " + log[(int)(i - firstKept)]);
                 }
                 nextEvent = total;
+
+                // -- Script output (same cursor pattern, per script) --
+                // First sight of a script: skip its backlog, only live lines.
+                foreach (var script in scripting.Scripts)
+                {
+                    if (!scriptCursors.TryGetValue(script.Name, out long seen))
+                    {
+                        scriptCursors[script.Name] = script.OutputTotal;
+                        continue;
+                    }
+
+                    long sTotal = script.OutputTotal;
+                    long sFirst = sTotal - script.Output.Count;
+                    long sFrom = Math.Max(seen, sFirst);
+
+                    lock (consoleLock)
+                    {
+                        for (long i = sFrom; i < sTotal; i++)
+                            Console.WriteLine("  " + script.Output[(int)(i - sFirst)]);
+                    }
+                    scriptCursors[script.Name] = sTotal;
+                }
             }
         });
 
@@ -109,6 +132,11 @@ internal class Program
             var args = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (args.Length == 0)
                 continue;
+
+            // 'run' compiles asynchronously (Roslyn can take a second); the
+            // compile happens OUTSIDE ConsoleLock so the UI stays live. Every
+            // other command is synchronous and lock-protected.
+            Task? pendingRun = null;
 
             lock (consoleLock)
             {
@@ -188,54 +216,37 @@ internal class Program
                             session.Submit(new AcceptContractCommand(args[1]));
                         break;
 
-                    // TODO: Implement this
                     case "run":
-                        Console.WriteLine("Not implemented yet.");
-                        //if (args.Length < 2)
-                        //{
-                        //    Console.WriteLine("Usage: run <script-name>  (runs scripts/<name>.cs)");
-                        //}
-                        //else if (scripting.Find(args[1])?.IsRunning == true)
-                        //{
-                        //    Console.WriteLine($"'{args[1]}' is already running. 'stop {args[1]}' first.");
-                        //}
-                        //else if (!File.Exists(ScriptPersistence.SourcePath(args[1])))
-                        //{
-                        //    Console.WriteLine($"No file at {ScriptPersistence.SourcePath(args[1])}");
-                        //}
-                        //else
-                        //{
-                        //    // Retire any stopped/errored instance with this name
-                        //    // so the list doesn't accumulate duplicates.
-                        //    scripting.Stop(args[1]);
-                        //    pendingRun = StartScriptAsync(scripting, args[1]);
-                        //}
+                        if (args.Length < 2)
+                        {
+                            Console.WriteLine("Usage: run <script-name>  (runs scripts/<name>.cs)");
+                        }
+                        else if (scripting.Find(args[1])?.IsRunning == true)
+                        {
+                            Console.WriteLine($"'{args[1]}' is already running. 'stop {args[1]}' first.");
+                        }
+                        else if (!File.Exists(ScriptPersistence.SourcePath(args[1])))
+                        {
+                            Console.WriteLine($"No file at {ScriptPersistence.SourcePath(args[1])}");
+                        }
+                        else
+                        {
+                            // Retire any stopped/errored instance with this name
+                            // so the list doesn't accumulate duplicates.
+                            scripting.Stop(args[1]);
+                            pendingRun = StartScriptAsync(scripting, args[1]);
+                        }
                         break;
 
-                    // TODO: Implement this
                     case "stop":
-                        Console.WriteLine("Not implemented yet.");
-                        //if (args.Length < 2)
-                        //    Console.WriteLine("Usage: stop <script-name>");
-                        //else
-                        //    scripting.Stop(args[1]);
+                        if (args.Length < 2)
+                            Console.WriteLine("Usage: stop <script-name>");
+                        else
+                            scripting.Stop(args[1]);
                         break;
 
-                    // TODO: Implement this
                     case "scripts":
-                        Console.WriteLine("Not implemented yet.");
-                        //if (scripting.Scripts.Count == 0)
-                        //{
-                        //    Console.WriteLine("No scripts. Write scripts/<name>.cs, then 'run <name>'.");
-                        //    break;
-                        //}
-                        //foreach (var s in scripting.Scripts)
-                        //{
-                        //    string status = s.IsRunning ? "RUNNING"
-                        //                  : s.Error is not null ? "ERROR"
-                        //                  : "STOPPED";
-                        //    Console.WriteLine($"  {s.Name,-16} [{status}]");
-                        //}
+                        PrintScripts(scripting);
                         break;
 
                     case "save":
@@ -257,6 +268,11 @@ internal class Program
                         break;
                 }
             }
+
+            // Await the 'run' outside the lock so the compile doesn't freeze
+            // the printer/loop tasks.
+            if (pendingRun is not null)
+                await pendingRun;
         }
 
         cts.Cancel();
@@ -270,6 +286,46 @@ internal class Program
 
         Console.WriteLine("Saved. Bye.");
         await Task.Delay(500);
+    }
+
+    /// <summary>
+    /// Compiles + starts a script from scripts/<name>.cs. Runs outside
+    /// ConsoleLock (Roslyn compile takes real time) and re-acquires the lock
+    /// only to report the outcome.
+    /// </summary>
+    private static async Task StartScriptAsync(ScriptingSystem scripting, string name)
+    {
+        try
+        {
+            await scripting.StartAsync(name, File.ReadAllText(ScriptPersistence.SourcePath(name)));
+            lock (consoleLock) { Console.WriteLine($"'{name}' running."); }
+        }
+        catch (ScriptCompileException ex)
+        {
+            lock (consoleLock) { Console.WriteLine("COMPILE ERROR:\n" + ex.Message); }
+        }
+        catch (Exception ex)
+        {
+            lock (consoleLock) { Console.WriteLine($"Can't start '{name}': {ex.Message}"); }
+        }
+    }
+
+    private static void PrintScripts(ScriptingSystem scripting)
+    {
+        if (scripting.Scripts.Count == 0)
+        {
+            Console.WriteLine("No scripts. Write scripts/<name>.cs, then 'run <name>'.");
+        }
+        else
+        {
+            foreach (var s in scripting.Scripts)
+            {
+                string status = s.IsRunning ? "RUNNING"
+                              : s.Error is not null ? "ERROR"
+                              : "STOPPED";
+                Console.WriteLine($"  {s.Name,-16} [{status}]");
+            }
+        }
     }
 
     /// <summary>

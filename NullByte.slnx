@@ -1,6 +1,13 @@
 <Solution>
   <Folder Name="/Docs/">
+    <File Path="DevJournal.md" />
     <File Path="GameDesign.md" />
+  </Folder>
+  <Folder Name="/Temp/">
+    <File Path="api.cs" />
+    <File Path="prog.cs" />
+    <File Path="scripting.cs" />
+    <File Path="test_script.cs" />
   </Folder>
   <Project Path="NullByte.ConsoleUI/NullByte.ConsoleUI.csproj" Id="cdcac8a8-11b5-4852-8078-0f43ce7d1fc4" />
   <Project Path="NullByte.Core.Tests/NullByte.Core.Tests.csproj" Id="837290d4-db23-4ba4-9318-db2bd159a073" />
