@@ -38,6 +38,20 @@ internal class Program
         
         // -- Scripting: Roslyn runtime + restart persisted scripts --
         var scripting = new ScriptingSystem(session);
+        var loadTasks = new List<Task>();
+        foreach (var entry in ScriptPersistence.Load())
+        {
+            if (!entry.Running)
+                continue;
+            // Compiles can be slow (Roslyn warm-up); do them before the
+            // banner, then the loop ticks them like any other script.
+            loadTasks.Add(scripting.StartAsync(entry.Name, entry.Source, entry.Data));
+        }
+        if (loadTasks.Count > 0)
+        {
+            await Task.WhenAll(loadTasks);
+            Console.WriteLine($"Restarted {loadTasks.Count} script(s): {string.Join(", ", scripting.Scripts.Select(s => s.Name))}");
+        }
 
         // -- The game loop: 100 ms fixed ticks on a background task --
         var cts = new CancellationTokenSource();
@@ -282,7 +296,9 @@ internal class Program
             printer.Wait();
         }
         catch (AggregateException) { }
+        
         SaveSystem.Save(session.State);
+        ScriptPersistence.Save(scripting.Scripts);
 
         Console.WriteLine("Saved. Bye.");
         await Task.Delay(500);

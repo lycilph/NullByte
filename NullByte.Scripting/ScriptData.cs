@@ -3,8 +3,8 @@
 /// <summary>Key-value store for durable script state. Serialized as JSON.</summary>
 public sealed class ScriptData
 {
-    public Dictionary<string, double> Numbers { get; set; } = new();
-    public Dictionary<string, string> Strings { get; set; } = new();
+    public Dictionary<string, double> Numbers { get; set; } = [];
+    public Dictionary<string, string> Strings { get; set; } = [];
 
     public double GetNum(string key, double def = 0)
         => Numbers.TryGetValue(key, out var v) ? v : def;
