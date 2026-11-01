@@ -45,7 +45,7 @@ public sealed class ScriptingSystem(GameSession session)
         //// System.Runtime + this assembly, add a banned-pattern analyzer.
         //// Scripts see no file/network/console access with this usings set.
 
-        var compiled = CSharpScript.Create(source, options, typeof(NullbyteApi));
+        var compiled = CSharpScript.Create(source, options, typeof(ScriptGlobals));
         var diagnostics = compiled.Compile();
         var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         if (errors.Count > 0)
@@ -55,12 +55,13 @@ public sealed class ScriptingSystem(GameSession session)
         if (data is not null)
             script.Data = data;
         var api = new NullbyteApi(this, session, script);
+        var globals = new ScriptGlobals(api);
 
         script.Execution = Task.Run(async () =>
         {
             try
             {
-                await compiled.RunAsync(api);
+                await compiled.RunAsync(globals);
                 script.AddOutput("...finished.");
             }
             catch (ScriptStoppedException)
