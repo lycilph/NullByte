@@ -1,5 +1,7 @@
-﻿using NullByte.Core;
+﻿using Microsoft.CodeAnalysis.Scripting;
+using NullByte.Core;
 using NullByte.Core.Commands;
+using NullByte.Core.Systems;
 
 namespace NullByte.Scripting;
 
@@ -34,11 +36,34 @@ public sealed class NullbyteApi
     public double ZeroDays => session.State.ZeroDays;
     public long Ticks => session.State.GameTick;
     public int ActiveJobs => session.State.ActiveJobs.Count;
+    public int MaxConcurrentJobs => HackSystem.MaxConcurrentHacks(session.State);
+
+    // -- Mark state (Phase 4.5) ----------------------------------------------
+
+    /// <summary>Live money pool on a mark. Unknown target id → 0.</summary>
+    public double TargetMoney(string targetId)
+        => session.Content.FindTarget(targetId) is { } t
+            ? HackSystem.StateFor(session.State, t).CurrentMoney : 0;
+
+    /// <summary>Current heat on a mark. Unknown target id → 0.</summary>
+    public double TargetHeat(string targetId)
+        => session.Content.FindTarget(targetId) is { } t
+            ? HackSystem.StateFor(session.State, t).Heat : 0;
+
+    /// <summary>Max drainable pool of a mark. Unknown target id → 0.</summary>
+    public double TargetMax(string targetId)
+        => session.Content.FindTarget(targetId) is { } t
+            ? HackSystem.MaxMoneyOf(t) : 0;
 
     // -- Actions (emit engine commands; resolve at the next tick) ----------
 
     public Task Hack(string targetId)
         => system.Action(script, () => session.Submit(new StartHackCommand(targetId)));
+    public Task Grow(string targetId)
+        => system.Action(script, () => session.Submit(new GrowTargetCommand(targetId)));
+
+    public Task Scrub(string targetId)
+        => system.Action(script, () => session.Submit(new ScrubTargetCommand(targetId)));
 
     public Task Buy(string upgradeId)
         => system.Action(script, () => session.Submit(new BuyUpgradeCommand(upgradeId)));

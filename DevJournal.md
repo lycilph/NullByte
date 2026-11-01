@@ -3,16 +3,17 @@
 ## 01-11-2026
 
 ### In Progress
-- Implement the new Hack/Grow/Scrub setup
+
 
 ### Done
 - Added the scriptglobals, so that all interaction goes through the api explicitly
 - Added tests for the scripting system
 - Split scripting tests into separate classes for better overview
+- Implemented the new Hack/Grow/Scrub setup
+- Fixed EngineTests (commented out now)
+- Fixed ScriptingTests (commented out now)
 
 ### Future
-- Fix EngineTests (commented out now)
-- Fix ScriptingTests (commented out now)
 - Clean up files (add a domain folder - gamestat + etc. in separate files)
 - Add a scan command (shows, current money, heat etc. for a given target)
 - Update stats (total grow and scrub jobs)
