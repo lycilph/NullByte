@@ -24,7 +24,14 @@ public sealed class SaveData
     public List<string> Achievements { get; set; } = [];
     public List<ContractOfferState> ContractOffers { get; set; } = [];
     public List<ActiveContractState> ActiveContracts { get; set; } = [];
-    public List<ActiveHack> ActiveHacks { get; set; } = [];
+    public List<ActiveJob> ActiveJobs { get; set; } = [];
+
+    /// <summary>
+    /// Nullable on purpose: saves from before Phase 4.5 lack it, and a
+    /// missing dict loads as fresh (fully stocked, cold) marks — the same
+    /// state a brand-new player sees, so no migration step is needed.
+    /// </summary>
+    public Dictionary<string, TargetState>? Targets { get; set; }
 }
 
 
@@ -57,7 +64,8 @@ public static class SaveSystem
             Achievements = [.. state.Achievements],
             ContractOffers = [.. state.ContractOffers],
             ActiveContracts = [.. state.ActiveContracts],
-            ActiveHacks = [.. state.ActiveHacks],
+            ActiveJobs = [.. state.ActiveJobs],
+            Targets = new Dictionary<string, TargetState>(state.Targets),
         };
         File.WriteAllText(path, JsonSerializer.Serialize(data, options));
     }
@@ -99,7 +107,8 @@ public static class SaveSystem
             Achievements = data.Achievements?.ToHashSet() ?? [],
             ContractOffers = data.ContractOffers ?? [],
             ActiveContracts = data.ActiveContracts ?? [],
-            ActiveHacks = data.ActiveHacks ?? [],
+            ActiveJobs = data.ActiveJobs ?? [],
+            Targets = data.Targets ?? [],
         };
 
         var elapsed = DateTimeOffset.UtcNow - data.SavedAtUtc;

@@ -31,9 +31,11 @@ public class EngineTests
         for (int i = 0; i < 31; i++) // 1 tick to apply + 30 duration
             session.Tick();
 
-        Assert.Empty(session.State.ActiveHacks);
-        Assert.Equal(15.0, session.State.Money, 3);
+        Assert.Empty(session.State.ActiveJobs);
+        // Phase 4.5: first hack steals 12% of the pool (webmail max = 8x15 = 120)
+        Assert.Equal(14.4, session.State.Money, 3);
         Assert.Equal(5.0, session.State.Xp, 3);
+        Assert.Equal(120 - 14.4, session.State.Targets["webmail"].CurrentMoney, 3);
     }
 
     [Fact]
@@ -43,7 +45,7 @@ public class EngineTests
         session.Submit(new StartHackCommand("city-bank")); // needs level 7
         session.Tick();
 
-        Assert.Empty(session.State.ActiveHacks);
+        Assert.Empty(session.State.ActiveJobs);
         Assert.Equal(0.0, session.State.Money, 3);
         Assert.Contains(session.State.EventLog, e => e.Contains("security too high"));
     }
@@ -59,7 +61,7 @@ public class EngineTests
         session.Submit(new StartHackCommand("corp-vpn"));
         session.Tick();
 
-        Assert.Empty(session.State.ActiveHacks);
+        Assert.Empty(session.State.ActiveJobs);
         Assert.Contains(session.State.EventLog, e => e.Contains("CPU level 5"));
     }
 
@@ -73,7 +75,7 @@ public class EngineTests
         session.Submit(new StartHackCommand("corp-vpn"));
         session.Tick();
 
-        Assert.Single(session.State.ActiveHacks);
+        Assert.Single(session.State.ActiveJobs);
     }
 
     // -- Skill tree --
@@ -123,17 +125,18 @@ public class EngineTests
 
         Assert.Equal(22, HackSystem.HackDuration(webmail, session.State)); // 30 * 0.97^10
     }
-    
+ 
     [Fact]
-    public void RansomPerk_BoostsReward()
+    public void RansomPerk_BoostsSteal()
     {
         var session = Session();
-        session.State.PerkLevels["ransom"] = 5; // +50% money
+        session.State.PerkLevels["ransom"] = 5; // +50% steal
 
         session.Submit(new StartHackCommand("webmail"));
-        session.Tick();
+        Forward(session, 31);
 
-        Assert.Equal(15 * 1.5, session.State.ActiveHacks[0].MoneyReward, 3);
+        // steal = 12% of 120, boosted 1.5x; resolves at completion now
+        Assert.Equal(14.4 * 1.5, session.State.Money, 3);
     }
 
     // -- Upgrades --
@@ -151,7 +154,7 @@ public class EngineTests
         session.Submit(new StartHackCommand("webmail")); // 4th should not fit
         session.Tick();
 
-        Assert.Equal(3, session.State.ActiveHacks.Count);
+        Assert.Equal(3, session.State.ActiveJobs.Count);
     }
 
     [Fact]
@@ -172,7 +175,7 @@ public class EngineTests
     {
         var session = Session();
         session.State.UpgradeLevels["botnet"] = 1; // 0.23/tick
-        session.FastForward(10);
+        Forward(session, 10);
 
         Assert.Equal(10 * 0.2 * 1.15, session.State.Money, 3);
     }
@@ -238,11 +241,11 @@ public class EngineTests
     {
         var session = Session();
         session.Submit(new StartHackCommand("webmail"));
-        session.FastForward(31);
+        Forward(session, 31);
 
         Assert.Equal(1, session.State.Stats.TotalHacks);
         Assert.Equal(1, session.State.Stats.HacksPerTarget["webmail"]);
-        Assert.Equal(15.0, session.State.Stats.MoneyEarned, 3);
+        Assert.Equal(14.4, session.State.Stats.MoneyEarned, 3);
     }
 
     [Fact]
@@ -250,7 +253,7 @@ public class EngineTests
     {
         var session = Session();
         session.Submit(new StartHackCommand("webmail"));
-        session.FastForward(31);
+        Forward(session, 31);
 
         Assert.Contains("first-blood", session.State.Achievements);
         Assert.Single(session.State.Achievements);
@@ -263,7 +266,7 @@ public class EngineTests
         var session = Session();
         session.State.Level = 10;
         session.Submit(new StartHackCommand("webmail"));
-        session.FastForward(31);
+        Forward(session, 31);
 
         Assert.DoesNotContain("bank-job", session.State.Achievements);
     }
@@ -276,7 +279,7 @@ public class EngineTests
         {
             var session = Session();
             session.Submit(new StartHackCommand("webmail"));
-            session.FastForward(31);
+            Forward(session, 31);
             SaveSystem.Save(session.State, path);
 
             var loaded = SaveSystem.Load(path);
@@ -300,6 +303,12 @@ public class EngineTests
         session.State.ContractOffers.Add(new ContractOfferState { DefId = defId });
     }
 
+    private static void Forward(GameSession session, long ticks)
+    {
+        for (long i = 0; i < ticks; i++)
+            session.Tick();
+    }
+
     [Fact]
     public void Contract_CompletesAndPaysBonus()
     {
@@ -311,18 +320,13 @@ public class EngineTests
         for (int i = 0; i < 5; i++)
         {
             session.Submit(new StartHackCommand("webmail"));
-            Forward(session, 31);
+            Forward(session, 50); // heat slows later hacks: duration 30 -> ~44
         }
-
+        
         Assert.Empty(session.State.ActiveContracts);
         Assert.Contains(session.State.EventLog, e => e.Contains("CONTRACT COMPLETE"));
-        Assert.Equal(5 * 15 + 500, session.State.Money, 3); // hack money + bonus
-    }
-
-    private static void Forward(GameSession session, long ticks)
-    {
-        for (long i = 0; i < ticks; i++)
-            session.Tick();
+        // geometric drain: 120 * (1 - 0.88^5) stolen across 5 hacks, + bonus
+        Assert.Equal(500 + 56.67, session.State.Money, 2);
     }
 
     [Fact]
@@ -412,6 +416,21 @@ public class EngineTests
     }
 
     [Fact]
+    public void Prestige_WipesTargetState()
+    {
+        var session = Session();
+        session.State.Level = 10;
+        session.Submit(new StartHackCommand("webmail"));
+        Forward(session, 31);
+        Assert.NotEmpty(session.State.Targets);
+
+        session.Submit(new PrestigeCommand());
+        session.Tick();
+
+        Assert.Empty(session.State.Targets); // fresh identity: cold, stocked marks
+    }
+
+    [Fact]
     public void Implant_CostsZeroDaysAndApplies()
     {
         var session = Session();
@@ -438,7 +457,115 @@ public class EngineTests
         Assert.Equal(250 * 8, session.State.Money, 3);
     }
 
+    // -- Mark heat & drain (Phase 4.5) --
+    
+    [Fact]
+    public void Heat_RisesPerHack_AndSlowsTheNext()
+    {
+        var session = Session();
+        var webmail = Content().FindTarget("webmail")!;
+
+        session.Submit(new StartHackCommand("webmail"));
+        Forward(session, 30); // job active every tick -> no decay yet
+
+        Assert.Equal(6.0, session.State.Targets["webmail"].Heat, 3);
+        Assert.Equal(34, HackSystem.HackDuration(webmail, session.State)); // 30 * 1.12
+    }
+
+    [Fact]
+    public void Heat_DecaysWhenIdle_ButNotWhileJobActive()
+    {
+        var session = Session();
+        session.Submit(new StartHackCommand("webmail"));
+        Forward(session, 30);
+
+        Assert.Equal(6.0, session.State.Targets["webmail"].Heat, 3); // no decay: job ran every tick
+        Forward(session, 60); // 6.0 - 60 * 0.1
+        Assert.True(session.State.Targets["webmail"].Heat < 0.01);
+    }
+
+    [Fact]
+    public void Drain_SecondHackStealsLess()
+    {
+        var session = Session();
+        session.Submit(new StartHackCommand("webmail"));
+        Forward(session, 31);
+        session.Submit(new StartHackCommand("webmail"));
+        Forward(session, 45); // hot mark: duration now 34, still fits
+
+        Assert.Equal(14.4 + 0.12 * 105.6, session.State.Money, 3);   // 14.4, then 12.672
+        Assert.Equal(120 * 0.88 * 0.88, session.State.Targets["webmail"].CurrentMoney, 3);
+    }
+
+    [Fact]
+    public void FailChance_CurveIsGatedAndCapped()
+    {
+        Assert.Equal(0.0, HackSystem.FailChance(0), 3);
+        Assert.Equal(0.0, HackSystem.FailChance(40), 3);  // starts strictly above 40
+        Assert.Equal(0.25, HackSystem.FailChance(70), 3);
+        Assert.Equal(0.5, HackSystem.FailChance(100), 3);  // cap
+        Assert.Equal(0.5, HackSystem.FailChance(500), 3);
+    }
+
+    [Fact]
+    public void Grow_RefillsPoolUpToMax()
+    {
+        var session = Session();
+        session.Submit(new StartHackCommand("webmail"));
+        Forward(session, 31); // pool 105.6, heat 6
+        
+        Assert.Equal(105.6, session.State.Targets["webmail"].CurrentMoney, 3); // capped at max
+
+        session.Submit(new GrowTargetCommand("webmail"));
+        Forward(session, 60); // grow duration = ceil(33.6 * 1.5) = 51
+
+        Assert.Equal(120.0, session.State.Targets["webmail"].CurrentMoney, 3); // capped at max
+    }
+
+    [Fact]
+    public void Scrub_CoolsHeat_WithFloorAtZero()
+    {
+        var session = Session();
+        session.State.Targets["webmail"] = new TargetState { CurrentMoney = 120, Heat = 60 };
+
+        session.Submit(new ScrubTargetCommand("webmail"));
+        Forward(session, 80); // duration round(30 * 2.2) = 66
+
+        // 60 - 35 = 25, minus a little idle decay after completion
+        Assert.InRange(session.State.Targets["webmail"].Heat, 20, 25);
+
+        // Floor: scrubbing an already-cold mark can't go below zero
+        session.State.Targets["webmail"].Heat = 10;
+        session.Submit(new ScrubTargetCommand("webmail"));
+        Forward(session, 80);
+        Assert.Equal(0.0, session.State.Targets["webmail"].Heat, 3);
+    }
+
+    [Fact]
+    public void GrowAndScrub_RespectLevelGates()
+    {
+        var session = Session();
+        session.Submit(new GrowTargetCommand("city-bank"));  // needs level 7
+        session.Submit(new ScrubTargetCommand("city-bank"));
+        session.Tick();
+
+        Assert.Empty(session.State.ActiveJobs);
+        Assert.Equal(2, session.State.EventLog.Count(e => e.Contains("security too high")));
+    }
+
     // -- Save / load & offline --
+
+    [Fact]
+    public void EventLog_KeepsCounting()
+    {
+        var session = Session();
+        for (int i = 0; i < 60; i++)
+            session.State.Log($"event {i}");
+
+        Assert.Equal(60, session.State.EventLog.Count);   // window is capped
+        session.State.EventLog.TryPeek(out var msg);
+        Assert.Contains("event 0", msg); // first
+    }
 
     [Fact]
     public void Save_RoundTrips()
@@ -458,7 +585,7 @@ public class EngineTests
             Assert.Equal(session.State.Money, loaded!.Value.State.Money, 3);
             Assert.Equal(session.State.GameTick, loaded.Value.State.GameTick);
             Assert.Equal(3, loaded.Value.State.UpgradeLevels["botnet"]);
-            Assert.Empty(loaded.Value.State.ActiveHacks);
+            Assert.Empty(loaded.Value.State.ActiveJobs);
         }
         finally
         {
@@ -471,7 +598,7 @@ public class EngineTests
     {
         var session = Session();
         session.State.UpgradeLevels["botnet"] = 5;
-        session.FastForward(100); // e.g. 10 seconds away
+        Forward(session, 100); // e.g. 10 seconds away
 
         Assert.Equal(100 * 0.2 * 5 * Math.Pow(1.15, 5), session.State.Money, 3);
     }

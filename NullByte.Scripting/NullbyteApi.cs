@@ -33,7 +33,7 @@ public sealed class NullbyteApi
     public double SkillPoints => session.State.SkillPoints;
     public double ZeroDays => session.State.ZeroDays;
     public long Ticks => session.State.GameTick;
-    public int ActiveHacks => session.State.ActiveHacks.Count;
+    public int ActiveJobs => session.State.ActiveJobs.Count;
 
     // -- Actions (emit engine commands; resolve at the next tick) ----------
 

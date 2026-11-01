@@ -43,7 +43,7 @@ public class OutputAndLifecycleTests
             "await api.Hack(\"webmail\"); api.Log(\"hack submitted at \" + api.Ticks);");
 
         Assert.True(await Helper.RunUntilAsync(session, scripting,
-            () => session.State.ActiveHacks.Count > 0),
+            () => session.State.ActiveJobs.Count > 0),
             "Script-submitted hack never started");
         Assert.False(session.State.EventLog.IsEmpty, "Hack produced no events");
         Assert.Contains(script.Output, l => l.Contains("[hacker] hack submitted at"));

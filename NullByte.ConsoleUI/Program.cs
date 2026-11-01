@@ -140,6 +140,19 @@ internal class Program
                             session.Submit(new StartHackCommand(args[1]));
                         break;
 
+                    case "grow":
+                        if (args.Length < 2)
+                            Console.WriteLine("Usage: grow <target-id>  (refills the mark's pool)");
+                        else
+                            session.Submit(new GrowTargetCommand(args[1]));
+                        break;
+
+                    case "scrub":
+                        if (args.Length < 2)
+                            Console.WriteLine("Usage: scrub <target-id>  (dumps 35 heat off the mark)");
+                        else
+                            session.Submit(new ScrubTargetCommand(args[1]));
+                        break;
                     case "buy":
                         if (args.Length < 2)
                             Console.WriteLine("Usage: buy <upgrade-id>  (see 'upgrades')");
@@ -475,7 +488,7 @@ internal class Program
 
     private static void PrintHelp()
     {
-        Console.WriteLine("Commands: hack <id> | buy <id> | skill <id> | accept <id> | implant <id> | prestige [confirm] | run <name> [parameters] | stop <name> | scripts | targets | upgrades | perks | contracts | implants | achievements | stats | status | save | quit | help");
+        Console.WriteLine("Commands: hack <id> | grow <id> | scrub <id> | buy <id> | skill <id> | accept <id> | implant <id> | prestige [confirm] | run <name> [parameters] | stop <name> | scripts | targets | upgrades | perks | contracts | implants | achievements | stats | status | save | quit | help");
         Console.WriteLine("Scripts: write scripts/<name>.cs (C#, globals expose 'api'), then 'run <name>' — e.g. await api.Hack(\"webmail\");"); 
         Console.WriteLine("Start here: 'targets' then 'hack webmail'\n");
     }
@@ -502,7 +515,8 @@ internal class Program
                 if (ram < t.RequiredRam) req.Add($"ram {t.RequiredRam}");
                 status = "needs " + string.Join(", ", req);
             }
-            Console.WriteLine($"  {t.Id,-14} {t.Name,-22} ${t.MoneyReward,-9:0.#}  {t.XpReward,5:0.#} xp  {t.DurationTicks,3} ticks  [{status}]");
+            var ts = HackSystem.StateFor(s, t);
+            Console.WriteLine($"  {t.Id,-14} {t.Name,-22} ${t.MoneyReward,-9:0.#} {t.XpReward,5:0.#}xp {t.DurationTicks,3}t  pool ${ts.CurrentMoney,6:0.#}/{HackSystem.MaxMoneyOf(t):0.#}  heat {ts.Heat,3:0.#}  [{status}]");
         }
     }
 
@@ -538,13 +552,17 @@ internal class Program
         Console.WriteLine($"== STATUS  t{s.GameTick} ==");
         Console.WriteLine($"  Money: ${s.Money:0.##}   (+${income:0.###}/tick)");
         Console.WriteLine($"  Level: {s.Level}   XP: {xpInto:0.#} / {xpNeed:0.#}   Skill points: {s.SkillPoints}");
-        Console.WriteLine($"  Hack slots: {s.ActiveHacks.Count}/{HackSystem.MaxConcurrentHacks(s)}");
+        Console.WriteLine($"  Job slots: {s.ActiveJobs.Count}/{HackSystem.MaxConcurrentHacks(s)}");
         Console.WriteLine($"  Rig: cpu {s.UpgradeLevels.GetValueOrDefault("cpu")} | ram {s.UpgradeLevels.GetValueOrDefault("ram")} | botnet {s.UpgradeLevels.GetValueOrDefault("botnet")}");
 
-        if (s.ActiveHacks.Count > 0)
+        if (s.ActiveJobs.Count > 0)
         {
-            foreach (var h in s.ActiveHacks)
-                Console.WriteLine($"    {h.TargetName}: {h.TicksRemaining}/{h.TotalTicks} ticks left");
+            foreach (var h in s.ActiveJobs)
+            {
+                string verb = h.Kind == JobKind.Grow ? "grow"
+                            : h.Kind == JobKind.Scrub ? "scrub" : "hack";
+                Console.WriteLine($"    {verb} {h.TargetName}: {h.TicksRemaining}/{h.TotalTicks} ticks left");
+            }
         }
     }
 }

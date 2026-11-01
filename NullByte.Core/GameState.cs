@@ -29,9 +29,6 @@ public sealed class GameState
     /// <summary>Owned level per perk id (skill tree).</summary>
     public Dictionary<string, int> PerkLevels { get; internal set; } = [];
 
-    /// <summary>Hacks currently running, with rewards frozen at start time.</summary>
-    public List<ActiveHack> ActiveHacks { get; internal set; } = [];
-    
     /// <summary>Lifetime totals for the stats page and achievement checks.</summary>
     public GameStats Stats { get; internal set; } = new();
 
@@ -47,21 +44,48 @@ public sealed class GameState
     /// <summary>Owned level per implant id (prestige upgrades; survive resets).</summary>
     public Dictionary<string, int> PrestigeLevels { get; internal set; } = [];
 
+    /// <summary>Jobs currently running on marks (hack / grow / scrub).</summary>
+    public List<ActiveJob> ActiveJobs { get; internal set; } = [];
+
+    /// <summary>
+    /// Live per-target state (money pool, heat), keyed by target id.
+    /// Lazily initialized on first touch — see HackSystem.StateFor.
+    /// </summary>
+    public Dictionary<string, TargetState> Targets { get; internal set; } = [];
+
     /// <summary>Event log; the UI reads and consumes this.</summary>
     public ConcurrentQueue<string> EventLog { get; } = [];
 
     internal void Log(string message) => EventLog.Enqueue($"[t{GameTick}] {message}");
 }
 
-/// <summary>One in-flight hack. Serialized with the save.</summary>
-public sealed class ActiveHack
+/// <summary>What a job does to its target.</summary>
+public enum JobKind { Hack, Grow, Scrub }
+
+/// <summary>
+/// One in-flight job on a mark (hack, grow, or scrub). Money is NOT frozen
+/// here anymore — steals are computed at completion from the target's live
+/// pool, so parallel jobs can't over-steal (Phase 4.5). Serialized with the save.
+/// </summary>
+public sealed class ActiveJob
 {
     public string TargetId { get; init; } = "";
     public string TargetName { get; init; } = "";
+    public JobKind Kind { get; init; }
     public int TicksRemaining { get; set; }
     public int TotalTicks { get; init; }
-    public double MoneyReward { get; init; }
-    public double XpReward { get; init; }
+    public double XpReward { get; init; } // hack & grow pay XP; scrub pays none
+}
+
+/// <summary>
+/// Live state of one target: a drainable money pool and a heat gauge
+/// (Phase 4.5). The pool only recovers via 'grow' (an active op) — heat
+/// decays passively when no job runs on the mark. Wiped on identity burn.
+/// </summary>
+public sealed class TargetState
+{
+    [JsonInclude] public double CurrentMoney { get; internal set; }
+    [JsonInclude] public double Heat { get; internal set; }
 }
 
 /// <summary>Lifetime counters; serialized with the save.</summary>

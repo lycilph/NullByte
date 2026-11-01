@@ -69,9 +69,10 @@ public static class PrestigeSystem
         s.SkillPoints = 0;
         s.UpgradeLevels = [];
         s.PerkLevels = [];
-        s.ActiveHacks = [];
         s.ContractOffers = [];
         s.ActiveContracts = [];
+        s.ActiveJobs = [];
+        s.Targets = [];   // fresh identity: all marks cold and fully stocked
 
         s.Stats.PrestigeCount++;
 

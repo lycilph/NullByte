@@ -5,14 +5,7 @@
   </Folder>
   <Folder Name="/Temp/">
     <File Path="TMP-api.cs" />
-    <File Path="TMP-content.cs" />
-    <File Path="TMP-enginetests.cs" />
-    <File Path="TMP-gamesession.cs" />
-    <File Path="TMP-gamestate.cs" />
     <File Path="TMP-program.cs" />
-    <File Path="TMP-savesystem.cs" />
-    <File Path="TMP-scriptingtests.cs" />
-    <File Path="TMP-systems.cs" />
   </Folder>
   <Project Path="NullByte.ConsoleUI/NullByte.ConsoleUI.csproj" Id="cdcac8a8-11b5-4852-8078-0f43ce7d1fc4" />
   <Project Path="NullByte.Core.Tests/NullByte.Core.Tests.csproj" Id="837290d4-db23-4ba4-9318-db2bd159a073" />
