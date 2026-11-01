@@ -70,7 +70,7 @@ internal class Program
         });
 
         // -- Event printer: drains the EventLog twice a second --
-        int handledBurns = session.State.Burns;
+        int handledPrestiges = session.State.Stats.PrestigeCount;
         var printer = Task.Run(async () =>
         {
             while (!cts.IsCancellationRequested)
@@ -80,9 +80,9 @@ internal class Program
                 // -- Burn detection (cursor pattern): a new identity gets a
                 // fresh boot. Skip the stale log backlog — the boot animation
                 // IS the announcement; pre-burn events don't matter anymore.
-                if (session.State.Burns != handledBurns)
+                if (session.State.Stats.PrestigeCount != handledPrestiges)
                 {
-                    handledBurns = session.State.Burns;
+                    handledPrestiges = session.State.Stats.PrestigeCount;
                     lock (consoleLock)
                     {
                         RunBootSequence();

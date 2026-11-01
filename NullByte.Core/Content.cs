@@ -6,6 +6,9 @@
 // engine logic.
 // ---------------------------------------------------------------------------
 
+/// <summary>
+/// MaxMoney pins the drainable pool (Phase 4.5). 0 = auto: 8x MoneyReward,
+/// which makes the FIRST hack pay ~the legacy flat reward, then decline.
 public sealed record TargetDef(
     string Id,
     string Name,
@@ -14,7 +17,8 @@ public sealed record TargetDef(
     double MoneyReward,
     double XpReward, 
     int RequiredCpu = 0,
-    int RequiredRam = 0);
+    int RequiredRam = 0,
+    double MaxMoney = 0);
 
 public sealed record UpgradeDef(
     string Id,

@@ -43,7 +43,24 @@ public sealed class NullbyteApi
     public double SkillPoints => _session.State.SkillPoints;
     public double ZeroDays => _session.State.ZeroDays;
     public long Ticks => _session.State.GameTick;
-    public int ActiveHacks => _session.State.ActiveHacks.Count;
+    public int ActiveJobs => _session.State.ActiveJobs.Count;
+
+    // -- Mark state (Phase 4.5) ----------------------------------------------
+
+    /// <summary>Live money pool on a mark. Unknown target id → 0.</summary>
+    public double TargetMoney(string targetId)
+        => _session.Content.FindTarget(targetId) is { } t
+            ? HackSystem.StateFor(_session.State, t).CurrentMoney : 0;
+
+    /// <summary>Current heat on a mark. Unknown target id → 0.</summary>
+    public double TargetHeat(string targetId)
+        => _session.Content.FindTarget(targetId) is { } t
+            ? HackSystem.StateFor(_session.State, t).Heat : 0;
+
+    /// <summary>Max drainable pool of a mark. Unknown target id → 0.</summary>
+    public double TargetMax(string targetId)
+        => _session.Content.FindTarget(targetId) is { } t
+            ? HackSystem.MaxMoneyOf(t) : 0;
 
     // -- Actions (emit engine commands; resolve at the next tick) ----------
 
@@ -61,6 +78,12 @@ public sealed class NullbyteApi
 
     public Task Prestige()
         => _system.Action(_script, () => _session.Submit(new PrestigeCommand()));
+
+    public Task Grow(string targetId)
+        => _system.Action(_script, () => _session.Submit(new GrowTargetCommand(targetId)));
+
+    public Task Scrub(string targetId)
+        => _system.Action(_script, () => _session.Submit(new ScrubTargetCommand(targetId)));
 
     // -- Time --------------------------------------------------------------
 

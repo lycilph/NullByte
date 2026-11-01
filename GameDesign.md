@@ -135,6 +135,67 @@ Nullbyte.sln
 - Runtime errors halt one script, never the game; cache compiled scripts per save (Roslyn warm-up ~1–2 s once)
 - *Exit test:* a player script can play the early game unattended; save/load round-trips and the script reconverges.
 
+### Phase 4.5 — Hack overhaul: mark heat & drain (Bitburner security)
+
+Bitburner's core insight: **a server is a resource, not a vending machine.** NULLBYTE
+targets currently pay a flat reward forever; grinding one mark is optimal and boring.
+This phase gives every target live state — a drainable account and a heat gauge —
+so the 18-mark roster becomes a farm you rotate and manage.
+
+**Per-target live state** (persisted in `GameState`, wiped on prestige burn):
+
+```csharp
+TargetState { double CurrentMoney; double Heat; }   // keyed by target id
+```
+
+**Hack (steal) — revised:**
+- Completion pays `StealBase (12%) × CurrentMoney` (× ransom perk, notoriety implant),
+  then subtracts from the target — so rewards decline as the mark drains.
+- `MaxMoney` per target is tuned so the *first* hack pays ≈ the old flat `MoneyReward`
+  (early game feels identical, the decline curve does the new work).
+- Heat: **+6** per completed hack, **+10** per *failed* hack.
+- **Failure risk at high heat** (user decision): `failChance = clamp((Heat − 40) / 120, 0, 0.5)`
+  — zero below 40 heat, ~25% at 70, 50% at 100. Failed hack = no reward + extra heat.
+  Checked at completion, announced with trace-flavor text. This roll is the  
+**documented engine-randomness exception #2** (contract offers being #1).
+- Duration multiplier `1 + Heat/50` — hot marks are also slower to crack.
+- At < 20% of `MaxMoney`: "tapped out" flavor + scraps (steal % of a small pool).
+
+**Grow (new action)** — active counter-play, like Bitburner's `grow`:
+- `grow <target>`: occupies a hack slot for a grow job (~1.5× hack duration);
+  on completion `CurrentMoney += 25% of MaxMoney` (capped at max), +2 heat.
+- Small XP (≈25% of the target's XpReward). No money reward.
+- **No passive money regen** (user decision) — the pool only recovers via grow,
+  which is exactly the scriptable resource-management gameplay we want.
+
+**Scrub (new action)** — heat counter-play (active op, hence the verb):
+- `scrub <target>`: occupies a hack slot; on completion `Heat −= 35` (floor 0).
+  Flavor: scrub your traces off the mark's logs.
+- Passive heat decay still exists (−1/sec, only while the target has no active job).
+- No XP. Pure heat tool.
+
+**Emergent loop:** drain a mark ~6 hacks (pool ~45%, heat ~40, fail risk begins) →
+rotate to a cold mark → later return with a `grow`+`scrub` rotation → repeat.
+Best done by a script: the ideal `grinder.cs` becomes a heat/money-aware rotation
+engine — which is the actual Bitburner hook landing.
+
+**Ripple effects (handled in the same pass):**
+- Commands: `GrowTarget`, `ScrubTarget` records via GameSession; console `grow`/`scrub`.
+- Scripting API: `await ns.Grow(id)`, `await ns.Scrub(id)` actions +
+  `ns.TargetMoney(id)`, `ns.TargetHeat(id)`, `ns.TargetMax(id)` sync queries.
+- `targets` command shows live money/heat columns; `status` shows active job types.
+- Prestige burn resets all `TargetState` (new identity → cold marks).
+- Offline: heat decay lives in `Tick()`, so `FastForward` makes away-time
+  recovery time — marks are cool and you *haven't* grown them; grow is a
+  deliberate player/script action, and that's the intended asymmetry.
+- Save: `Targets` dict in `SaveData` (tolerant of missing = fresh state);
+  `MaxMoney` added to content JSON per target (default 8× `MoneyReward` if absent).
+- Contracts counting "complete N hacks" become subtly rotation-aware.
+- Tests: drain math, fail-risk gate (inject fixed heat), grow cap, scrub floor,
+  heat decay gating, save round-trip with target state, prestige wipe.
+- *Exit test:* camping one target is clearly worse than rotating; a rotation
+  script measurably out-performs a naive `while(true) hack webmail` loop.
+
 ### Phase 5 - Factions 
 - Factions with reputation grind → unique upgrades (Bitburner staple)
 - *Exit test:* Exploring factions is rewarding game play wise
