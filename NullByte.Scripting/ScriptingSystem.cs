@@ -37,6 +37,8 @@ public sealed class ScriptingSystem(GameSession session)
 
     public async Task<ScriptInstance> StartAsync(string name, string source, ScriptData? data = null)
     {
+        ScriptGuard.Validate(source);   // banned patterns die before compile
+
         var options = ScriptOptions.Default
             .WithImports("System", "System.Collections.Generic", "System.Threading.Tasks")
             .WithAllowUnsafe(false)
