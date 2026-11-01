@@ -1,5 +1,4 @@
-﻿using Microsoft.CodeAnalysis.Scripting;
-using NullByte.Core;
+﻿using NullByte.Core;
 using NullByte.Core.Commands;
 
 namespace NullByte.Scripting;

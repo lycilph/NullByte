@@ -70,12 +70,7 @@ internal class Program
         });
 
         // -- Event printer: drains the EventLog twice a second --
-        // Consumes by TOTALS, not list positions: the log is a trimmed
-        // window, so a list index goes stale once entries start dropping
-        // off the front. Mapping: entry i lives at log[i - (total - Count)].
-        long nextEvent = 0;
         int handledBurns = session.State.Burns;
-        var scriptCursors = new Dictionary<string, long>();
         var printer = Task.Run(async () =>
         {
             while (!cts.IsCancellationRequested)
@@ -92,42 +87,24 @@ internal class Program
                     {
                         RunBootSequence();
                         PrintHelp();
-                        nextEvent = session.State.EventsLogged;
                     }
                 }
 
                 var log = session.State.EventLog;
-                long total = session.State.EventsLogged;
-                long firstKept = total - log.Count;      // absolute index of log[0]
-                long from = Math.Max(nextEvent, firstKept);
-
                 lock (consoleLock)
                 {
-                    for (long i = from; i < total; i++)
-                        Console.WriteLine("  " + log[(int)(i - firstKept)]);
+                    while (log.TryDequeue(out var message))
+                        Console.WriteLine("  " + message);
                 }
-                nextEvent = total;
 
                 // -- Script output (same cursor pattern, per script) --
-                // First sight of a script: skip its backlog, only live lines.
                 foreach (var script in scripting.Scripts)
                 {
-                    if (!scriptCursors.TryGetValue(script.Name, out long seen))
-                    {
-                        scriptCursors[script.Name] = script.OutputTotal;
-                        continue;
-                    }
-
-                    long sTotal = script.OutputTotal;
-                    long sFirst = sTotal - script.Output.Count;
-                    long sFrom = Math.Max(seen, sFirst);
-
                     lock (consoleLock)
                     {
-                        for (long i = sFrom; i < sTotal; i++)
-                            Console.WriteLine("  " + script.Output[(int)(i - sFirst)]);
+                        while (script.Output.TryDequeue(out var message))
+                            Console.WriteLine("  " + message);
                     }
-                    scriptCursors[script.Name] = sTotal;
                 }
             }
         });

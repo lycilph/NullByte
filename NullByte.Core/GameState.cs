@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Collections.Concurrent;
+using System.Text.Json.Serialization;
 
 namespace NullByte.Core;
 
@@ -52,23 +53,10 @@ public sealed class GameState
     /// <summary>Owned level per implant id (prestige upgrades; survive resets).</summary>
     public Dictionary<string, int> PrestigeLevels { get; internal set; } = [];
 
-    /// <summary>
-    /// Total events ever logged. The log list is a trimmed window, so a
-    /// reader must track this total to know which entries it has already
-    /// consumed after trims (a list index alone silently breaks at cap).
-    /// </summary>
-    public long EventsLogged { get; internal set; }
+    /// <summary>Event log; the UI reads and consumes this.</summary>
+    public ConcurrentQueue<string> EventLog { get; } = [];
 
-    /// <summary>Rolling event log; the UI reads this. Capped to 50 entries.</summary>
-    public List<string> EventLog { get; } = [];
-
-    internal void Log(string message)
-    {
-        EventLog.Add($"[t{GameTick}] {message}");
-        EventsLogged++;
-        if (EventLog.Count > 50)
-            EventLog.RemoveAt(0);
-    }
+    internal void Log(string message) => EventLog.Enqueue($"[t{GameTick}] {message}");
 }
 
 /// <summary>One in-flight hack. Serialized with the save.</summary>

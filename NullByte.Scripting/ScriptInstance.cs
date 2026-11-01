@@ -1,4 +1,6 @@
-﻿namespace NullByte.Scripting;
+﻿using System.Collections.Concurrent;
+
+namespace NullByte.Scripting;
 
 // ---------------------------------------------------------------------------
 // ScriptInstance: a compiled script and its live state. The instance object
@@ -12,8 +14,7 @@ public sealed class ScriptInstance
     public string Source { get; init; } = "";
     public ScriptData Data { get; internal set; } = new();
 
-    public List<string> Output { get; } = [];
-    public long OutputTotal { get; internal set; }
+    public ConcurrentQueue<string> Output { get; } = [];
     public Exception? Error { get; internal set; }
     public bool IsStopRequested { get; internal set; }
 
@@ -25,11 +26,5 @@ public sealed class ScriptInstance
     public bool IsRunning
         => !IsStopRequested && Error is null && Execution is { IsCompleted: false };
 
-    internal void AddOutput(string message)
-    {
-        Output.Add($"[{Name}] {message}");
-        OutputTotal++;
-        if (Output.Count > 50)
-            Output.RemoveAt(0);
-    }
+    internal void AddOutput(string message) => Output.Enqueue($"[{Name}] {message}");
 }
