@@ -202,8 +202,7 @@ engine — which is the actual Bitburner hook landing.
 
 ### Phase 6 — World & late game
 - Persistent "network map" world (nodes to conquer, turf mechanics)
-- Multiplayer-adjacent features (leaderboards via exported saves, weekly challenges)
-- Blazor/Avalonia UI with a real terminal window and live graphs
+- WPF UI with a real terminal window and live graphs
 - Move constants to the content to enable easier balancing
 - Balancing pass, difficulty curve tuning from telemetry-style save data
 
@@ -224,5 +223,4 @@ engine — which is the actual Bitburner hook landing.
 - `float`/`decimal` money → precision issues; use `double` then BigNum.
 - **Building the scripting layer too early** → nail the idle core first; scripting needs solid, tick-based systems underneath it.
 - **Trusting Roslyn as a sandbox** → .NET has no true sandbox; enforce at compile time (reference/using whitelist, banned-pattern analyzer) and treat scripts as player-self-inflicted risk, like Bitburner does. Real isolation would require an out-of-process host.
-- **Expecting to serialize running scripts** → Roslyn continuations can't be saved; design `ns` APIs and player conventions around source-restart + `ns.Data` from day one.
-- **Scope creep before Phase 1 exit test** — resist UI polish and factions until the core loop is fun.
+- **Expecting to serialize running scripts** → Roslyn continuations can't be saved; design `api` APIs and player conventions around source-restart + `api.Data` from day one.

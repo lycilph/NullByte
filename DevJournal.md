@@ -1,9 +1,17 @@
 # NULLBYTE — C# Incremental Hacker Game - DevJournal
 
-## 01-11-2026
+## 02-11-2026
 
 ### In Progress
 
+### Done
+
+### Future
+
+---
+## 01-11-2026
+
+### In Progress
 
 ### Done
 - Added the scriptglobals, so that all interaction goes through the api explicitly
