@@ -15,7 +15,8 @@ internal class Program
     {
         var content = ContentLoader.Load();
 
-        RunBootSequence();
+        // TODO - uncomment
+        //RunBootSequence();
 
         // -- Load save + offline catch-up --
         GameSession session;

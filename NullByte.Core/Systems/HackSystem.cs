@@ -77,6 +77,13 @@ public static class HackSystem
                * PrestigeSystem.SpeedMult(s)
                * HeatMult(s, t)));
 
+    public static int JobDuration(TargetDef t, GameState s, JobKind kind)
+        => kind switch
+        {
+            JobKind.Grow => (int)Math.Ceiling(HackDuration(t, s) * GrowDurationMult),
+            _ => HackDuration(t, s), // hack and scrub share the duration curve
+        };
+
     // -- Starting jobs ---------------------------------------------------------
 
     public static void StartHack(GameState s, GameContent c, string id) => StartJob(s, c, id, JobKind.Hack);
@@ -89,11 +96,13 @@ public static class HackSystem
         if (t is null)
             return;
 
-        int duration = kind switch
-        {
-            JobKind.Grow => (int)Math.Ceiling(HackDuration(t, s) * GrowDurationMult),
-            _ => HackDuration(t, s), // hack and scrub share the duration curve
-        };
+        //int duration = kind switch
+        //{
+        //    JobKind.Grow => (int)Math.Ceiling(HackDuration(t, s) * GrowDurationMult),
+        //    _ => HackDuration(t, s), // hack and scrub share the duration curve
+        //};
+
+        int duration = JobDuration(t, s, kind);
 
         double xp = kind switch
         {

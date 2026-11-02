@@ -37,11 +37,23 @@ public sealed class NullByteApi
     public int ActiveJobs => session.State.ActiveJobs.Count;
     public int MaxConcurrentJobs => HackSystem.MaxConcurrentHacks(session.State);
     
+    // -- Upgrade queries -----------------------------------------------------
+
+    public int CpuLevel => session.State.UpgradeLevels.GetValueOrDefault("cpu");
+    public int RamLevel => session.State.UpgradeLevels.GetValueOrDefault("ram");
+
     // -- List queries --------------------------------------------------------
 
-    // Get list of targets
+    /// <summary>Get list of targets</summary>
     public List<Target> ScanNetwork() 
-        => [.. session.Content.Targets.Select(t => new Target(t.Id, t.Name, t.MinLevel))];
+        => [.. session.Content.Targets.Select(t => new Target(t.Id, t.Name, t.MinLevel, t.RequiredCpu, t.RequiredRam))];
+
+    // TODO - remove this
+    //public void temp()
+    //{
+    //    List<int> a = [1, 2, 5, 3];
+    //    var b = a.OrderByDescending()
+    //}
 
     // -- Mark state (Phase 4.5) ----------------------------------------------
 
@@ -59,6 +71,18 @@ public sealed class NullByteApi
     public double TargetMax(string targetId)
         => session.Content.FindTarget(targetId) is { } t
             ? HackSystem.MaxMoneyOf(t) : 0;
+
+    public int TargetHackDuration(string targetId)
+        => session.Content.FindTarget(targetId) is { } t
+           ? HackSystem.JobDuration(t, session.State, JobKind.Hack) : 0;
+
+    public int TargetGrowDuration(string targetId)
+        => session.Content.FindTarget(targetId) is { } t
+           ? HackSystem.JobDuration(t, session.State, JobKind.Grow) : 0;
+
+    public int TargetScrubDuration(string targetId)
+        => session.Content.FindTarget(targetId) is { } t
+           ? HackSystem.JobDuration(t, session.State, JobKind.Scrub) : 0;
 
     // -- Actions (emit engine commands; resolve at the next tick) ----------
 

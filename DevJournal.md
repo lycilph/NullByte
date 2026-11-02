@@ -3,11 +3,14 @@
 ## 02-11-2026
 
 ### In Progress
-- Make an autohack script to test scripting api
-- Update scripting api (get targets)
-- Implement support for libraries
+- ~~Make an autohack script to test scripting api~~
+- ~~Update scripting api (get targets)~~
+- ~~-Implement support for libraries~~
 
 ### Done
+- Implemented support for libraries
+- Updated scripting api (get targets)
+- Made an autohack script to test scripting api
 
 ### Future
 - Autocomplete targets etc.
