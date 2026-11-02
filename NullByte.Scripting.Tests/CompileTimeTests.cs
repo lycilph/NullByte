@@ -17,6 +17,22 @@
 public class CompileTimeTests
 {
     [Fact]
+    public async Task Linq_IsUsableInScripts()
+    {
+        // Regression: 'using System.Linq' is not enough — the compiler also
+        // needs the System.Linq assembly REFERENCE (usings import namespaces,
+        // references load assemblies; Task is in System.Runtime, LINQ is not).
+        var session = Helper.NewSession();
+        var scripting = new ScriptingSystem(session);
+
+        var script = await scripting.StartAsync("linq",
+            "var xs = new[] { 1, 2, 3 };\nnb.Log(\"sum=\" + xs.Sum());");
+        await Helper.TickAsync(session, scripting);
+
+        Assert.Contains(script.Output, l => l.Contains("sum=6"));
+    }
+
+    [Fact]
     public async Task Compile_UnknownApiMethod_ThrowsWithDiagnostics()
     {
         var session = Helper.NewSession();

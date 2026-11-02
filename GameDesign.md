@@ -133,6 +133,7 @@ Nullbyte.sln
 - In-game editor: AvalonEdit + Roslyn classification → real C# highlighting, IntelliSense, compile-error squiggles
 - Script marketplace (share/import scripts as JSON strings)
 - Runtime errors halt one script, never the game; cache compiled scripts per save (Roslyn warm-up ~1–2 s once)
+- **Reusable libraries**: `// uses: <names>` header lines chain `scripts/lib/<name>.cs` ahead of the script via Roslyn `ContinueWith` — one compilation, shared declarations, guard-validated libs, name-locked to `[a-z0-9-]+`; libraries are pure source and take `ns` as a parameter when they need engine access
 - *Exit test:* a player script can play the early game unattended; save/load round-trips and the script reconverges.
 
 ### Phase 4.5 — Hack overhaul: mark heat & drain (Bitburner security)

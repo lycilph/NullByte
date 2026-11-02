@@ -1,5 +1,5 @@
-﻿var target = api.Data.GetStr("param0", "webmail");
-api.Log($"Target is {target}");
-await api.Hack(target);
-await api.Wait(30);
-api.Log("Script completed...");
+﻿var target = nb.Data.GetStr("param0", "webmail");
+nb.Log($"Target is {target}");
+await nb.Hack(target);
+await nb.Wait(30);
+nb.Log("Script completed...");

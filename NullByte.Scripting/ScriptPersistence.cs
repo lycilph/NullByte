@@ -14,8 +14,11 @@ public static class ScriptPersistence
 {
     public const string Folder = "scripts";
     public const string StateFile = "scripts/scripts.json";
-
     public static string SourcePath(string name) => Path.Combine(Folder, name + ".cs");
+    
+    /// <summary>Libraries live in scripts/lib/ and chain into scripts via '// uses:'.</summary>
+    public const string LibFolder = "scripts/lib";
+    public static string LibPath(string name) => Path.Combine(LibFolder, name + ".cs");
 
     public static void Save(IEnumerable<ScriptInstance> scripts)
     {

@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using NullByte.Core;
+using NullByte.Scripting.ScriptingApi;
 
 namespace NullByte.Scripting;
 
@@ -20,6 +21,20 @@ namespace NullByte.Scripting;
 
 public sealed class ScriptingSystem(GameSession session)
 {
+    /// <summary>
+    /// Pinned compile options (production hardening, design doc Phase 4):
+    ///
+    /// Security note: reference assemblies contain no IL, so this pins what
+    /// the COMPILER can see, not what scripts are ALLOWED to call — that
+    /// policy lives in ScriptGuard. Extend deliberately, never per-error.
+    /// </summary>
+    private static readonly ScriptOptions options = ScriptOptions.Default
+        .AddImports("System", "System.Collections.Generic", "System.Threading.Tasks", "System.Linq")
+        .AddImports("NullByte.Scripting.ScriptingApi")
+        .AddReferences(typeof(NullByteApi).Assembly)  // the nb API surface
+        .WithAllowUnsafe(false)
+        .WithEmitDebugInformation(false);
+
     public const int MaxApiCallsPerTick = 50;
 
     private readonly GameSession session = session;
@@ -39,15 +54,20 @@ public sealed class ScriptingSystem(GameSession session)
     {
         ScriptGuard.Validate(source);   // banned patterns die before compile
 
-        var options = ScriptOptions.Default
-            .WithImports("System", "System.Collections.Generic", "System.Threading.Tasks")
-            .WithAllowUnsafe(false)
-            .WithEmitDebugInformation(false);
-        //// Production hardening (design doc Phase 4): pin References to
-        //// System.Runtime + this assembly, add a banned-pattern analyzer.
-        //// Scripts see no file/network/console access with this usings set.
+        // Libraries: '// uses:' header lines chain library sources ahead of
+        // the script via ContinueWith — one compilation, shared declarations.
+        Script<object>? chain = null;
+        foreach (string libName in ScriptIncludes.ParseUses(source))
+        {
+            string libSource = ScriptIncludes.LoadLibrary(libName);
+            chain = chain is null
+                ? CSharpScript.Create(libSource, options, typeof(ScriptGlobals))
+                : chain.ContinueWith(libSource);
+        }
 
-        var compiled = CSharpScript.Create(source, options, typeof(ScriptGlobals));
+        var compiled = chain is null
+           ? CSharpScript.Create(source, options, typeof(ScriptGlobals))
+           : chain.ContinueWith(source);
         var diagnostics = compiled.Compile();
         var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         if (errors.Count > 0)
@@ -56,7 +76,7 @@ public sealed class ScriptingSystem(GameSession session)
         var script = new ScriptInstance { Name = name, Source = source };
         if (data is not null)
             script.Data = data;
-        var api = new NullbyteApi(this, session, script);
+        var api = new NullByteApi(this, session, script);
         var globals = new ScriptGlobals(api);
 
         script.Execution = Task.Run(async () =>

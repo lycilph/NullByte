@@ -2,7 +2,7 @@
 using NullByte.Core.Commands;
 using NullByte.Core.Systems;
 
-namespace NullByte.Scripting;
+namespace NullByte.Scripting.ScriptingApi;
 
 /// <summary>
 /// Player-facing scripting API.
@@ -13,13 +13,13 @@ namespace NullByte.Scripting;
 /// cannot act between ticks, and can never bypass game rules.
 /// </summary>
 
-public sealed class NullbyteApi
+public sealed class NullByteApi
 {
     private readonly ScriptingSystem system;
     private readonly GameSession session;
     private readonly ScriptInstance script;
 
-    internal NullbyteApi(ScriptingSystem system, GameSession session, ScriptInstance script)
+    internal NullByteApi(ScriptingSystem system, GameSession session, ScriptInstance script)
     {
         this.system = system;
         this.session = session;
@@ -36,6 +36,12 @@ public sealed class NullbyteApi
     public long Ticks => session.State.GameTick;
     public int ActiveJobs => session.State.ActiveJobs.Count;
     public int MaxConcurrentJobs => HackSystem.MaxConcurrentHacks(session.State);
+    
+    // -- List queries --------------------------------------------------------
+
+    // Get list of targets
+    public List<Target> ScanNetwork() 
+        => [.. session.Content.Targets.Select(t => new Target(t.Id, t.Name, t.MinLevel))];
 
     // -- Mark state (Phase 4.5) ----------------------------------------------
 

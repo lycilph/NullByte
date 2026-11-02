@@ -1,4 +1,6 @@
-﻿namespace NullByte.Scripting;
+﻿using NullByte.Scripting.ScriptingApi;
+
+namespace NullByte.Scripting;
 
 /// <summary>
 /// The globals object passed to every script. Scripts reference it as `api`.
@@ -7,8 +9,8 @@
 public sealed class ScriptGlobals
 {
 #pragma warning disable IDE1006 // Naming Styles
-    public NullbyteApi nb { get; }
+    public NullByteApi nb { get; }
 #pragma warning restore IDE1006 // Naming Styles
 
-    internal ScriptGlobals(NullbyteApi nb) {  this.nb = nb; }
+    internal ScriptGlobals(NullByteApi nb) {  this.nb = nb; }
 }

@@ -3,10 +3,15 @@
 ## 02-11-2026
 
 ### In Progress
+- Make an autohack script to test scripting api
+- Update scripting api (get targets)
+- Implement support for libraries
 
 ### Done
 
 ### Future
+- Autocomplete targets etc.
+- Add a compile script option in the game (when we have a UI)
 
 ---
 ## 01-11-2026

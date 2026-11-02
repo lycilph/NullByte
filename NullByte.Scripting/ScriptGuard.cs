@@ -29,12 +29,13 @@ namespace NullByte.Scripting;
 
 internal static class ScriptGuard
 {
-    private static readonly HashSet<string> AllowedUsings =
+    private static readonly HashSet<string> allowedUsings =
     [
         "System", "System.Collections.Generic", "System.Linq", "System.Threading.Tasks",
+        "NullByte.Scripting.ScriptingApi"
     ];
 
-    private static readonly HashSet<string> BannedIdentifiers = new(StringComparer.Ordinal)
+    private static readonly HashSet<string> bannedIdentifiers = new(StringComparer.Ordinal)
     {
         // File system & OS surface
         "File", "Directory", "Path", "DriveInfo", "FileSystemInfo", "FileStream",
@@ -65,15 +66,15 @@ internal static class ScriptGuard
         foreach (var u in root.DescendantNodes().OfType<UsingDirectiveSyntax>())
         {
             string name = u.Name?.ToString() ?? "";
-            if (!AllowedUsings.Contains(name))
+            if (!allowedUsings.Contains(name))
                 throw new ScriptCompileException(
-                    $"BANNED: using '{name}' is not whitelisted. Allowed: {string.Join(", ", AllowedUsings)}");
+                    $"BANNED: using '{name}' is not whitelisted. Allowed: {string.Join(", ", allowedUsings)}");
         }
 
         // 3) Banned identifiers, wherever they appear (aliases, qualified names, all of it).
         foreach (var id in root.DescendantNodes().OfType<IdentifierNameSyntax>())
         {
-            if (BannedIdentifiers.Contains(id.Identifier.ValueText))
+            if (bannedIdentifiers.Contains(id.Identifier.ValueText))
             {
                 int line = id.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
                 throw new ScriptCompileException(

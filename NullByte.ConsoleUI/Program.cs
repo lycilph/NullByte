@@ -153,6 +153,7 @@ internal class Program
                         else
                             session.Submit(new ScrubTargetCommand(args[1]));
                         break;
+
                     case "buy":
                         if (args.Length < 2)
                             Console.WriteLine("Usage: buy <upgrade-id>  (see 'upgrades')");
@@ -255,6 +256,10 @@ internal class Program
                         PrintScripts(scripting);
                         break;
 
+                    case "libs":
+                        PrintLibs();
+                        break;
+
                     case "save":
                         SaveSystem.Save(session.State);
                         Console.WriteLine("Saved.");
@@ -341,6 +346,20 @@ internal class Program
                               : "STOPPED";
                 Console.WriteLine($"  {s.Name,-16} [{status}]");
             }
+        }
+    }
+
+    private static void PrintLibs()
+    {
+        if (!Directory.Exists(ScriptPersistence.LibFolder)
+            || Directory.GetFiles(ScriptPersistence.LibFolder, "*.cs").Length == 0)
+        {
+            Console.WriteLine("No libraries — drop .cs files into scripts/lib/. Pull one in with a '// uses: <name>' header line.");
+        }
+        else
+        {
+            foreach (var f in Directory.GetFiles(ScriptPersistence.LibFolder, "*.cs"))
+                Console.WriteLine($"  {Path.GetFileNameWithoutExtension(f),-16} {f}");
         }
     }
 
@@ -488,8 +507,9 @@ internal class Program
 
     private static void PrintHelp()
     {
-        Console.WriteLine("Commands: hack <id> | grow <id> | scrub <id> | buy <id> | skill <id> | accept <id> | implant <id> | prestige [confirm] | run <name> [parameters] | stop <name> | scripts | targets | upgrades | perks | contracts | implants | achievements | stats | status | save | quit | help");
-        Console.WriteLine("Scripts: write scripts/<name>.cs (C#, globals expose 'api'), then 'run <name>' — e.g. await api.Hack(\"webmail\");"); 
+        Console.WriteLine("Commands: hack <id> | grow <id> | scrub <id> | buy <id> | skill <id> | accept <id> | implant <id> | prestige [confirm] | run <name> [parameters] | stop <name> | scripts | libs | targets | upgrades | perks | contracts | implants | achievements | stats | status | save | quit | help");
+        Console.WriteLine("Scripts: write scripts/<name>.cs (C#, globals expose 'api'), then 'run <name>' — e.g. await nb.Hack(\"webmail\");"); 
+        Console.WriteLine("Libraries: shared code in scripts/lib/<name>.cs, pulled in with a '// uses: <names>' header line (see 'libs').");
         Console.WriteLine("Start here: 'targets' then 'hack webmail'\n");
     }
 
