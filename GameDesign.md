@@ -75,7 +75,7 @@ flowchart TD
 3. **Content as data.** `Target`, `Upgrade`, and later `Faction`/`Augmentation` are records defined in JSON, loaded into registries. Adding content = editing JSON.
 4. **Exponential cost curve.** `cost = baseCost * growthRate^owned` (growthRate ≈ 1.07–1.15 per level, like classic idlers). Production scales linearly per level → exponential cost creates the classic "wall then breakthrough" pacing.
 5. **Save migrations.** Include a `schemaVersion` int in the save; write a migration step per version bump.
-6. **Scripts save as source + explicit state.** Roslyn continuations cannot be serialized. Persist each script's source text + its `ns.Data` key-value store; on load, recompile and restart — scripts reconverge because they're loops. Durable facts go in `ns.Data`, ephemeral progress lives in locals and is accepted lost. Make spendy commands idempotent ("if already owned, no-op") so restarts can't double-buy.
+6. **Scripts save as source + explicit state.** Roslyn continuations cannot be serialized. Persist each script's source text + its `nb.Data` key-value store; on load, recompile and restart — scripts reconverge because they're loops. Durable facts go in `ns.Data`, ephemeral progress lives in locals and is accepted lost. Make spendy commands idempotent ("if already owned, no-op") so restarts can't double-buy.
 
 ### Suggested project layout
 
@@ -126,10 +126,10 @@ Nullbyte.sln
 - *Exit test:* a first reset is an exciting choice, not a chore.
 
 ### Phase 4 — The programming hook (Bitburner moment)
-- **Roslyn C# scripting as the player language** (full C#, async/await, LINQ) — validated by spike: `ns` API object, tick barrier (`TaskCompletionSource` released once per tick), per-script CPU quota, compile-time lockdown (whitelisted namespaces/usings, banned patterns fail compilation)
-- Execution model: scripts are `async Task` coroutines; every `await` on an `ns` promise is tick-aligned — scripts cannot proceed between ticks
+- **Roslyn C# scripting as the player language** (full C#, async/await, LINQ) — validated by spike: `nb` API object, tick barrier (`TaskCompletionSource` released once per tick), per-script CPU quota, compile-time lockdown (whitelisted namespaces/usings, banned patterns fail compilation)
+- Execution model: scripts are `async Task` coroutines; every `await` on an `nb` promise is tick-aligned — scripts cannot proceed between ticks
 - CPU economy: time-based quota per script per tick, scaled by rig CPU/RAM → rig upgrades make scripts "faster" (API-call metering for cost balance)
-- Save model: persist script source + `ns.Data` key-value state; recompile and restart on load; durable facts in `ns.Data`, locals accepted lost; spendy commands made idempotent
+- Save model: persist script source + `nb.Data` key-value state; recompile and restart on load; durable facts in `nb.Data`, locals accepted lost; spendy commands made idempotent
 - In-game editor: AvalonEdit + Roslyn classification → real C# highlighting, IntelliSense, compile-error squiggles
 - Script marketplace (share/import scripts as JSON strings)
 - Runtime errors halt one script, never the game; cache compiled scripts per save (Roslyn warm-up ~1–2 s once)
@@ -181,8 +181,8 @@ engine — which is the actual Bitburner hook landing.
 
 **Ripple effects (handled in the same pass):**
 - Commands: `GrowTarget`, `ScrubTarget` records via GameSession; console `grow`/`scrub`.
-- Scripting API: `await ns.Grow(id)`, `await ns.Scrub(id)` actions +
-  `ns.TargetMoney(id)`, `ns.TargetHeat(id)`, `ns.TargetMax(id)` sync queries.
+- Scripting API: `await nb.Grow(id)`, `await nb.Scrub(id)` actions +
+  `nb.TargetMoney(id)`, `nb.TargetHeat(id)`, `nb.TargetMax(id)` sync queries.
 - `targets` command shows live money/heat columns; `status` shows active job types.
 - Prestige burn resets all `TargetState` (new identity → cold marks).
 - Offline: heat decay lives in `Tick()`, so `FastForward` makes away-time
@@ -223,4 +223,4 @@ engine — which is the actual Bitburner hook landing.
 - `float`/`decimal` money → precision issues; use `double` then BigNum.
 - **Building the scripting layer too early** → nail the idle core first; scripting needs solid, tick-based systems underneath it.
 - **Trusting Roslyn as a sandbox** → .NET has no true sandbox; enforce at compile time (reference/using whitelist, banned-pattern analyzer) and treat scripts as player-self-inflicted risk, like Bitburner does. Real isolation would require an out-of-process host.
-- **Expecting to serialize running scripts** → Roslyn continuations can't be saved; design `api` APIs and player conventions around source-restart + `api.Data` from day one.
+- **Expecting to serialize running scripts** → Roslyn continuations can't be saved; design `ns` APIs and player conventions around source-restart + `ns.Data` from day one.

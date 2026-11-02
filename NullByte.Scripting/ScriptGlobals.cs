@@ -7,8 +7,8 @@
 public sealed class ScriptGlobals
 {
 #pragma warning disable IDE1006 // Naming Styles
-    public NullbyteApi api { get; }
+    public NullbyteApi nb { get; }
 #pragma warning restore IDE1006 // Naming Styles
 
-    internal ScriptGlobals(NullbyteApi api) {  this.api = api; }
+    internal ScriptGlobals(NullbyteApi nb) {  this.nb = nb; }
 }

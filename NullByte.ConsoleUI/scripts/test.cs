@@ -1,4 +1,4 @@
-﻿api.Log("Testing a log message");
-await api.Hack("webmail");
-await api.Wait(30);
-api.Log("Hack completed");
+﻿nb.Log("Testing a log message");
+await nb.Hack("webmail");
+await nb.Wait(30);
+nb.Log("Hack completed");
