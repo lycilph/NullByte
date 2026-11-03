@@ -3,12 +3,13 @@
 ## 03-11-2026
 
 ### In Progress
-- Fixing issues identified by Mistral (gave it the entire codebase to look for errors) - see CodebaseIssues.md
+- ~~Fixing issues identified by Mistral (gave it the entire codebase to look for errors) - see CodebaseIssues.md~~
 
 ### Done
+- Fixed issues identified by Mistral (gave it the entire codebase to look for errors) - see CodebaseIssues.md
 
 ### Decisions
-- Removed lazy initialization of target state, remove potential threading issues in the gametick vs script api reads
+- Removed lazy initialization of target state to remove potential threading issues in the gametick vs script api reads
 
 ### Future
 - Network of nodes (like bitburner) to be discovered using network scans
@@ -20,7 +21,7 @@
 ### In Progress
 - ~~Make an autohack script to test scripting api~~
 - ~~Update scripting api (get targets)~~
-- ~~-Implement support for libraries~~
+- ~~Implement support for libraries~~
 
 ### Done
 - Implemented support for libraries
