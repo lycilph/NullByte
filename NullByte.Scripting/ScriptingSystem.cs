@@ -20,7 +20,7 @@ namespace NullByte.Scripting;
 // scripting.
 // ---------------------------------------------------------------------------
 
-public sealed partial class ScriptingSystem(GameSession session)
+public sealed partial class ScriptingSystem(GameSession session, string base_path = "")
 {
     [GeneratedRegex("^[a-z0-9-_]+$", RegexOptions.IgnoreCase, "da-DK")]
     private static partial Regex GeneratedNameRegex();
@@ -45,6 +45,7 @@ public sealed partial class ScriptingSystem(GameSession session)
 
     private readonly GameSession session = session;
     private readonly List<ScriptInstance> scripts = [];
+    private readonly string base_path = base_path;
 
     private TaskCompletionSource barrier = NewBarrier();
     private static TaskCompletionSource NewBarrier()
@@ -65,7 +66,7 @@ public sealed partial class ScriptingSystem(GameSession session)
         Script<object>? chain = null;
         foreach (string libName in ScriptIncludes.ParseUses(source))
         {
-            string libSource = ScriptPersistence.LoadLibrary(libName);
+            string libSource = ScriptPersistence.LoadLibrary(libName, base_path);
             chain = chain is null
                 ? CSharpScript.Create(libSource, options, typeof(ScriptGlobals))
                 : chain.ContinueWith(libSource);

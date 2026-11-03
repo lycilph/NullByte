@@ -12,17 +12,23 @@ public sealed class ScriptSaveEntry
 
 public static class ScriptPersistence
 {
-    public const string Folder = "scripts";
-    public const string StateFile = "scripts/scripts.json";
-    public static string SourcePath(string name) => Path.Combine(Folder, name + ".cs");
-    
-    /// <summary>Libraries live in scripts/lib/ and chain into scripts via '// uses:'.</summary>
-    public const string LibFolder = "scripts/lib";
-    public static string LibPath(string name) => Path.Combine(LibFolder, name + ".cs");
+    private const string defaultBasePath = "scripts";
+    public const string StateFile = "scripts.json";
+    public static string SourcePath(string name, string base_path = "") 
+        => Path.Combine(string.IsNullOrWhiteSpace(base_path) ? defaultBasePath : base_path, name + ".cs");
+    public static string LibPath(string name, string base_path = "") 
+        => Path.Combine(string.IsNullOrWhiteSpace(base_path) ? defaultBasePath : base_path, "lib", name + ".cs");
+    public static string StatePath(string base_path = "") 
+        => Path.Combine(string.IsNullOrWhiteSpace(base_path) ? defaultBasePath : base_path, StateFile);
 
-    public static void Save(IEnumerable<ScriptInstance> scripts)
+    public static string LibFolder(string base_path = "")
+        => Path.Combine(string.IsNullOrWhiteSpace(base_path) ? defaultBasePath : base_path, "lib");
+
+    public static void Save(IEnumerable<ScriptInstance> scripts, string base_path = "")
     {
-        Directory.CreateDirectory(Folder);
+        var script_dir = string.IsNullOrWhiteSpace(base_path) ? defaultBasePath : base_path;
+        Directory.CreateDirectory(script_dir);
+
         var entries = scripts.Select(s => new ScriptSaveEntry
         {
             Name = s.Name,
@@ -30,17 +36,17 @@ public static class ScriptPersistence
             Data = s.Data,
             Running = s.IsRunning,
         }).ToList();
-        File.WriteAllText(StateFile, JsonSerializer.Serialize(entries));
+        File.WriteAllText(StatePath(base_path), JsonSerializer.Serialize(entries));
     }
 
-    public static List<ScriptSaveEntry> Load()
+    public static List<ScriptSaveEntry> Load(string base_path = "")
     {
-        if (!File.Exists(StateFile))
+        if (!File.Exists(StatePath(base_path)))
             return [];
         try
         {
             return JsonSerializer.Deserialize<List<ScriptSaveEntry>>(
-                       File.ReadAllText(StateFile)) ?? [];
+                File.ReadAllText(StatePath(base_path))) ?? [];
         }
         catch (JsonException)
         {
@@ -50,12 +56,12 @@ public static class ScriptPersistence
 
     /// <summary>Loads and guard-validates one script. Throws on bad names,
     /// missing files, and banned patterns.</summary>
-    public static string LoadScript(string name)
+    public static string LoadScript(string name, string base_path = "")
     {
         if (!ScriptingSystem.FileNameRegex.IsMatch(name))
             throw new ScriptCompileException(
                 $"Invalid script name '{name}' — allowed: letters, digits, dashes, underscores.");
-        string path = SourcePath(name);
+        string path = SourcePath(name, base_path);
         if (!File.Exists(path))
             throw new ScriptCompileException($"Script '{name}' not found at {path}.");
         string source = File.ReadAllText(path);
@@ -65,12 +71,12 @@ public static class ScriptPersistence
 
     /// <summary>Loads and guard-validates one library. Throws on bad names,
     /// missing files, and banned patterns.</summary>
-    public static string LoadLibrary(string name)
+    public static string LoadLibrary(string name, string base_path = "")
     {
         if (!ScriptingSystem.FileNameRegex.IsMatch(name))
             throw new ScriptCompileException(
                 $"Invalid library name '{name}' — allowed: letters, digits, dashes, underscores.");
-        string path = LibPath(name);
+        string path = LibPath(name, base_path);
         if (!File.Exists(path))
             throw new ScriptCompileException($"Library '{name}' not found at {path}.");
         string source = File.ReadAllText(path);

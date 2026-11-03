@@ -354,14 +354,14 @@ internal class Program
 
     private static void PrintLibs()
     {
-        if (!Directory.Exists(ScriptPersistence.LibFolder)
-            || Directory.GetFiles(ScriptPersistence.LibFolder, "*.cs").Length == 0)
+        if (!Directory.Exists(ScriptPersistence.LibFolder())
+            || Directory.GetFiles(ScriptPersistence.LibFolder(), "*.cs").Length == 0)
         {
             Console.WriteLine("No libraries — drop .cs files into scripts/lib/. Pull one in with a '// uses: <name>' header line.");
         }
         else
         {
-            foreach (var f in Directory.GetFiles(ScriptPersistence.LibFolder, "*.cs"))
+            foreach (var f in Directory.GetFiles(ScriptPersistence.LibFolder(), "*.cs"))
                 Console.WriteLine($"  {Path.GetFileNameWithoutExtension(f),-16} {f}");
         }
     }

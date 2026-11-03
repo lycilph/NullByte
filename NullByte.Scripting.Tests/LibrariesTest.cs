@@ -2,109 +2,75 @@
 
 // -- Libraries ------------------------------------------------------------
 
-public class LibrariesTest
+public class LibrariesTest : IDisposable
 {
-    /// <summary>Sets up an isolated cwd so lib/script file IO stays in the test.</summary>
-    private static (string Dir, string OldCwd) TempScriptDir()
+    private readonly string test_path = Path.Combine(Path.GetTempPath(), "nullbyte-script-tests", Guid.NewGuid().ToString("N"));
+    private readonly string base_path;
+
+    public LibrariesTest()
     {
-        var dir = Path.Combine(Path.GetTempPath(), "nullbyte-script-tests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(Path.Combine(dir, "scripts", "lib"));
-        string old = Directory.GetCurrentDirectory();
-        Directory.SetCurrentDirectory(dir);
-        return (dir, old);
+        base_path = Path.Combine(test_path, "scripts");
+        Directory.CreateDirectory(ScriptPersistence.LibFolder(base_path));
     }
 
-    private static void CleanupScriptDir(string dir, string oldCwd)
+    public void Dispose()
     {
-        Directory.SetCurrentDirectory(oldCwd);
-        try { Directory.Delete(dir, true); } catch (IOException) { }
+        try { Directory.Delete(test_path, true); } catch (IOException) { }
     }
 
     [Fact]
     public async Task Library_HeaderChainsLibrarySource()
     {
-        var (dir, old) = TempScriptDir();
-        try
-        {
-            File.WriteAllText(Path.Combine("scripts", "lib", "mathlib.cs"),
-                "int DoubleIt(int x) => x * 2;\n");
+        File.WriteAllText(ScriptPersistence.LibPath("mathlib", base_path),
+            "int DoubleIt(int x) => x * 2;\n");
 
-            var session = Helper.NewSession();
-            var scripting = new ScriptingSystem(session);
-            var script = await scripting.StartAsync("user",
-                "// uses: mathlib\nnb.Log(\"doubled=\" + DoubleIt(21));");
-            await Helper.TickAsync(session, scripting);
+        var session = Helper.NewSession();
+        var scripting = new ScriptingSystem(session, base_path);
+        var script = await scripting.StartAsync("user",
+            "// uses: mathlib\nnb.Log(\"doubled=\" + DoubleIt(21));");
+        await Helper.TickAsync(session, scripting);
 
-            Assert.Contains(script.Output, l => l.Contains("doubled=42"));
-        }
-        finally
-        {
-            CleanupScriptDir(dir, old);
-        }
+        Assert.Contains(script.Output, l => l.Contains("doubled=42"));
     }
 
     [Fact]
     public async Task Library_Missing_ThrowsWithLibraryName()
     {
-        var (dir, old) = TempScriptDir();
-        try
-        {
-            var session = Helper.NewSession();
-            var scripting = new ScriptingSystem(session);
+        var session = Helper.NewSession();
+        var scripting = new ScriptingSystem(session, base_path);
 
-            var ex = await Assert.ThrowsAsync<ScriptCompileException>(
-                () => scripting.StartAsync("user", "// uses: nosuchlib\nns.Log(\"hi\");"));
+        var ex = await Assert.ThrowsAsync<ScriptCompileException>(
+            () => scripting.StartAsync("user", "// uses: nosuchlib\nns.Log(\"hi\");"));
 
-            Assert.Contains("nosuchlib", ex.Message);
-            Assert.Empty(scripting.Scripts);
-        }
-        finally
-        {
-            CleanupScriptDir(dir, old);
-        }
+        Assert.Contains("nosuchlib", ex.Message);
+        Assert.Empty(scripting.Scripts);
     }
 
     [Fact]
     public async Task Library_InvalidName_Throws()
     {
-        var (dir, old) = TempScriptDir();
-        try
-        {
-            var session = Helper.NewSession();
-            var scripting = new ScriptingSystem(session);
+        var session = Helper.NewSession();
+        var scripting = new ScriptingSystem(session, base_path);
 
-            // path traversal must die at the name check, before any file IO
-            var ex = await Assert.ThrowsAsync<ScriptCompileException>(
-                () => scripting.StartAsync("user", "// uses: ../evil\nns.Log(\"hi\");"));
+        // path traversal must die at the name check, before any file IO
+        var ex = await Assert.ThrowsAsync<ScriptCompileException>(
+            () => scripting.StartAsync("user", "// uses: ../evil\nns.Log(\"hi\");"));
 
-            Assert.Contains("Invalid library name", ex.Message);
-        }
-        finally
-        {
-            CleanupScriptDir(dir, old);
-        }
+        Assert.Contains("Invalid library name", ex.Message);
     }
 
     [Fact]
     public async Task Library_BannedPattern_Throws()
     {
-        var (dir, old) = TempScriptDir();
-        try
-        {
-            File.WriteAllText(Path.Combine("scripts", "lib", "badlib.cs"),
-                "using System.IO;\n");
+        File.WriteAllText(ScriptPersistence.LibPath("badlib", base_path),
+            "using System.IO;\n");
 
-            var session = Helper.NewSession();
-            var scripting = new ScriptingSystem(session);
+        var session = Helper.NewSession();
+        var scripting = new ScriptingSystem(session, base_path);
 
-            var ex = await Assert.ThrowsAsync<ScriptCompileException>(
-                () => scripting.StartAsync("user", "// uses: badlib\nns.Log(\"hi\");"));
+        var ex = await Assert.ThrowsAsync<ScriptCompileException>(
+            () => scripting.StartAsync("user", "// uses: badlib\nnb.Log(\"hi\");"));
 
-            Assert.Contains("BANNED", ex.Message); // the LIB failed the guard, not just the script
-        }
-        finally
-        {
-            CleanupScriptDir(dir, old);
-        }
+        Assert.Contains("BANNED", ex.Message); // the LIB failed the guard, not just the script
     }
 }
