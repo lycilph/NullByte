@@ -30,7 +30,7 @@ public class PersistenceTests
 
             // Keep it running (trailing Wait) so Running=true in the save.
             await scripting.StartAsync("persist",
-                "api.Data.SetNum(\"runs\", api.Data.GetNum(\"runs\", 0) + 1);\nawait api.Wait(100);");
+                "nb.Data.SetNum(\"runs\", nb.Data.GetNum(\"runs\", 0) + 1);\nawait nb.Wait(100);");
             await Helper.TickAsync(session, scripting);
 
             ScriptPersistence.Save(scripting.Scripts);

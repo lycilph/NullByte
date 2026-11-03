@@ -47,4 +47,34 @@ public static class ScriptPersistence
             return [];
         }
     }
+
+    /// <summary>Loads and guard-validates one script. Throws on bad names,
+    /// missing files, and banned patterns.</summary>
+    public static string LoadScript(string name)
+    {
+        if (!ScriptingSystem.FileNameRegex.IsMatch(name))
+            throw new ScriptCompileException(
+                $"Invalid script name '{name}' — allowed: letters, digits, dashes, underscores.");
+        string path = SourcePath(name);
+        if (!File.Exists(path))
+            throw new ScriptCompileException($"Script '{name}' not found at {path}.");
+        string source = File.ReadAllText(path);
+        ScriptGuard.Validate(source);
+        return source;
+    }
+
+    /// <summary>Loads and guard-validates one library. Throws on bad names,
+    /// missing files, and banned patterns.</summary>
+    public static string LoadLibrary(string name)
+    {
+        if (!ScriptingSystem.FileNameRegex.IsMatch(name))
+            throw new ScriptCompileException(
+                $"Invalid library name '{name}' — allowed: letters, digits, dashes, underscores.");
+        string path = LibPath(name);
+        if (!File.Exists(path))
+            throw new ScriptCompileException($"Library '{name}' not found at {path}.");
+        string source = File.ReadAllText(path);
+        ScriptGuard.Validate(source);
+        return source;
+    }
 }

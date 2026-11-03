@@ -131,7 +131,6 @@ Nullbyte.sln
 - CPU economy: time-based quota per script per tick, scaled by rig CPU/RAM → rig upgrades make scripts "faster" (API-call metering for cost balance)
 - Save model: persist script source + `nb.Data` key-value state; recompile and restart on load; durable facts in `nb.Data`, locals accepted lost; spendy commands made idempotent
 - In-game editor: AvalonEdit + Roslyn classification → real C# highlighting, IntelliSense, compile-error squiggles
-- Script marketplace (share/import scripts as JSON strings)
 - Runtime errors halt one script, never the game; cache compiled scripts per save (Roslyn warm-up ~1–2 s once)
 - **Reusable libraries**: `// uses: <names>` header lines chain `scripts/lib/<name>.cs` ahead of the script via Roslyn `ContinueWith` — one compilation, shared declarations, guard-validated libs, name-locked to `[a-z0-9-]+`; libraries are pure source and take `ns` as a parameter when they need engine access
 - *Exit test:* a player script can play the early game unattended; save/load round-trips and the script reconverges.
@@ -203,6 +202,7 @@ engine — which is the actual Bitburner hook landing.
 
 ### Phase 6 — World & late game
 - Persistent "network map" world (nodes to conquer, turf mechanics)
+  - Network graph to discovered by network scans
 - WPF UI with a real terminal window and live graphs
 - Move constants to the content to enable easier balancing
 - Balancing pass, difficulty curve tuning from telemetry-style save data

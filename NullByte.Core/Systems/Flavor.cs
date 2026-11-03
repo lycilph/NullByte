@@ -1,4 +1,6 @@
-﻿namespace NullByte.Core.Systems;
+﻿using System.Globalization;
+
+namespace NullByte.Core.Systems;
 
 // ---------------------------------------------------------------------------
 // Systems: pure game logic. Each exposes a Tick(GameState) that advances
@@ -23,6 +25,6 @@ public static class Flavor
                               double xp = 0)
         => template
             .Replace("{target}", target)
-            .Replace("{money}", money.ToString("0.##"))
-            .Replace("{xp}", xp.ToString("0.#"));
+            .Replace("{money}", money.ToString("0.##", CultureInfo.InvariantCulture))
+            .Replace("{xp}", xp.ToString("0.#", CultureInfo.InvariantCulture));
 }

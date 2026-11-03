@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Text.RegularExpressions;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using NullByte.Core;
@@ -19,8 +20,11 @@ namespace NullByte.Scripting;
 // scripting.
 // ---------------------------------------------------------------------------
 
-public sealed class ScriptingSystem(GameSession session)
+public sealed partial class ScriptingSystem(GameSession session)
 {
+    [GeneratedRegex("^[a-z0-9-_]+$", RegexOptions.IgnoreCase, "da-DK")]
+    private static partial Regex GeneratedNameRegex();
+
     /// <summary>
     /// Pinned compile options (production hardening, design doc Phase 4):
     ///
@@ -34,6 +38,8 @@ public sealed class ScriptingSystem(GameSession session)
         .AddReferences(typeof(NullByteApi).Assembly)  // the nb API surface
         .WithAllowUnsafe(false)
         .WithEmitDebugInformation(false);
+
+    public static readonly Regex FileNameRegex = GeneratedNameRegex();
 
     public const int MaxApiCallsPerTick = 50;
 
@@ -59,7 +65,7 @@ public sealed class ScriptingSystem(GameSession session)
         Script<object>? chain = null;
         foreach (string libName in ScriptIncludes.ParseUses(source))
         {
-            string libSource = ScriptIncludes.LoadLibrary(libName);
+            string libSource = ScriptPersistence.LoadLibrary(libName);
             chain = chain is null
                 ? CSharpScript.Create(libSource, options, typeof(ScriptGlobals))
                 : chain.ContinueWith(libSource);

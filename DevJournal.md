@@ -1,5 +1,20 @@
 # NULLBYTE — C# Incremental Hacker Game - DevJournal
 
+## 03-11-2026
+
+### In Progress
+- Fixing issues identified by Mistral (gave it the entire codebase to look for errors) - see CodebaseIssues.md
+
+### Done
+
+### Decisions
+- Removed lazy initialization of target state, remove potential threading issues in the gametick vs script api reads
+
+### Future
+- Network of nodes (like bitburner) to be discovered using network scans
+- Auto-save (every x secs)
+
+---
 ## 02-11-2026
 
 ### In Progress
@@ -46,5 +61,5 @@
 - Change the print loop to use concurrentqueue
 
 ### Future
-- Getting the lists of targets, upgrads, etc. is not implemented in the scripting api
-- Add option (in api) to get calculated duration of a hack
+- ~~Getting the lists of targets, upgrads, etc. is not implemented in the scripting api~~
+- ~~Add option (in api) to get calculated duration of a hack~~

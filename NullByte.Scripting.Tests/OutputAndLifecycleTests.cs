@@ -22,7 +22,7 @@ public class OutputAndLifecycleTests
         var session = Helper.NewSession();
         var scripting = new ScriptingSystem(session);
 
-        var script = await scripting.StartAsync("logger", "api.Log(\"hello from script\");");
+        var script = await scripting.StartAsync("logger", "nb.Log(\"hello from script\");");
         await Helper.TickAsync(session, scripting);
         Assert.Contains("[logger] hello from script", script.Output);
 
@@ -40,7 +40,7 @@ public class OutputAndLifecycleTests
         // The script's Hack must become a real engine hack — a script is just
         // another command source, so a valid target must actually start.
         var script = await scripting.StartAsync("hacker",
-            "await api.Hack(\"webmail\"); api.Log(\"hack submitted at \" + api.Ticks);");
+            "await nb.Hack(\"webmail\"); nb.Log(\"hack submitted at \" + nb.Ticks);");
 
         Assert.True(await Helper.RunUntilAsync(session, scripting,
             () => session.State.ActiveJobs.Count > 0),
@@ -58,7 +58,7 @@ public class OutputAndLifecycleTests
         // Wait(5) can only be satisfied by >= 5 barrier releases (it may
         // take one more if the script starts mid-tick — tolerated).
         var script = await scripting.StartAsync("waiter",
-            "api.Log(\"t0=\" + api.Ticks); await api.Wait(5); api.Log(\"t1=\" + api.Ticks);");
+            "nb.Log(\"t0=\" + nb.Ticks); await nb.Wait(5); nb.Log(\"t1=\" + nb.Ticks);");
 
         Assert.True(await Helper.RunUntilAsync(session, scripting,
             () => script.Output.Any(l => l.Contains("t1="))),
@@ -76,7 +76,7 @@ public class OutputAndLifecycleTests
         var scripting = new ScriptingSystem(session);
 
         var script = await scripting.StartAsync("daemon",
-            "int i = 0;\nwhile (true) { api.Log(\"beat \" + i++); await api.Wait(1); }");
+            "int i = 0;\nwhile (true) { nb.Log(\"beat \" + i++); await nb.Wait(1); }");
 
         // Prove it's alive and looping...
         Assert.True(await Helper.RunUntilAsync(session, scripting,
@@ -109,7 +109,7 @@ public class OutputAndLifecycleTests
         var bad = await scripting.StartAsync("bad",
             "throw new Exception(\"boom\");");
         var good = await scripting.StartAsync("good",
-            "for (int i = 0; i < 3; i++) { api.Log(\"alive \" + i); await api.Wait(1); }");
+            "for (int i = 0; i < 3; i++) { nb.Log(\"alive \" + i); await nb.Wait(1); }");
 
         Assert.True(await Helper.RunUntilAsync(session, scripting, () => !bad.IsRunning));
         Assert.NotNull(bad.Error);

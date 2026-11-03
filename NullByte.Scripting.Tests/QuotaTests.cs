@@ -27,7 +27,7 @@ public class QuotaTests
         // submitting, so the extra calls are deferred to later ticks —
         // throttled, not dropped, not crashed.
         var script = await scripting.StartAsync("burst",
-            "for (int i = 0; i < 60; i++) { _ = api.Buy(\"cpu\"); }\napi.Log(\"burst queued\");");
+            "for (int i = 0; i < 60; i++) { _ = nb.Buy(\"cpu\"); }\nnb.Log(\"burst queued\");");
 
         // NOTE: observable assumes a rejected buy (no money at start) logs an
         // EventLog entry. If engine feedback changes, swap the observable.

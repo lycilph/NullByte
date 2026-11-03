@@ -32,6 +32,16 @@ public static class HackSystem
     // heat failure roll is engine Random and changes gameplay outcomes.
     private static readonly Random Rng = new();
 
+    // -- Initialize -----------------------------------------------------------
+
+    /// <summary>Stocks every target's pool to max, cold. Call once per run
+    /// (new game, load, identity burn).</summary>
+    public static void InitializeTargets(GameState s, GameContent c)
+    {
+        foreach (var t in c.Targets)
+            s.Targets[t.Id] = new TargetState { CurrentMoney = MaxMoneyOf(t) };
+    }
+
     // -- Target state ---------------------------------------------------------
 
     /// <summary>Max pool: content may pin it, else 8x the legacy flat reward
@@ -39,16 +49,11 @@ public static class HackSystem
     public static double MaxMoneyOf(TargetDef t)
         => t.MaxMoney > 0 ? t.MaxMoney : t.MoneyReward * 8;
 
-    /// <summary>Lazy per-target state; first touch stocks the pool to max.</summary>
+    /// <summary>Get the pre-initialized state for a given target (or throw)</summary>
     public static TargetState StateFor(GameState s, TargetDef t)
-    {
-        if (!s.Targets.TryGetValue(t.Id, out var st))
-        {
-            st = new TargetState { CurrentMoney = MaxMoneyOf(t) };
-            s.Targets[t.Id] = st;
-        }
-        return st;
-    }
+    => s.Targets.TryGetValue(t.Id, out var st)
+     ? st
+     : throw new InvalidOperationException($"Target '{t.Id}' has no state — init ran?");
 
     /// <summary>Fail chance at a heat: 0 up to 40, 0.25 at 70, capped at 0.5.</summary>
     public static double FailChance(double heat)
@@ -95,12 +100,6 @@ public static class HackSystem
         var t = CanTouch(s, c, targetId);
         if (t is null)
             return;
-
-        //int duration = kind switch
-        //{
-        //    JobKind.Grow => (int)Math.Ceiling(HackDuration(t, s) * GrowDurationMult),
-        //    _ => HackDuration(t, s), // hack and scrub share the duration curve
-        //};
 
         int duration = JobDuration(t, s, kind);
 
@@ -172,12 +171,10 @@ public static class HackSystem
     public static void Tick(GameState s, GameContent c)
     {
         // Passive heat decay — paused while a job runs on the mark.
+        var busy_targets = new HashSet<string>(s.ActiveJobs.Select(j => j.TargetId));
         foreach (var kv in s.Targets)
         {
-            bool busy = false;
-            foreach (var j in s.ActiveJobs)
-                if (j.TargetId == kv.Key) { busy = true; break; }
-            if (!busy)
+            if (!busy_targets.Contains(kv.Key))
                 kv.Value.Heat = Math.Max(0, kv.Value.Heat - HeatDecayPerTick);
         }
 

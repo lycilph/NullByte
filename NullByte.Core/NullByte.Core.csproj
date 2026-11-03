@@ -7,6 +7,6 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <InternalsVisibleTo Include="Nullbyte.Core.Tests" />
+    <InternalsVisibleTo Include="NullByte.Core.Tests" />
   </ItemGroup>
 </Project>

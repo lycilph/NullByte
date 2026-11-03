@@ -7,34 +7,6 @@ namespace NullByte.Core;
 // The caller turns offlineElapsed into FastForward ticks (capped here).
 // ---------------------------------------------------------------------------
 
-public sealed class SaveData
-{
-    public int SchemaVersion { get; set; } = 1;
-    public DateTimeOffset SavedAtUtc { get; set; }
-    public double Money { get; set; }
-    public double Xp { get; set; }
-    public int Level { get; set; }
-    public int SkillPoints { get; set; }
-    public long ZeroDays { get; set; }
-    public long GameTick { get; set; }
-    public Dictionary<string, int> UpgradeLevels { get; set; } = [];
-    public Dictionary<string, int> PerkLevels { get; set; } = [];
-    public Dictionary<string, int> PrestigeLevels { get; set; } = [];
-    public GameStats? Stats { get; set; }
-    public List<string> Achievements { get; set; } = [];
-    public List<ContractOfferState> ContractOffers { get; set; } = [];
-    public List<ActiveContractState> ActiveContracts { get; set; } = [];
-    public List<ActiveJob> ActiveJobs { get; set; } = [];
-
-    /// <summary>
-    /// Nullable on purpose: saves from before Phase 4.5 lack it, and a
-    /// missing dict loads as fresh (fully stocked, cold) marks — the same
-    /// state a brand-new player sees, so no migration step is needed.
-    /// </summary>
-    public Dictionary<string, TargetState>? Targets { get; set; }
-}
-
-
 public static class SaveSystem
 {
     public const string SaveFile = "save.json";
@@ -45,29 +17,12 @@ public static class SaveSystem
         WriteIndented = true,
     };
 
-    public static void Save(GameState state, string path = SaveFile)
+    public static void Save(GameSession session, string path = SaveFile)
     {
-        var data = new SaveData
-        {
-            SchemaVersion = 1,
-            SavedAtUtc = DateTimeOffset.UtcNow,
-            Money = state.Money,
-            Xp = state.Xp,
-            Level = state.Level,
-            SkillPoints = state.SkillPoints,
-            ZeroDays = state.ZeroDays,
-            GameTick = state.GameTick,
-            UpgradeLevels = new Dictionary<string, int>(state.UpgradeLevels),
-            PerkLevels = new Dictionary<string, int>(state.PerkLevels),
-            PrestigeLevels = new Dictionary<string, int>(state.PrestigeLevels),
-            Stats = state.Stats,
-            Achievements = [.. state.Achievements],
-            ContractOffers = [.. state.ContractOffers],
-            ActiveContracts = [.. state.ActiveContracts],
-            ActiveJobs = [.. state.ActiveJobs],
-            Targets = new Dictionary<string, TargetState>(state.Targets),
-        };
-        File.WriteAllText(path, JsonSerializer.Serialize(data, options));
+        var tmp = path + ".tmp";
+        var data = session.CaptureSaveData();
+        File.WriteAllText(tmp, JsonSerializer.Serialize(data, options));
+        File.Move(tmp, path, overwrite: true);
     }
 
     /// <summary>

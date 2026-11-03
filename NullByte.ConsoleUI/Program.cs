@@ -1,4 +1,4 @@
-﻿using NullByte.ConsoleUI.Systems;
+﻿using System.Globalization;
 using NullByte.Core;
 using NullByte.Core.Commands;
 using NullByte.Core.Systems;
@@ -13,9 +13,11 @@ internal class Program
 
     static async Task Main()
     {
+        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+
         var content = ContentLoader.Load();
 
-        // TODO - uncomment
+        // TODO: commented out while developing (takes time)
         //RunBootSequence();
 
         // -- Load save + offline catch-up --
@@ -262,7 +264,7 @@ internal class Program
                         break;
 
                     case "save":
-                        SaveSystem.Save(session.State);
+                        SaveSystem.Save(session);
                         Console.WriteLine("Saved.");
                         break;
 
@@ -295,7 +297,7 @@ internal class Program
         }
         catch (AggregateException) { }
         
-        SaveSystem.Save(session.State);
+        SaveSystem.Save(session);
         ScriptPersistence.Save(scripting.Scripts);
 
         Console.WriteLine("Saved. Bye.");
@@ -319,7 +321,7 @@ internal class Program
                     data.SetStr($"param{i}", parameters[i]);
             }
 
-            await scripting.StartAsync(name, File.ReadAllText(ScriptPersistence.SourcePath(name)), data);
+            await scripting.StartAsync(name, ScriptPersistence.LoadScript(name), data);
             lock (consoleLock) { Console.WriteLine($"'{name}' running."); }
         }
         catch (ScriptCompileException ex)

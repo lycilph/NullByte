@@ -72,7 +72,7 @@ public static class PrestigeSystem
         s.ContractOffers = [];
         s.ActiveContracts = [];
         s.ActiveJobs = [];
-        s.Targets = [];   // fresh identity: all marks cold and fully stocked
+        HackSystem.InitializeTargets(s, c); // Resets the state for all targets
 
         s.Stats.PrestigeCount++;
 

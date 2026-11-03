@@ -39,7 +39,7 @@ public class CompileTimeTests
         var scripting = new ScriptingSystem(session);
 
         var ex = await Assert.ThrowsAsync<ScriptCompileException>(
-            () => scripting.StartAsync("bad", "api.UndefinedMethod();"));
+            () => scripting.StartAsync("bad", "nb.UndefinedMethod();"));
 
         Assert.Contains("CS1061", ex.Message); // '... does not contain a definition for ...'
         Assert.Empty(scripting.Scripts);       // failed compiles never register

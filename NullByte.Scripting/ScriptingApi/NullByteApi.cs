@@ -28,19 +28,19 @@ public sealed class NullByteApi
 
     // -- Queries -------------------------------------------------------------
 
-    public double Money => session.State.Money;
-    public double Level => session.State.Level;
-    public double Xp => session.State.Xp;
-    public double SkillPoints => session.State.SkillPoints;
-    public double ZeroDays => session.State.ZeroDays;
-    public long Ticks => session.State.GameTick;
-    public int ActiveJobs => session.State.ActiveJobs.Count;
-    public int MaxConcurrentJobs => HackSystem.MaxConcurrentHacks(session.State);
+    public double Money => session.Read(s => s.Money);
+    public int Level => session.Read(s => s.Level);
+    public double Xp => session.Read(s => s.Xp);
+    public int SkillPoints => session.Read(s => s.SkillPoints);
+    public long ZeroDays => session.Read(s => s.ZeroDays);
+    public long Ticks => session.Read(s => s.GameTick);
+    public int ActiveJobs => session.Read(s => s.ActiveJobs.Count);
+    public int MaxConcurrentJobs => session.Read(HackSystem.MaxConcurrentHacks);
     
     // -- Upgrade queries -----------------------------------------------------
 
-    public int CpuLevel => session.State.UpgradeLevels.GetValueOrDefault("cpu");
-    public int RamLevel => session.State.UpgradeLevels.GetValueOrDefault("ram");
+    public int CpuLevel => session.Read(s => s.UpgradeLevels.GetValueOrDefault("cpu"));
+    public int RamLevel => session.Read(s => s.UpgradeLevels.GetValueOrDefault("ram"));
 
     // -- List queries --------------------------------------------------------
 
@@ -48,24 +48,17 @@ public sealed class NullByteApi
     public List<Target> ScanNetwork() 
         => [.. session.Content.Targets.Select(t => new Target(t.Id, t.Name, t.MinLevel, t.RequiredCpu, t.RequiredRam))];
 
-    // TODO - remove this
-    //public void temp()
-    //{
-    //    List<int> a = [1, 2, 5, 3];
-    //    var b = a.OrderByDescending()
-    //}
-
     // -- Mark state (Phase 4.5) ----------------------------------------------
 
     /// <summary>Live money pool on a mark. Unknown target id → 0.</summary>
     public double TargetMoney(string targetId)
         => session.Content.FindTarget(targetId) is { } t
-            ? HackSystem.StateFor(session.State, t).CurrentMoney : 0;
+         ? session.Read(s => s.Targets[t.Id].CurrentMoney) : 0;
 
     /// <summary>Current heat on a mark. Unknown target id → 0.</summary>
     public double TargetHeat(string targetId)
         => session.Content.FindTarget(targetId) is { } t
-            ? HackSystem.StateFor(session.State, t).Heat : 0;
+         ? session.Read(s => s.Targets[t.Id].Heat) : 0;
 
     /// <summary>Max drainable pool of a mark. Unknown target id → 0.</summary>
     public double TargetMax(string targetId)
@@ -74,15 +67,15 @@ public sealed class NullByteApi
 
     public int TargetHackDuration(string targetId)
         => session.Content.FindTarget(targetId) is { } t
-           ? HackSystem.JobDuration(t, session.State, JobKind.Hack) : 0;
+         ? session.Read(s => HackSystem.JobDuration(t, s, JobKind.Hack)) : 0;
 
     public int TargetGrowDuration(string targetId)
         => session.Content.FindTarget(targetId) is { } t
-           ? HackSystem.JobDuration(t, session.State, JobKind.Grow) : 0;
+         ? session.Read(s => HackSystem.JobDuration(t, s, JobKind.Grow)) : 0;
 
     public int TargetScrubDuration(string targetId)
         => session.Content.FindTarget(targetId) is { } t
-           ? HackSystem.JobDuration(t, session.State, JobKind.Scrub) : 0;
+         ? session.Read(s => HackSystem.JobDuration(t, s, JobKind.Scrub)) : 0;
 
     // -- Actions (emit engine commands; resolve at the next tick) ----------
 

@@ -1,6 +1,4 @@
-﻿using NullByte.Core;
-
-namespace NullByte.ConsoleUI.Systems;
+﻿namespace NullByte.Core.Systems;
 
 /// <summary>Classic idler cost curve: cost = base * growth^owned.</summary>
 public static class CostMath

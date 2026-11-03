@@ -51,6 +51,8 @@ internal static class ScriptGuard
         "TcpClient", "UdpClient", "Dns", "NetworkInterface", "IPAddress", "IPEndPoint",
         // Registry / string-compiled-code escapes
         "Registry", "RegistryKey", "Expression", "LambdaExpression",
+        // Misc
+        "Type"
     };
 
     public static void Validate(string source)

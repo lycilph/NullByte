@@ -8,37 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="scripts\autohack.cs" />
-    <Compile Remove="scripts\grinder.cs" />
-    <Compile Remove="scripts\hack.cs" />
-    <Compile Remove="scripts\lib\misc.cs" />
-    <Compile Remove="scripts\lib\print.cs" />
-    <Compile Remove="scripts\parameters_test.cs" />
-    <Compile Remove="scripts\test.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="scripts\autohack.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="scripts\grinder.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="scripts\hack.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="scripts\lib\misc.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="scripts\lib\print.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="scripts\parameters_test.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="scripts\test.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <Compile Remove="scripts\**\*.cs" />
+    <Content Include="scripts\**\*.cs" CopyToOutputDirectory="PreserveNewest"/>
   </ItemGroup>
 
   <ItemGroup>

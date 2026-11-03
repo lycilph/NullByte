@@ -28,32 +28,12 @@ internal static partial class ScriptIncludes
         [GeneratedRegex(@"^\s*//\s*uses:\s*(.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline, "da-DK")]
     private static partial Regex GeneratedUsesRegex();
 
-    [GeneratedRegex("^[a-z0-9-]+$", RegexOptions.IgnoreCase, "da-DK")]
-    private static partial Regex GeneratedNameRegex();
-
-    private static readonly Regex UsesRegex = GeneratedUsesRegex();
-    private static readonly Regex NameRegex = GeneratedNameRegex();
+    private static readonly Regex usesRegex = GeneratedUsesRegex();
 
     /// <summary>All library names the script asks for, in header order.</summary>
     public static List<string> ParseUses(string source)
-        => UsesRegex.Matches(source)
+        => usesRegex.Matches(source)
             .SelectMany(m => m.Groups[1].Value.Split(',',
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
             .ToList();
-
-    /// <summary>Loads and guard-validates one library. Throws on bad names,
-    /// missing files, and banned patterns.</summary>
-    public static string LoadLibrary(string name)
-    {
-        if (!NameRegex.IsMatch(name))
-            throw new ScriptCompileException(
-                $"Invalid library name '{name}' — allowed: letters, digits, dashes.");
-        string path = ScriptPersistence.LibPath(name);
-        if (!File.Exists(path))
-            throw new ScriptCompileException($"Library '{name}' not found at {path}.");
-        string source = File.ReadAllText(path);
-        ScriptGuard.Validate(source);
-        return source;
-    }
-
 }

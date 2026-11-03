@@ -47,10 +47,7 @@ public sealed class GameState
     /// <summary>Jobs currently running on marks (hack / grow / scrub).</summary>
     public List<ActiveJob> ActiveJobs { get; internal set; } = [];
 
-    /// <summary>
-    /// Live per-target state (money pool, heat), keyed by target id.
-    /// Lazily initialized on first touch — see HackSystem.StateFor.
-    /// </summary>
+    /// <summary> Live per-target state (money pool, heat), keyed by target id.</summary>
     public Dictionary<string, TargetState> Targets { get; internal set; } = [];
 
     /// <summary>Event log; the UI reads and consumes this.</summary>

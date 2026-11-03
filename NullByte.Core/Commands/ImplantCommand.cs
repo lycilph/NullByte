@@ -1,4 +1,4 @@
-﻿using NullByte.ConsoleUI.Systems;
+﻿using NullByte.Core.Systems;
 
 namespace NullByte.Core.Commands;
 
