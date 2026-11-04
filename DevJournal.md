@@ -1,5 +1,20 @@
 # NULLBYTE — C# Incremental Hacker Game - DevJournal
 
+## 04-11-2026
+
+### In Progress
+
+
+## TODO
+
+### Done
+
+### Decisions
+- Restarted entire project
+
+### Future
+
+---
 ## 03-11-2026
 
 ### In Progress

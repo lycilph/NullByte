@@ -1,12 +1,12 @@
 <Solution>
   <Folder Name="/Docs/">
     <File Path="AIPrompts.md" />
+    <File Path="DevJournal.md" />
+    <File Path="NullByte Game Design Document.md" />
   </Folder>
   <Folder Name="/Temp/" />
   <Project Path="NullByte.ConsoleUI/NullByte.ConsoleUI.csproj" Id="cdcac8a8-11b5-4852-8078-0f43ce7d1fc4" />
-  <Project Path="NullByte.Core.Tests/NullByte.Core.Tests.csproj" Id="837290d4-db23-4ba4-9318-db2bd159a073" />
-  <Project Path="NullByte.Core/NullByte.Core.csproj" />
-  <Project Path="NullByte.Scripting.Tests/NullByte.Scripting.Tests.csproj" Id="f61c4933-a783-4021-b7c1-b50a3fb9b930" />
-  <Project Path="NullByte.Scripting/NullByte.Scripting.csproj" Id="fbe2b454-980b-4cf7-af14-4bc22dc481dc" />
+  <Project Path="NullByte.Core.Tests/NullByte.Core.Tests.csproj" Id="3c692650-63b2-4dd8-85c7-47ee14ee95d2" />
+  <Project Path="NullByte.Core/NullByte.Core.csproj" Id="9d3e2a10-9d38-4a80-9e80-55ea93597222" />
   <Project Path="NullByte/NullByte.csproj" />
 </Solution>
