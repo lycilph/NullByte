@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using NullByte.Core;
 using NullByte.Core.Commands;
+using NullByte.Core.Domain;
 using NullByte.Core.Systems;
 using NullByte.Scripting;
 
@@ -31,7 +32,7 @@ internal class Program
             {
                 session.FastForward(offlineTicks);
                 Console.WriteLine($"Save loaded. Away for {l.OfflineElapsed:hh\\:mm\\:ss} — advanced {offlineTicks} ticks.");
-                Console.WriteLine($"Welcome back. Money: ${session.State.Money:0.##}\n");
+                Console.WriteLine($"Welcome back. Money: ${session.Read(s => s.Money):0.##}\n");
             }
         }
         else
@@ -73,7 +74,7 @@ internal class Program
         });
 
         // -- Event printer: drains the EventLog twice a second --
-        int handledPrestiges = session.State.Stats.PrestigeCount;
+        int handledPrestiges = session.Read(s => s.Stats.PrestigeCount);
         var printer = Task.Run(async () =>
         {
             while (!cts.IsCancellationRequested)
@@ -83,9 +84,9 @@ internal class Program
                 // -- Burn detection (cursor pattern): a new identity gets a
                 // fresh boot. Skip the stale log backlog — the boot animation
                 // IS the announcement; pre-burn events don't matter anymore.
-                if (session.State.Stats.PrestigeCount != handledPrestiges)
+                if (session.Read(s => s.Stats.PrestigeCount) != handledPrestiges)
                 {
-                    handledPrestiges = session.State.Stats.PrestigeCount;
+                    handledPrestiges = session.Read(s => s.Stats.PrestigeCount);
                     lock (consoleLock)
                     {
                         RunBootSequence();
@@ -93,7 +94,7 @@ internal class Program
                     }
                 }
 
-                var log = session.State.EventLog;
+                var log = session.EventLog;
                 lock (consoleLock)
                 {
                     while (log.TryDequeue(out var message))

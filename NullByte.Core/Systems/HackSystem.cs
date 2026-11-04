@@ -1,4 +1,6 @@
-﻿namespace NullByte.Core.Systems;
+﻿using NullByte.Core.Domain;
+
+namespace NullByte.Core.Systems;
 
 // ---------------------------------------------------------------------------
 // Systems: pure game logic. Each exposes a Tick(GameState) that advances
@@ -235,10 +237,10 @@ public static class HackSystem
 
                 s.Money += steal;
                 s.Xp += h.XpReward;
-                s.Stats.TotalHacks++;
-                s.Stats.MoneyEarned += steal;
-                s.Stats.HacksPerTarget[h.TargetId] =
-                    s.Stats.HacksPerTarget.GetValueOrDefault(h.TargetId) + 1;
+                s.Statistics.TotalHacks++;
+                s.Statistics.MoneyEarned += steal;
+                s.Statistics.HacksPerTarget[h.TargetId] =
+                    s.Statistics.HacksPerTarget.GetValueOrDefault(h.TargetId) + 1;
 
                 string flavor = Flavor.Pick(c.Flavor.HackComplete);
                 s.Log(flavor.Length == 0

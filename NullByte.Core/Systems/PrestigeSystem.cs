@@ -1,4 +1,6 @@
-﻿namespace NullByte.Core.Systems;
+﻿using NullByte.Core.Domain;
+
+namespace NullByte.Core.Systems;
 
 // ---------------------------------------------------------------------------
 // Systems: pure game logic. Each exposes a Tick(GameState) that advances
@@ -74,7 +76,7 @@ public static class PrestigeSystem
         s.ActiveJobs = [];
         HackSystem.InitializeTargets(s, c); // Resets the state for all targets
 
-        s.Stats.PrestigeCount++;
+        s.Statistics.PrestigeCount++;
 
         s.Log($"Identity burned. +{tokens} 0-days. The dark web forgets you... for now.");
     }

@@ -1,4 +1,6 @@
-﻿namespace NullByte.Core.Systems;
+﻿using NullByte.Core.Domain;
+
+namespace NullByte.Core.Systems;
 
 // ---------------------------------------------------------------------------
 // Systems: pure game logic. Each exposes a Tick(GameState) that advances

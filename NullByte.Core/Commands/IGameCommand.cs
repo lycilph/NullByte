@@ -1,4 +1,6 @@
-﻿namespace NullByte.Core.Commands;
+﻿using NullByte.Core.Domain;
+
+namespace NullByte.Core.Commands;
 
 // ---------------------------------------------------------------------------
 // Commands: the ONLY way anything outside the engine changes game state.

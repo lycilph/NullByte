@@ -1,5 +1,7 @@
 ﻿using NullByte.Core;
 using NullByte.Core.Commands;
+using NullByte.Core.Domain;
+using NullByte.Core.Snapshots;
 using NullByte.Core.Systems;
 
 namespace NullByte.Scripting.ScriptingApi;
@@ -28,12 +30,13 @@ public sealed class NullByteApi
 
     // -- Queries -------------------------------------------------------------
 
-    public double Money => session.Read(s => s.Money);
-    public int Level => session.Read(s => s.Level);
-    public double Xp => session.Read(s => s.Xp);
-    public int SkillPoints => session.Read(s => s.SkillPoints);
-    public long ZeroDays => session.Read(s => s.ZeroDays);
-    public long Ticks => session.Read(s => s.GameTick);
+    //public double Money => session.CaptureStateSnapshot().Money;
+    //public int Level => session.CaptureStateSnapshot().Level;
+    //public double Xp => session.CaptureStateSnapshot().Xp;
+    //public int SkillPoints => session.CaptureStateSnapshot().SkillPoints;
+    //public long ZeroDays => session.CaptureStateSnapshot().ZeroDays;
+    //public long Ticks => session.CaptureStateSnapshot().GameTick;
+    public StateSnapshot State => session.CaptureStateSnapshot();
     public int ActiveJobs => session.Read(s => s.ActiveJobs.Count);
     public int MaxConcurrentJobs => session.Read(HackSystem.MaxConcurrentHacks);
     

@@ -1,4 +1,6 @@
-﻿namespace NullByte.Core.Systems;
+﻿using NullByte.Core.Domain;
+
+namespace NullByte.Core.Systems;
 
 // ---------------------------------------------------------------------------
 // Systems: pure game logic. Each exposes a Tick(GameState) that advances
@@ -18,17 +20,17 @@ public static class AchievementsSystem
     public static double StatValue(GameState s, string key)
     {
         if (key.StartsWith(targetHackPrefix))
-            return s.Stats.HacksPerTarget.GetValueOrDefault(key[targetHackPrefix.Length..]);
+            return s.Statistics.HacksPerTarget.GetValueOrDefault(key[targetHackPrefix.Length..]);
 
         return key switch
         {
-            "hacks" => s.Stats.TotalHacks,
-            "moneyEarned" => s.Stats.MoneyEarned,
+            "hacks" => s.Statistics.TotalHacks,
+            "moneyEarned" => s.Statistics.MoneyEarned,
             "level" => s.Level,
-            "upgradesBought" => s.Stats.UpgradesBought,
-            "contractsCompleted" => s.Stats.ContractsCompleted,
-            "contractsFailed" => s.Stats.ContractsFailed,
-            "prestigeCount" => s.Stats.PrestigeCount,
+            "upgradesBought" => s.Statistics.UpgradesBought,
+            "contractsCompleted" => s.Statistics.ContractsCompleted,
+            "contractsFailed" => s.Statistics.ContractsFailed,
+            "prestigeCount" => s.Statistics.PrestigeCount,
             _ => 0,
         };
     }

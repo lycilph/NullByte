@@ -1,4 +1,6 @@
-﻿namespace NullByte.Core.Systems;
+﻿using NullByte.Core.Domain;
+
+namespace NullByte.Core.Systems;
 
 // ---------------------------------------------------------------------------
 // Systems: pure game logic. Each exposes a Tick(GameState) that advances
@@ -82,7 +84,7 @@ public static class ContractsSystem
             {
                 s.Money += def.RewardMoney;
                 s.Xp += def.RewardXp;
-                s.Stats.ContractsCompleted++;
+                s.Statistics.ContractsCompleted++;
                 s.Log($"CONTRACT COMPLETE: {def.Name} — bonus +${def.RewardMoney:0.##}, +{def.RewardXp:0.#} XP.");
                 s.ActiveContracts.RemoveAt(i);
                 continue;
@@ -91,7 +93,7 @@ public static class ContractsSystem
             a.DeadlineRemaining--;
             if (a.DeadlineRemaining <= 0)
             {
-                s.Stats.ContractsFailed++;
+                s.Statistics.ContractsFailed++;
                 s.Log($"Contract failed: {def.Name} — expired. No bonus this time.");
                 s.ActiveContracts.RemoveAt(i);
             }

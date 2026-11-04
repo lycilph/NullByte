@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using NullByte.Core.Domain;
 
 namespace NullByte.Core;
 
@@ -58,7 +59,7 @@ public static class SaveSystem
             UpgradeLevels = data.UpgradeLevels ?? [],
             PerkLevels = data.PerkLevels ?? [],
             PrestigeLevels = data.PrestigeLevels ?? [],
-            Stats = data.Stats ?? new GameStats(),
+            Statistics = data.Stats ?? new GameStatistics(),
             Achievements = data.Achievements?.ToHashSet() ?? [],
             ContractOffers = data.ContractOffers ?? [],
             ActiveContracts = data.ActiveContracts ?? [],

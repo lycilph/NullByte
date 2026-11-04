@@ -1,5 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using NullByte.Core.Commands;
+using NullByte.Core.Domain;
+using NullByte.Core.Snapshots;
 using NullByte.Core.Systems;
 
 namespace NullByte.Core;
@@ -12,14 +14,14 @@ namespace NullByte.Core;
 
 public sealed class GameSession
 {
-    private static readonly Lock gate = new();
+    private readonly Lock gate = new();
+    private readonly GameState state;
+    private readonly ConcurrentQueue<IGameCommand> inbox = new();
 
     public const int TickMs = 100;
-
     public GameContent Content { get; }
-    public GameState State { get; }
 
-    private readonly ConcurrentQueue<IGameCommand> inbox = new();
+    public ConcurrentQueue<string> EventLog { get => state.EventLog; }
 
     public GameSession(GameContent content, GameState? loadedState = null)
     {
@@ -27,11 +29,11 @@ public sealed class GameSession
 
         if (loadedState == null)
         {
-            State = new GameState();
-            HackSystem.InitializeTargets(State, content);
+            state = new GameState();
+            HackSystem.InitializeTargets(state, content);
         }
         else
-            State = loadedState;
+            state = loadedState;
     }
 
     /// <summary>Queue a command; applied at the start of the next tick.</summary>
@@ -43,20 +45,20 @@ public sealed class GameSession
         lock (gate)
         {
             while (inbox.TryDequeue(out var cmd))
-                cmd.Apply(State, Content);
+                cmd.Apply(state, Content);
 
-            HackSystem.Tick(State, Content);
-            EconomySystem.Tick(State);
-            ProgressionSystem.Tick(State);
-            AchievementsSystem.Tick(State, Content);
+            HackSystem.Tick(state, Content);
+            EconomySystem.Tick(state);
+            ProgressionSystem.Tick(state);
+            AchievementsSystem.Tick(state, Content);
 
             if (!isFastforward)
             {
-                AtmosphereSystem.Tick(State, Content);
-                ContractsSystem.Tick(State, Content);
+                AtmosphereSystem.Tick(state, Content);
+                ContractsSystem.Tick(state, Content);
             }
 
-            State.GameTick++;
+            state.GameTick++;
         }
     }
 
@@ -70,14 +72,6 @@ public sealed class GameSession
             Tick(true);
     }
 
-    /// <summary>Thread-safe read access for the scripting API and UI.
-    /// Callback must not mutate state, must not await, must not call
-    /// back into Submit/Tick.</summary>
-    public T Read<T>(Func<GameState, T> read)
-    {
-        lock (gate) return read(State);
-    }
-
     /// <summary>Thread-safe read access for capturing all data to save.</summary>
     public SaveData CaptureSaveData()
     {
@@ -87,23 +81,36 @@ public sealed class GameSession
             {
                 SchemaVersion = 1,
                 SavedAtUtc = DateTimeOffset.UtcNow,
-                Money = State.Money,
-                Xp = State.Xp,
-                Level = State.Level,
-                SkillPoints = State.SkillPoints,
-                ZeroDays = State.ZeroDays,
-                GameTick = State.GameTick,
-                UpgradeLevels = new Dictionary<string, int>(State.UpgradeLevels),
-                PerkLevels = new Dictionary<string, int>(State.PerkLevels),
-                PrestigeLevels = new Dictionary<string, int>(State.PrestigeLevels),
-                Stats = State.Stats,
-                Achievements = [.. State.Achievements],
-                ContractOffers = [.. State.ContractOffers],
-                ActiveContracts = [.. State.ActiveContracts],
-                ActiveJobs = [.. State.ActiveJobs],
-                Targets = new Dictionary<string, TargetState>(State.Targets),
+                Money = state.Money,
+                Xp = state.Xp,
+                Level = state.Level,
+                SkillPoints = state.SkillPoints,
+                ZeroDays = state.ZeroDays,
+                GameTick = state.GameTick,
+                UpgradeLevels = new Dictionary<string, int>(state.UpgradeLevels),
+                PerkLevels = new Dictionary<string, int>(state.PerkLevels),
+                PrestigeLevels = new Dictionary<string, int>(state.PrestigeLevels),
+                Stats = state.Statistics,
+                Achievements = [.. state.Achievements],
+                ContractOffers = [.. state.ContractOffers],
+                ActiveContracts = [.. state.ActiveContracts],
+                ActiveJobs = [.. state.ActiveJobs],
+                Targets = new Dictionary<string, TargetState>(state.Targets),
             };
         }
     }
 
+    /// <summary>Thread-safe read access for simple state data.</summary>
+    public StateSnapshot CaptureStateSnapshot()
+    {
+        lock (gate)
+        {
+            return new StateSnapshot(
+                state.Money,
+                state.Xp,
+                state.Level,
+                state.SkillPoints,
+                state.ZeroDays,
+                state.GameTick);
+        }
 }

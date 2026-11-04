@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Docs/">
+    <File Path="Codebase-feedback-chatgpt.md" />
     <File Path="DevJournal.md" />
     <File Path="GameDesign.md" />
   </Folder>

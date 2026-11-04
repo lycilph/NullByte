@@ -1,4 +1,5 @@
-﻿using NullByte.Core.Systems;
+﻿using NullByte.Core.Domain;
+using NullByte.Core.Systems;
 
 namespace NullByte.Core.Commands;
 

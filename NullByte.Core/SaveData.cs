@@ -1,4 +1,6 @@
-﻿namespace NullByte.Core;
+﻿using NullByte.Core.Domain;
+
+namespace NullByte.Core;
 
 public sealed class SaveData
 {
@@ -13,7 +15,7 @@ public sealed class SaveData
     public Dictionary<string, int> UpgradeLevels { get; set; } = [];
     public Dictionary<string, int> PerkLevels { get; set; } = [];
     public Dictionary<string, int> PrestigeLevels { get; set; } = [];
-    public GameStats? Stats { get; set; }
+    public GameStatistics? Stats { get; set; }
     public List<string> Achievements { get; set; } = [];
     public List<ContractOfferState> ContractOffers { get; set; } = [];
     public List<ActiveContractState> ActiveContracts { get; set; } = [];

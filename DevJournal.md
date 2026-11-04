@@ -3,7 +3,31 @@
 ## 03-11-2026
 
 ### In Progress
-- ~~Fixing issues identified by Mistral (gave it the entire codebase to look for errors) - see CodebaseIssues.md~~
+- Fix issues identified by ChatGPT
+
+- State issues
+  - ~~Fix GameSession: fix the synchronization boundary~~
+  - Although the scripting API uses session.Read() for synchronized access, other consumers can access the mutable collections directly.
+	- Expose snapshot collections
+
+## TODO
+- ScriptingSystem has concurrency risks
+  - Consider using a ConcurrentDictionary<string, ScriptInstance> keyed by script name.
+- ApiCallsThisTick is incremented without synchronization.
+  - I would make the API quota accounting thread-safe or enforce sequential execution of API operations per script.
+- Handle missing target state when loading older saves
+  - HackSystem.EnsureTargetStates(State, content);
+	- Initialize missing targets.
+	- Preserve existing target state.
+	- Handle removed targets deliberately.
+	- Avoid silently resetting existing progress.
+-  Corrupt saves should not silently become new games
+	-  would distinguish between:
+		- No save exists.
+		- Save loaded successfully.
+		- Save is corrupt.
+		- Save version is unsupported.
+- Naming conventions are inconsistent. For example, there is a mixture of snake_case and PascalCase/camelCase in the C# implementation.
 
 ### Done
 - Fixed issues identified by Mistral (gave it the entire codebase to look for errors) - see CodebaseIssues.md
@@ -14,6 +38,7 @@
 ### Future
 - Network of nodes (like bitburner) to be discovered using network scans
 - Auto-save (every x secs)
+- Implement the CPU quota part (so it actually does something)
 
 ---
 ## 02-11-2026
