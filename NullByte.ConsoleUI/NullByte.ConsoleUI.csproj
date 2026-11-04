@@ -27,4 +27,8 @@
     <ProjectReference Include="..\NullByte.Core\NullByte.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Terminal\" />
+  </ItemGroup>
+
 </Project>
