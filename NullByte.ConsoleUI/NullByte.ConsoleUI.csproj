@@ -8,8 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="scripts\**\*.cs" />
-    <Content Include="scripts\**\*.cs" CopyToOutputDirectory="PreserveNewest"/>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="5.9.0" />
   </ItemGroup>
 
   <ItemGroup>

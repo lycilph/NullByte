@@ -1,591 +1,191 @@
-﻿using System.Globalization;
-using NullByte.Core;
-using NullByte.Core.Commands;
-using NullByte.Core.Domain;
-using NullByte.Core.Systems;
-using NullByte.Scripting;
+﻿using System.Text;
+using NullByte.ConsoleUI.Scripting;
 
 namespace NullByte.ConsoleUI;
 
-internal class Program
+public class Program
 {
-    private static readonly Random bootRng = new();
-    private static readonly Lock consoleLock = new();
-
     static async Task Main()
     {
-        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+        Console.OutputEncoding = Encoding.UTF8;
 
-        var content = ContentLoader.Load();
+        await using var terminal = new ThreadSafeConsoleTerminal(
+            prompt: "root@home $ ",
+            maximumHistoryLines: 2_000);
 
-        // TODO: commented out while developing (takes time)
-        //RunBootSequence();
+        var terminalTask = terminal.RunAsync();
 
-        // -- Load save + offline catch-up --
-        GameSession session;
-        var loaded = SaveSystem.Load();
-        if (loaded is { } l)
+        terminal.WriteLine("Incremental scripting game started.");
+        terminal.WriteLine("Type 'help' to see available commands.");
+        terminal.WriteLine();
+
+        // Simulate asynchronous game or script output.
+        var backgroundSimulationTask = SimulateBackgroundActivityAsync(terminal);
+
+        try
         {
-            session = new GameSession(content, l.State);
-            long offlineTicks = (long)(l.OfflineElapsed.TotalMilliseconds / GameSession.TickMs);
-            if (offlineTicks > 0)
+            await foreach (var command in terminal.ReadCommandsAsync())
             {
-                session.FastForward(offlineTicks);
-                Console.WriteLine($"Save loaded. Away for {l.OfflineElapsed:hh\\:mm\\:ss} — advanced {offlineTicks} ticks.");
-                Console.WriteLine($"Welcome back. Money: ${session.Read(s => s.Money):0.##}\n");
+                if (string.IsNullOrWhiteSpace(command))
+                    continue;
+
+                var shouldContinue = await ExecuteCommandAsync(command, terminal);
+
+                if (!shouldContinue)
+                    break;
             }
         }
-        else
+        finally
         {
-            session = new GameSession(content);
-        }
-        
-        // -- Scripting: Roslyn runtime + restart persisted scripts --
-        var scripting = new ScriptingSystem(session);
-        var loadTasks = new List<Task>();
-        foreach (var entry in ScriptPersistence.Load())
-        {
-            if (!entry.Running)
-                continue;
-            // Compiles can be slow (Roslyn warm-up); do them before the
-            // banner, then the loop ticks them like any other script.
-            loadTasks.Add(scripting.StartAsync(entry.Name, entry.Source, entry.Data));
-        }
-        if (loadTasks.Count > 0)
-        {
-            await Task.WhenAll(loadTasks);
-            Console.WriteLine($"Restarted {loadTasks.Count} script(s): {string.Join(", ", scripting.Scripts.Select(s => s.Name))}");
-        }
+            terminal.RequestStop();
 
-        // -- The game loop: 100 ms fixed ticks on a background task --
-        var cts = new CancellationTokenSource();
-        var loop = Task.Run(async () =>
+            await terminalTask;
+            await backgroundSimulationTask;
+        }
+    }
+
+    static async Task<bool> ExecuteCommandAsync(
+        string commandLine,
+        IGameTerminal terminal)
+    {
+        var arguments = CommandLineParser.Parse(commandLine);
+
+        if (arguments.Count == 0)
+            return true;
+
+        var command = arguments[0].ToLowerInvariant();
+
+        switch (command)
+        {
+            case "help":
+                terminal.WriteLine("Available commands:");
+                terminal.WriteLine("  help             Show this help");
+                terminal.WriteLine("  scan             Scan the network");
+                terminal.WriteLine("  hack <server>    Start hacking a server");
+                terminal.WriteLine("  long             Print a long line");
+                terminal.WriteLine("  script           Run a test script");
+                terminal.WriteLine("  clear            Clear terminal history");
+                terminal.WriteLine("  exit             Exit the application");
+                return true;
+
+            case "scan":
+                terminal.WriteLine("Scanning network...");
+
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(500);
+                    terminal.WriteLine("Discovered server: n00dles");
+
+                    await Task.Delay(350);
+                    terminal.WriteLine("Discovered server: foodnstuff");
+
+                    await Task.Delay(300);
+                    terminal.WriteLine("Scan completed.");
+                });
+
+                return true;
+
+            case "hack":
+                if (arguments.Count < 2)
+                {
+                    terminal.WriteLine("Usage: hack <server>");
+                    return true;
+                }
+
+                var server = arguments[1];
+
+                terminal.WriteLine($"Starting hack against {server}...");
+
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(1_500);
+                    terminal.WriteLine($"Hack against {server} succeeded.");
+                });
+
+                return true;
+
+            case "long":
+                terminal.WriteLine(
+                    "This is a deliberately long output line. " +
+                    "The terminal renderer wraps output based on the current " +
+                    "console window width and recalculates wrapping when the " +
+                    "window is resized.");
+
+                return true;
+
+            case "script":
+                await RunTestScript(terminal);
+                return true;
+
+            case "clear":
+                terminal.Clear();
+                return true;
+
+            case "exit":
+            case "quit":
+                terminal.WriteLine("Shutting down...");
+                return false;
+
+            default:
+                terminal.WriteLine($"Unknown command: {arguments[0]}");
+                return true;
+        }
+    }
+
+    static async Task RunTestScript(IGameTerminal terminal)
+    {
+        var game = new GameState();
+        var api = new ScriptApi(game, terminal);
+        var runner = new ScriptRunner(terminal);
+        var script = @"var server = Api.GetServer(""foodmart"");
+
+Api.Log(
+    $""Target: {server.Hostname}, "" +
+    $""Money: {server.Money:C}, "" +
+    $""Security: {server.Security:F1}"");
+
+var result = await Api.HackAsync(
+    server.Hostname,
+    CancellationToken);
+
+Api.Log(
+    $""Hack returned {result.MoneyStolen:C}"");
+
+server = Api.GetServer(""foodmart"");
+
+Api.Log(
+    $""Server now has {server.Money:C}"");";
+
+        using var cts = new CancellationTokenSource();
+
+        terminal.WriteLine($"Player money before: {game.PlayerMoney:C}");
+
+        await runner.RunAsync(
+            script,
+            api,
+            cts.Token);
+
+        terminal.WriteLine($"Player money after: {game.PlayerMoney:C}");
+    }
+
+    static async Task SimulateBackgroundActivityAsync(IGameTerminal terminal)
+    {
+        var counter = 1;
+
+        while (!terminal.StoppingToken.IsCancellationRequested)
         {
             try
             {
-                while (!cts.IsCancellationRequested)
-                {
-                    session.Tick();
-                    scripting.Tick();   // releases the script barrier, once per tick
-                    await Task.Delay(GameSession.TickMs, cts.Token);
-                }
-            }
-            catch (TaskCanceledException) { /* shutting down */ }
-        });
+                await Task.Delay(
+                    TimeSpan.FromSeconds(5),
+                    terminal.StoppingToken);
 
-        // -- Event printer: drains the EventLog twice a second --
-        int handledPrestiges = session.Read(s => s.Stats.PrestigeCount);
-        var printer = Task.Run(async () =>
-        {
-            while (!cts.IsCancellationRequested)
+                terminal.WriteLine(
+                    $"[{DateTime.Now:HH:mm:ss}] Simulation tick {counter++}");
+            }
+            catch (OperationCanceledException)
             {
-                await Task.Delay(500, cts.Token);
-
-                // -- Burn detection (cursor pattern): a new identity gets a
-                // fresh boot. Skip the stale log backlog — the boot animation
-                // IS the announcement; pre-burn events don't matter anymore.
-                if (session.Read(s => s.Stats.PrestigeCount) != handledPrestiges)
-                {
-                    handledPrestiges = session.Read(s => s.Stats.PrestigeCount);
-                    lock (consoleLock)
-                    {
-                        RunBootSequence();
-                        PrintHelp();
-                    }
-                }
-
-                var log = session.EventLog;
-                lock (consoleLock)
-                {
-                    while (log.TryDequeue(out var message))
-                        Console.WriteLine("  " + message);
-                }
-
-                // -- Script output (same cursor pattern, per script) --
-                foreach (var script in scripting.Scripts)
-                {
-                    lock (consoleLock)
-                    {
-                        while (script.Output.TryDequeue(out var message))
-                            Console.WriteLine("  " + message);
-                    }
-                }
-            }
-        });
-
-        PrintHelp();
-
-        // -- Input loop (main thread) --
-        bool running = true;
-        while (running)
-        {
-            Console.Write("nullbyte@rig:~$ ");
-            string? line = Console.ReadLine();
-            if (line is null)
                 break;
-
-            var args = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (args.Length == 0)
-                continue;
-
-            // 'run' compiles asynchronously (Roslyn can take a second); the
-            // compile happens OUTSIDE ConsoleLock so the UI stays live. Every
-            // other command is synchronous and lock-protected.
-            Task? pendingRun = null;
-
-            lock (consoleLock)
-            {
-                switch (args[0].ToLowerInvariant())
-                {
-                    case "hack":
-                        if (args.Length < 2)
-                            Console.WriteLine("Usage: hack <target-id>  (see 'targets')");
-                        else
-                            session.Submit(new StartHackCommand(args[1]));
-                        break;
-
-                    case "grow":
-                        if (args.Length < 2)
-                            Console.WriteLine("Usage: grow <target-id>  (refills the mark's pool)");
-                        else
-                            session.Submit(new GrowTargetCommand(args[1]));
-                        break;
-
-                    case "scrub":
-                        if (args.Length < 2)
-                            Console.WriteLine("Usage: scrub <target-id>  (dumps 35 heat off the mark)");
-                        else
-                            session.Submit(new ScrubTargetCommand(args[1]));
-                        break;
-
-                    case "buy":
-                        if (args.Length < 2)
-                            Console.WriteLine("Usage: buy <upgrade-id>  (see 'upgrades')");
-                        else
-                            session.Submit(new BuyUpgradeCommand(args[1]));
-                        break;
-
-                    case "targets":
-                        PrintTargets(session);
-                        break;
-
-                    case "upgrades":
-                        PrintUpgrades(session);
-                        break;
-
-                    case "perks":
-                        PrintPerks(session);
-                        break;
-
-                    case "skill":
-                        if (args.Length < 2)
-                            Console.WriteLine("Usage: skill <perk-id>  (see 'perks')");
-                        else
-                            session.Submit(new SpendSkillCommand(args[1]));
-                        break;
-
-                    case "prestige":
-                        if (args.Length >= 2 && args[1] == "confirm")
-                            session.Submit(new PrestigeCommand());
-                        else
-                            PrintPrestige(session);
-                        break;
-
-                    case "implants":
-                        PrintImplants(session);
-                        break;
-
-                    case "implant":
-                        if (args.Length < 2)
-                            Console.WriteLine("Usage: implant <id>  (see 'implants')");
-                        else
-                            session.Submit(new ImplantCommand(args[1]));
-                        break;
-
-                    case "status":
-                        PrintStatus(session);
-                        break;
-
-                    case "stats":
-                        PrintStats(session);
-                        break;
-
-                    case "achievements":
-                        PrintAchievements(session);
-                        break;
-
-                    case "contracts":
-                        PrintContracts(session);
-                        break;
-
-                    case "accept":
-                        if (args.Length < 2)
-                            Console.WriteLine("Usage: accept <contract-id>  (see 'contracts')");
-                        else
-                            session.Submit(new AcceptContractCommand(args[1]));
-                        break;
-
-                    case "run":
-                        if (args.Length < 2)
-                        {
-                            Console.WriteLine("Usage: run <script-name> [parameters] (runs scripts/<name>.cs)");
-                        }
-                        else if (scripting.Find(args[1])?.IsRunning == true)
-                        {
-                            Console.WriteLine($"'{args[1]}' is already running. 'stop {args[1]}' first.");
-                        }
-                        else if (!File.Exists(ScriptPersistence.SourcePath(args[1])))
-                        {
-                            Console.WriteLine($"No file at {ScriptPersistence.SourcePath(args[1])}");
-                        }
-                        else
-                        {
-                            var script_parameters = args[2..];
-
-                            // Retire any stopped/errored instance with this name
-                            // so the list doesn't accumulate duplicates.
-                            scripting.Stop(args[1]);
-                            pendingRun = StartScriptAsync(scripting, args[1], script_parameters);
-                        }
-                        break;
-
-                    case "stop":
-                        if (args.Length < 2)
-                            Console.WriteLine("Usage: stop <script-name>");
-                        else
-                            scripting.Stop(args[1]);
-                        break;
-
-                    case "scripts":
-                        PrintScripts(scripting);
-                        break;
-
-                    case "libs":
-                        PrintLibs();
-                        break;
-
-                    case "save":
-                        SaveSystem.Save(session);
-                        Console.WriteLine("Saved.");
-                        break;
-
-                    case "help":
-                        PrintHelp();
-                        break;
-
-                    case "quit":
-                    case "exit":
-                        running = false;
-                        break;
-
-                    default:
-                        Console.WriteLine($"Unknown command '{args[0]}'. Try 'help'.");
-                        break;
-                }
-            }
-
-            // Await the 'run' outside the lock so the compile doesn't freeze
-            // the printer/loop tasks.
-            if (pendingRun is not null)
-                await pendingRun;
-        }
-
-        cts.Cancel();
-        try
-        {
-            loop.Wait();
-            printer.Wait();
-        }
-        catch (AggregateException) { }
-        
-        SaveSystem.Save(session);
-        ScriptPersistence.Save(scripting.Scripts);
-
-        Console.WriteLine("Saved. Bye.");
-        await Task.Delay(500);
-    }
-
-    /// <summary>
-    /// Compiles + starts a script from scripts/<name>.cs. Runs outside
-    /// ConsoleLock (Roslyn compile takes real time) and re-acquires the lock
-    /// only to report the outcome.
-    /// </summary>
-    private static async Task StartScriptAsync(ScriptingSystem scripting, string name, string[] parameters)
-    {
-        try
-        {
-            ScriptData? data = null;
-            if (parameters.Length > 0)
-            {
-                data = new ScriptData();
-                for (int i = 0; i < parameters.Length; i++)
-                    data.SetStr($"param{i}", parameters[i]);
-            }
-
-            await scripting.StartAsync(name, ScriptPersistence.LoadScript(name), data);
-            lock (consoleLock) { Console.WriteLine($"'{name}' running."); }
-        }
-        catch (ScriptCompileException ex)
-        {
-            lock (consoleLock) { Console.WriteLine("COMPILE ERROR:\n" + ex.Message); }
-        }
-        catch (Exception ex)
-        {
-            lock (consoleLock) { Console.WriteLine($"Can't start '{name}': {ex.Message}"); }
-        }
-    }
-
-    private static void PrintScripts(ScriptingSystem scripting)
-    {
-        if (scripting.Scripts.Count == 0)
-        {
-            Console.WriteLine("No scripts. Write scripts/<name>.cs, then 'run <name>'.");
-        }
-        else
-        {
-            foreach (var s in scripting.Scripts)
-            {
-                string status = s.IsRunning ? "RUNNING"
-                              : s.Error is not null ? "ERROR"
-                              : "STOPPED";
-                Console.WriteLine($"  {s.Name,-16} [{status}]");
-            }
-        }
-    }
-
-    private static void PrintLibs()
-    {
-        if (!Directory.Exists(ScriptPersistence.LibFolder())
-            || Directory.GetFiles(ScriptPersistence.LibFolder(), "*.cs").Length == 0)
-        {
-            Console.WriteLine("No libraries — drop .cs files into scripts/lib/. Pull one in with a '// uses: <name>' header line.");
-        }
-        else
-        {
-            foreach (var f in Directory.GetFiles(ScriptPersistence.LibFolder(), "*.cs"))
-                Console.WriteLine($"  {Path.GetFileNameWithoutExtension(f),-16} {f}");
-        }
-    }
-
-    /// <summary>
-    /// Full boot: clear screen, banner, animated lines. Run at startup and
-    /// again after an identity burn — a fresh identity gets a fresh boot.
-    /// </summary>
-    private static void RunBootSequence()
-    {
-        Console.Clear();
-        Console.WriteLine("=== NULLBYTE ===");
-        Console.WriteLine(@"
-      ___           ___           ___       ___       ___           ___           ___           ___     
-     /\__\         /\__\         /\__\     /\__\     /\  \         |\__\         /\  \         /\  \    
-    /::|  |       /:/  /        /:/  /    /:/  /    /::\  \        |:|  |        \:\  \       /::\  \   
-   /:|:|  |      /:/  /        /:/  /    /:/  /    /:/\:\  \       |:|  |         \:\  \     /:/\:\  \  
-  /:/|:|  |__   /:/  /  ___   /:/  /    /:/  /    /::\~\:\__\      |:|__|__       /::\  \   /::\~\:\  \ 
- /:/ |:| /\__\ /:/__/  /\__\ /:/__/    /:/__/    /:/\:\ \:|__|     /::::\__\     /:/\:\__\ /:/\:\ \:\__\
- \/__|:|/:/  / \:\  \ /:/  / \:\  \    \:\  \    \:\~\:\/:/  /    /:/~~/~       /:/  \/__/ \:\~\:\ \/__/
-     |:/:/  /   \:\  /:/  /   \:\  \    \:\  \    \:\ \::/  /    /:/  /        /:/  /       \:\ \:\__\  
-     |::/  /     \:\/:/  /     \:\  \    \:\  \    \:\/:/  /     \/__/         \/__/         \:\ \/__/  
-     /:/  /       \::/  /       \:\__\    \:\__\    \::/__/                                   \:\__\    
-     \/__/         \/__/         \/__/     \/__/     ~~                                        \/__/");
-        Console.WriteLine();
-        BootLine("booting rig", 21);
-        BootLine("establishing tunnel", 13);
-        BootLine("wiping fingerprints", 13);
-        BootLine("loading contacts", 16);
-        Console.WriteLine();
-    }
-
-    /// <summary>
-    /// Types a boot line dot by dot with a random delay per dot, so the rig
-    /// feels like it's actually churning. Occasional longer pauses make it
-    /// feel organic rather than metronomic.
-    /// </summary>
-    private static void BootLine(string label, int dotCount)
-    {
-        Console.Write($"{label} ");
-        for (int i = 0; i < dotCount; i++)
-        {
-            Console.Write('.');
-            int delay = bootRng.Next(20, 80);
-            if (bootRng.Next(10) == 0)
-                delay += bootRng.Next(150, 400); // rare hiccup
-            Thread.Sleep(delay);
-        }
-        Thread.Sleep(bootRng.Next(60, 180));      // beat before OK
-        Console.Write(" [ OK ]\n");
-    }
-
-    private static void PrintAchievements(GameSession session)
-    {
-        var s = session.State;
-        var c = session.Content;
-        Console.WriteLine($"ACHIEVEMENTS — {s.Achievements.Count}/{c.Achievements.Count} earned");
-        foreach (var a in c.Achievements)
-        {
-            string mark = s.Achievements.Contains(a.Id) ? "[x]" : "[ ]";
-            Console.WriteLine($"  {mark} {a.Name,-20} {a.Description}");
-        }
-    }
-
-    private static void PrintStats(GameSession session)
-    {
-        var s = session.State;
-        var time = TimeSpan.FromMilliseconds(s.GameTick * GameSession.TickMs);
-
-        Console.WriteLine($"== STATS ==");
-        Console.WriteLine($"  Time played:    {time:hh\\:mm\\:ss}  ({s.GameTick} ticks)");
-        Console.WriteLine($"  Prestige count: {s.Stats.PrestigeCount}");
-        Console.WriteLine($"  Hacks done:     {s.Stats.TotalHacks}");
-        Console.WriteLine($"  Money earned:   ${s.Stats.MoneyEarned:0.##} (current: ${s.Money:0.##})");
-        Console.WriteLine($"  Upgrades:       {s.Stats.UpgradesBought} bought");
-        Console.WriteLine($"  Perks:          {s.PerkLevels.Values.Sum()} levels trained");
-        Console.WriteLine($"  Implant:        {s.PrestigeLevels.Values.Sum()} implants installed");
-        Console.WriteLine($"  Contracts:      {s.Stats.ContractsCompleted} completed / {s.Stats.ContractsFailed} failed");
-
-        var favorites = s.Stats.HacksPerTarget.OrderByDescending(kv => kv.Value).Take(3).ToList();
-        if (favorites.Count > 0)
-            Console.WriteLine($"  Favorite marks: {string.Join(", ", favorites.Select(kv => $"{kv.Key} x{kv.Value}"))}");
-    }
-
-    private static void PrintContracts(GameSession session)
-    {
-        var s = session.State;
-        Console.WriteLine("CONTRACTS — timed bonus objectives; missing a deadline just loses the bonus");
-
-        if (s.ActiveContracts.Count > 0)
-        {
-            Console.WriteLine("  Active:");
-            foreach (var a in s.ActiveContracts)
-            {
-                var def = session.Content.FindContract(a.DefId);
-                if (def is null) continue;
-                double progress = ContractsSystem.Progress(s, session.Content, a);
-                Console.WriteLine($"    {def.Name,-16} {progress:0.#}/{def.Goal:0.#} — {a.DeadlineRemaining} ticks left  (+${def.RewardMoney:0.##}, +{def.RewardXp:0.#} xp)");
-            }
-        }
-
-        if (s.ContractOffers.Count > 0)
-        {
-            Console.WriteLine("  Open offers:");
-            foreach (var o in s.ContractOffers)
-            {
-                var def = session.Content.FindContract(o.DefId);
-                if (def is null) continue;
-                Console.WriteLine($"    {def.Id,-16} {def.Name,-16} {def.Description,-28} (+${def.RewardMoney:0.##}, +{def.RewardXp:0.#} xp, {def.DurationTicks} ticks)");
-            }
-            Console.WriteLine("  Accept with: accept <id>");
-        }
-    }
-    private static void PrintPrestige(GameSession session)
-    {
-        var s = session.State;
-        Console.WriteLine("== PRESTIGE ==");
-        Console.WriteLine($"  0-days: {s.ZeroDays}");
-
-        if (!PrestigeSystem.Unlocked(s))
-        {
-            Console.WriteLine($"  Identity burning unlocks at level {PrestigeSystem.UnlockLevel} (you are level {s.Level}).");
-            return;
-        }
-
-        long tokens = PrestigeSystem.TokensForLevel(s.Level);
-        Console.WriteLine($"  Burn your identity NOW for +{tokens} 0-days.");
-        Console.WriteLine("  Wipes: money, XP, level, skill points, rig, perks, contracts.");
-        Console.WriteLine("  Keeps: 0-days, implants, achievements, lifetime stats.");
-        Console.WriteLine("  Confirm with: prestige confirm   |   Spend tokens: 'implants'");
-    }
-
-    private static void PrintImplants(GameSession session)
-    {
-        var s = session.State;
-        Console.WriteLine($"IMPLANTS — 0-days available: {s.ZeroDays}");
-        foreach (var i in session.Content.Implants)
-        {
-            int owned = s.PrestigeLevels.GetValueOrDefault(i.Id);
-            long cost = (long)Math.Ceiling(i.BaseCost * Math.Pow(i.GrowthRate, owned));
-            string maxed = owned >= i.MaxLevel ? " MAX" : $" next: {cost} 0-days";
-            Console.WriteLine($"  {i.Id,-11} {i.Name,-20} lvl {owned,2}/{i.MaxLevel,-2} {maxed,-16} {i.Description}");
-        }
-        Console.WriteLine("  Install with: implant <id>   (survive identity burns)");
-    }
-
-    private static void PrintHelp()
-    {
-        Console.WriteLine("Commands: hack <id> | grow <id> | scrub <id> | buy <id> | skill <id> | accept <id> | implant <id> | prestige [confirm] | run <name> [parameters] | stop <name> | scripts | libs | targets | upgrades | perks | contracts | implants | achievements | stats | status | save | quit | help");
-        Console.WriteLine("Scripts: write scripts/<name>.cs (C#, globals expose 'api'), then 'run <name>' — e.g. await nb.Hack(\"webmail\");"); 
-        Console.WriteLine("Libraries: shared code in scripts/lib/<name>.cs, pulled in with a '// uses: <names>' header line (see 'libs').");
-        Console.WriteLine("Start here: 'targets' then 'hack webmail'\n");
-    }
-
-    private static void PrintTargets(GameSession session)
-    {
-        Console.WriteLine("TARGETS");
-        var s = session.State;
-        int cpu = s.UpgradeLevels.GetValueOrDefault("cpu");
-        int ram = s.UpgradeLevels.GetValueOrDefault("ram");
-
-        foreach (var t in session.Content.Targets)
-        {
-            string status;
-            if (s.Level >= t.MinLevel && cpu >= t.RequiredCpu && ram >= t.RequiredRam)
-            {
-                status = "OK";
-            }
-            else
-            {
-                var req = new List<string>();
-                if (s.Level < t.MinLevel) req.Add($"lvl {t.MinLevel}");
-                if (cpu < t.RequiredCpu) req.Add($"cpu {t.RequiredCpu}");
-                if (ram < t.RequiredRam) req.Add($"ram {t.RequiredRam}");
-                status = "needs " + string.Join(", ", req);
-            }
-            var ts = HackSystem.StateFor(s, t);
-            Console.WriteLine($"  {t.Id,-14} {t.Name,-22} ${t.MoneyReward,-9:0.#} {t.XpReward,5:0.#}xp {t.DurationTicks,3}t  pool ${ts.CurrentMoney,6:0.#}/{HackSystem.MaxMoneyOf(t):0.#}  heat {ts.Heat,3:0.#}  [{status}]");
-        }
-    }
-
-    private static void PrintUpgrades(GameSession session)
-    {
-        Console.WriteLine("UPGRADES");
-        foreach (var u in session.Content.Upgrades)
-        {
-            int owned = session.State.UpgradeLevels.GetValueOrDefault(u.Id);
-            double cost = CostMath.UpgradeCost(u, owned);
-            string maxed = owned >= u.MaxLevel ? " MAX" : $" next: ${cost:0.##}";
-            Console.WriteLine($"  {u.Id,-8} {u.Name,-14} lvl {owned,2}/{u.MaxLevel,-2} {maxed,-18} {u.Description}");
-        }
-    }
-    private static void PrintPerks(GameSession session)
-    {
-        Console.WriteLine($"SKILL TREE — points available: {session.State.SkillPoints}");
-        foreach (var p in session.Content.Perks)
-        {
-            int owned = session.State.PerkLevels.GetValueOrDefault(p.Id);
-            Console.WriteLine($"  {p.Id,-11} {p.Name,-14} lvl {owned,2}/{p.MaxLevel,-2}  {p.Description}");
-        }
-        Console.WriteLine("Spend with: skill <id>");
-    }
-
-    private static void PrintStatus(GameSession session)
-    {
-        var s = session.State;
-        double income = EconomySystem.IncomePerTick(s);
-        double xpInto = s.Xp - ProgressionSystem.TotalXpForLevel(s.Level);
-        double xpNeed = ProgressionSystem.XpForLevelUp(s.Level);
-
-        Console.WriteLine($"== STATUS  t{s.GameTick} ==");
-        Console.WriteLine($"  Money: ${s.Money:0.##}   (+${income:0.###}/tick)");
-        Console.WriteLine($"  Level: {s.Level}   XP: {xpInto:0.#} / {xpNeed:0.#}   Skill points: {s.SkillPoints}");
-        Console.WriteLine($"  Job slots: {s.ActiveJobs.Count}/{HackSystem.MaxConcurrentHacks(s)}");
-        Console.WriteLine($"  Rig: cpu {s.UpgradeLevels.GetValueOrDefault("cpu")} | ram {s.UpgradeLevels.GetValueOrDefault("ram")} | botnet {s.UpgradeLevels.GetValueOrDefault("botnet")}");
-
-        if (s.ActiveJobs.Count > 0)
-        {
-            foreach (var h in s.ActiveJobs)
-            {
-                string verb = h.Kind == JobKind.Grow ? "grow"
-                            : h.Kind == JobKind.Scrub ? "scrub" : "hack";
-                Console.WriteLine($"    {verb} {h.TargetName}: {h.TicksRemaining}/{h.TotalTicks} ticks left");
             }
         }
     }
