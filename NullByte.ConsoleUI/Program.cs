@@ -36,7 +36,9 @@ public class Program
         }
         finally
         {
+            terminal.RequestStop();
             gameLoop.RequestStop();
+
             try
             {
                 await gameLoop.Completion;
@@ -45,8 +47,6 @@ public class Program
             {
                 terminal.WriteLine($"Game loop stopped with an error: {exception.Message}");
             }
-
-            terminal.RequestStop();
             await terminalTask;
         }
 
