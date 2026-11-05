@@ -114,8 +114,8 @@ Later we can switch to top-level scripts (Roslyn script mode) as a friendlier su
 
 - `NullByte.Core`: simulation, formulas, model, clock, scheduler, NS API. No console or UI references.
 - `NullByte.Scripting`: Roslyn compile, analysis (RAM, banned APIs), loading and process management.
-- `NullByte.Console`: the first host, with command parser, rendering and input.
-- `NullByte.Wpf` (later): WPF host with AvalonEdit, reusing Core and Scripting unchanged.
+- `NullByte.ConsoleUI` Host: the first host, with command parser, rendering and input.
+- `NullByte` Host (later): WPF host with AvalonEdit, reusing Core and Scripting unchanged.
 - `NullByte.Tests`: unit tests, with a fake clock and seeded RNG.
 
 Target framework: .NET 10 with the matching C# language version, nullable reference types enabled.
@@ -130,6 +130,10 @@ All game state is read and written only on the game thread.
 - The game loop runs on a dedicated thread (or the main thread in the console host), repeatedly: advance game time, fire due timers, drain the posted queue, render if needed, sleep briefly.
 - `SynchronizationContext.SetSynchronizationContext` is set on that thread, so `await` in scripts and in console commands resumes on the game thread.
 - Other threads (console `ReadLine`, Roslyn compilation if we want it off-thread) never touch game state; they `Post` results back.
+
+&#91;embedded content: one tick of the game loop · 3 stages, 4 components\]
+
+A timer completed in stage 2 posts its continuation to the mailbox, and stage 3 of the same tick runs it. Other threads can only add to the mailbox, never run game code themselves.
 
 ### 4.3 Game time and timers
 

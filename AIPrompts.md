@@ -13,3 +13,7 @@ The player should also be able to do the hack/grow/weaken from the console (not 
 I would like the game simulation to run on a single thread using a custom synchronization context.
 
 We should build this step by step, so please start by making a game design document with milestone on the way to the first playable game.
+
+
+
+

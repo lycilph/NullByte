@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using NullByte.ConsoleUI.Configuration;
+﻿using System.Text;
+using NullByte.ConsoleUI.Terminal;
 
 namespace NullByte.ConsoleUI;
 
@@ -7,48 +7,152 @@ public class Program
 {
     static async Task Main()
     {
-        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder
-                .SetMinimumLevel(LogLevel.Information)
-                .AddSimpleConsole(options =>
-                {
-                    options.SingleLine = true;
-                    options.TimestampFormat = "HH:mm:ss ";
-                });
-        });
+        Console.OutputEncoding = Encoding.UTF8;
 
-        ILogger logger = loggerFactory.CreateLogger("NullByte");
+        await using var terminal = new ThreadSafeConsoleTerminal(
+            prompt: "root@home $ ",
+            maximumHistoryLines: 2_000);
+
+        var terminalTask = terminal.RunAsync();
+
+        terminal.WriteLine("Incremental scripting game started.");
+        terminal.WriteLine("Type 'help' to see available commands.");
+        terminal.WriteLine();
+
+        // Simulate asynchronous game or script output.
+        var backgroundSimulationTask = SimulateBackgroundActivityAsync(terminal);
 
         try
         {
-            logger.LogInformation("Starting NullByte...");
+            await foreach (var command in terminal.ReadCommandsAsync())
+            {
+                if (string.IsNullOrWhiteSpace(command))
+                    continue;
 
-            LoadedConfiguration configuration = ConfigurationLoader.Load();
+                var shouldContinue = await ExecuteCommandAsync(command, terminal);
 
-            Console.WriteLine();
-            Console.WriteLine("==================================");
-            Console.WriteLine("          NULLBYTE v0.1");
-            Console.WriteLine("==================================");
-            Console.WriteLine();
-            Console.WriteLine("Simulation configuration loaded.");
-            Console.WriteLine(
-                $"Time multiplier: {configuration.Game.TimeMultiplier:F2}");
-            Console.WriteLine(
-                $"Starting money: ${configuration.Balance.Player.StartingMoney:N2}");
-            Console.WriteLine();
-            Console.WriteLine("Welcome to NullByte.");
-            Console.WriteLine();
-
-            logger.LogInformation("NullByte started successfully.");
-
-            Console.ReadKey();
+                if (!shouldContinue)
+                    break;
+            }
         }
-        catch (Exception exception)
+        finally
         {
-            logger.LogCritical(exception, "Failed to start NullByte.");
+            terminal.RequestStop();
 
-            Environment.ExitCode = 1;
+            await terminalTask;
+            await backgroundSimulationTask;
+        }
+    }
+
+    static async Task<bool> ExecuteCommandAsync(
+       string commandLine,
+       IGameTerminal terminal)
+    {
+        var arguments = CommandLineParser.Parse(commandLine);
+
+        if (arguments.Count == 0)
+            return true;
+
+        var command = arguments[0].ToLowerInvariant();
+
+        switch (command)
+        {
+            case "help":
+                terminal.WriteLine("Available commands:");
+                terminal.WriteLine("  help             Show this help");
+                terminal.WriteLine("  scan             Scan the network");
+                terminal.WriteLine("  hack <server>    Start hacking a server");
+                terminal.WriteLine("  long             Print a long line");
+                terminal.WriteLine("  script           Run a test script");
+                terminal.WriteLine("  clear            Clear terminal history");
+                terminal.WriteLine("  exit             Exit the application");
+                return true;
+
+            case "scan":
+                terminal.WriteLine("Scanning network...");
+
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(500);
+                    terminal.WriteLine("Discovered server: n00dles");
+
+                    await Task.Delay(350);
+                    terminal.WriteLine("Discovered server: foodnstuff");
+
+                    await Task.Delay(300);
+                    terminal.WriteLine("Scan completed.");
+                });
+
+                return true;
+
+            case "hack":
+                if (arguments.Count < 2)
+                {
+                    terminal.WriteLine("Usage: hack <server>");
+                    return true;
+                }
+
+                var server = arguments[1];
+
+                terminal.WriteLine($"Starting hack against {server}...");
+
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(1_500);
+                    terminal.WriteLine($"Hack against {server} succeeded.");
+                });
+
+                return true;
+
+            case "long":
+                terminal.WriteLine(
+                    "This is a deliberately long output line. " +
+                    "The terminal renderer wraps output based on the current " +
+                    "console window width and recalculates wrapping when the " +
+                    "window is resized.");
+
+                return true;
+
+            case "script":
+                terminal.WriteLine("Faking a script");
+                await Task.Delay(1_500);
+                terminal.WriteLine("... fake script done");
+                return true;
+
+            case "clear":
+                terminal.Clear();
+                return true;
+
+            case "exit":
+            case "quit":
+                terminal.WriteLine("Shutting down...");
+                return false;
+
+            default:
+                terminal.WriteLine($"Unknown command: {arguments[0]}");
+                return true;
+        }
+    }
+
+    static async Task SimulateBackgroundActivityAsync(IGameTerminal terminal)
+    {
+        var counter = 1;
+
+        while (!terminal.StoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(
+                    TimeSpan.FromSeconds(5),
+                    terminal.StoppingToken);
+
+                terminal.WriteLine(
+                    $"[{DateTime.Now:HH:mm:ss}] Simulation tick {counter++}");
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
     }
 }
