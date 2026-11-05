@@ -9,8 +9,8 @@ public sealed class ThreadSafeConsoleTerminal :
 {
     private const int RefreshDelayMilliseconds = 16;
 
-    private readonly string prompt;
     private readonly int maximumHistoryLines;
+    private string prompt;
 
     /*
      * Multiple background threads may write to this channel.
@@ -74,6 +74,8 @@ public sealed class ThreadSafeConsoleTerminal :
     }
 
     public CancellationToken StoppingToken => stopSource.Token;
+
+    public void SetPrompt(string newPrompt) => prompt = newPrompt;
 
     public void WriteLine() => WriteLine(string.Empty);
 
@@ -387,7 +389,7 @@ public sealed class ThreadSafeConsoleTerminal :
                 ? wrappedOutput[row]
                 : string.Empty;
 
-            WriteRow(outputHeight - row, text, usableWidth);
+            WriteRow(outputHeight - row - 1, text, usableWidth);
         }
 
         RenderInputLine(

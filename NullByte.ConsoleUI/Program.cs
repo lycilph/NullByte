@@ -1,6 +1,8 @@
 ﻿using System.Text;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Configuration;
+using NullByte.Core.Domain;
+using NullByte.Core.Services;
 using NullByte.Core.Simulation;
 using NullByte.Core.Threading;
 using NullByte.Core.Time;
@@ -17,6 +19,9 @@ public class Program
         var clock = new RealGameClock() { SpeedMultiplier = balanceConfig.GameSpeedMultiplier };
         var synchronizationContext = new GameSynchronizationContext();
 
+        var gameState = InitialGameStateFactory.Create();
+        var networkService = new NetworkService(gameState);
+
         await using var gameLoop = new GameLoop(clock, synchronizationContext);
 
         await using var terminal = new ThreadSafeConsoleTerminal(
@@ -32,7 +37,7 @@ public class Program
 
             WriteStartupMessage(terminal, gameLoop);
 
-            await ProcessCommandsAsync(gameLoop, terminal);
+            await ProcessCommandsAsync(gameLoop, networkService, terminal);
         }
         finally
         {
@@ -127,6 +132,7 @@ public class Program
 
     private static async Task ProcessCommandsAsync(
         GameLoop gameLoop,
+        NetworkService networkService,
         ThreadSafeConsoleTerminal terminal)
     {
         await foreach (var commandLine in terminal.ReadCommandsAsync())
@@ -153,6 +159,7 @@ public class Program
                     _ => ExecuteGameCommand(
                         arguments,
                         gameLoop,
+                        networkService,
                         terminal));
             }
             catch (InvalidOperationException)
@@ -166,6 +173,7 @@ public class Program
     private static void ExecuteGameCommand(
         IReadOnlyList<string> arguments,
         GameLoop gameLoop,
+        NetworkService networkService,
         IGameTerminal terminal)
     {
         gameLoop.SynchronizationContext.VerifyAccess();
@@ -190,6 +198,22 @@ public class Program
                 _ = RunMilestoneDemonstrationAsync(gameLoop, terminal);
                 break;
 
+            case "status":
+                WriteStatus(networkService, terminal);
+                break;
+
+            case "scan":
+                ScanNetwork(networkService, terminal);
+                break;
+
+            case "connect":
+                Connect(arguments, networkService, terminal);
+                break;
+
+            case "home":
+                GoHome(networkService, terminal);
+                break;
+
             case "clear":
                 terminal.Clear();
                 break;
@@ -203,12 +227,16 @@ public class Program
     private static void WriteHelp(IGameTerminal terminal)
     {
         terminal.WriteLine("Available commands:");
-        terminal.WriteLine("  help       Show this help");
-        terminal.WriteLine("  time       Show current game time");
-        terminal.WriteLine("  thread     Show the current game thread");
-        terminal.WriteLine("  demo       Run the M1 scheduler demo");
-        terminal.WriteLine("  clear      Clear terminal history");
-        terminal.WriteLine("  exit       Exit NullByte");
+        terminal.WriteLine("  help               Show this help");
+        terminal.WriteLine("  time               Show current game time");
+        terminal.WriteLine("  thread             Show the current game thread");
+        terminal.WriteLine("  demo               Run the M1 scheduler demo");
+        terminal.WriteLine("  status             Show current server status");
+        terminal.WriteLine("  scan               Scan connected servers");
+        terminal.WriteLine("  connect <server>   Connect to a discovered server");
+        terminal.WriteLine("  home               Return to your home server");
+        terminal.WriteLine("  clear              Clear terminal history");
+        terminal.WriteLine("  exit               Exit NullByte");
     }
 
     private static void WriteGameTime(GameLoop gameLoop, IGameTerminal terminal)
@@ -218,5 +246,60 @@ public class Program
     {
         terminal.WriteLine($"Thread ID: {Environment.CurrentManagedThreadId}");
         terminal.WriteLine($"Is game thread: {gameLoop.IsGameThread}");
+    }
+
+    private static void WriteStatus(NetworkService networkService, IGameTerminal terminal)
+    {
+        var server =
+            networkService.GetCurrentServer();
+
+        terminal.WriteLine($"Connected to: {server.Hostname}");
+        terminal.WriteLine($"Money: {server.Money:N0} / {server.MaximumMoney:N0}");
+        terminal.WriteLine($"Security: {server.Security:F1} (minimum {server.MinimumSecurity:F1})");
+    }
+
+    private static void ScanNetwork(NetworkService networkService, IGameTerminal terminal)
+    {
+        var currentServer = networkService.GetCurrentServer();
+        var servers = networkService.Scan();
+
+        terminal.WriteLine($"Scanning from {currentServer.Hostname}...");
+
+        if (servers.Count == 0)
+        {
+            terminal.WriteLine("No connected servers found.");
+            return;
+        }
+
+        foreach (var server in servers)
+            terminal.WriteLine($"  {server.Hostname}");
+    }
+
+    private static void Connect(IReadOnlyList<string> arguments, NetworkService networkService, IGameTerminal terminal)
+    {
+        if (arguments.Count < 2)
+        {
+            terminal.WriteLine("Usage: connect <server>");
+            return;
+        }
+
+        var result = networkService.Connect(arguments[1]);
+
+        if (!result.Succeeded)
+        {
+            terminal.WriteLine(result.Error ?? "Connection failed.");
+            return;
+        }
+
+        terminal.SetPrompt($"root@{result.Server!.Hostname} $ ");
+        terminal.WriteLine($"Connected to {result.Server!.Hostname}.");
+    }
+
+    private static void GoHome(NetworkService networkService, IGameTerminal terminal)
+    {
+        var result = networkService.GoHome();
+
+        terminal.SetPrompt($"root@{result.Server!.Hostname} $ ");
+        terminal.WriteLine($"Connected to {result.Server!.Hostname}.");
     }
 }
