@@ -1,5 +1,8 @@
 ﻿using System.Text;
 using NullByte.ConsoleUI.Terminal;
+using NullByte.Core.Simulation;
+using NullByte.Core.Threading;
+using NullByte.Core.Time;
 
 namespace NullByte.ConsoleUI;
 
@@ -12,147 +15,221 @@ public class Program
         await using var terminal = new ThreadSafeConsoleTerminal(
             prompt: "root@home $ ",
             maximumHistoryLines: 2_000);
+        
+        var clock = new RealGameClock();
+        var synchronizationContext = new GameSynchronizationContext();
+
+        await using var gameLoop = new GameLoop(clock, synchronizationContext);
 
         var terminalTask = terminal.RunAsync();
-
-        terminal.WriteLine("Incremental scripting game started.");
-        terminal.WriteLine("Type 'help' to see available commands.");
-        terminal.WriteLine();
-
-        // Simulate asynchronous game or script output.
-        var backgroundSimulationTask = SimulateBackgroundActivityAsync(terminal);
+        
+        gameLoop.Start();
 
         try
         {
-            await foreach (var command in terminal.ReadCommandsAsync())
-            {
-                if (string.IsNullOrWhiteSpace(command))
-                    continue;
+            await gameLoop.Started;
 
-                var shouldContinue = await ExecuteCommandAsync(command, terminal);
+            WriteStartupMessage(terminal, gameLoop);
 
-                if (!shouldContinue)
-                    break;
-            }
+            StartMilestoneDemonstration(
+               gameLoop,
+               terminal);
+
+
+            await ProcessCommandsAsync(gameLoop, terminal);
         }
         finally
         {
-            terminal.RequestStop();
+            gameLoop.RequestStop();
+            try
+            {
+                await gameLoop.Completion;
+            }
+            catch (Exception exception)
+            {
+                terminal.WriteLine($"Game loop stopped with an error: {exception.Message}");
+            }
 
+            terminal.RequestStop();
             await terminalTask;
-            await backgroundSimulationTask;
+        }
+
+        Console.WriteLine("Everything stopped, bye");
+        await Task.Delay(500);
+    }
+
+    private static void WriteStartupMessage(IGameTerminal terminal, GameLoop gameLoop)
+    {
+        terminal.WriteLine("NullByte");
+        terminal.WriteLine();
+        terminal.WriteLine("Single-threaded simulation started.");
+        terminal.WriteLine($"Game thread ready. Game time: {gameLoop.Clock.Elapsed.TotalSeconds:F3}s");
+        terminal.WriteLine();
+        terminal.WriteLine("Type 'help' to see available commands.");
+        terminal.WriteLine();
+    }
+
+    private static void StartMilestoneDemonstration(GameLoop gameLoop, IGameTerminal terminal)
+    {
+        gameLoop.Post(
+            _ =>
+            {
+                _ = RunMilestoneDemonstrationAsync(gameLoop, terminal);
+            });
+    }
+
+    private static async Task RunMilestoneDemonstrationAsync(GameLoop gameLoop, IGameTerminal terminal)
+    {
+        try
+        {
+            terminal.WriteLine("[M1] Starting scheduler demonstration.");
+            terminal.WriteLine($"[M1] Game thread ID: {Environment.CurrentManagedThreadId}");
+            terminal.WriteLine();
+
+            var slowOperation =
+                DemonstrateOperationAsync(
+                    name: "operation-a",
+                    duration: TimeSpan.FromSeconds(3),
+                    gameLoop,
+                    terminal);
+
+            var fastOperation =
+                DemonstrateOperationAsync(
+                    name: "operation-b",
+                    duration: TimeSpan.FromSeconds(1.5),
+                    gameLoop,
+                    terminal);
+
+            await Task.WhenAll(slowOperation, fastOperation);
+
+            terminal.WriteLine();
+            terminal.WriteLine("[M1] Both scheduled operations completed.");
+        }
+        catch (Exception exception)
+        {
+            terminal.WriteLine($"[M1] Demonstration failed: {exception.Message}");
         }
     }
 
-    static async Task<bool> ExecuteCommandAsync(
-       string commandLine,
-       IGameTerminal terminal)
+    private static async Task DemonstrateOperationAsync(
+        string name,
+        TimeSpan duration,
+        GameLoop gameLoop,
+        IGameTerminal terminal)
     {
-        var arguments = CommandLineParser.Parse(commandLine);
+        var threadBefore = Environment.CurrentManagedThreadId;
 
-        if (arguments.Count == 0)
-            return true;
+        terminal.WriteLine(
+            $"[M1] {name} started at " +
+            $"{gameLoop.Clock.Elapsed.TotalSeconds:F3}s " +
+            $"on thread {threadBefore}. " +
+            $"Waiting {duration.TotalSeconds:F1} game seconds.");
+
+        await gameLoop.Scheduler.DelayAsync(duration);
+
+        var threadAfter = Environment.CurrentManagedThreadId;
+
+        terminal.WriteLine(
+            $"[M1] {name} completed at " +
+            $"{gameLoop.Clock.Elapsed.TotalSeconds:F3}s " +
+            $"on thread {threadAfter}.");
+
+        if (threadBefore != threadAfter || !gameLoop.IsGameThread)
+            throw new InvalidOperationException($"{name} resumed on the wrong thread.");
+    }
+
+    private static async Task ProcessCommandsAsync(
+        GameLoop gameLoop,
+        ThreadSafeConsoleTerminal terminal)
+    {
+        await foreach (var commandLine in terminal.ReadCommandsAsync())
+        {
+            if (string.IsNullOrWhiteSpace(commandLine))
+                continue;
+
+            var arguments = CommandLineParser.Parse(commandLine);
+
+            if (arguments.Count == 0)
+                continue;
+
+            var command = arguments[0].ToLowerInvariant();
+
+            if (command is "exit" or "quit")
+            {
+                terminal.WriteLine("Shutting down...");
+                return;
+            }
+           
+            try
+            {
+                gameLoop.Post(
+                    _ => ExecuteGameCommand(
+                        arguments,
+                        gameLoop,
+                        terminal));
+            }
+            catch (InvalidOperationException)
+                when (gameLoop.Completion.IsCompleted)
+            {
+                return;
+            }
+        }
+    }
+
+    private static void ExecuteGameCommand(
+        IReadOnlyList<string> arguments,
+        GameLoop gameLoop,
+        IGameTerminal terminal)
+    {
+        gameLoop.SynchronizationContext.VerifyAccess();
 
         var command = arguments[0].ToLowerInvariant();
 
         switch (command)
         {
             case "help":
-                terminal.WriteLine("Available commands:");
-                terminal.WriteLine("  help             Show this help");
-                terminal.WriteLine("  scan             Scan the network");
-                terminal.WriteLine("  hack <server>    Start hacking a server");
-                terminal.WriteLine("  long             Print a long line");
-                terminal.WriteLine("  script           Run a test script");
-                terminal.WriteLine("  clear            Clear terminal history");
-                terminal.WriteLine("  exit             Exit the application");
-                return true;
+                WriteHelp(terminal);
+                break;
 
-            case "scan":
-                terminal.WriteLine("Scanning network...");
+            case "time":
+                WriteGameTime(gameLoop, terminal);
+                break;
 
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(500);
-                    terminal.WriteLine("Discovered server: n00dles");
+            case "thread":
+                WriteThreadInformation(gameLoop, terminal);
+                break;
 
-                    await Task.Delay(350);
-                    terminal.WriteLine("Discovered server: foodnstuff");
-
-                    await Task.Delay(300);
-                    terminal.WriteLine("Scan completed.");
-                });
-
-                return true;
-
-            case "hack":
-                if (arguments.Count < 2)
-                {
-                    terminal.WriteLine("Usage: hack <server>");
-                    return true;
-                }
-
-                var server = arguments[1];
-
-                terminal.WriteLine($"Starting hack against {server}...");
-
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(1_500);
-                    terminal.WriteLine($"Hack against {server} succeeded.");
-                });
-
-                return true;
-
-            case "long":
-                terminal.WriteLine(
-                    "This is a deliberately long output line. " +
-                    "The terminal renderer wraps output based on the current " +
-                    "console window width and recalculates wrapping when the " +
-                    "window is resized.");
-
-                return true;
-
-            case "script":
-                terminal.WriteLine("Faking a script");
-                await Task.Delay(1_500);
-                terminal.WriteLine("... fake script done");
-                return true;
+            case "demo":
+                _ = RunMilestoneDemonstrationAsync(gameLoop, terminal);
+                break;
 
             case "clear":
                 terminal.Clear();
-                return true;
-
-            case "exit":
-            case "quit":
-                terminal.WriteLine("Shutting down...");
-                return false;
+                break;
 
             default:
                 terminal.WriteLine($"Unknown command: {arguments[0]}");
-                return true;
+                terminal.WriteLine("Type 'help' to see available commands.");
+                break;
         }
     }
-
-    static async Task SimulateBackgroundActivityAsync(IGameTerminal terminal)
+    private static void WriteHelp(IGameTerminal terminal)
     {
-        var counter = 1;
+        terminal.WriteLine("Available commands:");
+        terminal.WriteLine("  help       Show this help");
+        terminal.WriteLine("  time       Show current game time");
+        terminal.WriteLine("  thread     Show the current game thread");
+        terminal.WriteLine("  demo       Run the M1 scheduler demo");
+        terminal.WriteLine("  clear      Clear terminal history");
+        terminal.WriteLine("  exit       Exit NullByte");
+    }
 
-        while (!terminal.StoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await Task.Delay(
-                    TimeSpan.FromSeconds(5),
-                    terminal.StoppingToken);
+    private static void WriteGameTime(GameLoop gameLoop, IGameTerminal terminal)
+        => terminal.WriteLine($"Game time: {gameLoop.Clock.Elapsed.TotalSeconds:F3}s");
 
-                terminal.WriteLine(
-                    $"[{DateTime.Now:HH:mm:ss}] Simulation tick {counter++}");
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-        }
+    private static void WriteThreadInformation(GameLoop gameLoop, IGameTerminal terminal)
+    {
+        terminal.WriteLine($"Thread ID: {Environment.CurrentManagedThreadId}");
+        terminal.WriteLine($"Is game thread: {gameLoop.IsGameThread}");
     }
 }
