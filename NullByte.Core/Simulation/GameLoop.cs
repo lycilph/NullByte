@@ -22,9 +22,8 @@ public sealed class GameLoop : IAsyncDisposable
 
     private readonly Lock lifecycleLock = new();
 
+    private GameLoopState state = GameLoopState.Created;
     private Thread? gameThread;
-    private bool hasStarted;
-    private bool hasDisposed;
 
     public GameLoop(
         RealGameClock clock,
@@ -51,34 +50,37 @@ public sealed class GameLoop : IAsyncDisposable
     public GameSynchronizationContext SynchronizationContext => synchronizationContext;
 
     /// <summary>
-    /// Gets the game clock used by this game loop.
+    /// Gets the game clock.
     /// </summary>
     public IGameClock Clock => clock;
 
     /// <summary>
-    /// Gets whether the game loop has been started.
+    /// Gets whether the game loop is currently running.
     /// </summary>
-    public bool HasStarted
+    public bool IsRunning
     {
         get
         {
             lock (lifecycleLock)
-                return hasStarted;
+            {
+                return state == GameLoopState.Running;
+            }
         }
     }
 
     /// <summary>
     /// Gets whether the calling thread is the game thread.
     /// </summary>
-    public bool IsGameThread => synchronizationContext.IsGameThread;
+    public bool IsGameThread =>
+        synchronizationContext.IsGameThread;
 
     /// <summary>
-    /// Gets a task that completes when the game thread is ready.
+    /// Completes when the game thread is initialized and ready.
     /// </summary>
     public Task Started => startedSource.Task;
 
     /// <summary>
-    /// Gets a task that completes when the game loop has stopped.
+    /// Completes when the game loop has stopped.
     /// </summary>
     public Task Completion => stoppedSource.Task;
 
@@ -89,12 +91,15 @@ public sealed class GameLoop : IAsyncDisposable
     {
         lock (lifecycleLock)
         {
-            ObjectDisposedException.ThrowIf(hasDisposed, this);
+            ThrowIfDisposed();
 
-            if (hasStarted)
-                throw new InvalidOperationException( "The game loop can only be started once.");
+            if (state != GameLoopState.Created)
+            {
+                throw new InvalidOperationException(
+                    "The game loop can only be started once.");
+            }
 
-            hasStarted = true;
+            state = GameLoopState.Starting;
 
             gameThread = new Thread(Run)
             {
@@ -111,8 +116,31 @@ public sealed class GameLoop : IAsyncDisposable
     /// </summary>
     public void RequestStop()
     {
-        if (!stopSource.IsCancellationRequested)
-            stopSource.Cancel();
+        lock (lifecycleLock)
+        {
+            if (state is
+                GameLoopState.Stopping or
+                GameLoopState.Stopped or
+                GameLoopState.Faulted or
+                GameLoopState.Disposed)
+            {
+                return;
+            }
+
+            if (state == GameLoopState.Created)
+            {
+                state = GameLoopState.Stopped;
+
+                startedSource.TrySetCanceled();
+                stoppedSource.TrySetResult();
+
+                return;
+            }
+
+            state = GameLoopState.Stopping;
+        }
+
+        stopSource.Cancel();
     }
 
     /// <summary>
@@ -122,16 +150,19 @@ public sealed class GameLoop : IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(callback);
 
-        ThrowIfNotStarted();
-
-        if (stopSource.IsCancellationRequested)
+        lock (lifecycleLock)
         {
-            throw new InvalidOperationException(
-                "Work cannot be posted after the game loop " +
-                "has been asked to stop.");
-        }
+            ThrowIfDisposed();
 
-        synchronizationContext.Post(callback, state);
+            if (this.state != GameLoopState.Running)
+            {
+                throw new InvalidOperationException(
+                    "Work can only be posted while the " +
+                    "game loop is running.");
+            }
+
+            synchronizationContext.Post(callback, state);
+        }
     }
 
     /// <summary>
@@ -142,54 +173,68 @@ public sealed class GameLoop : IAsyncDisposable
 
     private void Run()
     {
+        Exception? failure = null;
+
         try
         {
             synchronizationContext.BindToCurrentThread();
 
             clock.Start();
 
-            startedSource.TrySetResult();
+            lock (lifecycleLock)
+            {
+                if (state != GameLoopState.Stopping)
+                    state = GameLoopState.Running;
+
+                startedSource.TrySetResult();
+            }
 
             while (!stopSource.IsCancellationRequested)
             {
                 RunIteration();
 
-                Thread.Sleep(DefaultIdleDelayMilliseconds);
+                Thread.Sleep(
+                    DefaultIdleDelayMilliseconds);
             }
 
-            /*
-             * Process work that was already queued before shutdown.
-             * New work is rejected once RequestStop has been called.
-             */
             RunFinalIteration();
-
-            stoppedSource.TrySetResult();
         }
         catch (Exception exception)
         {
-            startedSource.TrySetException(exception);
-            stoppedSource.TrySetException(exception);
+            failure = exception;
         }
         finally
         {
+            synchronizationContext.Complete();
+
             clock.Stop();
 
-            /*
-             * Avoid leaving this context installed if the thread is
-             * reused by hosting infrastructure in a future version.
-             */
             System.Threading.SynchronizationContext.SetSynchronizationContext(null);
+        }
+
+        if (failure is null)
+        {
+            lock (lifecycleLock)
+            {
+                state = GameLoopState.Stopped;
+            }
+
+            stoppedSource.TrySetResult();
+        }
+        else
+        {
+            lock (lifecycleLock)
+            {
+                state = GameLoopState.Faulted;
+            }
+
+            startedSource.TrySetException(failure);
+            stoppedSource.TrySetException(failure);
         }
     }
 
     private void RunIteration()
     {
-        /*
-         * Ordering matters:
-         *
-         * 1. Complete game-time delays that are now due.
-         * 2. Execute their continuations and other posted work.
-         */
         Scheduler.Update();
         synchronizationContext.Drain();
     }
@@ -200,49 +245,68 @@ public sealed class GameLoop : IAsyncDisposable
         synchronizationContext.Drain();
     }
 
-    private void ThrowIfNotStarted()
+    private void ThrowIfDisposed()
     {
-        lock (lifecycleLock)
-        {
-            ObjectDisposedException.ThrowIf(
-                hasDisposed,
-                this);
-
-            if (!hasStarted)
-            {
-                throw new InvalidOperationException(
-                    "The game loop has not been started.");
-            }
-        }
+        ObjectDisposedException.ThrowIf(state == GameLoopState.Disposed, this);
     }
 
     public async ValueTask DisposeAsync()
     {
+        bool shouldWait;
+
         lock (lifecycleLock)
         {
-            if (hasDisposed)
+            if (state == GameLoopState.Disposed)
                 return;
 
-            hasDisposed = true;
+            shouldWait =
+                state is not
+                    GameLoopState.Created and not
+                    GameLoopState.Stopped and not
+                    GameLoopState.Faulted;
+
+            if (state == GameLoopState.Created)
+            {
+                startedSource.TrySetCanceled();
+                stoppedSource.TrySetResult();
+            }
+            else if (shouldWait &&
+                     state != GameLoopState.Stopping)
+            {
+                state = GameLoopState.Stopping;
+            }
         }
 
-        RequestStop();
-
-        if (HasStarted)
+        if (shouldWait)
         {
+            stopSource.Cancel();
+
             try
             {
                 await Completion.ConfigureAwait(false);
             }
             catch
             {
-                /*
-                 * Completion retains the original exception for callers.
-                 * Disposal still needs to release owned resources.
-                 */
+                // Disposal must still release owned resources.
             }
         }
 
+        lock (lifecycleLock)
+        {
+            state = GameLoopState.Disposed;
+        }
+
         stopSource.Dispose();
+    }
+
+    private enum GameLoopState
+    {
+        Created,
+        Starting,
+        Running,
+        Stopping,
+        Stopped,
+        Faulted,
+        Disposed
     }
 }

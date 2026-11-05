@@ -5,6 +5,193 @@ namespace NullByte.Core.Tests.Threading;
 public sealed class GameSynchronizationContextTests
 {
     [Fact]
+    public void Complete_PreventsNewPosts()
+    {
+        RunOnDedicatedThread(
+            context =>
+            {
+                context.Complete();
+
+                Assert.True(context.IsCompleted);
+
+                var exception =
+                    Assert.Throws<InvalidOperationException>(
+                        () => context.Post(
+                            _ => { },
+                            state: null));
+
+                Assert.Contains(
+                    "completed",
+                    exception.Message,
+                    StringComparison.OrdinalIgnoreCase);
+
+                Assert.Equal(
+                    0,
+                    context.PendingCount);
+            });
+    }
+
+    [Fact]
+    public void Complete_PreventsNewSends()
+    {
+        RunOnDedicatedThread(
+            context =>
+            {
+                context.Complete();
+
+                var exception =
+                    Assert.Throws<InvalidOperationException>(
+                        () => context.Send(
+                            _ => { },
+                            state: null));
+
+                Assert.Contains(
+                    "completed",
+                    exception.Message,
+                    StringComparison.OrdinalIgnoreCase);
+
+                Assert.Equal(
+                    0,
+                    context.PendingCount);
+            });
+    }
+
+    [Fact]
+    public void Complete_ReleasesBlockedSend()
+    {
+        RunOnDedicatedThread(
+            context =>
+            {
+                Exception? observedException = null;
+                var callbackExecuted = false;
+
+                using var sendStarted =
+                    new ManualResetEventSlim(false);
+
+                using var sendCompleted =
+                    new ManualResetEventSlim(false);
+
+                var worker =
+                    new Thread(
+                        () =>
+                        {
+                            try
+                            {
+                                sendStarted.Set();
+
+                                context.Send(
+                                    _ =>
+                                    {
+                                        callbackExecuted = true;
+                                    },
+                                    state: null);
+                            }
+                            catch (Exception exception)
+                            {
+                                observedException = exception;
+                            }
+                            finally
+                            {
+                                sendCompleted.Set();
+                            }
+                        })
+                    {
+                        IsBackground = true,
+                        Name =
+                            "Blocked Send Test Thread"
+                    };
+
+                worker.Start();
+
+                Assert.True(
+                    sendStarted.Wait(
+                        TimeSpan.FromSeconds(5)),
+                    "The worker did not start Send.");
+
+                Assert.True(
+                    SpinWait.SpinUntil(
+                        () => context.PendingCount == 1,
+                        TimeSpan.FromSeconds(5)),
+                    "Send did not enqueue its callback.");
+
+                Assert.False(
+                    sendCompleted.IsSet);
+
+                context.Complete();
+
+                Assert.True(
+                    sendCompleted.Wait(
+                        TimeSpan.FromSeconds(5)),
+                    "Complete did not release the blocked Send.");
+
+                Assert.True(
+                    worker.Join(
+                        TimeSpan.FromSeconds(5)),
+                    "The worker thread did not terminate.");
+
+                Assert.False(callbackExecuted);
+
+                var exception =
+                    Assert.IsType<InvalidOperationException>(
+                        observedException);
+
+                Assert.Contains(
+                    "completed",
+                    exception.Message,
+                    StringComparison.OrdinalIgnoreCase);
+
+                Assert.True(context.IsCompleted);
+
+                Assert.Equal(
+                    0,
+                    context.PendingCount);
+            });
+    }
+
+    [Fact]
+    public void Complete_CanBeCalledMultipleTimes()
+    {
+        RunOnDedicatedThread(
+            context =>
+            {
+                context.Complete();
+                context.Complete();
+                context.Complete();
+
+                Assert.True(context.IsCompleted);
+                Assert.Equal(0, context.PendingCount);
+            });
+    }
+
+    [Fact]
+    public void Complete_DiscardsPendingPosts()
+    {
+        RunOnDedicatedThread(
+            context =>
+            {
+                var callbackExecuted = false;
+
+                context.Post(
+                    _ => callbackExecuted = true,
+                    state: null);
+
+                Assert.Equal(
+                    1,
+                    context.PendingCount);
+
+                context.Complete();
+
+                Assert.True(context.IsCompleted);
+                Assert.Equal(0, context.PendingCount);
+                Assert.False(callbackExecuted);
+
+                context.Drain();
+
+                Assert.False(callbackExecuted);
+            });
+    }
+
+    [Fact]
     public void BindToCurrentThread_BindsContextAndInstallsIt()
     {
         var previousContext = SynchronizationContext.Current;

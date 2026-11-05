@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using NullByte.ConsoleUI.Terminal;
+using NullByte.Core.Configuration;
 using NullByte.Core.Simulation;
 using NullByte.Core.Threading;
 using NullByte.Core.Time;
@@ -12,15 +13,15 @@ public class Program
     {
         Console.OutputEncoding = Encoding.UTF8;
 
-        await using var terminal = new ThreadSafeConsoleTerminal(
-            prompt: "root@home $ ",
-            maximumHistoryLines: 2_000);
-        
-        var clock = new RealGameClock();
+        var balanceConfig = new BalanceConfig();
+        var clock = new RealGameClock() { SpeedMultiplier = balanceConfig.GameSpeedMultiplier };
         var synchronizationContext = new GameSynchronizationContext();
 
         await using var gameLoop = new GameLoop(clock, synchronizationContext);
 
+        await using var terminal = new ThreadSafeConsoleTerminal(
+            prompt: "root@home $ ",
+            maximumHistoryLines: 2_000);
         var terminalTask = terminal.RunAsync();
         
         gameLoop.Start();
@@ -30,11 +31,6 @@ public class Program
             await gameLoop.Started;
 
             WriteStartupMessage(terminal, gameLoop);
-
-            StartMilestoneDemonstration(
-               gameLoop,
-               terminal);
-
 
             await ProcessCommandsAsync(gameLoop, terminal);
         }
@@ -67,15 +63,6 @@ public class Program
         terminal.WriteLine();
         terminal.WriteLine("Type 'help' to see available commands.");
         terminal.WriteLine();
-    }
-
-    private static void StartMilestoneDemonstration(GameLoop gameLoop, IGameTerminal terminal)
-    {
-        gameLoop.Post(
-            _ =>
-            {
-                _ = RunMilestoneDemonstrationAsync(gameLoop, terminal);
-            });
     }
 
     private static async Task RunMilestoneDemonstrationAsync(GameLoop gameLoop, IGameTerminal terminal)
@@ -169,7 +156,7 @@ public class Program
                         terminal));
             }
             catch (InvalidOperationException)
-                when (gameLoop.Completion.IsCompleted)
+                when (!gameLoop.IsRunning)
             {
                 return;
             }
