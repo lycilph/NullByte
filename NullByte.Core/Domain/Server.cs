@@ -5,35 +5,41 @@
 /// </summary>
 public sealed class Server
 {
+    private double money;
+    private double security;
+    private double usedRam;
+
     public Server(
         string id,
         string hostname,
         double maximumMoney,
-        double minimumSecurity,
         double startingMoney,
-        double startingSecurity)
+        double minimumSecurity,
+        double startingSecurity,
+        int requiredHackingLevel,
+        double growthParameter,
+        double maximumRam,
+        bool hasRootAccess = false)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
             throw new ArgumentException(
-                "The server ID cannot be empty.",
+                "Server ID cannot be empty.",
                 nameof(id));
         }
 
         if (string.IsNullOrWhiteSpace(hostname))
         {
             throw new ArgumentException(
-                "The hostname cannot be empty.",
+                "Host name cannot be empty.",
                 nameof(hostname));
         }
 
-        if (!double.IsFinite(maximumMoney) ||
-            maximumMoney < 0)
+        if (!double.IsFinite(maximumMoney) || maximumMoney < 0)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(maximumMoney),
-                "Maximum money must be a finite, " +
-                "non-negative value.");
+                "Maximum money must be finite and non-negative.");
         }
 
         if (!double.IsFinite(startingMoney) ||
@@ -42,17 +48,14 @@ public sealed class Server
         {
             throw new ArgumentOutOfRangeException(
                 nameof(startingMoney),
-                "Starting money must be finite and between " +
-                "zero and maximum money.");
+                "Starting money must be finite and between zero and maximum money.");
         }
 
-        if (!double.IsFinite(minimumSecurity) ||
-            minimumSecurity < 0)
+        if (!double.IsFinite(minimumSecurity) || minimumSecurity < 0)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(minimumSecurity),
-                "Minimum security must be a finite, " +
-                "non-negative value.");
+                "Minimum security must be finite and non-negative.");
         }
 
         if (!double.IsFinite(startingSecurity) ||
@@ -60,47 +63,153 @@ public sealed class Server
         {
             throw new ArgumentOutOfRangeException(
                 nameof(startingSecurity),
-                "Starting security must be finite and greater " +
-                "than or equal to minimum security.");
+                "Starting security must be finite and at least minimum security.");
+        }
+
+        if (requiredHackingLevel < 1)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(requiredHackingLevel),
+                "Required hacking level must be at least 1.");
+        }
+
+        if (!double.IsFinite(growthParameter) || growthParameter < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(growthParameter),
+                "Growth parameter must be finite and non-negative.");
+        }
+
+        if (!double.IsFinite(maximumRam) || maximumRam < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumRam),
+                "Maximum RAM must be finite and non-negative.");
         }
 
         Id = id;
         Hostname = hostname;
 
         MaximumMoney = maximumMoney;
-        Money = startingMoney;
+        money = startingMoney;
 
         MinimumSecurity = minimumSecurity;
-        Security = startingSecurity;
+        security = startingSecurity;
+
+        RequiredHackingLevel = requiredHackingLevel;
+        GrowthParameter = growthParameter;
+
+        MaximumRam = maximumRam;
+
+        HasRootAccess = hasRootAccess;
     }
 
-    /// <summary>
-    /// Gets the stable identifier of the server.
-    /// </summary>
     public string Id { get; }
 
-    /// <summary>
-    /// Gets the hostname presented to the player.
-    /// </summary>
     public string Hostname { get; }
 
-    /// <summary>
-    /// Gets the maximum amount of money the server can hold.
-    /// </summary>
     public double MaximumMoney { get; }
 
-    /// <summary>
-    /// Gets the server's current available money.
-    /// </summary>
-    public double Money { get; internal set; }
+    public double Money => money;
 
-    /// <summary>
-    /// Gets the lowest security level the server can reach.
-    /// </summary>
     public double MinimumSecurity { get; }
 
-    /// <summary>
-    /// Gets the server's current security level.
-    /// </summary>
-    public double Security { get; internal set; }
+    public double Security => security;
+
+    public int RequiredHackingLevel { get; }
+
+    public double GrowthParameter { get; }
+
+    public bool HasRootAccess { get; private set; }
+
+    public double MaximumRam { get; }
+
+    public double UsedRam => usedRam;
+
+    public double AvailableRam => MaximumRam - usedRam;
+
+    internal void GrantRootAccess()
+    {
+        HasRootAccess = true;
+    }
+
+    internal double RemoveMoney(double amount)
+    {
+        ValidateNonNegativeFinite(amount, nameof(amount));
+
+        var removed = Math.Min(amount, money);
+
+        money -= removed;
+
+        return removed;
+    }
+
+    internal double AddMoney(double amount)
+    {
+        ValidateNonNegativeFinite(amount, nameof(amount));
+
+        var availableCapacity = MaximumMoney - money;
+        var added = Math.Min(amount, availableCapacity);
+
+        money += added;
+
+        return added;
+    }
+
+    internal void IncreaseSecurity(double amount)
+    {
+        ValidateNonNegativeFinite(amount, nameof(amount));
+
+        security += amount;
+    }
+
+    internal double DecreaseSecurity(double amount)
+    {
+        ValidateNonNegativeFinite(amount, nameof(amount));
+
+        var removable = security - MinimumSecurity;
+        var removed = Math.Min(amount, removable);
+
+        security -= removed;
+
+        return removed;
+    }
+
+    internal void AllocateRam(double amount)
+    {
+        ValidateNonNegativeFinite(amount, nameof(amount));
+
+        if (amount > AvailableRam)
+        {
+            throw new InvalidOperationException(
+                $"Server '{Hostname}' does not have enough available RAM.");
+        }
+
+        usedRam += amount;
+    }
+
+    internal void ReleaseRam(double amount)
+    {
+        ValidateNonNegativeFinite(amount, nameof(amount));
+
+        if (amount > usedRam)
+        {
+            throw new InvalidOperationException(
+                $"Cannot release more RAM than is currently allocated on server '{Hostname}'.");
+        }
+
+        usedRam -= amount;
+    }
+
+    private static void ValidateNonNegativeFinite(
+        double value,
+        string parameterName)
+    {
+        if (!double.IsFinite(value) || value < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                parameterName,
+                "Value must be finite and non-negative.");
+        }
+    }
 }

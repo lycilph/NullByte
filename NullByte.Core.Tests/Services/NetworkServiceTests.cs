@@ -265,18 +265,25 @@ public sealed class NetworkServiceTests
                 id: "home",
                 hostname: "home",
                 maximumMoney: 0,
-                minimumSecurity: 0,
                 startingMoney: 0,
-                startingSecurity: 0);
+                minimumSecurity: 0,
+                startingSecurity: 0,
+                requiredHackingLevel: 1,
+                growthParameter: 1.1,
+                maximumRam: 32,
+                hasRootAccess: true);
 
         var n00dles =
             new Server(
                 id: "server-n00dles",
                 hostname: "n00dles",
                 maximumMoney: 50_000,
-                minimumSecurity: 1,
                 startingMoney: 25_000,
-                startingSecurity: 5);
+                minimumSecurity: 1,
+                startingSecurity: 5,
+                requiredHackingLevel: 1,
+                growthParameter: 1.1,
+                maximumRam: 32);
 
         var foodNStuff =
             new Server(
@@ -285,7 +292,10 @@ public sealed class NetworkServiceTests
                 maximumMoney: 100_000,
                 minimumSecurity: 2,
                 startingMoney: 60_000,
-                startingSecurity: 8);
+                startingSecurity: 8,
+                requiredHackingLevel: 1,
+                growthParameter: 1.1,
+                maximumRam: 32);
 
         var sigmaCosmetics =
             new Server(
@@ -294,7 +304,10 @@ public sealed class NetworkServiceTests
                 maximumMoney: 150_000,
                 minimumSecurity: 3,
                 startingMoney: 75_000,
-                startingSecurity: 10);
+                startingSecurity: 10,
+                requiredHackingLevel: 1,
+                growthParameter: 1.1,
+                maximumRam: 32);
 
         var network =
             new Network();

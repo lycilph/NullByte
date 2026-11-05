@@ -7,7 +7,10 @@ public sealed class Player
 {
     private readonly HashSet<string> discoveredServerIds = new(StringComparer.OrdinalIgnoreCase);
 
-    public Player(string homeServerId, double startingMoney = 0)
+    public Player(
+        string homeServerId,
+        double startingMoney = 0,
+        double startingHackingExperience = 0)
     {
         if (string.IsNullOrWhiteSpace(homeServerId))
         {
@@ -25,9 +28,19 @@ public sealed class Player
                 "non-negative value.");
         }
 
+        if (!double.IsFinite(startingHackingExperience) ||
+            startingHackingExperience < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(startingHackingExperience),
+                "Starting hacking experience must be a finite, " +
+                "non-negative value.");
+        }
+
         HomeServerId = homeServerId;
         CurrentServerId = homeServerId;
         Money = startingMoney;
+        HackingExperience = startingHackingExperience;
 
         DiscoverServer(homeServerId);
     }
@@ -49,9 +62,30 @@ public sealed class Player
     public double Money { get; internal set; }
 
     /// <summary>
+    /// Gets the player's accumulated hacking experience.
+    /// </summary>
+    public double HackingExperience { get; private set; }
+
+    /// <summary>
     /// Gets the IDs of servers known to the player.
     /// </summary>
     public IReadOnlySet<string> DiscoveredServerIds => discoveredServerIds;
+
+    /// <summary>
+    /// Adds hacking experience to the player.
+    /// </summary>
+    internal void AddHackingExperience(double amount)
+    {
+        if (!double.IsFinite(amount) || amount < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(amount),
+                "Hacking experience must be a finite, " +
+                "non-negative value.");
+        }
+
+        HackingExperience += amount;
+    }
 
     /// <summary>
     /// Marks a server as discovered.

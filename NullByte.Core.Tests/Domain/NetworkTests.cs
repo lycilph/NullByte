@@ -366,9 +366,12 @@ public sealed class NetworkTests
             id,
             hostname,
             maximumMoney: 100_000,
-            minimumSecurity: 1,
             startingMoney: 50_000,
-            startingSecurity: 5);
+            minimumSecurity: 1,
+            startingSecurity: 5,
+            requiredHackingLevel: 1,
+            growthParameter: 1.1,
+            maximumRam: 32);
     }
 
     private static Network CreateLinearNetwork(
