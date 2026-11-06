@@ -163,11 +163,14 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
                     changed = true;
                 }
 
-                if (changed || screenInvalidated || progressRunning)
+                if (changed || screenInvalidated)
                 {
                     Render();
                     screenInvalidated = false;
                 }
+
+                if (progressRunning)
+                    RenderProgressLine();
 
                 await Task.Delay(RefreshDelayMilliseconds, token);
             }
@@ -436,13 +439,9 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
             WriteRow(outputHeight - row - 1, text, usableWidth);
         }
 
-        if (progressRunning)
-            RenderProgressLine(height - 2, usableWidth);
-
         RenderInputLine(row: height - 1, usableWidth);
 
-        if (isInputEnabled)
-            Console.CursorVisible = true;
+        Console.CursorVisible = true;
     }
 
     private List<string> BuildVisibleOutput(
@@ -538,13 +537,17 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
             Console.Write(new string(' ', remaining));
     }
 
-    private void RenderProgressLine(int row, int usableWidth)
+    private void RenderProgressLine()
     {
-        if (row < 0)
-            return;
+        Console.CursorVisible = false;
+
+        var width = SafeWindowWidth();
+        var height = SafeWindowHeight();
+
+        var usableWidth = Math.Max(1, width - 1);
 
         var text = FormatProgress(progressLabel, progressFunc());
-        WriteRow(row, text, usableWidth);
+        WriteRow(height - 2, text, usableWidth);
     }
 
     private static string FormatProgress(string label, double progress)
