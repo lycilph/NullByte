@@ -80,13 +80,23 @@ public sealed class Player
         {
             throw new ArgumentOutOfRangeException(
                 nameof(amount),
-                "Hacking experience must be a finite, " +
-                "non-negative value.");
+                "Hacking experience must be a finite, non-negative value.");
         }
 
         HackingExperience += amount;
     }
 
+    internal void AddMoney(double amount)
+    {
+        if (!double.IsFinite(amount) || amount < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(amount),
+                "Hacking experience must be a finite, non-negative value.");
+        }
+
+        Money += amount;
+    }
     /// <summary>
     /// Marks a server as discovered.
     /// </summary>

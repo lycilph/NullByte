@@ -159,7 +159,7 @@ A timer completed in stage 2 posts its continuation to the mailbox, and stage 3 
 
 Compile results are cached by source hash.
 
-### 4.6 NS API (first set)
+### 4.6 NB API (first set)
 
 Each method has a RAM cost declared with an attribute (for example `[RamCost(0.1)]`) so analysis can find it.
 

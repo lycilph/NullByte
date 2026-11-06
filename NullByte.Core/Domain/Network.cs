@@ -67,11 +67,7 @@ public sealed class Network
     public Server GetServer(string serverId)
     {
         if (string.IsNullOrWhiteSpace(serverId))
-        {
-            throw new ArgumentException(
-                "The server ID cannot be empty.",
-                nameof(serverId));
-        }
+            throw new ArgumentException("The server ID cannot be empty.", nameof(serverId));
 
         if (!serversById.TryGetValue(serverId, out var server))
             throw new KeyNotFoundException($"Server '{serverId}' does not exist.");
