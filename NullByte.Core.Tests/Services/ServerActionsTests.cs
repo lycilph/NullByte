@@ -225,27 +225,29 @@ public sealed class ServerActionsTests
     }
 
     [Fact]
-    public async Task HackAsync_WithoutRootAccess_ThrowsBeforeScheduling()
+    public async Task HackAsync_WithoutRootAccess_FailsWithMessage()
     {
         var fixture = CreateFixture(randomValue: 0, hasRootAccess: false);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => fixture.Actions.HackAsync(fixture.Target.Id));
+        var action = await fixture.Actions.HackAsync(fixture.Target.Id);
 
+        Assert.False(action.Succeeded);
+        Assert.False(string.IsNullOrWhiteSpace(action.FailureMessage));
         Assert.Equal(0, fixture.Scheduler.PendingCount);
     }
 
     [Fact]
-    public async Task HackAsync_WhenHackingLevelIsTooLow_ThrowsBeforeScheduling()
+    public async Task HackAsync_WhenHackingLevelIsTooLow_FailsWithMessage()
     {
         var fixture = CreateFixture(
             randomValue: 0,
             playerLevel: 5,
             requiredHackingLevel: 10);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => fixture.Actions.HackAsync(fixture.Target.Id));
+        var action = await fixture.Actions.HackAsync(fixture.Target.Id);
 
+        Assert.False(action.Succeeded);
+        Assert.False(string.IsNullOrWhiteSpace(action.FailureMessage));
         Assert.Equal(0, fixture.Scheduler.PendingCount);
     }
 

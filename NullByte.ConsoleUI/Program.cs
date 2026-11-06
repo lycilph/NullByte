@@ -2,6 +2,8 @@
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Configuration;
 using NullByte.Core.Domain;
+using NullByte.Core.Formulas;
+using NullByte.Core.Randomness;
 using NullByte.Core.Services;
 using NullByte.Core.Simulation;
 using NullByte.Core.Threading;
@@ -20,14 +22,15 @@ public class Program
         var clock = new RealGameClock() { SpeedMultiplier = balanceConfig.GameSpeedMultiplier };
         var synchronizationContext = new GameSynchronizationContext();
 
-        var gameState = InitialGameStateFactory.Create();
-        var networkService = new NetworkService(gameState);
-
         await using var gameLoop = new GameLoop(clock, synchronizationContext);
 
-        await using var terminal = new ThreadSafeConsoleTerminal(
-            prompt: "root@home $ ",
-            maximumHistoryLines: 2_000);
+        var gameState = InitialGameStateFactory.Create();
+        var networkService = new NetworkService(gameState);
+        var formulas = new HackingFormulas(balanceConfig);
+        var randomSource = new SeededRandomSource(balanceConfig.RandomSeed);
+        var serverActions = new ServerActions(gameState, gameLoop.Scheduler, formulas, randomSource);
+
+        await using var terminal = new ThreadSafeConsoleTerminal(prompt: "root@home $ ", maximumHistoryLines: 2_000);
         var terminalTask = terminal.RunAsync();
         
         gameLoop.Start();
@@ -38,7 +41,7 @@ public class Program
 
             WriteStartupMessage(terminal, gameLoop);
 
-            await ProcessCommandsAsync(gameLoop, networkService, terminal);
+            await ProcessCommandsAsync(gameLoop, gameState, networkService, serverActions, formulas, terminal);
         }
         finally
         {
@@ -133,7 +136,10 @@ public class Program
 
     private static async Task ProcessCommandsAsync(
         GameLoop gameLoop,
+        GameState gameState,
         NetworkService networkService,
+        ServerActions serverActions,
+        HackingFormulas formulas,
         ThreadSafeConsoleTerminal terminal)
     {
         await foreach (var commandLine in terminal.ReadCommandsAsync())
@@ -160,7 +166,10 @@ public class Program
                     _ => ExecuteGameCommand(
                         arguments,
                         gameLoop,
+                        gameState,
                         networkService,
+                        serverActions,
+                        formulas,
                         terminal));
             }
             catch (InvalidOperationException)
@@ -171,10 +180,13 @@ public class Program
         }
     }
 
-    private static void ExecuteGameCommand(
+    private static async void ExecuteGameCommand(
         IReadOnlyList<string> arguments,
         GameLoop gameLoop,
+        GameState gameState,
         NetworkService networkService,
+        ServerActions serverActions,
+        HackingFormulas formulas,
         IGameTerminal terminal)
     {
         gameLoop.SynchronizationContext.VerifyAccess();
@@ -215,6 +227,22 @@ public class Program
                 GoHome(networkService, terminal);
                 break;
 
+            case "nuke":
+                Nuke(networkService, formulas, gameState.Player, terminal);
+                break;
+
+            case "hack":
+                await HackAsync(arguments, networkService, serverActions, terminal);
+                break;
+
+            case "grow":
+                await GrowAsync(arguments, networkService, serverActions, terminal);
+                break;
+
+            case "weaken":
+                await WeakenAsync(arguments, networkService, serverActions, terminal);
+                break;
+
             case "clear":
                 terminal.Clear();
                 break;
@@ -225,6 +253,126 @@ public class Program
                 break;
         }
     }
+
+    private static void Nuke(NetworkService networkService, HackingFormulas formulas, Player player, IGameTerminal terminal)
+    {
+        var server = networkService.GetCurrentServer();
+        if (server.HasRootAccess)
+        {
+            terminal.WriteLine($"You already have root access to {server.Hostname}.");
+            return;
+        }
+
+        var hackingLevel = formulas.CalculateHackingLevel(player.HackingExperience);
+        if (!server.TryGainRootAccess(hackingLevel))
+        {
+            terminal.WriteLine($"Cannot gain root access to {server.Hostname}.");
+            terminal.WriteLine($"Required hacking level: {server.RequiredHackingLevel}");
+            terminal.WriteLine($"Your hacking level: {hackingLevel}");
+        }
+        else
+        {
+            terminal.WriteLine($"Root access gained on {server.Hostname}.");
+        }
+    }
+
+    private static async Task HackAsync(
+        IReadOnlyList<string> arguments,
+        NetworkService networkService,
+        ServerActions serverActions,
+        IGameTerminal terminal)
+    {
+        var server = networkService.GetCurrentServer();
+
+        await RunWithInputBlockedAsync(
+            terminal,
+            async () =>
+            {
+                terminal.WriteLine($"Hacking {server.Hostname}...");
+
+                var result = await serverActions.HackAsync(server.Id, threads: 1,terminal.StoppingToken);
+                if (result.Succeeded)
+                    terminal.WriteLine($"Hack succeeded. Stole ${result.MoneyStolen:N2}.");
+                else
+                    terminal.WriteLine(result.FailureMessage);
+
+                terminal.WriteLine($"Experience gained: {result.ExperienceGained:N2}");
+                terminal.WriteLine($"Security increased by {result.SecurityIncrease:F3}.");
+                terminal.WriteLine($"Completed in {result.Duration.TotalSeconds:F1} game seconds.");
+            });
+    }
+
+    private static async Task GrowAsync(
+        IReadOnlyList<string> arguments,
+        NetworkService networkService,
+        ServerActions serverActions,
+        IGameTerminal terminal)
+    {
+        var server = networkService.GetCurrentServer();
+
+        await RunWithInputBlockedAsync(
+            terminal,
+            async () =>
+            {
+                terminal.WriteLine($"Growing {server.Hostname}...");
+
+                var result = await serverActions.GrowAsync(server.Id, threads: 1, terminal.StoppingToken);
+                if (result.Succeeded)
+                {
+                    terminal.WriteLine($"Grew server money by ${result.MoneyGrown:N2}.");
+                    terminal.WriteLine($"Experience gained: {result.ExperienceGained:N2}");
+                    terminal.WriteLine($"Security increased by {result.SecurityIncrease:F3}.");
+                    terminal.WriteLine($"Completed in {result.Duration.TotalSeconds:F1} game seconds.");
+                }    
+                else
+                {
+                    terminal.WriteLine(result.FailureMessage);
+                }
+            });
+    }
+
+    private static async Task WeakenAsync(
+        IReadOnlyList<string> arguments,
+        NetworkService networkService,
+        ServerActions serverActions,
+        IGameTerminal terminal)
+    {
+        var server = networkService.GetCurrentServer();
+
+        await RunWithInputBlockedAsync(
+            terminal,
+            async () =>
+            {
+                terminal.WriteLine($"Weakening {server.Hostname}...");
+
+                var result = await serverActions.WeakenAsync(server.Id, threads: 1,terminal.StoppingToken);
+                if (result.Succeeded)
+                {
+                    terminal.WriteLine($"Security decreased by {result.SecurityDecrease:F3}.");
+                    terminal.WriteLine($"Experience gained: {result.ExperienceGained:N2}");
+                    terminal.WriteLine($"Completed in {result.Duration.TotalSeconds:F1} game seconds.");
+                }
+                else
+                {
+                    terminal.WriteLine(result.FailureMessage);
+                }
+            });
+    }
+
+    private static async Task RunWithInputBlockedAsync(IGameTerminal terminal, Func<Task> operation)
+    {
+        terminal.SetInputEnabled(false);
+
+        try
+        {
+            await operation();
+        }
+        finally
+        {
+            terminal.SetInputEnabled(true);
+        }
+    }
+
     private static void WriteHelp(IGameTerminal terminal)
     {
         terminal.WriteLine("Available commands:");
@@ -236,6 +384,10 @@ public class Program
         terminal.WriteLine("  scan               Scan connected servers");
         terminal.WriteLine("  connect <server>   Connect to a discovered server");
         terminal.WriteLine("  home               Return to your home server");
+        terminal.WriteLine("  nuke               Gain root access to current server");
+        terminal.WriteLine("  hack               Attempt to steal money");
+        terminal.WriteLine("  grow               Increase server money");
+        terminal.WriteLine("  weaken             Reduce server security");
         terminal.WriteLine("  clear              Clear terminal history");
         terminal.WriteLine("  exit               Exit NullByte");
     }

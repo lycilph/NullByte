@@ -22,70 +22,23 @@ public sealed class Server
         bool hasRootAccess = false)
     {
         if (string.IsNullOrWhiteSpace(id))
-        {
-            throw new ArgumentException(
-                "Server ID cannot be empty.",
-                nameof(id));
-        }
-
+            throw new ArgumentException("Server ID cannot be empty.", nameof(id));
         if (string.IsNullOrWhiteSpace(hostname))
-        {
-            throw new ArgumentException(
-                "Host name cannot be empty.",
-                nameof(hostname));
-        }
-
+            throw new ArgumentException("Host name cannot be empty.", nameof(hostname));
         if (!double.IsFinite(maximumMoney) || maximumMoney < 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(maximumMoney),
-                "Maximum money must be finite and non-negative.");
-        }
-
-        if (!double.IsFinite(startingMoney) ||
-            startingMoney < 0 ||
-            startingMoney > maximumMoney)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(startingMoney),
-                "Starting money must be finite and between zero and maximum money.");
-        }
-
+            throw new ArgumentOutOfRangeException(nameof(maximumMoney), "Maximum money must be finite and non-negative.");
+        if (!double.IsFinite(startingMoney) || startingMoney < 0 || startingMoney > maximumMoney)
+            throw new ArgumentOutOfRangeException(nameof(startingMoney), "Starting money must be finite and between zero and maximum money.");
         if (!double.IsFinite(minimumSecurity) || minimumSecurity < 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(minimumSecurity),
-                "Minimum security must be finite and non-negative.");
-        }
-
-        if (!double.IsFinite(startingSecurity) ||
-            startingSecurity < minimumSecurity)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(startingSecurity),
-                "Starting security must be finite and at least minimum security.");
-        }
-
+            throw new ArgumentOutOfRangeException(nameof(minimumSecurity), "Minimum security must be finite and non-negative.");
+        if (!double.IsFinite(startingSecurity) || startingSecurity < minimumSecurity)
+            throw new ArgumentOutOfRangeException(nameof(startingSecurity), "Starting security must be finite and at least minimum security.");
         if (requiredHackingLevel < 1)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(requiredHackingLevel),
-                "Required hacking level must be at least 1.");
-        }
-
+            throw new ArgumentOutOfRangeException(nameof(requiredHackingLevel), "Required hacking level must be at least 1.");
         if (!double.IsFinite(growthParameter) || growthParameter < 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(growthParameter),
-                "Growth parameter must be finite and non-negative.");
-        }
-
+            throw new ArgumentOutOfRangeException(nameof(growthParameter), "Growth parameter must be finite and non-negative.");
         if (!double.IsFinite(maximumRam) || maximumRam < 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(maximumRam),
-                "Maximum RAM must be finite and non-negative.");
-        }
+            throw new ArgumentOutOfRangeException(nameof(maximumRam), "Maximum RAM must be finite and non-negative.");
 
         Id = id;
         Hostname = hostname;
@@ -127,6 +80,18 @@ public sealed class Server
     public double UsedRam => usedRam;
 
     public double AvailableRam => MaximumRam - usedRam;
+
+    public bool TryGainRootAccess(int hackingLevel)
+    {
+        if (HasRootAccess)
+            return true;
+
+        if (hackingLevel < RequiredHackingLevel)
+            return false;
+
+        GrantRootAccess();
+        return true;
+    }
 
     internal void GrantRootAccess()
     {

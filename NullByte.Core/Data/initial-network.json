@@ -3,8 +3,8 @@
     {
       "id": "home",
       "hostname": "home",
-      "maximumMoney": 0,
-      "startingMoney": 0,
+      "maximumMoney": 1000,
+      "startingMoney": 1000,
       "minimumSecurity": 1,
       "startingSecurity": 1,
       "requiredHackingLevel": 1,

@@ -47,15 +47,19 @@ public sealed class ServerActions
         int threads = 1,
         CancellationToken cancellationToken = default)
     {
+        ValidateThreads(threads);
+
         var server = ResolveTarget(serverId);
 
-        ValidateThreads(threads);
-        ValidateRootAccess(server);
-        ValidateHackingLevel(server);
+        if (!server.HasRootAccess)
+            return HackResult.Failed("Hack failed: root access required.");
 
+        var hackingLevel = formulas.CalculateHackingLevel(gameState.Player.HackingExperience);
+        if (hackingLevel < server.RequiredHackingLevel)
+            return HackResult.Failed("Hack failed: hacking level too low.");
+        
         var player = gameState.Player;
         var duration = formulas.CalculateHackDuration(player, server);
-
         await scheduler.DelayAsync(duration, cancellationToken);
 
         var hackChance = formulas.CalculateHackChance(player, server);
@@ -77,6 +81,7 @@ public sealed class ServerActions
 
         return new HackResult(
             Succeeded: succeeded,
+            FailureMessage: succeeded ? string.Empty : "Hack failed. No money was stolen.",
             MoneyStolen: moneyStolen,
             ExperienceGained: experienceGained,
             SecurityIncrease: securityIncrease,
@@ -91,10 +96,12 @@ public sealed class ServerActions
         int threads = 1,
         CancellationToken cancellationToken = default)
     {
+        ValidateThreads(threads);
+
         var server = ResolveTarget(serverId);
 
-        ValidateThreads(threads);
-        ValidateRootAccess(server);
+        if (!server.HasRootAccess)
+            return GrowResult.Failed("Grow failed: root access required.");
 
         var player = gameState.Player;
         var duration = formulas.CalculateGrowDuration(player, server);
@@ -110,6 +117,8 @@ public sealed class ServerActions
         player.AddHackingExperience(experienceGained);
 
         return new GrowResult(
+            Succeeded: true,
+            FailureMessage: string.Empty,
             MoneyGrown: moneyGrown,
             ExperienceGained: experienceGained,
             SecurityIncrease: securityIncrease,
@@ -124,10 +133,12 @@ public sealed class ServerActions
         int threads = 1,
         CancellationToken cancellationToken = default)
     {
+        ValidateThreads(threads);
+
         var server = ResolveTarget(serverId);
 
-        ValidateThreads(threads);
-        ValidateRootAccess(server);
+        if (!server.HasRootAccess)
+            return WeakenResult.Failed("Weaken failed: root access required.");
 
         var player = gameState.Player;
         var duration = formulas.CalculateWeakenDuration(player, server);
@@ -140,6 +151,8 @@ public sealed class ServerActions
         player.AddHackingExperience(experienceGained);
 
         return new WeakenResult(
+            Succeeded: true, 
+            FailureMessage: string.Empty,
             SecurityDecrease: securityDecrease,
             ExperienceGained: experienceGained,
             Duration: duration);
@@ -153,24 +166,24 @@ public sealed class ServerActions
         return gameState.Network.GetServer(serverId);
     }
 
-    private void ValidateHackingLevel(Server server)
-    {
-        var hackingLevel = formulas.CalculateHackingLevel(gameState.Player.HackingExperience);
+    //private void ValidateHackingLevel(Server server)
+    //{
+    //    var hackingLevel = formulas.CalculateHackingLevel(gameState.Player.HackingExperience);
 
-        if (hackingLevel < server.RequiredHackingLevel)
-        {
-            throw new InvalidOperationException(
-                $"Hacking level {hackingLevel} is too low to hack " +
-                $"server '{server.Hostname}'. Required level: " +
-                $"{server.RequiredHackingLevel}.");
-        }
-    }
+    //    if (hackingLevel < server.RequiredHackingLevel)
+    //    {
+    //        throw new InvalidOperationException(
+    //            $"Hacking level {hackingLevel} is too low to hack " +
+    //            $"server '{server.Hostname}'. Required level: " +
+    //            $"{server.RequiredHackingLevel}.");
+    //    }
+    //}
 
-    private static void ValidateRootAccess(Server server)
-    {
-        if (!server.HasRootAccess)
-            throw new InvalidOperationException($"Root access is required for server '{server.Hostname}'.");
-    }
+    //private static void ValidateRootAccess(Server server)
+    //{
+    //    if (!server.HasRootAccess)
+    //        throw new InvalidOperationException($"Root access is required for server '{server.Hostname}'.");
+    //}
 
     private static void ValidateThreads(int threads)
     {

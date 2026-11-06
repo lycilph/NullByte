@@ -20,10 +20,14 @@
 /// </param>
 public sealed record HackResult(
     bool Succeeded,
+    string FailureMessage,
     double MoneyStolen,
     double ExperienceGained,
     double SecurityIncrease,
-    TimeSpan Duration);
+    TimeSpan Duration)
+{
+    public static HackResult Failed(string msg) => new(false, msg, 0, 0, 0, TimeSpan.Zero);
+}
 
 /// <summary>
 /// Describes the outcome of a completed grow operation.
@@ -41,10 +45,15 @@ public sealed record HackResult(
 /// The amount of game time taken by the operation.
 /// </param>
 public sealed record GrowResult(
+    bool Succeeded,
+    string FailureMessage,
     double MoneyGrown,
     double ExperienceGained,
     double SecurityIncrease,
-    TimeSpan Duration);
+    TimeSpan Duration)
+{
+    public static GrowResult Failed(string msg) => new(false, msg, 0, 0, 0, TimeSpan.Zero);
+}
 
 /// <summary>
 /// Describes the outcome of a completed weaken operation.
@@ -60,6 +69,11 @@ public sealed record GrowResult(
 /// The amount of game time taken by the operation.
 /// </param>
 public sealed record WeakenResult(
+    bool Succeeded,
+    string FailureMessage,
     double SecurityDecrease,
     double ExperienceGained,
-    TimeSpan Duration);
+    TimeSpan Duration)
+{
+    public static WeakenResult Failed(string msg) => new(false, msg, 0, 0, TimeSpan.Zero);
+}

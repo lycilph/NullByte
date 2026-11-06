@@ -5,6 +5,36 @@ namespace NullByte.Core.Tests.Domain;
 public sealed class ServerTests
 {
     [Fact]
+    public void TryGainRootAccess_WithSufficientHackingLevel_GainsRootAccess()
+    {
+        var server = CreateServer(requiredHackingLevel: 10, hasRootAccess: false);
+        var result = server.TryGainRootAccess(hackingLevel: 10);
+
+        Assert.True(result);
+        Assert.True(server.HasRootAccess);
+    }
+
+    [Fact]
+    public void TryGainRootAccess_WithInsufficientHackingLevel_DoesNotGainRootAccess()
+    {
+        var server = CreateServer(requiredHackingLevel: 10, hasRootAccess: false);
+        var result = server.TryGainRootAccess(hackingLevel: 9);
+
+        Assert.False(result);
+        Assert.False(server.HasRootAccess);
+    }
+
+    [Fact]
+    public void TryGainRootAccess_WhenAlreadyRooted_ReturnsTrue()
+    {
+        var server = CreateServer(requiredHackingLevel: 100, hasRootAccess: true);
+        var result = server.TryGainRootAccess(hackingLevel: 1);
+
+        Assert.True(result);
+        Assert.True(server.HasRootAccess);
+    }
+
+    [Fact]
     public void Constructor_InitializesServer()
     {
         var server = CreateServer();
@@ -210,7 +240,7 @@ public sealed class ServerTests
             () => server.ReleaseRam(amount));
     }
 
-    private static Server CreateServer()
+    private static Server CreateServer(int requiredHackingLevel = 10, bool hasRootAccess = false)
     {
         return new Server(
             id: "n00dles",
@@ -219,8 +249,9 @@ public sealed class ServerTests
             startingMoney: 50_000,
             minimumSecurity: 1,
             startingSecurity: 5,
-            requiredHackingLevel: 10,
+            requiredHackingLevel: requiredHackingLevel,
             growthParameter: 20,
-            maximumRam: 8);
+            maximumRam: 8,
+            hasRootAccess: hasRootAccess);
     }
 }

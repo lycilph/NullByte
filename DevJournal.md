@@ -3,9 +3,10 @@
 ## 05-11-2026
 
 ### In Progress
-- M2 milestone
+- M3 milestone
 
 ### Done
+- M2 milestone done
 - M0 and M1 milestones from design document is completed
 - Hardening pass done over the code
 
