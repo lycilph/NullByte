@@ -42,6 +42,10 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
     private readonly List<string> history = [];
     private readonly StringBuilder input = new();
 
+    private bool progressRunning = false;
+    private string progressLabel = string.Empty;
+    private Func<double> progressFunc = () => 1;
+
     private int cursorIndex;
     private int lastWindowWidth = -1;
     private int lastWindowHeight = -1;
@@ -53,24 +57,32 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
     public ThreadSafeConsoleTerminal(string prompt = "> ", int maximumHistoryLines = 1_000)
     {
         if (string.IsNullOrEmpty(prompt))
-        {
-            throw new ArgumentException(
-                "The prompt cannot be empty.",
-                nameof(prompt));
-        }
-
+            throw new ArgumentException("The prompt cannot be empty.", nameof(prompt));
         if (maximumHistoryLines < 1)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(maximumHistoryLines),
-                "Maximum history lines must be at least one.");
-        }
+            throw new ArgumentOutOfRangeException(nameof(maximumHistoryLines), "Maximum history lines must be at least one.");
 
         this.prompt = prompt;
         this.maximumHistoryLines = maximumHistoryLines;
     }
 
     public CancellationToken StoppingToken => stopSource.Token;
+
+    public void StartProgress(string label, Func<double> progress)
+    {
+        if (hasDisposed || stopSource.IsCancellationRequested)
+            return;
+
+        WriteLine(label); // This reserves the space for the progress to be displayed properly
+        requests.Writer.TryWrite(new StartProgressRequest(label, progress));
+    }
+
+    public void StopProgress()
+    {
+        if (hasDisposed || stopSource.IsCancellationRequested)
+            return;
+
+        requests.Writer.TryWrite(StopProgressRequest.Instance);
+    }
 
     public void SetInputEnabled(bool enabled)
     {
@@ -151,15 +163,13 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
                     changed = true;
                 }
 
-                if (changed || screenInvalidated)
+                if (changed || screenInvalidated || progressRunning)
                 {
                     Render();
                     screenInvalidated = false;
                 }
 
-                await Task.Delay(
-                    RefreshDelayMilliseconds,
-                    token);
+                await Task.Delay(RefreshDelayMilliseconds, token);
             }
         }
         catch (OperationCanceledException)
@@ -254,6 +264,18 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
                         cursorIndex = 0;
                     }
 
+                    changed = true;
+                    break;
+
+                case StartProgressRequest startProgress:
+                    progressRunning = true;
+                    progressLabel = startProgress.label;
+                    progressFunc = startProgress.func;
+                    changed = true;
+                    break;
+
+                case StopProgressRequest:
+                    progressRunning = false;
                     changed = true;
                     break;
             }
@@ -402,9 +424,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
 
         Console.CursorVisible = false;
 
-        var wrappedOutput = BuildVisibleOutput(
-            usableWidth,
-            outputHeight);
+        var wrappedOutput = BuildVisibleOutput(usableWidth, outputHeight);
         wrappedOutput.Reverse();
 
         for (var row = 0; row < outputHeight; row++)
@@ -416,11 +436,13 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
             WriteRow(outputHeight - row - 1, text, usableWidth);
         }
 
-        RenderInputLine(
-            row: height - 1,
-            usableWidth);
+        if (progressRunning)
+            RenderProgressLine(height - 2, usableWidth);
 
-        Console.CursorVisible = true;
+        RenderInputLine(row: height - 1, usableWidth);
+
+        if (isInputEnabled)
+            Console.CursorVisible = true;
     }
 
     private List<string> BuildVisibleOutput(
@@ -445,10 +467,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
             outputHeight);
     }
 
-    private static void WrapLine(
-        string line,
-        int width,
-        List<string> destination)
+    private static void WrapLine(string line, int width, List<string> destination)
     {
         if (line.Length == 0)
         {
@@ -461,10 +480,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
         while (index < line.Length)
         {
             var length = Math.Min(width, line.Length - index);
-
-            destination.Add(
-                line.Substring(index, length));
-
+            destination.Add(line.Substring(index, length));
             index += length;
         }
     }
@@ -522,6 +538,28 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
             Console.Write(new string(' ', remaining));
     }
 
+    private void RenderProgressLine(int row, int usableWidth)
+    {
+        if (row < 0)
+            return;
+
+        var text = FormatProgress(progressLabel, progressFunc());
+        WriteRow(row, text, usableWidth);
+    }
+
+    private static string FormatProgress(string label, double progress)
+    {
+        const int width = 24;
+
+        var filled = (int)Math.Round(progress * width);
+
+        var bar =
+            new string('=', filled) +
+            new string(' ', width - filled);
+
+        return $"{label}... [{bar}] {progress:P0}";
+    }
+
     private static int SafeWindowWidth()
     {
         try
@@ -575,4 +613,10 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
     private sealed record SetPromptRequest(string Prompt) : TerminalRequest;
 
     private sealed record SetInputEnabledRequest(bool Enabled) : TerminalRequest;
+
+    private sealed record StartProgressRequest(string label, Func<double> func) : TerminalRequest;
+    private sealed record StopProgressRequest() : TerminalRequest
+    {
+        public static StopProgressRequest Instance { get; } = new();
+    }
 }

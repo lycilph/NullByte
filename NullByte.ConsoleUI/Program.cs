@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Numerics;
+using System.Text;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Configuration;
 using NullByte.Core.Domain;
@@ -232,15 +233,15 @@ public class Program
                 break;
 
             case "hack":
-                await HackAsync(arguments, networkService, serverActions, terminal);
+                await HackAsync(arguments, networkService, serverActions, formulas, gameState.Player, gameLoop.Clock, terminal);
                 break;
 
             case "grow":
-                await GrowAsync(arguments, networkService, serverActions, terminal);
+                await GrowAsync(arguments, networkService, serverActions, formulas, gameState.Player, gameLoop.Clock, terminal);
                 break;
 
             case "weaken":
-                await WeakenAsync(arguments, networkService, serverActions, terminal);
+                await WeakenAsync(arguments, networkService, serverActions, formulas, gameState.Player, gameLoop.Clock, terminal);
                 break;
 
             case "clear":
@@ -280,17 +281,29 @@ public class Program
         IReadOnlyList<string> arguments,
         NetworkService networkService,
         ServerActions serverActions,
+        HackingFormulas formulas, 
+        Player player,
+        IGameClock clock,
         IGameTerminal terminal)
     {
         var server = networkService.GetCurrentServer();
+
+        var duration = formulas.CalculateHackDuration(player, server);
+        var startedAt = clock.Elapsed;
+        terminal.StartProgress($"Hacking {server.Hostname}...",
+            () =>
+            {
+                var elapsed = clock.Elapsed - startedAt;
+                return Math.Clamp(elapsed.TotalSeconds / duration.TotalSeconds, 0.0, 1.0);
+            });
 
         await RunWithInputBlockedAsync(
             terminal,
             async () =>
             {
-                terminal.WriteLine($"Hacking {server.Hostname}...");
-
                 var result = await serverActions.HackAsync(server.Id, threads: 1,terminal.StoppingToken);
+                terminal.StopProgress();
+
                 if (result.Succeeded)
                     terminal.WriteLine($"Hack succeeded. Stole ${result.MoneyStolen:N2}.");
                 else
@@ -306,17 +319,29 @@ public class Program
         IReadOnlyList<string> arguments,
         NetworkService networkService,
         ServerActions serverActions,
+        HackingFormulas formulas,
+        Player player,
+        IGameClock clock,
         IGameTerminal terminal)
     {
         var server = networkService.GetCurrentServer();
+        
+        var duration = formulas.CalculateGrowDuration(player, server);
+        var startedAt = clock.Elapsed;
+        terminal.StartProgress($"Growing {server.Hostname}...",
+            () =>
+            {
+                var elapsed = clock.Elapsed - startedAt;
+                return Math.Clamp(elapsed.TotalSeconds / duration.TotalSeconds, 0.0, 1.0);
+            });
 
         await RunWithInputBlockedAsync(
             terminal,
             async () =>
             {
-                terminal.WriteLine($"Growing {server.Hostname}...");
-
                 var result = await serverActions.GrowAsync(server.Id, threads: 1, terminal.StoppingToken);
+                terminal.StopProgress();
+
                 if (result.Succeeded)
                 {
                     terminal.WriteLine($"Grew server money by ${result.MoneyGrown:N2}.");
@@ -335,17 +360,29 @@ public class Program
         IReadOnlyList<string> arguments,
         NetworkService networkService,
         ServerActions serverActions,
+        HackingFormulas formulas,
+        Player player,
+        IGameClock clock,
         IGameTerminal terminal)
     {
         var server = networkService.GetCurrentServer();
+
+        var duration = formulas.CalculateWeakenDuration(player, server);
+        var startedAt = clock.Elapsed;
+        terminal.StartProgress($"Weakening {server.Hostname}...",
+            () =>
+            {
+                var elapsed = clock.Elapsed - startedAt;
+                return Math.Clamp(elapsed.TotalSeconds / duration.TotalSeconds, 0.0, 1.0);
+            });
 
         await RunWithInputBlockedAsync(
             terminal,
             async () =>
             {
-                terminal.WriteLine($"Weakening {server.Hostname}...");
-
                 var result = await serverActions.WeakenAsync(server.Id, threads: 1,terminal.StoppingToken);
+                terminal.StopProgress();
+
                 if (result.Succeeded)
                 {
                     terminal.WriteLine($"Security decreased by {result.SecurityDecrease:F3}.");

@@ -4,6 +4,10 @@ public interface IGameTerminal
 {
     CancellationToken StoppingToken { get; }
 
+    void StartProgress(string msg, Func<double> progress);
+    void StopProgress();
+
+
     void SetPrompt(string prompt);
     void SetInputEnabled(bool enabled);
 
