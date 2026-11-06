@@ -241,6 +241,18 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 - Input typed during a blocking action is discarded and never executed.
 - Tests drive the console with scripted input and a fake clock.
 
+### M3.5: Console shell QoL improvements
+
+**Deliverables**
+
+- Autocomplete for server names and commands in the console
+- History for input in the console
+
+**Acceptance**
+
+- The user can tab to autocomplete server names commands
+- The user can use up/down arrows to cycle through input history
+
 ### M4: Hacknet
 
 **Deliverables**
