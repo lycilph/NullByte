@@ -153,7 +153,7 @@ public class Program
                 terminal.WriteLine("Shutting down...");
                 return;
             }
-           
+
             try
             {
                 gameLoop.Post(

@@ -13,13 +13,8 @@ public sealed class GameLoop : IAsyncDisposable
     private readonly RealGameClock clock;
     private readonly GameSynchronizationContext synchronizationContext;
     private readonly CancellationTokenSource stopSource = new();
-
-    private readonly TaskCompletionSource startedSource =
-        new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-    private readonly TaskCompletionSource stoppedSource =
-        new(TaskCreationOptions.RunContinuationsAsynchronously);
-
+    private readonly TaskCompletionSource startedSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource stoppedSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly Lock lifecycleLock = new();
 
     private GameLoopState state = GameLoopState.Created;
@@ -71,8 +66,7 @@ public sealed class GameLoop : IAsyncDisposable
     /// <summary>
     /// Gets whether the calling thread is the game thread.
     /// </summary>
-    public bool IsGameThread =>
-        synchronizationContext.IsGameThread;
+    public bool IsGameThread => synchronizationContext.IsGameThread;
 
     /// <summary>
     /// Completes when the game thread is initialized and ready.
@@ -155,13 +149,77 @@ public sealed class GameLoop : IAsyncDisposable
             ThrowIfDisposed();
 
             if (this.state != GameLoopState.Running)
-            {
-                throw new InvalidOperationException(
-                    "Work can only be posted while the " +
-                    "game loop is running.");
-            }
+                throw new InvalidOperationException("Work can only be posted while the game loop is running.");
 
             synchronizationContext.Post(callback, state);
+        }
+    }
+
+    /// <summary>
+    /// Executes an asynchronous operation on the game thread and
+    /// completes when the operation has finished.
+    /// </summary>
+    /// <param name="callback">The asynchronous operation to execute on the game thread.</param>
+    /// <returns>A task that represents the completion of the operation.</returns>
+    public Task InvokeAsync(Func<Task> callback)
+    {
+        ArgumentNullException.ThrowIfNull(callback);
+
+        var completionSource = new TaskCompletionSource( TaskCreationOptions.RunContinuationsAsynchronously);
+        Post(_ => { _ = ExecuteAsync(callback, completionSource); });
+
+        return completionSource.Task;
+    }
+
+    /// <summary>
+    /// Executes an asynchronous operation on the game thread and
+    /// returns its result when the operation has finished.
+    /// </summary>
+    /// <typeparam name="T">The type of result produced by the operation.</typeparam>
+    /// <param name="callback">The asynchronous operation to execute on the game thread.</param>
+    /// <returns>A task that contains the result produced by the operation.</returns>
+    public Task<T> InvokeAsync<T>(Func<Task<T>> callback)
+    {
+        ArgumentNullException.ThrowIfNull(callback);
+
+        var completionSource = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Post(_ => { _ = ExecuteAsync(callback, completionSource); });
+
+        return completionSource.Task;
+    }
+
+    private static async Task ExecuteAsync(Func<Task> callback, TaskCompletionSource completionSource)
+    {
+        try
+        {
+            await callback();
+            completionSource.TrySetResult();
+        }
+        catch (OperationCanceledException exception)
+        {
+            completionSource.TrySetCanceled(exception.CancellationToken);
+        }
+        catch (Exception exception)
+        {
+            completionSource.TrySetException(exception);
+        }
+    }
+
+
+    private static async Task ExecuteAsync<T>(Func<Task<T>> callback, TaskCompletionSource<T> completionSource)
+    {
+        try
+        {
+            var result = await callback();
+            completionSource.TrySetResult(result);
+        }
+        catch (OperationCanceledException exception)
+        {
+            completionSource.TrySetCanceled(exception.CancellationToken);
+        }
+        catch (Exception exception)
+        {
+            completionSource.TrySetException(exception);
         }
     }
 
@@ -193,8 +251,7 @@ public sealed class GameLoop : IAsyncDisposable
             {
                 RunIteration();
 
-                Thread.Sleep(
-                    DefaultIdleDelayMilliseconds);
+                Thread.Sleep(DefaultIdleDelayMilliseconds);
             }
 
             RunFinalIteration();

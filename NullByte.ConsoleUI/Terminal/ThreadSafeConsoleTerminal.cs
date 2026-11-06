@@ -3,9 +3,7 @@ using System.Threading.Channels;
 
 namespace NullByte.ConsoleUI.Terminal;
 
-public sealed class ThreadSafeConsoleTerminal :
-    IGameTerminal,
-    IAsyncDisposable
+public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
 {
     private const int RefreshDelayMilliseconds = 16;
 
@@ -48,12 +46,11 @@ public sealed class ThreadSafeConsoleTerminal :
     private int lastWindowWidth = -1;
     private int lastWindowHeight = -1;
     private bool screenInvalidated = true;
+    private bool isInputEnabled = true;
     private bool hasStarted;
     private bool hasDisposed;
 
-    public ThreadSafeConsoleTerminal(
-        string prompt = "> ",
-        int maximumHistoryLines = 1_000)
+    public ThreadSafeConsoleTerminal(string prompt = "> ", int maximumHistoryLines = 1_000)
     {
         if (string.IsNullOrEmpty(prompt))
         {
@@ -75,7 +72,21 @@ public sealed class ThreadSafeConsoleTerminal :
 
     public CancellationToken StoppingToken => stopSource.Token;
 
-    public void SetPrompt(string newPrompt) => prompt = newPrompt;
+    public void SetInputEnabled(bool enabled)
+    {
+        if (hasDisposed || stopSource.IsCancellationRequested)
+            return;
+
+        requests.Writer.TryWrite(new SetInputEnabledRequest(enabled));
+    }
+
+    public void SetPrompt(string prompt)
+    {
+        if (hasDisposed || stopSource.IsCancellationRequested)
+            return;
+
+        requests.Writer.TryWrite(new SetPromptRequest(prompt));
+    }
 
     public void WriteLine() => WriteLine(string.Empty);
 
@@ -108,21 +119,14 @@ public sealed class ThreadSafeConsoleTerminal :
         requests.Writer.TryWrite(ClearRequest.Instance);
     }
 
-    public async Task RunAsync(
-        CancellationToken cancellationToken = default)
+    public async Task RunAsync(CancellationToken cancellationToken = default)
     {
         if (hasStarted)
-        {
-            throw new InvalidOperationException(
-                "The terminal UI loop can only be started once.");
-        }
+            throw new InvalidOperationException("The terminal UI loop can only be started once.");
 
         hasStarted = true;
 
-        using var linkedSource =
-            CancellationTokenSource.CreateLinkedTokenSource(
-                cancellationToken,
-                stopSource.Token);
+        using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, stopSource.Token);
 
         var token = linkedSource.Token;
 
@@ -225,6 +229,11 @@ public sealed class ThreadSafeConsoleTerminal :
         {
             switch (request)
             {
+                case SetPromptRequest setPrompt:
+                    prompt = setPrompt.Prompt;
+                    changed = true;
+                    break;
+
                 case AppendLineRequest append:
                     history.Add(append.Message);
                     TrimHistory();
@@ -233,6 +242,18 @@ public sealed class ThreadSafeConsoleTerminal :
 
                 case ClearRequest:
                     history.Clear();
+                    changed = true;
+                    break;
+
+                case SetInputEnabledRequest setInputEnabled:
+                    isInputEnabled = setInputEnabled.Enabled;
+
+                    if (!isInputEnabled)
+                    {
+                        input.Clear();
+                        cursorIndex = 0;
+                    }
+
                     changed = true;
                     break;
             }
@@ -248,6 +269,9 @@ public sealed class ThreadSafeConsoleTerminal :
         while (Console.KeyAvailable)
         {
             var key = Console.ReadKey(intercept: true);
+            
+            if (!isInputEnabled)
+                continue;
 
             switch (key.Key)
             {
@@ -445,9 +469,7 @@ public sealed class ThreadSafeConsoleTerminal :
         }
     }
 
-    private void RenderInputLine(
-        int row,
-        int usableWidth)
+    private void RenderInputLine(int row, int usableWidth)
     {
         if (row < 0)
             return;
@@ -462,10 +484,7 @@ public sealed class ThreadSafeConsoleTerminal :
         var horizontalOffset = 0;
 
         if (absoluteCursorPosition >= usableWidth)
-        {
-            horizontalOffset =
-                absoluteCursorPosition - usableWidth + 1;
-        }
+            horizontalOffset = absoluteCursorPosition - usableWidth + 1;
 
         var visibleInput = completeInput.Length > horizontalOffset
             ? completeInput[horizontalOffset..]
@@ -474,31 +493,27 @@ public sealed class ThreadSafeConsoleTerminal :
         if (visibleInput.Length > usableWidth)
             visibleInput = visibleInput[..usableWidth];
 
+        var foregroundColor = Console.ForegroundColor;
+        if (!isInputEnabled)
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+
         WriteRow(row, visibleInput, usableWidth);
 
-        var visibleCursorPosition =
-            absoluteCursorPosition - horizontalOffset;
+        if (!isInputEnabled)
+            Console.ForegroundColor = foregroundColor;
 
-        visibleCursorPosition = Math.Clamp(
-            visibleCursorPosition,
-            0,
-            usableWidth - 1);
+        var visibleCursorPosition = absoluteCursorPosition - horizontalOffset;
+        visibleCursorPosition = Math.Clamp(visibleCursorPosition, 0, usableWidth - 1);
 
-        Console.SetCursorPosition(
-            visibleCursorPosition,
-            row);
+        Console.SetCursorPosition(visibleCursorPosition, row);
     }
 
-    private static void WriteRow(
-        int row,
-        string text,
-        int usableWidth)
+    private static void WriteRow(int row, string text, int usableWidth)
     {
         if (text.Length > usableWidth)
             text = text[..usableWidth];
 
         Console.SetCursorPosition(0, row);
-
         Console.Write(text);
 
         var remaining = usableWidth - text.Length;
@@ -550,11 +565,14 @@ public sealed class ThreadSafeConsoleTerminal :
 
     private abstract record TerminalRequest;
 
-    private sealed record AppendLineRequest(
-        string Message) : TerminalRequest;
+    private sealed record AppendLineRequest(string Message) : TerminalRequest;
 
     private sealed record ClearRequest : TerminalRequest
     {
         public static ClearRequest Instance { get; } = new();
     }
+
+    private sealed record SetPromptRequest(string Prompt) : TerminalRequest;
+
+    private sealed record SetInputEnabledRequest(bool Enabled) : TerminalRequest;
 }

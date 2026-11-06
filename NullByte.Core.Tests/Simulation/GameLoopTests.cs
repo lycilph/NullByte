@@ -267,6 +267,180 @@ public sealed class GameLoopTests
     }
 
     [Fact]
+    public async Task InvokeAsync_ExecutesCallbackOnGameThread()
+    {
+        await using var gameLoop = CreateGameLoop();
+
+        gameLoop.Start();
+
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var gameThreadId = await GetGameThreadIdAsync(gameLoop);
+
+        var callbackThreadId = 0;
+
+        await gameLoop.InvokeAsync(
+            () =>
+            {
+                callbackThreadId = Environment.CurrentManagedThreadId;
+
+                return Task.CompletedTask;
+            }).WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(gameThreadId, callbackThreadId);
+
+        gameLoop.RequestStop();
+
+        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task InvokeAsync_DoesNotCompleteUntilAsyncCallbackCompletes()
+    {
+        await using var gameLoop = CreateGameLoop();
+
+        gameLoop.Start();
+
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var callbackStartedSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseCallbackSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var invocation =
+            gameLoop.InvokeAsync(
+                async () =>
+                {
+                    callbackStartedSource.TrySetResult();
+
+                    await releaseCallbackSource.Task;
+                });
+
+        await callbackStartedSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.False(invocation.IsCompleted);
+
+        releaseCallbackSource.TrySetResult();
+
+        await invocation.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.True(invocation.IsCompletedSuccessfully);
+
+        gameLoop.RequestStop();
+
+        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task InvokeAsync_PropagatesCallbackException()
+    {
+        await using var gameLoop = CreateGameLoop();
+
+        gameLoop.Start();
+
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var exception =
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                async () =>
+                    await gameLoop.InvokeAsync(
+                        () =>
+                            Task.FromException(
+                                new InvalidOperationException(
+                                    "Expected invocation failure."))));
+
+        Assert.Equal("Expected invocation failure.", exception.Message);
+        Assert.True(gameLoop.IsRunning);
+
+        gameLoop.RequestStop();
+
+        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task InvokeAsync_GenericReturnsResult()
+    {
+        await using var gameLoop = CreateGameLoop();
+
+        gameLoop.Start();
+
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var result =
+            await gameLoop.InvokeAsync(
+                () => Task.FromResult(42))
+                .WaitAsync(
+                    TimeSpan.FromSeconds(5));
+
+        Assert.Equal(42, result);
+
+        gameLoop.RequestStop();
+
+        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task InvokeAsync_AfterStopThrows()
+    {
+        await using var gameLoop = CreateGameLoop();
+
+        gameLoop.Start();
+
+        await gameLoop.Started.WaitAsync(
+            TimeSpan.FromSeconds(5));
+
+        gameLoop.RequestStop();
+
+        await gameLoop.Completion.WaitAsync(
+            TimeSpan.FromSeconds(5));
+
+        var exception =
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => gameLoop.InvokeAsync(() => Task.CompletedTask));
+
+        Assert.Contains(
+            "only be posted",
+            exception.Message,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_CanceledCallbackReturnsCanceledTask()
+    {
+        await using var gameLoop = CreateGameLoop();
+
+        gameLoop.Start();
+
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+
+        using var cancellationSource = new CancellationTokenSource();
+
+        var callbackStartedSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var invocation =
+            gameLoop.InvokeAsync(
+                async () =>
+                {
+                    callbackStartedSource.TrySetResult();
+
+                    await Task.Delay(Timeout.InfiniteTimeSpan, cancellationSource.Token);
+                });
+
+        await callbackStartedSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        cancellationSource.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            async () => await invocation.WaitAsync(TimeSpan.FromSeconds(5)));
+
+        Assert.True(invocation.IsCanceled);
+        Assert.True(gameLoop.IsRunning);
+
+        gameLoop.RequestStop();
+
+        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public async Task PostedCallbacksExecuteInPostingOrder()
     {
         await using var gameLoop = CreateGameLoop();

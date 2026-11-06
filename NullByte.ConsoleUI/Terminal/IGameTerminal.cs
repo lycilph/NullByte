@@ -4,7 +4,8 @@ public interface IGameTerminal
 {
     CancellationToken StoppingToken { get; }
 
-    public void SetPrompt(string newPrompt);
+    void SetPrompt(string prompt);
+    void SetInputEnabled(bool enabled);
 
     void WriteLine();
     void WriteLine(string message);
