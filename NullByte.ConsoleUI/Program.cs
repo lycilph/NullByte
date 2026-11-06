@@ -6,6 +6,7 @@ using NullByte.Core.Services;
 using NullByte.Core.Simulation;
 using NullByte.Core.Threading;
 using NullByte.Core.Time;
+using NullByte.Core.World;
 
 namespace NullByte.ConsoleUI;
 

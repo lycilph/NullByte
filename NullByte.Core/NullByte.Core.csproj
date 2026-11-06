@@ -5,6 +5,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Data\initial-network.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Data\initial-network.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   
   <ItemGroup>
     <InternalsVisibleTo Include="NullByte.Core.Tests" />

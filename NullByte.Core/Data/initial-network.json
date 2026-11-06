@@ -1,0 +1,210 @@
+﻿{
+  "servers": [
+    {
+      "id": "home",
+      "hostname": "home",
+      "maximumMoney": 0,
+      "startingMoney": 0,
+      "minimumSecurity": 1,
+      "startingSecurity": 1,
+      "requiredHackingLevel": 1,
+      "growthParameter": 1,
+      "maximumRam": 8,
+      "hasRootAccess": true
+    },
+    {
+      "id": "server-n00dles",
+      "hostname": "n00dles",
+      "maximumMoney": 50000,
+      "startingMoney": 25000,
+      "minimumSecurity": 1,
+      "startingSecurity": 3,
+      "requiredHackingLevel": 1,
+      "growthParameter": 30,
+      "maximumRam": 4,
+      "hasRootAccess": false
+    },
+    {
+      "id": "server-foodnstuff",
+      "hostname": "foodnstuff",
+      "maximumMoney": 100000,
+      "startingMoney": 60000,
+      "minimumSecurity": 2,
+      "startingSecurity": 5,
+      "requiredHackingLevel": 5,
+      "growthParameter": 25,
+      "maximumRam": 8,
+      "hasRootAccess": false
+    },
+    {
+      "id": "server-sigma-cosmetics",
+      "hostname": "sigma-cosmetics",
+      "maximumMoney": 150000,
+      "startingMoney": 75000,
+      "minimumSecurity": 3,
+      "startingSecurity": 7,
+      "requiredHackingLevel": 10,
+      "growthParameter": 20,
+      "maximumRam": 8,
+      "hasRootAccess": false
+    },
+    {
+      "id": "server-joesguns",
+      "hostname": "joesguns",
+      "maximumMoney": 250000,
+      "startingMoney": 150000,
+      "minimumSecurity": 4,
+      "startingSecurity": 9,
+      "requiredHackingLevel": 15,
+      "growthParameter": 30,
+      "maximumRam": 16,
+      "hasRootAccess": false
+    },
+    {
+      "id": "server-harbor",
+      "hostname": "harbor",
+      "maximumMoney": 400000,
+      "startingMoney": 200000,
+      "minimumSecurity": 5,
+      "startingSecurity": 11,
+      "requiredHackingLevel": 20,
+      "growthParameter": 22,
+      "maximumRam": 16,
+      "hasRootAccess": false
+    },
+    {
+      "id": "server-catalyst",
+      "hostname": "catalyst",
+      "maximumMoney": 600000,
+      "startingMoney": 300000,
+      "minimumSecurity": 6,
+      "startingSecurity": 13,
+      "requiredHackingLevel": 30,
+      "growthParameter": 25,
+      "maximumRam": 16,
+      "hasRootAccess": false
+    },
+    {
+      "id": "server-datavault",
+      "hostname": "datavault",
+      "maximumMoney": 900000,
+      "startingMoney": 500000,
+      "minimumSecurity": 8,
+      "startingSecurity": 16,
+      "requiredHackingLevel": 40,
+      "growthParameter": 18,
+      "maximumRam": 32,
+      "hasRootAccess": false
+    },
+    {
+      "id": "server-phantom",
+      "hostname": "phantom",
+      "maximumMoney": 1250000,
+      "startingMoney": 650000,
+      "minimumSecurity": 10,
+      "startingSecurity": 20,
+      "requiredHackingLevel": 50,
+      "growthParameter": 20,
+      "maximumRam": 32,
+      "hasRootAccess": false
+    },
+    {
+      "id": "server-neurocore",
+      "hostname": "neurocore",
+      "maximumMoney": 1750000,
+      "startingMoney": 900000,
+      "minimumSecurity": 12,
+      "startingSecurity": 24,
+      "requiredHackingLevel": 65,
+      "growthParameter": 17,
+      "maximumRam": 64,
+      "hasRootAccess": false
+    },
+    {
+      "id": "server-blackice",
+      "hostname": "blackice",
+      "maximumMoney": 2500000,
+      "startingMoney": 1250000,
+      "minimumSecurity": 15,
+      "startingSecurity": 30,
+      "requiredHackingLevel": 80,
+      "growthParameter": 15,
+      "maximumRam": 64,
+      "hasRootAccess": false
+    },
+    {
+      "id": "server-null",
+      "hostname": "null",
+      "maximumMoney": 4000000,
+      "startingMoney": 2000000,
+      "minimumSecurity": 20,
+      "startingSecurity": 40,
+      "requiredHackingLevel": 100,
+      "growthParameter": 12,
+      "maximumRam": 128,
+      "hasRootAccess": false
+    }
+  ],
+  "connections": [
+    {
+      "from": "home",
+      "to": "server-n00dles"
+    },
+    {
+      "from": "home",
+      "to": "server-foodnstuff"
+    },
+    {
+      "from": "server-n00dles",
+      "to": "server-sigma-cosmetics"
+    },
+    {
+      "from": "server-foodnstuff",
+      "to": "server-joesguns"
+    },
+    {
+      "from": "server-sigma-cosmetics",
+      "to": "server-joesguns"
+    },
+    {
+      "from": "server-sigma-cosmetics",
+      "to": "server-harbor"
+    },
+    {
+      "from": "server-joesguns",
+      "to": "server-catalyst"
+    },
+    {
+      "from": "server-harbor",
+      "to": "server-catalyst"
+    },
+    {
+      "from": "server-harbor",
+      "to": "server-datavault"
+    },
+    {
+      "from": "server-catalyst",
+      "to": "server-phantom"
+    },
+    {
+      "from": "server-datavault",
+      "to": "server-phantom"
+    },
+    {
+      "from": "server-datavault",
+      "to": "server-neurocore"
+    },
+    {
+      "from": "server-phantom",
+      "to": "server-blackice"
+    },
+    {
+      "from": "server-neurocore",
+      "to": "server-blackice"
+    },
+    {
+      "from": "server-blackice",
+      "to": "server-null"
+    }
+  ]
+}

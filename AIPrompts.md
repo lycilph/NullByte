@@ -20,3 +20,8 @@ We should build this step by step, so please start by making a game design docum
 ----------------- Follow up prompt -------------------
 Help me implement the game described in this design document and this codebase. I have reached milestone x
 Help me finish x
+
+
+
+---- Misc ---
+When posting code, don't wrap lines unless they are at least 80 characters long.
