@@ -69,7 +69,7 @@ Diagnostic or progress operations may need GameLoop.
 The context belongs to the application layer. It should not move into NullByte.Core.
 
 2. Add CommandDefinition.cs
-1. namespace NullByte.ConsoleUI.Commands;
+namespace NullByte.ConsoleUI.Commands;
 
 public sealed class CommandDefinition
 {
@@ -126,7 +126,7 @@ return;
 var hostname = arguments[0];
 
 3. Add CommandRegistry.cs
-1. namespace NullByte.ConsoleUI.Commands;
+namespace NullByte.ConsoleUI.Commands;
 
 public sealed class CommandRegistry
 {
