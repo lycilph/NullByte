@@ -27,17 +27,13 @@ public sealed class CommandDispatcher
 
         if (!registry.TryGet(commandName, out var command))
         {
-            context.Terminal.WriteLine(
-                $"Unknown command: {commandName}");
-
-            context.Terminal.WriteLine(
-                "Type 'help' to see available commands.");
+            context.Terminal.WriteLine($"Unknown command: {commandName}");
+            context.Terminal.WriteLine("Type 'help' to see available commands.");
 
             return false;
         }
 
         var commandArguments = arguments.Skip(1).ToArray();
-
         await command!.Handler(context, commandArguments);
 
         return true;

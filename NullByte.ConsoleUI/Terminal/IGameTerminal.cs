@@ -11,6 +11,8 @@ public interface IGameTerminal
     void SetPrompt(string prompt);
     void SetInputEnabled(bool enabled);
 
+    IAsyncEnumerable<string> ReadCommandsAsync(CancellationToken cancellationToken = default);
+
     void WriteLine();
     void WriteLine(string message);
     void Clear();

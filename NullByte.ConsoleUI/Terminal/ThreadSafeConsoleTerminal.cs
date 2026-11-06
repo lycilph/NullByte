@@ -187,11 +187,8 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
         }
     }
 
-    public IAsyncEnumerable<string> ReadCommandsAsync(
-        CancellationToken cancellationToken = default)
-    {
-        return commands.Reader.ReadAllAsync(cancellationToken);
-    }
+    public IAsyncEnumerable<string> ReadCommandsAsync(CancellationToken cancellationToken = default)
+        => commands.Reader.ReadAllAsync(cancellationToken);
 
     public void RequestStop()
     {
