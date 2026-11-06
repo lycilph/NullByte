@@ -3,6 +3,7 @@
     <File Path="AIPrompts.md" />
     <File Path="DevJournal.md" />
     <File Path="NullByte Game Design Document.md" />
+    <File Path="temp.md" />
   </Folder>
   <Project Path="NullByte.ConsoleUI/NullByte.ConsoleUI.csproj" Id="cdcac8a8-11b5-4852-8078-0f43ce7d1fc4" />
   <Project Path="NullByte.Core.Tests/NullByte.Core.Tests.csproj" Id="3c692650-63b2-4dd8-85c7-47ee14ee95d2" />

@@ -19,6 +19,19 @@ public sealed class NetworkService
     /// Gets the server the player is currently connected to.
     /// </summary>
     public Server GetCurrentServer() => gameState.Network.GetServer(gameState.Player.CurrentServerId);
+    
+    public Server GetServer(string hostname)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
+
+        gameState.Network.TryFindServer(hostname, out var server);
+
+        return server
+            ?? throw new InvalidOperationException($"Unknown server: {hostname}");
+    }
+
+    public bool IsServerKnown(Server server)
+        => gameState.Player.DiscoveredServerIds.Contains(server.Id);
 
     /// <summary>
     /// Discovers and returns all servers directly connected

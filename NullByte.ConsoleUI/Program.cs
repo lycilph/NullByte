@@ -212,8 +212,20 @@ public class Program
                 _ = RunMilestoneDemonstrationAsync(gameLoop, terminal);
                 break;
 
+            case "ls":
+                ListFiles(terminal);
+                break;
+
             case "status":
-                WriteStatus(networkService, terminal);
+                WriteStatus(networkService, formulas, gameState.Player, terminal);
+                break;
+
+            case "money":
+                WriteMoney(gameState.Player, terminal);
+                break;
+
+            case "analyze":
+                Analyze(arguments, networkService, terminal);
                 break;
 
             case "scan":
@@ -418,8 +430,12 @@ public class Program
         terminal.WriteLine("  thread             Show the current game thread");
         terminal.WriteLine("  demo               Run the M1 scheduler demo");
         terminal.WriteLine("  status             Show current server status");
+        terminal.WriteLine("  money              Show player money");
+        terminal.WriteLine("  status             Show player status");
+        terminal.WriteLine("  ls                 List files");
         terminal.WriteLine("  scan               Scan connected servers");
-        terminal.WriteLine("  connect <server>   Connect to a discovered server");
+        terminal.WriteLine("  analyze [hostname] Show server information");
+        terminal.WriteLine("  connect [hostname] Connect to a discovered server");
         terminal.WriteLine("  home               Return to your home server");
         terminal.WriteLine("  nuke               Gain root access to current server");
         terminal.WriteLine("  hack               Attempt to steal money");
@@ -438,14 +454,46 @@ public class Program
         terminal.WriteLine($"Is game thread: {gameLoop.IsGameThread}");
     }
 
-    private static void WriteStatus(NetworkService networkService, IGameTerminal terminal)
+    private static void ListFiles(IGameTerminal terminal)
+        => terminal.WriteLine("No files on this server.");
+
+    private static void WriteStatus(NetworkService networkService, HackingFormulas formulas, Player player, IGameTerminal terminal)
+    {
+        var server = networkService.GetCurrentServer();
+        var hackingLevel = formulas.CalculateHackingLevel(player.HackingExperience);
+
+        terminal.WriteLine("Status");
+        terminal.WriteLine($"Money: ${player.Money:N2}");
+        terminal.WriteLine($"Hacking level: {hackingLevel}");
+        terminal.WriteLine($"Hacking XP: {player.HackingExperience:N2}");
+        terminal.WriteLine($"Connected to: {server.Hostname}");
+        terminal.WriteLine($"Root access: {(server.HasRootAccess ? "Yes" : "No")}");
+    }
+
+    private static void WriteMoney(Player player, IGameTerminal terminal)
+        => terminal.WriteLine($"Money: ${player.Money:N2}");
+
+    private static void Analyze(IReadOnlyList<string> arguments, NetworkService networkService, IGameTerminal terminal)
     {
         var server =
-            networkService.GetCurrentServer();
+            arguments.Count >= 2
+                ? networkService.GetServer(arguments[1])
+                : networkService.GetCurrentServer();
 
-        terminal.WriteLine($"Connected to: {server.Hostname}");
-        terminal.WriteLine($"Money: {server.Money:N0} / {server.MaximumMoney:N0}");
-        terminal.WriteLine($"Security: {server.Security:F1} (minimum {server.MinimumSecurity:F1})");
+        if (networkService.IsServerKnown(server))
+        {
+            terminal.WriteLine($"Server: {server.Hostname}");
+            terminal.WriteLine($"Root access: {(server.HasRootAccess ? "Yes" : "No")}");
+            terminal.WriteLine($"Required hacking level: {server.RequiredHackingLevel}");
+            terminal.WriteLine($"Money: ${server.Money:N2} / ${server.MaximumMoney:N2}");
+            terminal.WriteLine($"Security: {server.Security:F2} / {server.MinimumSecurity:F2}");
+            terminal.WriteLine($"Growth: {server.GrowthParameter:F2}");
+            terminal.WriteLine($"RAM: {server.UsedRam:F2} GB / {server.MaximumRam:F2} GB");
+        }
+        else
+        {
+            terminal.WriteLine($"Unknown server {server.Hostname}");
+        }
     }
 
     private static void ScanNetwork(NetworkService networkService, IGameTerminal terminal)
