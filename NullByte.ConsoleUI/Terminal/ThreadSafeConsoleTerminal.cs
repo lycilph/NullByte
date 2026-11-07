@@ -8,6 +8,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
     private const int RefreshDelayMilliseconds = 16;
 
     private readonly int maximumHistoryLines;
+    private readonly ICompletionProvider? completionProvider;
     private string prompt;
 
     /*
@@ -39,7 +40,8 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
     private readonly CancellationTokenSource stopSource = new();
 
     // These fields are accessed only by the UI loop.
-    private readonly List<string> history = [];
+    private readonly List<string> history = [];   // Output lines shown on screen.
+    private readonly InputHistory inputHistory;    // Previously submitted commands (Up/Down).
     private readonly StringBuilder input = new();
 
     private bool progressRunning = false;
@@ -54,7 +56,11 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
     private bool hasStarted;
     private bool hasDisposed;
 
-    public ThreadSafeConsoleTerminal(string prompt = "> ", int maximumHistoryLines = 1_000)
+    public ThreadSafeConsoleTerminal(
+        string prompt = "> ", 
+        int maximumHistoryLines = 1_000,
+        ICompletionProvider? completionProvider = null,
+        int maximumInputHistory = 200)
     {
         if (string.IsNullOrEmpty(prompt))
             throw new ArgumentException("The prompt cannot be empty.", nameof(prompt));
@@ -63,6 +69,8 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
 
         this.prompt = prompt;
         this.maximumHistoryLines = maximumHistoryLines;
+        this.completionProvider = completionProvider;
+        inputHistory = new InputHistory(maximumInputHistory);
     }
 
     public CancellationToken StoppingToken => stopSource.Token;
@@ -262,6 +270,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
                     {
                         input.Clear();
                         cursorIndex = 0;
+                        inputHistory.ResetNavigation();
                     }
 
                     changed = true;
@@ -307,6 +316,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
                     {
                         input.Remove(cursorIndex - 1, 1);
                         cursorIndex--;
+                        inputHistory.ResetNavigation();
                         changed = true;
                     }
 
@@ -316,6 +326,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
                     if (cursorIndex < input.Length)
                     {
                         input.Remove(cursorIndex, 1);
+                        inputHistory.ResetNavigation();
                         changed = true;
                     }
 
@@ -364,7 +375,19 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
                         cursorIndex = 0;
                         changed = true;
                     }
+                    inputHistory.ResetNavigation();
+                    break;
 
+                case ConsoleKey.UpArrow:
+                    changed |= RecallPreviousInput();
+                    break;
+
+                case ConsoleKey.DownArrow:
+                    changed |= RecallNextInput();
+                    break;
+
+                case ConsoleKey.Tab:
+                    changed |= CompleteInput();
                     break;
 
                 default:
@@ -372,6 +395,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
                     {
                         input.Insert(cursorIndex, key.KeyChar);
                         cursorIndex++;
+                        inputHistory.ResetNavigation(); 
                         changed = true;
                     }
 
@@ -395,8 +419,65 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
             commands.Writer.TryWrite(command);
         }
 
+        inputHistory.Add(command);
+
         input.Clear();
         cursorIndex = 0;
+    }
+
+    private bool RecallPreviousInput()
+    {
+        var entry = inputHistory.Previous(input.ToString());
+        return entry is not null && ReplaceInput(entry);
+    }
+
+    private bool RecallNextInput()
+    {
+        var entry = inputHistory.Next();
+        return entry is not null && ReplaceInput(entry);
+    }
+
+    private bool ReplaceInput(string text)
+    {
+        input.Clear();
+        input.Append(text);
+        cursorIndex = input.Length;
+
+        return true;
+    }
+    private bool CompleteInput()
+    {
+        if (completionProvider is null)
+            return false;
+
+        var current = input.ToString();
+        var result = completionProvider.Complete(current, cursorIndex);
+
+        if (!result.HasCandidates)
+            return false;
+
+        var replaced = current.Substring(result.ReplaceStart, result.ReplaceLength);
+        var extended = !string.Equals(replaced, result.Replacement, StringComparison.Ordinal);
+
+        if (extended)
+        {
+            input.Remove(result.ReplaceStart, result.ReplaceLength);
+            input.Insert(result.ReplaceStart, result.Replacement);
+            cursorIndex = result.ReplaceStart + result.Replacement.Length;
+            inputHistory.ResetNavigation();
+        }
+
+        // Still ambiguous and nothing more could be typed for the user:
+        // show the options, like a shell does on a second Tab.
+        if (!extended && result.Candidates.Count > 1)
+        {
+            history.Add($"{prompt}{current}");
+            history.Add(string.Join("  ", result.Candidates));
+            TrimHistory();
+            extended = true;
+        }
+
+        return extended;
     }
 
     private void TrimHistory()

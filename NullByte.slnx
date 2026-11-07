@@ -5,6 +5,7 @@
     <File Path="NullByte Game Design Document.md" />
     <File Path="temp.md" />
   </Folder>
+  <Project Path="NullByte.ConsoleUI.Tests/NullByte.ConsoleUI.Tests.csproj" Id="4c10974c-2e82-467e-9f3c-4c9c90807b0d" />
   <Project Path="NullByte.ConsoleUI/NullByte.ConsoleUI.csproj" Id="cdcac8a8-11b5-4852-8078-0f43ce7d1fc4" />
   <Project Path="NullByte.Core.Tests/NullByte.Core.Tests.csproj" Id="3c692650-63b2-4dd8-85c7-47ee14ee95d2" />
   <Project Path="NullByte.Core/NullByte.Core.csproj" Id="9d3e2a10-9d38-4a80-9e80-55ea93597222" />

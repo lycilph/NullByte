@@ -33,7 +33,13 @@ public class Program
         var commandRegistry = CommandRegistryFactory.Create();
         var commandDispatcher = new CommandDispatcher(commandRegistry);
 
-        await using var terminal = new ThreadSafeConsoleTerminal(prompt: "root@home $ ", maximumHistoryLines: 2_000);
+        // Tab completion reads an immutable snapshot that is refreshed on the game thread.
+        var completionCatalog = new CompletionCatalog(commandRegistry, gameState);
+
+        await using var terminal = new ThreadSafeConsoleTerminal(
+            prompt: "root@home $ ", 
+            maximumHistoryLines: 2_000,
+            completionProvider: completionCatalog);
         var terminalTask = terminal.RunAsync();
 
         var context = new CommandContext(
@@ -50,10 +56,17 @@ public class Program
         try
         {
             await gameLoop.Started;
+            
+            // Initialize the completion catalog
+            await gameLoop.InvokeAsync(() =>
+            {
+                completionCatalog.Refresh();
+                return Task.CompletedTask;
+            });
 
             WriteStartupMessage(terminal, gameLoop);
 
-            await ProcessCommandsAsync(context, commandDispatcher);
+            await ProcessCommandsAsync(context, commandDispatcher, completionCatalog);
         }
         finally
         {
@@ -83,10 +96,14 @@ public class Program
         terminal.WriteLine($"Game thread ready. Game time: {gameLoop.Clock.Elapsed.TotalSeconds:F3}s");
         terminal.WriteLine();
         terminal.WriteLine("Type 'help' to see available commands ('debug' for other commands).");
+        terminal.WriteLine("Tab completes commands and server names, Up/Down recalls earlier input.");
         terminal.WriteLine();
     }
 
-    private static async Task ProcessCommandsAsync(CommandContext context, CommandDispatcher dispatcher)
+    private static async Task ProcessCommandsAsync(
+        CommandContext context, 
+        CommandDispatcher dispatcher,
+        CompletionCatalog completionCatalog)
     {
         var terminal = context.Terminal;
         var gameLoop = context.GameLoop;
@@ -104,8 +121,18 @@ public class Program
 
             try
             {
-                await gameLoop.InvokeAsync(
-                    () => dispatcher.DispatchAsync(commandLine, context));
+                await gameLoop.InvokeAsync(async () =>
+                {
+                    try
+                    {
+                        await dispatcher.DispatchAsync(commandLine, context);
+                    }
+                    finally
+                    {
+                        // Commands such as scan and connect change what can be completed.
+                        completionCatalog.Refresh();
+                    }
+                });
             }
             catch (OperationCanceledException)
                 when (terminal.StoppingToken.IsCancellationRequested)

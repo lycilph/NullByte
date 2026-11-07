@@ -27,32 +27,32 @@ public static class CommandRegistryFactory
                 "debug",
                 "debug",
                 "Debug commands.",
-                DebugAsync,
-                true));
+                DebugAsync)
+            { Debug = true });
 
         registry.Register(
             new CommandDefinition(
                 "time",
                 "time",
                 "Show current game time.",
-                TimeAsync,
-                true));
+                TimeAsync)
+            { Debug = true });
 
         registry.Register(
             new CommandDefinition(
                 "thread",
                 "thread",
                 "Show the current game thread.",
-                ThreadAsync,
-                true));
+                ThreadAsync)
+            { Debug = true });
 
         registry.Register(
             new CommandDefinition(
                 "demo",
                 "demo",
                 "Run a scheduler demonstration.",
-                RunDemoAsync,
-                true));
+                RunDemoAsync)
+            { Debug = true });
     }
 
     private static void RegisterGameCommands(CommandRegistry registry)
@@ -97,14 +97,16 @@ public static class CommandRegistryFactory
                 "analyze",
                 "analyze [hostname]",
                 "Show server information.",
-                AnalyzeAsync));
+                AnalyzeAsync)
+            { ArgumentCompletion = ArgumentCompletionKind.KnownServer });
 
         registry.Register(
             new CommandDefinition(
                 "connect",
                 "connect <hostname>",
                 "Connect to a discovered server.",
-                ConnectAsync));
+                ConnectAsync)
+            { ArgumentCompletion = ArgumentCompletionKind.ConnectableServer });
 
         registry.Register(
             new CommandDefinition(
@@ -147,7 +149,6 @@ public static class CommandRegistryFactory
                 "clear",
                 "Clear the terminal.",
                 ClearAsync,
-                false,
                 "cls"));
     }
 

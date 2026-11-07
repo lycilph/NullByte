@@ -1,4 +1,6 @@
-﻿namespace NullByte.ConsoleUI.Commands;
+﻿using NullByte.ConsoleUI.Terminal;
+
+namespace NullByte.ConsoleUI.Commands;
 
 public sealed class CommandDefinition
 {
@@ -7,7 +9,6 @@ public sealed class CommandDefinition
         string usage,
         string description,
         Func<CommandContext, IReadOnlyList<string>, Task> handler,
-        bool debug = false,
         params string[] aliases)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -20,7 +21,6 @@ public sealed class CommandDefinition
         Usage = usage;
         Description = description;
         Handler = handler;
-        Debug = debug;
         Aliases = aliases;
     }
 
@@ -28,6 +28,11 @@ public sealed class CommandDefinition
     public string Usage { get; }
     public string Description { get; }
     public Func<CommandContext, IReadOnlyList<string>, Task> Handler { get; }
-    public bool Debug { get; }
     public IReadOnlyList<string> Aliases { get; }
+
+    /// <summary>Is this a debugging command.</summary>
+    public bool Debug { get; init; } = false;
+
+    /// <summary>What the command's first argument can be tab-completed to.</summary>
+    public ArgumentCompletionKind ArgumentCompletion { get; init; } = ArgumentCompletionKind.None;
 }
