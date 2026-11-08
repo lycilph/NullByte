@@ -84,6 +84,27 @@ public static class CommandRegistryFactory
                 "ls",
                 "List files.",
                 ListFilesAsync));
+      
+        registry.Register(
+            new CommandDefinition(
+                "cat",
+                "cat <filename>",
+                "Display a file's contents.",
+                CatAsync));
+
+        registry.Register(
+            new CommandDefinition(
+                "rm",
+                "rm <filename>",
+                "Delete a file.",
+                RemoveFileAsync));
+
+        registry.Register(
+            new CommandDefinition(
+                "edit",
+                "edit <filename>",
+                "Create or replace a file.",
+                EditFileAsync));
 
         registry.Register(
             new CommandDefinition(
@@ -322,7 +343,97 @@ public static class CommandRegistryFactory
             return Task.CompletedTask;
         }
 
-        context.Terminal.WriteLine("No files on this server.");
+        var server = context.NetworkService.GetCurrentServer();
+        var files = context.GameState.FileSystem.ListFiles(server.Id);
+
+        if (files.Count == 0)
+        {
+            context.Terminal.WriteLine("No files on this server.");
+            return Task.CompletedTask;
+        }
+
+        foreach (var file in files)
+            context.Terminal.WriteLine(file);
+
+        return Task.CompletedTask;
+    }
+
+    private static Task CatAsync(
+        CommandContext context,
+        IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count != 1)
+        {
+            context.Terminal.WriteLine("Usage: cat <filename>");
+            return Task.CompletedTask;
+        }
+
+        var server = context.NetworkService.GetCurrentServer();
+
+        if (!context.GameState.FileSystem.TryReadFile(server.Id, arguments[0], out var content))
+        {
+            context.Terminal.WriteLine($"File not found: {arguments[0]}");
+
+            return Task.CompletedTask;
+        }
+
+        context.Terminal.WriteLine(content!);
+
+        return Task.CompletedTask;
+    }
+
+    private static Task RemoveFileAsync(
+        CommandContext context,
+        IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count != 1)
+        {
+            context.Terminal.WriteLine("Usage: rm <filename>");
+            return Task.CompletedTask;
+        }
+
+        var server = context.NetworkService.GetCurrentServer();
+        var fileName = arguments[0];
+
+        if (!context.GameState.FileSystem.DeleteFile(server.Id, fileName))
+        {
+            context.Terminal.WriteLine($"File not found: {fileName}");
+
+            return Task.CompletedTask;
+        }
+
+        context.Terminal.WriteLine($"Deleted {fileName}.");
+
+        return Task.CompletedTask;
+    }
+
+    private static Task EditFileAsync(
+        CommandContext context,
+        IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count != 1)
+        {
+            context.Terminal.WriteLine("Usage: edit <filename>");
+            return Task.CompletedTask;
+        }
+
+        var server = context.NetworkService.GetCurrentServer();
+        var fileName = "test.txt"; // arguments[0];
+        var source = 
+@"var target = nb.Args[0];
+while (true)
+{
+    if (nb.GetServerSecurityLevel(target) > nb.GetServerMinSecurityLevel(target) + 5)
+        await nb.Weaken(target);
+    else if (nb.GetServerMoneyAvailable(target) < nb.GetServerMaxMoney(target) * 0.75)
+        await nb.Grow(target);
+    else
+        await nb.Hack(target);
+}";
+
+        context.GameState.FileSystem.WriteFile(server.Id, fileName, source);
+
+        context.Terminal.WriteLine($"Saved {fileName}.");
 
         return Task.CompletedTask;
     }

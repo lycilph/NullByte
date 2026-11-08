@@ -142,7 +142,7 @@ public sealed class BotnetSystemTests
         var network = new Network();
         network.AddServer(home);
 
-        var state = new GameState(new Player("home", startingMoney: startingMoney), network, new Botnet());
+        var state = new GameState(new Player("home", startingMoney: startingMoney), network);
         var formulas = new BotnetFormulas(new BalanceConfig());
 
         return (state, new BotnetService(state, formulas), new BotnetSystem(state, formulas), formulas);

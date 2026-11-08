@@ -3,6 +3,8 @@
 ## 09-11-2026
 
 ### In Progress
+- M5 milestone
+- add files to autocomplete
 
 ### Done
 - Fix tab completion for botnet commands

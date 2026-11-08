@@ -53,7 +53,7 @@ public sealed class ServerActionsSimulationTests
         network.AddServer(target);
         network.Connect(home.Id, target.Id);
 
-        var gameState = new GameState(player, network, new Botnet());
+        var gameState = new GameState(player, network);
 
         var clock = new FakeGameClock();
         var scheduler = new GameScheduler(clock);

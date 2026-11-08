@@ -17,7 +17,7 @@ public static class InitialGameStateFactory
             homeServerId: HomeServerId,
             startingMoney: StartingMoney);
 
-        return new GameState(player, network, new Botnet());
+        return new GameState(player, network);
     }
 
     private static Network LoadNetwork()

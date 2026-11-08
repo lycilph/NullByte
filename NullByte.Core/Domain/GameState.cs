@@ -5,7 +5,7 @@
 /// </summary>
 public sealed class GameState
 {
-    public GameState(Player player, Network network, Botnet botnet)
+    public GameState(Player player, Network network)
     {
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(network);
@@ -30,21 +30,19 @@ public sealed class GameState
 
         Player = player;
         Network = network;
-        Botnet = botnet;
+        Botnet = new Botnet();
+        FileSystem = new VirtualFileSystem(network);
     }
 
-    /// <summary>
-    /// Gets the player's state.
-    /// </summary>
+    /// <summary>Gets the player's state.</summary>
     public Player Player { get; }
 
-    /// <summary>
-    /// Gets the game network.
-    /// </summary>
+    /// <summary><Gets the game network.</summary>
     public Network Network { get; }
 
-    /// <summary>
-    /// Gets the player's botnet.
-    /// </summary>
+    /// <summary>Gets the player's botnet.</summary>
     public Botnet Botnet { get; }
+
+    /// <summary>Gets the virtual filesystem containing files stored on game servers.</summary>
+    public VirtualFileSystem FileSystem { get; }
 }

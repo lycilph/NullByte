@@ -18,7 +18,10 @@ public sealed class CompletionEngineTests
             new("debug", ArgumentCompletionKind.None)
         ],
         ConnectableServers: ["n00dles", "foodnstuff", "foodcourt"],
-        KnownServers: ["home", "n00dles", "sigma-cosmetics"]);
+        KnownServers: ["home", "n00dles", "sigma-cosmetics"],
+        ["status", "buy", "upgrade"],
+        ["1", "2", "3"],
+        ["level", "ram", "core"]);
 
     [Fact]
     public void EmptyInput_OffersEveryVisibleCommand()

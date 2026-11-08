@@ -160,7 +160,7 @@ public sealed class BotnetCommandTests
             var network = new Network();
             network.AddServer(home);
 
-            GameState = new GameState(new Player("home", startingMoney: money), network, new Botnet());
+            GameState = new GameState(new Player("home", startingMoney: money), network);
 
             var clock = new RealGameClock();
             var gameLoop = new GameLoop(clock, new GameSynchronizationContext());

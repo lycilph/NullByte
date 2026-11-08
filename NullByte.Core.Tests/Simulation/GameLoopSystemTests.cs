@@ -175,7 +175,7 @@ public sealed class GameLoopSystemTests
         var network = new Network();
         network.AddServer(home);
 
-        var gameState = new GameState(new Player("home"), network, new Botnet());
+        var gameState = new GameState(new Player("home"), network);
         gameState.Botnet.AddNode();
 
         gameLoop.AddSystem(new BotnetSystem(gameState, new BotnetFormulas(new BalanceConfig())));
