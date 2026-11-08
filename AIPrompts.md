@@ -25,3 +25,8 @@ Help me finish x
 
 ---- Misc ---
 When posting code, don't wrap lines unless they are at least 80 characters long.
+
+
+---- Repomix ---
+Exclusion parameter:
+*.md, *.git*, NullByte/* 

@@ -12,16 +12,15 @@ public static class CompletionEngine
         ArgumentNullException.ThrowIfNull(input);
 
         cursorIndex = Math.Clamp(cursorIndex, 0, input.Length);
-
         var beforeCursor = input[..cursorIndex];
 
-        // Quoted or escaped text is left alone for now.
         if (beforeCursor.Contains('"') || beforeCursor.Contains('\\'))
             return CompletionResult.None;
 
         var tokenStart = FindTokenStart(beforeCursor);
         var token = beforeCursor[tokenStart..];
-        var previousTokens = CommandLineParser.Parse(beforeCursor[..tokenStart]);
+        var previousTokens = CommandLineParser.Parse(
+            beforeCursor[..tokenStart]);
 
         IReadOnlyList<string> pool;
         var appendSpaceWhenUnique = false;
@@ -32,23 +31,53 @@ public static class CompletionEngine
                 .Where(command => !command.Hidden)
                 .Select(command => command.Name)
                 .ToArray();
-            appendSpaceWhenUnique = true;
-        }
-        else if (previousTokens.Count == 1)
-        {
-            var command = snapshot.Commands.FirstOrDefault(c =>
-                c.Name.Equals(previousTokens[0], StringComparison.OrdinalIgnoreCase));
 
-            pool = command?.ArgumentCompletion switch
-            {
-                ArgumentCompletionKind.ConnectableServer => snapshot.ConnectableServers,
-                ArgumentCompletionKind.KnownServer => snapshot.KnownServers,
-                _ => []
-            };
+            appendSpaceWhenUnique = true;
         }
         else
         {
-            return CompletionResult.None;
+            var command = snapshot.Commands.FirstOrDefault(c =>
+                c.Name.Equals(
+                    previousTokens[0],
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (command is null)
+                return CompletionResult.None;
+
+            var argumentIndex = previousTokens.Count - 1;
+            var kind = command.ArgumentCompletion;
+
+            if (kind == ArgumentCompletionKind.BotnetSubcommand)
+            {
+                appendSpaceWhenUnique = true;
+
+                pool = argumentIndex switch
+                {
+                    0 => snapshot.BotnetSubcommands,
+
+                    1 when previousTokens.Count > 1 &&
+                          previousTokens[1].Equals("upgrade", StringComparison.OrdinalIgnoreCase)
+                        => snapshot.BotnetNodes,
+
+                    2 when previousTokens.Count > 2 &&
+                          previousTokens[1].Equals("upgrade", StringComparison.OrdinalIgnoreCase)
+                        => snapshot.BotnetUpgradeKinds,
+
+                    _ => []
+                };
+            }
+            else
+            {
+                if (argumentIndex != 0)
+                    return CompletionResult.None;
+
+                pool = kind switch
+                {
+                    ArgumentCompletionKind.ConnectableServer => snapshot.ConnectableServers,
+                    ArgumentCompletionKind.KnownServer => snapshot.KnownServers,
+                    _ => []
+                };
+            }
         }
 
         var candidates = pool
@@ -66,7 +95,10 @@ public static class CompletionEngine
         {
             replacement = candidates[0];
 
-            var spaceAlreadyFollows = cursorIndex < input.Length && char.IsWhiteSpace(input[cursorIndex]);
+            var spaceAlreadyFollows =
+                cursorIndex < input.Length &&
+                char.IsWhiteSpace(input[cursorIndex]);
+
             if (appendSpaceWhenUnique && !spaceAlreadyFollows)
                 replacement += " ";
         }
@@ -75,7 +107,11 @@ public static class CompletionEngine
             replacement = LongestCommonPrefix(candidates);
         }
 
-        return new CompletionResult(tokenStart, token.Length, replacement, candidates);
+        return new CompletionResult(
+            tokenStart,
+            token.Length,
+            replacement,
+            candidates);
     }
 
     private static int FindTokenStart(string text)

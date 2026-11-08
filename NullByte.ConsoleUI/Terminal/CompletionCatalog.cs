@@ -64,10 +64,22 @@ public sealed class CompletionCatalog : ICompletionProvider
             .Select(server => server.Hostname)
             .ToArray();
 
+        var botnetSubcommands = new[] {"status", "buy", "upgrade"};
+
+        var botnetNodes = Enumerable
+            .Range(1, gameState.Botnet.NodeCount)
+            .Select(node => node.ToString())
+            .ToArray();
+
+        var botnetUpgradeKinds = new[] {"level", "ram", "core"};
+
         snapshot = new CompletionSnapshot(
             commands,
             connectable,
-            known.Select(server => server.Hostname).ToArray());
+            known.Select(server => server.Hostname).ToArray(),
+            botnetSubcommands,
+            botnetNodes,
+            botnetUpgradeKinds);
     }
 
     public CompletionResult Complete(string input, int cursorIndex)

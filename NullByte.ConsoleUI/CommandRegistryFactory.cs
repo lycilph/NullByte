@@ -148,7 +148,8 @@ public static class CommandRegistryFactory
                 "botnet",
                 "botnet <subcommand>",
                 "Manage your botnet (status, buy, upgrade).",
-                BotnetAsync));
+                BotnetAsync)
+            { ArgumentCompletion = ArgumentCompletionKind.BotnetSubcommand });
 
         registry.Register(
             new CommandDefinition(

@@ -3,6 +3,8 @@
 ## 09-11-2026
 
 ### In Progress
+- Fix tab completion for botnet commands
+  - Figure out how to handle sub-commands 
 
 ### Done
 - M4 milestone
@@ -13,7 +15,7 @@
 - Change the name of the gameloop into something different (like gameclient or something) - maybe GameKernel?
 
 ### Future
-- Tab completion for the buy/upgrade/status subcommands is not added, because ArgumentCompletionKind currently covers only server names.
+- Generalize the subcommand handling in the completion engine
 - Add debugdisplay to domain classes
 - Add animated startup (see version 0.5)
 

@@ -12,5 +12,8 @@ public enum ArgumentCompletionKind
     ConnectableServer,
 
     /// <summary>Every server the player has discovered.</summary>
-    KnownServer
+    KnownServer,
+
+    /// <summary>Sub commands for the botnet command.</summary>
+    BotnetSubcommand
 }

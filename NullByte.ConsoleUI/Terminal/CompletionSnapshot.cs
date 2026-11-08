@@ -7,9 +7,12 @@
 public sealed record CompletionSnapshot(
     IReadOnlyList<CommandCompletionInfo> Commands,
     IReadOnlyList<string> ConnectableServers,
-    IReadOnlyList<string> KnownServers)
+    IReadOnlyList<string> KnownServers,
+    IReadOnlyList<string> BotnetSubcommands,
+    IReadOnlyList<string> BotnetNodes,
+    IReadOnlyList<string> BotnetUpgradeKinds)
 {
-    public static CompletionSnapshot Empty { get; } = new([], [], []);
+    public static CompletionSnapshot Empty { get; } = new([], [], [], [], [], []);
 }
 
 /// <param name="Name">The command name or alias.</param>
