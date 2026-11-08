@@ -4,7 +4,7 @@ Version 0.1, first iteration (console), with a later WPF + AvalonEdit front end.
 
 ## 1. Vision
 
-NullByte is a text-driven incremental game where the player grows a passive income stream (Hacknet) and then automates the rest of the economy by writing C# scripts against a small game API (the `ns` object), compiled at runtime with Roslyn. Manual commands and scripts use the same underlying actions, so everything a script can do the player can also do by hand, only slower.
+NullByte is a text-driven incremental game where the player grows a passive income stream (botnet) and then automates the rest of the economy by writing C# scripts against a small game API (the `ns` object), compiled at runtime with Roslyn. Manual commands and scripts use the same underlying actions, so everything a script can do the player can also do by hand, only slower.
 
 The central fantasy is the same as Bitburner: you start by typing commands, get bored, write a script, then write a better one.
 
@@ -20,7 +20,7 @@ The central fantasy is the same as Bitburner: you start by typing commands, get 
 ### In scope
 
 - A player with money and a hacking level (with XP).
-- Hacknet: buy nodes, upgrade level, RAM and cores, generate passive income.
+- Botnet: buy nodes, upgrade level, RAM and cores, generate passive income.
 - A small hand-authored network of servers (home plus roughly 10 to 15), each with hacking requirement, security, money and growth.
 - Server actions: `scan`, `connect`, `nuke` (gain root), `hack`, `grow`, `weaken`, with variable duration and thread count.
 - Scripts: write, compile, run, kill and list scripts, with RAM cost, threads and arguments.
@@ -70,11 +70,11 @@ Each action has a duration, a success rule and an effect, and applies per thread
 
 Key property for gameplay: durations are long enough that waiting is felt, which is what motivates scripting.
 
-### 3.4 Hacknet
+### 3.4 Botnet (hacknet in bitburner)
 
 A node has level, RAM and cores. Production per second is roughly `level * 1.5 * 1.035^(ram - 1) * (cores + 5) / 6`, times a global multiplier. Costs grow geometrically per purchase, with separate base costs and growth factors for new node, level, RAM and core. Caps: level 200, RAM 64, cores 16. All values are initial tunables.
 
-Hacknet accrues in game time, on the same simulation clock as everything else.
+Botnet accrues in game time, on the same simulation clock as everything else.
 
 ### 3.5 Scripts and RAM
 
@@ -145,7 +145,7 @@ A timer completed in stage 2 posts its continuation to the mailbox, and stage 3 
 
 - Manual `hack`, `grow` and `weaken` start the same action as a script would, with a progress indicator.
 - While it runs, the console does not accept the next command, and anything typed in the meantime is discarded. Implementation: the command dispatcher awaits the action's task before printing the next prompt and before consuming the next queued input line.
-- **The simulation does not pause.** Background scripts and Hacknet keep running while the player is blocked. Output from other sources is printed above or after the progress line and must not corrupt the prompt.
+- **The simulation does not pause.** Background scripts and botnet keep running while the player is blocked. Output from other sources is printed above or after the progress line and must not corrupt the prompt.
 - Optional: Ctrl+C cancels the manual action through a `CancellationToken` (decide in M3).
 
 ### 4.5 Roslyn pipeline
@@ -169,7 +169,7 @@ Each method has a RAM cost declared with an attribute (for example `[RamCost(0.1
 | Info | `GetServerMoneyAvailable`, `GetServerMaxMoney`, `GetServerSecurityLevel`, `GetServerMinSecurityLevel`, `GetServerRequiredHackingLevel`, `GetHackingLevel`, `GetServerMaxRam`, `GetServerUsedRam`, `HasRootAccess` |
 | Network | `Scan`, `Nuke` |
 | Scripts | `Run`, `Exec`, `Kill`, `Ps`, `ScriptRunning`, `GetScriptRam` |
-| Hacknet | `Hacknet.NumNodes`, `PurchaseNode`, `UpgradeLevel`, `UpgradeRam`, `UpgradeCore`, cost getters |
+| Botnet | `Botnet.NumNodes`, `PurchaseNode`, `UpgradeLevel`, `UpgradeRam`, `UpgradeCore`, cost getters |
 | Output | `Print`, `Tprint` |
 | Args | `Args` |
 
@@ -253,17 +253,17 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 - The user can tab to autocomplete server names commands
 - The user can use up/down arrows to cycle through input history
 
-### M4: Hacknet
+### M4: Botnet (called Hacknet in bitburner)
 
 **Deliverables**
 
-- Hacknet model, cost formulas, production per tick, node purchase and upgrades.
-- Console commands: `hacknet`, `hacknet buy`, `hacknet upgrade <n> level|ram|core`, `hacknet status`.
+- Botnet model, cost formulas, production per tick, node purchase and upgrades.
+- Console commands: `botnet`, `botnet buy`, `botnet upgrade <n> level|ram|core`, `botnet status`.
 
 **Acceptance**
 
 - Production matches the formula in tests over simulated time.
-- A new game can reach several nodes using only hand-hack money plus Hacknet income, so the early loop works before scripting exists.
+- A new game can reach several nodes using only hand-hack money plus Botnet income, so the early loop works before scripting exists.
 
 ### M5: Roslyn scripting, compile and run
 
@@ -311,9 +311,9 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 
 **Deliverables**
 
-- Tuned network, requirements and payouts so that a first playthrough has a clear arc: manual hack, Hacknet, first script, script on several servers, home RAM upgrades.
+- Tuned network, requirements and payouts so that a first playthrough has a clear arc: manual hack, Botnet, first script, script on several servers, home RAM upgrades.
 - Home RAM upgrade purchase (and optionally purchased servers).
-- Hacknet and hack economy balanced so neither dominates.
+- Botnet and hack economy balanced so neither dominates.
 - Short in-game tutorial via `help` and a few sample scripts shipped in the starting file system.
 
 **Acceptance**: a play session of roughly 1 to 2 hours reaches the final in-scope tier of servers, with a script-based economy clearly better than manual play.
@@ -322,7 +322,7 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 
 **Deliverables**
 
-- Serialization of player, servers, Hacknet, files, running processes (restarted on load) and game time.
+- Serialization of player, servers, Botnet, files, running processes (restarted on load) and game time.
 - Versioned save format with a migration hook.
 - Autosave and manual `save` and `load`.
 
