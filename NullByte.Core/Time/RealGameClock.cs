@@ -80,6 +80,7 @@ public sealed class RealGameClock : IGameClock
             return;
 
         CommitElapsedTime();
+        stopwatch.Stop();
     }
 
     /// <summary>
@@ -101,7 +102,8 @@ public sealed class RealGameClock : IGameClock
                 stopwatch.Elapsed,
                 speedMultiplier);
 
-        stopwatch.Reset();
+        // Keep running: a speed change must not stop the clock.
+        stopwatch.Restart();
     }
 
     private static TimeSpan Scale(

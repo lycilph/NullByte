@@ -1,5 +1,32 @@
 # NULLBYTE — C# Incremental Hacker Game - DevJournal
 
+## 09-11-2026
+
+### In Progress
+- Hardening pass done over the code
+
+### Done
+
+### Decisions
+- Investigate solution with a queue in the gameloop - Claude seems to think it a bad idea
+- Change the name of the gameloop into something different (like gameclient or something) - maybe GameKernel?
+
+### Future
+
+---
+## 08-11-2026
+
+### In Progress
+- Hardening pass done over the code
+
+### Done
+- M3.5 milestone
+
+### Decisions
+
+### Future
+
+---
 ## 05-11-2026
 
 ### In Progress

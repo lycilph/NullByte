@@ -4,8 +4,17 @@
 /// Schedules tasks for completion at a future point in game time.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The scheduler is intended to be accessed from the game thread.
 /// Cancellation may be requested from any thread.
+/// </para>
+/// <para>
+/// Delays never run their continuations inline. Completing or cancelling a
+/// delay only marks its task as finished; code awaiting it resumes through the
+/// awaiter's captured context (on the game thread, the game synchronization
+/// context). This keeps script code from running inside
+/// <see cref="Update"/> or inside whoever called Cancel.
+/// </para>
 /// </remarks>
 public sealed class GameScheduler
 {
@@ -47,9 +56,6 @@ public sealed class GameScheduler
         {
             return Task.FromCanceled(cancellationToken);
         }
-
-        if (duration == TimeSpan.Zero)
-            return Task.CompletedTask;
 
         var dueTime = AddWithSaturation(
             clock.Elapsed,
@@ -122,7 +128,8 @@ public sealed class GameScheduler
 
     private sealed class ScheduledDelay : IDisposable
     {
-        private readonly TaskCompletionSource completionSource = new();
+        private readonly TaskCompletionSource completionSource =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly CancellationToken cancellationToken;
         private CancellationTokenRegistration cancellationRegistration;
 

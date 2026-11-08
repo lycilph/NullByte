@@ -50,7 +50,11 @@ public class Program
             formulas,
             commandRegistry,
             terminal);
-        
+
+        // Work that throws on the game thread is reported, not fatal.
+        gameLoop.UnhandledException += exception =>
+            terminal.WriteLine($"Unhandled error on the game thread: {exception.Message}");
+
         gameLoop.Start();
 
         try

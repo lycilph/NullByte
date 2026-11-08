@@ -626,6 +626,86 @@ public sealed class GameSynchronizationContextTests
                 Assert.Equal("Send failure.", sendException.Message);
             });
     }
+    [Fact]
+    public void DrainBatch_DoesNotRunCallbacksPostedDuringTheBatch()
+    {
+        RunOnDedicatedThread(
+            context =>
+            {
+                var executionOrder = new List<string>();
+
+                context.Post(
+                    _ =>
+                    {
+                        executionOrder.Add("outer");
+
+                        context.Post(
+                            _ => executionOrder.Add("inner"),
+                            state: null);
+                    },
+                    state: null);
+
+                Assert.Equal(1, context.DrainBatch());
+                Assert.Equal(["outer"], executionOrder);
+                Assert.Equal(1, context.PendingCount);
+
+                Assert.Equal(1, context.DrainBatch());
+                Assert.Equal(["outer", "inner"], executionOrder);
+            });
+    }
+
+    [Fact]
+    public void DrainBatch_WithSelfPostingCallback_ReturnsEveryBatch()
+    {
+        RunOnDedicatedThread(
+            context =>
+            {
+                var runs = 0;
+
+                void Callback(object? _)
+                {
+                    runs++;
+                    context.Post(Callback, state: null);
+                }
+
+                context.Post(Callback, state: null);
+
+                for (var batch = 1; batch <= 5; batch++)
+                {
+                    Assert.Equal(1, context.DrainBatch());
+                    Assert.Equal(batch, runs);
+                }
+            });
+    }
+
+    [Fact]
+    public void DrainBatch_WithNothingQueued_ReturnsZero()
+    {
+        RunOnDedicatedThread(context => Assert.Equal(0, context.DrainBatch()));
+    }
+
+    [Fact]
+    public void DrainBatch_ContinuesAfterCallbackThrows()
+    {
+        RunOnDedicatedThread(
+            context =>
+            {
+                var successfulCallbackExecuted = false;
+
+                context.Post(
+                    _ => throw new InvalidOperationException("Expected failure."),
+                    state: null);
+
+                context.Post(
+                    _ => successfulCallbackExecuted = true,
+                    state: null);
+
+                var exception = Assert.Throws<AggregateException>(() => context.DrainBatch());
+
+                Assert.True(successfulCallbackExecuted);
+                Assert.Single(exception.InnerExceptions);
+            });
+    }
 
     [Fact]
     public void CreateCopy_ReturnsSameContext()

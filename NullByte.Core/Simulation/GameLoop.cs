@@ -35,6 +35,18 @@ public sealed class GameLoop : IAsyncDisposable
     }
 
     /// <summary>
+    /// Raised on the game thread when work posted to the game thread throws.
+    /// </summary>
+    /// <remarks>
+    /// With no subscriber, such a failure is fatal: the loop faults and
+    /// <see cref="Completion"/> fails. With a subscriber, each exception is
+    /// reported and the loop keeps running, which is what scripts need: a
+    /// crashing script must not take the game down. A handler that throws is
+    /// ignored.
+    /// </remarks>
+    public event Action<Exception>? UnhandledException;
+
+    /// <summary>
     /// Gets the scheduler owned by this game loop.
     /// </summary>
     public GameScheduler Scheduler { get; }
@@ -254,7 +266,8 @@ public sealed class GameLoop : IAsyncDisposable
                 Thread.Sleep(DefaultIdleDelayMilliseconds);
             }
 
-            RunFinalIteration();
+            // This runs the final iteration
+            RunIteration();
         }
         catch (Exception exception)
         {
@@ -293,13 +306,36 @@ public sealed class GameLoop : IAsyncDisposable
     private void RunIteration()
     {
         Scheduler.Update();
-        synchronizationContext.Drain();
+        DrainPendingWork();
     }
 
-    private void RunFinalIteration()
+    /*
+     * One batch per tick: continuations released by Scheduler.Update run in
+     * this batch, while anything they post waits for the next tick.
+     */
+    private void DrainPendingWork()
     {
-        Scheduler.Update();
-        synchronizationContext.Drain();
+        try
+        {
+            synchronizationContext.DrainBatch();
+        }
+        catch (AggregateException aggregate) when (UnhandledException is not null)
+        {
+            foreach (var exception in aggregate.InnerExceptions)
+                ReportUnhandled(exception);
+        }
+    }
+
+    private void ReportUnhandled(Exception exception)
+    {
+        try
+        {
+            UnhandledException?.Invoke(exception);
+        }
+        catch
+        {
+            // A failing handler must not take down the game loop.
+        }
     }
 
     private void ThrowIfDisposed()

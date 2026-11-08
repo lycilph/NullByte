@@ -141,16 +141,35 @@ public sealed class GameSynchronizationContext : SynchronizationContext
     }
 
     /// <summary>
-    /// Executes all currently queued callbacks.
+    /// Executes queued callbacks until the queue is empty, including
+    /// callbacks that are posted while draining.
     /// </summary>
-    public int Drain()
+    /// <remarks>
+    /// A callback that keeps posting itself keeps this call running forever.
+    /// The game loop uses <see cref="DrainBatch"/> instead.
+    /// </remarks>
+    public int Drain() => DrainCore(maxItems: null);
+
+    /// <summary>
+    /// Executes only the callbacks that were queued when the call started.
+    /// Callbacks posted while draining wait for the next batch.
+    /// </summary>
+    /// <remarks>
+    /// This bounds the work done per game tick, so a callback that re-posts
+    /// itself (for example a script awaiting Task.Yield in a loop) cannot
+    /// starve the scheduler or the rest of the game.
+    /// </remarks>
+    public int DrainBatch() => DrainCore(maxItems: workItems.Count);
+
+    private int DrainCore(int? maxItems)
     {
         EnsureGameThread();
 
         var processedCount = 0;
         List<Exception>? exceptions = null;
 
-        while (workItems.TryDequeue(out var workItem))
+        while ((maxItems is null || processedCount < maxItems.Value) &&
+               workItems.TryDequeue(out var workItem))
         {
             /*
              * Complete() may race with a drain and mark an item
@@ -169,8 +188,7 @@ public sealed class GameSynchronizationContext : SynchronizationContext
             }
             catch (Exception exception)
             {
-                workItem.Exception =
-                    ExceptionDispatchInfo.Capture(exception);
+                workItem.Exception = ExceptionDispatchInfo.Capture(exception);
 
                 exceptions ??= [];
                 exceptions.Add(exception);
@@ -184,10 +202,7 @@ public sealed class GameSynchronizationContext : SynchronizationContext
 
         if (exceptions is not null)
         {
-            throw new AggregateException(
-                "One or more callbacks posted to the " +
-                "game thread failed.",
-                exceptions);
+            throw new AggregateException("One or more callbacks posted to the game thread failed.", exceptions);
         }
 
         return processedCount;
