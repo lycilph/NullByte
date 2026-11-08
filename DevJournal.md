@@ -3,10 +3,9 @@
 ## 09-11-2026
 
 ### In Progress
-- Fix tab completion for botnet commands
-  - Figure out how to handle sub-commands 
 
 ### Done
+- Fix tab completion for botnet commands
 - M4 milestone
 - Hardening pass done over the code
 
