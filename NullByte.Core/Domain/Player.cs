@@ -92,11 +92,31 @@ public sealed class Player
         {
             throw new ArgumentOutOfRangeException(
                 nameof(amount),
-                "Hacking experience must be a finite, non-negative value.");
+                "Money must be a finite, non-negative value.");
         }
 
         Money += amount;
     }
+
+    /// <summary>
+    /// Takes money from the player if they can afford it.
+    /// </summary>
+    /// <returns>
+    /// True if the money was spent; false if the player has too little,
+    /// in which case nothing changes.
+    /// </returns>
+    internal bool TrySpendMoney(double amount)
+    {
+        if (!double.IsFinite(amount) || amount < 0)
+            throw new ArgumentOutOfRangeException(nameof(amount), "Money must be a finite, non-negative value.");
+
+        if (amount > Money)
+            return false;
+
+        Money -= amount;
+        return true;
+    }
+
     /// <summary>
     /// Marks a server as discovered.
     /// </summary>

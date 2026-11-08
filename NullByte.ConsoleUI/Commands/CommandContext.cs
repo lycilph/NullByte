@@ -11,7 +11,9 @@ public sealed class CommandContext(
     GameLoop gameLoop,
     NetworkService networkService,
     ServerActions serverActions,
+    BotnetService botnetService,
     HackingFormulas hackingFormulas,
+    BotnetFormulas botnetFormulas,
     CommandRegistry commandRegistry,
     IGameTerminal terminal)
 {
@@ -19,7 +21,9 @@ public sealed class CommandContext(
     public GameLoop GameLoop { get; } = gameLoop;
     public NetworkService NetworkService { get; } = networkService;
     public ServerActions ServerActions { get; } = serverActions;
+    public BotnetService BotnetService { get; } = botnetService;
     public HackingFormulas HackingFormulas { get; } = hackingFormulas;
+    public BotnetFormulas BotnetFormulas { get; } = botnetFormulas;
     public CommandRegistry CommandRegistry { get; } = commandRegistry;
     public IGameTerminal Terminal { get; } = terminal;
 }

@@ -1,4 +1,5 @@
-﻿using NullByte.Core.Threading;
+﻿using NullByte.Core.Systems;
+using NullByte.Core.Threading;
 using NullByte.Core.Time;
 
 namespace NullByte.Core.Simulation;
@@ -16,9 +17,11 @@ public sealed class GameLoop : IAsyncDisposable
     private readonly TaskCompletionSource startedSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource stoppedSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly Lock lifecycleLock = new();
+    private readonly List<ISimulationSystem> systems = [];
 
     private GameLoopState state = GameLoopState.Created;
     private Thread? gameThread;
+    private TimeSpan lastSystemUpdate;
 
     public GameLoop(
         RealGameClock clock,
@@ -89,6 +92,29 @@ public sealed class GameLoop : IAsyncDisposable
     /// Completes when the game loop has stopped.
     /// </summary>
     public Task Completion => stoppedSource.Task;
+
+    /// <summary>
+    /// Registers a system that is updated on every iteration of the loop.
+    /// </summary>
+    /// <remarks>
+    /// Systems must be added before <see cref="Start"/>. They are updated in
+    /// the order they were added, on the game thread, after due timers have
+    /// fired and before posted callbacks run.
+    /// </remarks>
+    public void AddSystem(ISimulationSystem system)
+    {
+        ArgumentNullException.ThrowIfNull(system);
+
+        lock (lifecycleLock)
+        {
+            ThrowIfDisposed();
+
+            if (state != GameLoopState.Created)
+                throw new InvalidOperationException("Systems can only be added before the game loop is started.");
+
+            systems.Add(system);
+        }
+    }
 
     /// <summary>
     /// Starts the game loop on a dedicated background thread.
@@ -250,6 +276,7 @@ public sealed class GameLoop : IAsyncDisposable
             synchronizationContext.BindToCurrentThread();
 
             clock.Start();
+            lastSystemUpdate = clock.Elapsed;
 
             lock (lifecycleLock)
             {
@@ -306,7 +333,36 @@ public sealed class GameLoop : IAsyncDisposable
     private void RunIteration()
     {
         Scheduler.Update();
+        UpdateSystems();
         DrainPendingWork();
+    }
+
+    /*
+     * Every system sees the same delta, measured on the game clock, so game
+     * speed changes and a paused clock apply to all of them alike. As with
+     * posted work, a failing system is reported when someone listens and is
+     * fatal otherwise; it never stops the systems after it.
+     */
+    private void UpdateSystems()
+    {
+        var now = clock.Elapsed;
+        var delta = now - lastSystemUpdate;
+        lastSystemUpdate = now;
+
+        if (delta <= TimeSpan.Zero)
+            return;
+
+        foreach (var system in systems)
+        {
+            try
+            {
+                system.Update(delta);
+            }
+            catch (Exception exception) when (UnhandledException is not null)
+            {
+                ReportUnhandled(exception);
+            }
+        }
     }
 
     /*

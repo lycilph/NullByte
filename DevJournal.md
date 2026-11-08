@@ -3,15 +3,19 @@
 ## 09-11-2026
 
 ### In Progress
-- Hardening pass done over the code
 
 ### Done
+- M4 milestone
+- Hardening pass done over the code
 
 ### Decisions
 - Investigate solution with a queue in the gameloop - Claude seems to think it a bad idea
 - Change the name of the gameloop into something different (like gameclient or something) - maybe GameKernel?
 
 ### Future
+- Tab completion for the buy/upgrade/status subcommands is not added, because ArgumentCompletionKind currently covers only server names.
+- Add debugdisplay to domain classes
+- Add animated startup (see version 0.5)
 
 ---
 ## 08-11-2026

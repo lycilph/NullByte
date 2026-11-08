@@ -11,4 +11,9 @@
     <ProjectReference Include="..\NullByte.Core\NullByte.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="TempTests\" />
+    <Folder Include="temp\" />
+  </ItemGroup>
+
 </Project>

@@ -5,14 +5,12 @@
 /// </summary>
 public sealed class GameState
 {
-    public GameState(Player player, Network network)
+    public GameState(Player player, Network network, Botnet botnet)
     {
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(network);
 
-        if (!network.TryGetServer(
-                player.HomeServerId,
-                out _))
+        if (!network.TryGetServer(player.HomeServerId, out _))
         {
             throw new ArgumentException(
                 $"The player's home server " +
@@ -21,9 +19,7 @@ public sealed class GameState
                 nameof(player));
         }
 
-        if (!network.TryGetServer(
-                player.CurrentServerId,
-                out _))
+        if (!network.TryGetServer(player.CurrentServerId, out _))
         {
             throw new ArgumentException(
                 $"The player's current server " +
@@ -34,6 +30,7 @@ public sealed class GameState
 
         Player = player;
         Network = network;
+        Botnet = botnet;
     }
 
     /// <summary>
@@ -45,4 +42,9 @@ public sealed class GameState
     /// Gets the game network.
     /// </summary>
     public Network Network { get; }
+
+    /// <summary>
+    /// Gets the player's botnet.
+    /// </summary>
+    public Botnet Botnet { get; }
 }

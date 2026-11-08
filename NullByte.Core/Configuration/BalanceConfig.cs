@@ -77,6 +77,63 @@ public sealed record BalanceConfig
     /// </summary>
     public double ServerBaseGrowthRate { get; init; } = 1.03;
 
+    // Botnet
+
+    /// <summary>
+    /// Multiplier applied to all botnet production. Use it to tune the
+    /// botnet's share of the economy without touching the cost curves.
+    /// </summary>
+    public double BotnetProductionMultiplier { get; init; } = 1.0;
+
+    /// <summary>
+    /// Money produced per second by each level of a node, before the RAM
+    /// and core bonuses.
+    /// </summary>
+    public double BotnetProductionPerLevel { get; init; } = 1.5;
+
+    /// <summary>
+    /// Production grows by this factor for every point of RAM above one.
+    /// </summary>
+    public double BotnetRamBonusBase { get; init; } = 1.035;
+
+    /// <summary>
+    /// Cost of the first node. Each further node costs
+    /// <see cref="BotnetNodeCostGrowth"/> times the previous one.
+    /// </summary>
+    public double BotnetNodeBaseCost { get; init; } = 1_000;
+
+    public double BotnetNodeCostGrowth { get; init; } = 1.85;
+
+    /// <summary>
+    /// Cost of raising a level-one node to level two. Each further level
+    /// costs <see cref="BotnetLevelCostGrowth"/> times the previous one.
+    /// </summary>
+    public double BotnetLevelBaseCost { get; init; } = 500;
+
+    public double BotnetLevelCostGrowth { get; init; } = 1.04;
+
+    /// <summary>
+    /// Cost per point of current RAM for the first RAM upgrade. Each
+    /// further RAM upgrade multiplies it by <see cref="BotnetRamCostGrowth"/>.
+    /// </summary>
+    public double BotnetRamBaseCost { get; init; } = 30_000;
+
+    public double BotnetRamCostGrowth { get; init; } = 1.28;
+
+    /// <summary>
+    /// Cost of the first extra core. Each further core costs
+    /// <see cref="BotnetCoreCostGrowth"/> times the previous one.
+    /// </summary>
+    public double BotnetCoreBaseCost { get; init; } = 500_000;
+
+    public double BotnetCoreCostGrowth { get; init; } = 1.48;
+
+    public int BotnetMaxLevel { get; init; } = 200;
+
+    public int BotnetMaxRam { get; init; } = 64;
+
+    public int BotnetMaxCores { get; init; } = 16;
+
     // Randomness
 
     /// <summary>

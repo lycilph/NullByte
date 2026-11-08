@@ -1,14 +1,15 @@
-﻿using System.Text;
-using NullByte.ConsoleUI.Commands;
+﻿using NullByte.ConsoleUI.Commands;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Configuration;
 using NullByte.Core.Formulas;
 using NullByte.Core.Randomness;
 using NullByte.Core.Services;
 using NullByte.Core.Simulation;
+using NullByte.Core.Systems;
 using NullByte.Core.Threading;
 using NullByte.Core.Time;
 using NullByte.Core.World;
+using System.Text;
 
 namespace NullByte.ConsoleUI;
 
@@ -26,9 +27,14 @@ public class Program
 
         var gameState = InitialGameStateFactory.Create();
         var networkService = new NetworkService(gameState);
-        var formulas = new HackingFormulas(balanceConfig);
+        var hackingFormulas = new HackingFormulas(balanceConfig);
+        var botnetFormulas = new BotnetFormulas(balanceConfig);
         var randomSource = new SeededRandomSource(balanceConfig.RandomSeed);
-        var serverActions = new ServerActions(gameState, gameLoop.Scheduler, formulas, randomSource);
+        var serverActions = new ServerActions(gameState, gameLoop.Scheduler, hackingFormulas, randomSource);
+        var botnetService = new BotnetService(gameState, botnetFormulas);
+
+        // Systems are updated by the game loop on the game thread; they must be added before it starts.
+        gameLoop.AddSystem(new BotnetSystem(gameState, botnetFormulas));
 
         var commandRegistry = CommandRegistryFactory.Create();
         var commandDispatcher = new CommandDispatcher(commandRegistry);
@@ -47,7 +53,9 @@ public class Program
             gameLoop,
             networkService,
             serverActions,
-            formulas,
+            botnetService,
+            hackingFormulas,
+            botnetFormulas,
             commandRegistry,
             terminal);
 

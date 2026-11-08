@@ -322,7 +322,7 @@ public sealed class NetworkServiceTests
         network.Connect(n00dles.Id, sigmaCosmetics.Id);
 
         var player = new Player(homeServerId: home.Id);
-        var gameState = new GameState(player, network);
+        var gameState = new GameState(player, network, new Botnet());
         var service = new NetworkService(gameState);
 
         return new NetworkFixture(

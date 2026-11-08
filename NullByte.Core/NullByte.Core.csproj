@@ -17,6 +17,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <InternalsVisibleTo Include="NullByte.Core.Tests" />
+	  <InternalsVisibleTo Include="NullByte.Core.Tests" />
+	  <InternalsVisibleTo Include="NullByte.ConsoleUI.Tests" />
   </ItemGroup>
 </Project>
