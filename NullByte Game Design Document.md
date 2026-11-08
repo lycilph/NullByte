@@ -11,7 +11,7 @@ The central fantasy is the same as Bitburner: you start by typing commands, get 
 ### Pillars
 
 1. **Scripting is the game.** Progress comes from writing better programs, not clicking faster.
-2. **Same rules for hand and script.** Hack, grow and weaken are one implementation, called from the console or from `ns`.
+2. **Same rules for hand and script.** Hack, grow and weaken are one implementation, called from the console or from `nb`.
 3. **Deterministic, single-threaded simulation.** All game state is touched from exactly one thread, driven by a custom synchronization context. No locks in game code.
 4. **Start small, grow later.** The first iteration is deliberately narrow, but the architecture must not block factions, augmentations, a UI, saving and so on.
 
@@ -79,7 +79,7 @@ Botnet accrues in game time, on the same simulation clock as everything else.
 ### 3.5 Scripts and RAM
 
 - A script is a C# source file stored in the game's virtual file system (kept in memory and saved to JSON; no real disk access for scripts).
-- Each script has a static RAM cost: a base cost plus the sum of costs for each distinct `ns` method it calls, found by analyzing the code with Roslyn's semantic model.
+- Each script has a static RAM cost: a base cost plus the sum of costs for each distinct `nb` method it calls, found by analyzing the code with Roslyn's semantic model.
 - Running a script with `t` threads costs `ram * t`. It must fit in the target server's free RAM.
 - Scripts run as processes (PID, name, args, threads, host) and can be listed and killed.
 
@@ -90,17 +90,17 @@ Start with the simplest thing that is pleasant to write:
 ```csharp
 public class Script : IScript
 {
-    public async Task Main(NS ns)
+    public async Task Main(NB nb)
     {
-        var target = ns.Args[0];
+        var target = nb.Args[0];
         while (true)
         {
-            if (ns.GetServerSecurityLevel(target) > ns.GetServerMinSecurityLevel(target) + 5)
-                await ns.Weaken(target);
-            else if (ns.GetServerMoneyAvailable(target) < ns.GetServerMaxMoney(target) * 0.75)
-                await ns.Grow(target);
+            if (nb.GetServerSecurityLevel(target) > nb.GetServerMinSecurityLevel(target) + 5)
+                await nb.Weaken(target);
+            else if (nb.GetServerMoneyAvailable(target) < nb.GetServerMaxMoney(target) * 0.75)
+                await nb.Grow(target);
             else
-                await ns.Hack(target);
+                await nb.Hack(target);
         }
     }
 }
@@ -112,7 +112,7 @@ Later we can switch to top-level scripts (Roslyn script mode) as a friendlier su
 
 ### 4.1 Solution layout
 
-- `NullByte.Core`: simulation, formulas, model, clock, scheduler, NS API. No console or UI references.
+- `NullByte.Core`: simulation, formulas, model, clock, scheduler, NB API. No console or UI references.
 - `NullByte.Scripting`: Roslyn compile, analysis (RAM, banned APIs), loading and process management.
 - `NullByte.ConsoleUI` Host: the first host, with command parser, rendering and input.
 - `NullByte` Host (later): WPF host with AvalonEdit, reusing Core and Scripting unchanged.
@@ -138,7 +138,7 @@ A timer completed in stage 2 posts its continuation to the mailbox, and stage 3 
 ### 4.3 Game time and timers
 
 - `IGameClock` provides game time. Production uses a fixed time step driven by real elapsed time; tests use a manually advanced clock.
-- A scheduler (priority queue) holds timers keyed by game time. `ns.Hack`, `ns.Grow`, `ns.Weaken` and `ns.Sleep` create a `TaskCompletionSource`, schedule a timer, and complete it when due. Continuations then run through the synchronization context, on the game thread.
+- A scheduler (priority queue) holds timers keyed by game time. `nb.Hack`, `nb.Grow`, `nb.Weaken` and `nb.Sleep` create a `TaskCompletionSource`, schedule a timer, and complete it when due. Continuations then run through the synchronization context, on the game thread.
 - This keeps long operations cheap and makes time controllable (speed-up, pause, fast tests).
 
 ### 4.4 Console blocking behavior
@@ -272,7 +272,7 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 - Virtual file system with `ls`, `cat`, `rm`, `edit` (console editor stub: paste or external editor reload).
 - Compile pipeline from 4.5 minus RAM analysis and sandbox hardening.
 - `run <script> [args]` executes `Main` on the game thread; diagnostics are printed.
-- A first `ns` surface: `Print`, `Sleep`, `Args`, and the three actions.
+- A first `nb` surface: `Print`, `Sleep`, `Args`, and the three actions.
 
 **Acceptance**
 
@@ -287,7 +287,7 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 - Processes with PID, host, threads and cancellation.
 - Static RAM analysis from `[RamCost]` attributes; RAM enforcement on `run` and `exec`.
 - `ps`, `kill`, `killall`, `free`, `mem <script>`, `scp` and `exec` for running on other rooted servers.
-- Full first NS set from 4.6.
+- Full first NB set from 4.6.
 
 **Acceptance**
 
