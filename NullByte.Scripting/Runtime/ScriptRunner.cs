@@ -35,10 +35,13 @@ public sealed class ScriptRunner
 
         // Used in the tests
         LoadContextCreated?.Invoke(loadedScript.LoadContext);
+        
+        var apiWasBound = false;
 
         try
         {
             ScriptRuntime.Bind(api);
+            apiWasBound = true;
 
             var scriptArgs = args.ToArray();
 
@@ -46,7 +49,9 @@ public sealed class ScriptRunner
         }
         finally
         {
-            ScriptRuntime.Unbind();
+            if (apiWasBound)
+                ScriptRuntime.Unbind();
+
             assemblyLoader.Unload(loadedScript);
         }
     }

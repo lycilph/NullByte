@@ -25,15 +25,15 @@ public sealed class ScriptUnloadTests
         AssertCompilationSucceeded(result);
 
         var script = Assert.IsType<CompiledScript>(result.Script);
-        var weakReference = await LoadRunAndUnloadAsync(script);
+        var weakReference = await RunAndUnloadAsync(script);
 
-        ForceGarbageCollection();
+        WaitForCollection(weakReference);
 
         Assert.False(weakReference.IsAlive, "The script AssemblyLoadContext was not collected.");
     }
 
     [Fact]
-    public async Task RecompiledScript_AllowsOldLoadContextToBeCollected()
+    public async Task RecompiledScript_AllowsPreviousLoadContextToBeCollected()
     {
         var compiler = new ScriptCompiler();
 
@@ -41,88 +41,68 @@ public sealed class ScriptUnloadTests
             """
             nb.Print("Version 1");
             """,
-            "recompile-test.cs");
+            "hack.cs");
 
         AssertCompilationSucceeded(firstResult);
 
         var firstScript = Assert.IsType<CompiledScript>(firstResult.Script);
-
-        var weakReference = await LoadRunAndUnloadAsync(firstScript);
+        var firstContext = await RunAndUnloadAsync(firstScript);
 
         var secondResult = compiler.Compile(
             """
             nb.Print("Version 2");
             """,
-            "recompile-test.cs");
+            "hack.cs");
 
         AssertCompilationSucceeded(secondResult);
 
         var secondScript = Assert.IsType<CompiledScript>(secondResult.Script);
 
-        await RunAsync(secondScript);
+        await RunWithoutTrackingAsync(secondScript);
 
-        ForceGarbageCollection();
+        WaitForCollection(firstContext);
 
-        Assert.False(weakReference.IsAlive, "The previous script AssemblyLoadContext was not collected.");
+        Assert.False(firstContext.IsAlive, "The previous script AssemblyLoadContext was not collected.");
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static async Task<WeakReference> LoadRunAndUnloadAsync(CompiledScript script)
+    private static async Task<WeakReference> RunAndUnloadAsync(CompiledScript script)
     {
-        var loader = new ScriptAssemblyLoader();
-        var runner = new ScriptRunner(loader);
-        var api = new TestNullByteApi();
+        WeakReference? weakReference = null;
 
-        var weakReference = await RunAndCaptureContextAsync(
-            runner,
-            loader,
-            script,
-            api);
+        var runner = new ScriptRunner(new ScriptAssemblyLoader())
+        {
+            LoadContextCreated = context =>
+                weakReference = new WeakReference(context, trackResurrection: false)
+        };
 
+        await runner.RunAsync(script, new TestNullByteApi(), []);
+
+        runner.LoadContextCreated = null;
         runner = null!;
-        loader = null!;
-        api = null!;
 
-        return weakReference;
+        return Assert.IsType<WeakReference>(weakReference);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static async Task<WeakReference> RunAndCaptureContextAsync(
-        ScriptRunner runner,
-        ScriptAssemblyLoader loader,
-        CompiledScript script,
-        INullByteApi api)
-    {
-        var loaded = loader.Load(script);
-
-        var weakReference = new WeakReference(
-            loaded.LoadContext,
-            trackResurrection: false);
-
-        loader.Unload(loaded);
-
-        loaded = null!;
-
-        await runner.RunAsync(script, api, []);
-
-        return weakReference;
-    }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static async Task RunAsync(CompiledScript script)
+    private static async Task RunWithoutTrackingAsync(CompiledScript script)
     {
         var runner = new ScriptRunner(new ScriptAssemblyLoader());
 
         await runner.RunAsync(script, new TestNullByteApi(), []);
+
+        runner = null!;
     }
 
-    private static void ForceGarbageCollection()
+    private static void WaitForCollection(WeakReference weakReference)
     {
-        for (var attempt = 0; attempt < 10; attempt++)
+        for (var attempt = 0; attempt < 10 && weakReference.IsAlive; attempt++)
         {
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
+
+            Thread.Sleep(10);
         }
     }
 
