@@ -10,6 +10,8 @@ namespace NullByte.Scripting.Runtime;
 /// </summary>
 public sealed class ScriptRunner
 {
+    internal Action<ScriptLoadContext>? LoadContextCreated { get; set; }
+
     private readonly ScriptAssemblyLoader assemblyLoader;
 
     public ScriptRunner(ScriptAssemblyLoader assemblyLoader)
@@ -30,6 +32,9 @@ public sealed class ScriptRunner
         ArgumentNullException.ThrowIfNull(args);
 
         var loadedScript = assemblyLoader.Load(script);
+
+        // Used in the tests
+        LoadContextCreated?.Invoke(loadedScript.LoadContext);
 
         try
         {

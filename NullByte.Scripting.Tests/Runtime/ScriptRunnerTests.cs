@@ -6,6 +6,7 @@ using NullByte.Scripting.Runtime;
 
 namespace NullByte.Scripting.Tests.Runtime;
 
+[Collection(ScriptRuntimeCollection.Name)]
 public sealed class ScriptRunnerTests
 {
     private readonly ScriptCompiler compiler = new();
