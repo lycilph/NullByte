@@ -88,21 +88,15 @@ Botnet accrues in game time, on the same simulation clock as everything else.
 Start with the simplest thing that is pleasant to write:
 
 ```csharp
-public class Script : IScript
+var target = args[0];
+while (true)
 {
-    public async Task Main(NB nb)
-    {
-        var target = nb.Args[0];
-        while (true)
-        {
-            if (nb.GetServerSecurityLevel(target) > nb.GetServerMinSecurityLevel(target) + 5)
-                await nb.Weaken(target);
-            else if (nb.GetServerMoneyAvailable(target) < nb.GetServerMaxMoney(target) * 0.75)
-                await nb.Grow(target);
-            else
-                await nb.Hack(target);
-        }
-    }
+    if (nb.GetServerSecurityLevel(target) > nb.GetServerMinSecurityLevel(target) + 5)
+        await nb.Weaken(target);
+    else if (nb.GetServerMoneyAvailable(target) < nb.GetServerMaxMoney(target) * 0.75)
+        await nb.Grow(target);
+    else
+        await nb.Hack(target);
 }
 ```
 
@@ -271,7 +265,7 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 
 - Virtual file system with `ls`, `cat`, `rm`, `edit` (console editor stub: paste or external editor reload).
 - Compile pipeline from 4.5 minus RAM analysis and sandbox hardening.
-- `run <script> [args]` executes `Main` on the game thread; diagnostics are printed.
+- `run <script> [args]` executes the script on the game thread; diagnostics are printed.
 - A first `nb` surface: `Print`, `Sleep`, `Args`, and the three actions.
 
 **Acceptance**

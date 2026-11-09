@@ -419,8 +419,10 @@ public static class CommandRegistryFactory
 
         var server = context.NetworkService.GetCurrentServer();
         var fileName = "test.txt"; // arguments[0];
-        var source = 
-@"var target = nb.Args[0];
+        var source =
+@"var target = args[0];
+nb.Print($""Starting against {target}"");
+
 while (true)
 {
     if (nb.GetServerSecurityLevel(target) > nb.GetServerMinSecurityLevel(target) + 5)
