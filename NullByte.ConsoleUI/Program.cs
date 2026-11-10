@@ -1,15 +1,19 @@
-﻿using NullByte.ConsoleUI.Commands;
+﻿using System.Text;
+using NullByte.ConsoleUI.Commands;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Configuration;
 using NullByte.Core.Formulas;
 using NullByte.Core.Randomness;
+using NullByte.Core.Scripting;
 using NullByte.Core.Services;
 using NullByte.Core.Simulation;
 using NullByte.Core.Systems;
 using NullByte.Core.Threading;
 using NullByte.Core.Time;
 using NullByte.Core.World;
-using System.Text;
+using NullByte.Scripting.Compilation;
+using NullByte.Scripting.Loading;
+using NullByte.Scripting.Runtime;
 
 namespace NullByte.ConsoleUI;
 
@@ -46,7 +50,20 @@ public class Program
             prompt: "root@home $ ", 
             maximumHistoryLines: 2_000,
             completionProvider: completionCatalog);
+        
         var terminalTask = terminal.RunAsync();
+        var scriptOutput = new TerminalScriptOutput(terminal);
+        var scriptCompiler = new ScriptCompiler();
+        var scriptLoader = new ScriptAssemblyLoader();
+        var scriptRunner = new ScriptRunner(scriptLoader);
+
+        var scriptService = new ScriptService(
+            gameState,
+            scriptCompiler,
+            scriptRunner,
+            () => new NullByteApi(gameState, gameLoop.Scheduler, serverActions, scriptOutput));
+        
+        scriptService.ScriptFailed += exception => terminal.WriteLine($"Script failed: {exception.Message}");
 
         var context = new CommandContext(
             gameState,
@@ -54,6 +71,7 @@ public class Program
             networkService,
             serverActions,
             botnetService,
+            scriptService,
             hackingFormulas,
             botnetFormulas,
             commandRegistry,

@@ -4,10 +4,14 @@ using NullByte.Core.Configuration;
 using NullByte.Core.Domain;
 using NullByte.Core.Formulas;
 using NullByte.Core.Randomness;
+using NullByte.Core.Scripting;
 using NullByte.Core.Services;
 using NullByte.Core.Simulation;
 using NullByte.Core.Threading;
 using NullByte.Core.Time;
+using NullByte.Scripting.Compilation;
+using NullByte.Scripting.Loading;
+using NullByte.Scripting.Runtime;
 
 namespace NullByte.ConsoleUI.Tests;
 
@@ -164,17 +168,39 @@ public sealed class BotnetCommandTests
 
             var clock = new RealGameClock();
             var gameLoop = new GameLoop(clock, new GameSynchronizationContext());
+
             var hackingFormulas = new HackingFormulas(balance);
             var botnetFormulas = new BotnetFormulas(balance);
+
+            var serverActions = new ServerActions(
+                GameState,
+                gameLoop.Scheduler,
+                hackingFormulas,
+                new SeededRandomSource(1));
+
+            var scriptOutput = new TerminalScriptOutput(terminal);
+
+            var scriptService = new ScriptService(
+                GameState,
+                new ScriptCompiler(),
+                new ScriptRunner(new ScriptAssemblyLoader()),
+                () => new NullByteApi(
+                    GameState,
+                    gameLoop.Scheduler,
+                    serverActions,
+                    scriptOutput));
+
             var registry = CommandRegistryFactory.Create();
 
             dispatcher = new CommandDispatcher(registry);
+
             context = new CommandContext(
                 GameState,
                 gameLoop,
                 new NetworkService(GameState),
-                new ServerActions(GameState, gameLoop.Scheduler, hackingFormulas, new SeededRandomSource(1)),
+                serverActions,
                 new BotnetService(GameState, botnetFormulas),
+                scriptService,
                 hackingFormulas,
                 botnetFormulas,
                 registry,

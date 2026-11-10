@@ -3,6 +3,7 @@ using NullByte.Core.Domain;
 using NullByte.Core.Formulas;
 using NullByte.Core.Services;
 using NullByte.Core.Simulation;
+using NullByte.Scripting.Runtime;
 
 namespace NullByte.ConsoleUI.Commands;
 
@@ -12,6 +13,7 @@ public sealed class CommandContext(
     NetworkService networkService,
     ServerActions serverActions,
     BotnetService botnetService,
+    ScriptService scriptService,
     HackingFormulas hackingFormulas,
     BotnetFormulas botnetFormulas,
     CommandRegistry commandRegistry,
@@ -22,6 +24,7 @@ public sealed class CommandContext(
     public NetworkService NetworkService { get; } = networkService;
     public ServerActions ServerActions { get; } = serverActions;
     public BotnetService BotnetService { get; } = botnetService;
+    public ScriptService ScriptService { get; } = scriptService;
     public HackingFormulas HackingFormulas { get; } = hackingFormulas;
     public BotnetFormulas BotnetFormulas { get; } = botnetFormulas;
     public CommandRegistry CommandRegistry { get; } = commandRegistry;

@@ -1,10 +1,8 @@
 ﻿using NullByte.ConsoleUI.Commands;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Domain;
-using NullByte.Core.Formulas;
-using NullByte.Core.Services;
 using NullByte.Core.Simulation;
-using System.Numerics;
+using NullByte.Scripting.Compilation;
 
 namespace NullByte.ConsoleUI;
 
@@ -105,6 +103,13 @@ public static class CommandRegistryFactory
                 "edit <filename>",
                 "Create or replace a file.",
                 EditFileAsync));
+
+        registry.Register(
+            new CommandDefinition(
+                "run",
+                "run <script> [args...]",
+                "Run a script.",
+                RunScriptAsync));
 
         registry.Register(
             new CommandDefinition(
@@ -418,24 +423,90 @@ public static class CommandRegistryFactory
         }
 
         var server = context.NetworkService.GetCurrentServer();
-        var fileName = "test.txt"; // arguments[0];
+        var fileName = "test.cx"; // arguments[0];
         var source =
-@"var target = args[0];
-nb.Print($""Starting against {target}"");
-
-while (true)
+@"nb.Print($""Hacking n00dles"");
+var result = await nb.Hack(""n00dles"");
+if (!result.Succeeded)
+    nb.Print($""{result.FailureMessage}"");
+else
 {
-    if (nb.GetServerSecurityLevel(target) > nb.GetServerMinSecurityLevel(target) + 5)
-        await nb.Weaken(target);
-    else if (nb.GetServerMoneyAvailable(target) < nb.GetServerMaxMoney(target) * 0.75)
-        await nb.Grow(target);
-    else
-        await nb.Hack(target);
-}";
+    nb.Print($""Duration {result.Duration.Milliseconds}"");
+    await nb.Sleep(result.Duration);
+}
+nb.Print($""Operation done"");"; 
+//@"var target = args[0];
+//nb.Print($""Starting against {target}"");
+//int iteration = 0;
+
+//while (true)
+//{
+//    nb.Print($""Iteration {iteration}"");
+//    iteration++;
+
+//    if (nb.GetServerSecurityLevel(target) > nb.GetServerMinSecurityLevel(target) + 5)
+//    {
+//        nb.Print($""Weakening {target}"");
+//        await nb.Weaken(target);
+//    }
+//    else if (nb.GetServerMoneyAvailable(target) < nb.GetServerMaxMoney(target) * 0.75)
+//    {
+//        nb.Print($""Growing {target}"");
+//        await nb.Grow(target);
+//    }
+//    else
+//    {
+//        nb.Print($""Hacking {target}"");
+//        await nb.Hack(target);
+//    }
+
+//    await nb.Sleep(TimeSpan.FromSeconds(60));
+//    nb.Print($""Operation done"");
+//}";
 
         context.GameState.FileSystem.WriteFile(server.Id, fileName, source);
 
         context.Terminal.WriteLine($"Saved {fileName}.");
+
+        return Task.CompletedTask;
+    }
+
+    private static Task RunScriptAsync(
+        CommandContext context,
+        IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count == 0)
+        {
+            context.Terminal.WriteLine("Usage: run <script> [args...]");
+            return Task.CompletedTask;
+        }
+
+        var server = context.NetworkService.GetCurrentServer();
+        var fileName = arguments[0];
+        var scriptArguments = arguments.Skip(1).ToArray();
+
+        var result = context.ScriptService.Start(
+            server.Id,
+            fileName,
+            scriptArguments);
+
+        foreach (var diagnostic in result.Diagnostics)
+        {
+            WriteScriptDiagnostic(
+                context.Terminal,
+                fileName,
+                diagnostic);
+        }
+
+        if (!result.Succeeded)
+        {
+            if (result.Diagnostics.Count == 0)
+                context.Terminal.WriteLine(result.FailureMessage);
+
+            return Task.CompletedTask;
+        }
+
+        context.Terminal.WriteLine($"Started {fileName}.");
 
         return Task.CompletedTask;
     }
@@ -911,5 +982,14 @@ while (true)
         {
             terminal.SetInputEnabled(true);
         }
+    }
+
+    private static void WriteScriptDiagnostic(IGameTerminal terminal, string fileName, ScriptDiagnostic diagnostic)
+    {
+        var severity = diagnostic.Severity.ToString().ToLowerInvariant();
+
+        terminal.WriteLine(
+            $"{fileName}({diagnostic.Line},{diagnostic.Column}): " +
+            $"{severity} {diagnostic.Id}: {diagnostic.Message}");
     }
 }
