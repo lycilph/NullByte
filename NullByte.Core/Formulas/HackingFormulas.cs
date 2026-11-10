@@ -32,9 +32,7 @@ public sealed class HackingFormulas
                 "Experience must be finite and non-negative.");
         }
 
-        var level =
-            Math.Sqrt(experience / balance.HackingLevelExperienceFactor)
-            + 1.0;
+        var level = Math.Sqrt(experience / balance.HackingLevelExperienceFactor) + 1.0;
 
         return Math.Max(1, (int)Math.Floor(level));
     }

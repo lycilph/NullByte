@@ -429,11 +429,6 @@ public static class CommandRegistryFactory
 var result = await nb.Hack(""n00dles"");
 if (!result.Succeeded)
     nb.Print($""{result.FailureMessage}"");
-else
-{
-    nb.Print($""Duration {result.Duration.Milliseconds}"");
-    await nb.Sleep(result.Duration);
-}
 nb.Print($""Operation done"");"; 
 //@"var target = args[0];
 //nb.Print($""Starting against {target}"");
@@ -460,7 +455,6 @@ nb.Print($""Operation done"");";
 //        await nb.Hack(target);
 //    }
 
-//    await nb.Sleep(TimeSpan.FromSeconds(60));
 //    nb.Print($""Operation done"");
 //}";
 
