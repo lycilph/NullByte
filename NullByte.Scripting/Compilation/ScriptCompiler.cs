@@ -1,22 +1,18 @@
-﻿using System.Reflection;
-using System.Text;
+﻿using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
 using NullByte.Core.Scripting;
-using NullByte.Scripting.Runtime;
 
 namespace NullByte.Scripting.Compilation;
 
 /// <summary>
-/// Compiles player-written top-level C# programs into in-memory assemblies.
+/// Compiles player-written top-level scripts into in-memory assemblies that
+/// contain one generated <see cref="IScript"/> class.
 /// </summary>
 public sealed class ScriptCompiler : IScriptCompiler
 {
-    private const string GeneratedFileName = "NullByte.Script.g.cs";
-
     private const string DefaultUsingsSource = """
     global using System;
     global using System.Collections.Generic;
@@ -25,13 +21,21 @@ public sealed class ScriptCompiler : IScriptCompiler
     global using System.Threading.Tasks;
     """;
 
+    private static readonly List<string> allowedAssemblies = new([
+        "System.Private.CoreLib.dll",
+        "System.Runtime.dll",
+        "System.Collections.dll",
+        "System.Linq.dll",
+        "System.Threading.dll",
+        "System.Threading.Tasks.dll"]);
+
     private static readonly CSharpParseOptions ParseOptions = new(
         languageVersion: LanguageVersion.Latest,
         documentationMode: DocumentationMode.Parse,
         kind: SourceCodeKind.Regular);
 
     private static readonly CSharpCompilationOptions CompilationOptions = new(
-        OutputKind.ConsoleApplication,
+        OutputKind.DynamicallyLinkedLibrary,
         optimizationLevel: OptimizationLevel.Release,
         allowUnsafe: false,
         nullableContextOptions: NullableContextOptions.Enable,
@@ -39,7 +43,7 @@ public sealed class ScriptCompiler : IScriptCompiler
 
     private readonly IReadOnlyList<MetadataReference> references;
 
-    public ScriptCompiler() : this(CreateDefaultReferences()) {}
+    public ScriptCompiler() : this(CreateScriptReferences()) { }
 
     internal ScriptCompiler(IReadOnlyList<MetadataReference> references)
     {
@@ -52,23 +56,25 @@ public sealed class ScriptCompiler : IScriptCompiler
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
 
-        var originalSource = SourceText.From(
-            source,
-            Encoding.UTF8);
+        var originalText = SourceText.From(source, Encoding.UTF8);
+        var originalTree = CSharpSyntaxTree.ParseText(originalText, ParseOptions, fileName);
 
-        var originalTree = CSharpSyntaxTree.ParseText(
-            originalSource,
-            ParseOptions,
+        // Syntax errors are reported against the player's own text, so the
+        // line numbers are right and the generator never sees broken code.
+        var syntaxErrors = originalTree.GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .Select(ConvertDiagnostic)
+            .ToArray();
+
+        if (syntaxErrors.Length > 0)
+            return ScriptCompilationResult.Failure(syntaxErrors);
+
+        var generatedSource = ScriptSourceGenerator.Generate(
+            originalText,
+            originalTree.GetCompilationUnitRoot(),
             fileName);
 
-        var originalRoot = originalTree.GetCompilationUnitRoot();
-
-        var generatedSource = GenerateSource(
-            originalSource,
-            originalRoot,
-            fileName);
-        
-        var defaultUsingsTree = CSharpSyntaxTree.ParseText(
+        var usingsTree = CSharpSyntaxTree.ParseText(
             SourceText.From(DefaultUsingsSource, Encoding.UTF8),
             ParseOptions,
             "NullByte.GlobalUsings.g.cs");
@@ -76,154 +82,59 @@ public sealed class ScriptCompiler : IScriptCompiler
         var generatedTree = CSharpSyntaxTree.ParseText(
             SourceText.From(generatedSource, Encoding.UTF8),
             ParseOptions,
-            GeneratedFileName);
-
-        var assemblyName = $"NullByte.Script.{Guid.NewGuid():N}";
+            "NullByte.Script.g.cs");
 
         var compilation = CSharpCompilation.Create(
-            assemblyName,
-            [defaultUsingsTree, generatedTree],
+            $"NullByte.Script.{Guid.NewGuid():N}",
+            [usingsTree, generatedTree],
             references,
             CompilationOptions);
 
         using var assemblyStream = new MemoryStream();
         using var symbolsStream = new MemoryStream();
 
-        var emitOptions = new EmitOptions(
-            debugInformationFormat: DebugInformationFormat.PortablePdb);
-
         var emitResult = compilation.Emit(
             peStream: assemblyStream,
             pdbStream: symbolsStream,
-            options: emitOptions);
+            options: new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb));
 
         var diagnostics = emitResult.Diagnostics
-            .Where(IsVisibleDiagnostic)
+            .Where(diagnostic => diagnostic.Severity != DiagnosticSeverity.Hidden)
             .Select(ConvertDiagnostic)
             .ToArray();
 
         if (!emitResult.Success)
             return ScriptCompilationResult.Failure(diagnostics);
 
-        var compiledScript = new CompiledScript(
-            assemblyStream.ToArray(),
-            symbolsStream.ToArray());
-
         return ScriptCompilationResult.Success(
-            compiledScript,
+            new CompiledScript(assemblyStream.ToArray(), symbolsStream.ToArray()),
             diagnostics);
     }
 
-    private static string GenerateSource(SourceText originalSource, CompilationUnitSyntax originalRoot, string fileName)
+    private static IReadOnlyList<MetadataReference> CreateScriptReferences()
     {
-        var insertionPosition = FindInsertionPosition(originalRoot);
-
-        var sourceBeforeInsertion = originalSource
-            .ToString(TextSpan.FromBounds(0, insertionPosition));
-
-        var sourceAfterInsertion = originalSource
-            .ToString(TextSpan.FromBounds(insertionPosition, originalSource.Length));
-
-        var sourceLine = originalSource.Lines
-            .GetLineFromPosition(insertionPosition)
-            .LineNumber + 1;
-
-        var builder = new StringBuilder();
-
-        builder.Append(sourceBeforeInsertion);
-
-        if (builder.Length > 0 &&
-            builder[^1] != '\n' &&
-            builder[^1] != '\r')
-        {
-            builder.AppendLine();
-        }
-
-        builder.AppendLine("#line hidden");
-        builder.AppendLine(
-            "var nb = global::NullByte.Scripting.Runtime." +
-            "ScriptRuntime.CurrentApi;");
-
-        builder.Append("#line ");
-        builder.Append(sourceLine);
-        builder.Append(" \"");
-        builder.Append(EscapeFileName(fileName));
-        builder.AppendLine("\"");
-
-        builder.Append(sourceAfterInsertion);
-
-        return builder.ToString();
-    }
-
-    private static int FindInsertionPosition(CompilationUnitSyntax root)
-    {
-        if (root.Usings.Count > 0)
-        {
-            return root.Usings[^1].FullSpan.End;
-        }
-
-        if (root.AttributeLists.Count > 0)
-        {
-            return root.AttributeLists[^1].FullSpan.End;
-        }
-
-        return 0;
-    }
-
-    private static string EscapeFileName(string fileName)
-    {
-        return fileName
-            .Replace(
-                "\\",
-                "\\\\",
-                StringComparison.Ordinal)
-            .Replace(
-                "\"",
-                "\\\"",
-                StringComparison.Ordinal);
-    }
-
-    private static IReadOnlyList<MetadataReference> CreateDefaultReferences()
-    {
-        var references =
-            new Dictionary<string, MetadataReference>(
-                StringComparer.OrdinalIgnoreCase);
-
+        var references = new Dictionary<string, MetadataReference>(StringComparer.OrdinalIgnoreCase);
+        
         var trustedPlatformAssemblies = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string;
-
         if (string.IsNullOrWhiteSpace(trustedPlatformAssemblies))
-        {
             throw new InvalidOperationException("The trusted platform assemblies could not be determined.");
-        }
 
-        foreach (var assemblyPath in
-                 trustedPlatformAssemblies.Split(
-                     Path.PathSeparator,
-                     StringSplitOptions.RemoveEmptyEntries))
+        foreach (var path in trustedPlatformAssemblies.Split(Path.PathSeparator))
         {
-            AddReference(references, assemblyPath);
+            var fileName = Path.GetFileName(path);
+            if (allowedAssemblies.Contains(fileName))
+                AddReference(references, path);
         }
 
-        AddReference(references, typeof(INullByteApi).Assembly);
-        AddReference(references, typeof(ScriptRuntime).Assembly);
+        AddReference(references, typeof(INullByteApi).Assembly.Location);
 
         return references.Values.ToArray();
     }
 
-    private static void AddReference(IDictionary<string, MetadataReference> references, Assembly assembly)
+    private static void AddReference(Dictionary<string, MetadataReference> references, string assemblyPath)
     {
-        if (string.IsNullOrWhiteSpace(assembly.Location))
-            throw new InvalidOperationException($"Assembly '{assembly.FullName}' does not have a file location.");
-
-        AddReference(references, assembly.Location);
-    }
-
-    private static void AddReference(IDictionary<string, MetadataReference> references, string assemblyPath)
-    {
-        if (references.ContainsKey(assemblyPath))
-            return;
-
-        references.Add(assemblyPath, MetadataReference.CreateFromFile(assemblyPath));
+        if (!references.ContainsKey(assemblyPath))
+            references.Add(assemblyPath, MetadataReference.CreateFromFile(assemblyPath));
     }
 
     private static ScriptDiagnostic ConvertDiagnostic(Diagnostic diagnostic)
@@ -233,31 +144,21 @@ public sealed class ScriptCompiler : IScriptCompiler
 
         if (diagnostic.Location.IsInSource)
         {
-            var mappedSpan = diagnostic.Location
-                .GetMappedLineSpan();
-
-            line = mappedSpan.StartLinePosition.Line + 1;
-            column = mappedSpan.StartLinePosition.Character + 1;
+            var span = diagnostic.Location.GetMappedLineSpan();
+            line = span.StartLinePosition.Line + 1;
+            column = span.StartLinePosition.Character + 1;
         }
 
         return new ScriptDiagnostic(
             diagnostic.Id,
             diagnostic.GetMessage(),
-            ConvertSeverity(diagnostic.Severity),
+            diagnostic.Severity switch
+            {
+                DiagnosticSeverity.Error => ScriptDiagnosticSeverity.Error,
+                DiagnosticSeverity.Warning => ScriptDiagnosticSeverity.Warning,
+                _ => ScriptDiagnosticSeverity.Info
+            },
             line,
             column);
     }
-
-    private static ScriptDiagnosticSeverity ConvertSeverity(DiagnosticSeverity severity)
-    {
-        return severity switch
-        {
-            DiagnosticSeverity.Error => ScriptDiagnosticSeverity.Error,
-            DiagnosticSeverity.Warning => ScriptDiagnosticSeverity.Warning,
-            _ => ScriptDiagnosticSeverity.Info
-        };
-    }
-
-    private static bool IsVisibleDiagnostic(Diagnostic diagnostic)
-        => diagnostic.Severity != DiagnosticSeverity.Hidden;
 }

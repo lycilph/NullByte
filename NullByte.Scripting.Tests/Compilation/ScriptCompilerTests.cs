@@ -13,7 +13,7 @@ public sealed class ScriptCompilerTests
     {
         const string source = """
             var answer = 42;
-            Console.WriteLine(answer);
+            nb.Print(answer);
             """;
 
         var result = compiler.Compile(source, "simple.cs");
@@ -30,7 +30,7 @@ public sealed class ScriptCompilerTests
     {
         const string source = """
             var target = args[0];
-            Console.WriteLine(target);
+            nb.Print(target);
             """;
 
         var result = compiler.Compile(source, "args.cs");
@@ -277,93 +277,6 @@ public sealed class ScriptCompilerTests
 
         Assert.NotEmpty(script.Assembly);
         Assert.NotEmpty(script.Symbols);
-    }
-
-    [Fact]
-    public void Compile_ProducesExecutableAssemblyWithEntryPoint()
-    {
-        const string source = """
-            nb.Print(args[0]);
-            """;
-
-        var result = compiler.Compile(source, "entry-point.cs");
-
-        var script = Assert.IsType<CompiledScript>(result.Script);
-        var loadContext = new TestLoadContext();
-
-        try
-        {
-            var assembly = LoadAssembly(loadContext, script);
-
-            Assert.NotNull(assembly.EntryPoint);
-            Assert.True(assembly.EntryPoint.IsStatic);
-
-            var parameters = assembly.EntryPoint.GetParameters();
-
-            var parameter = Assert.Single(parameters);
-
-            Assert.Equal(typeof(string[]), parameter.ParameterType);
-        }
-        finally
-        {
-            loadContext.Unload();
-        }
-    }
-
-    [Fact]
-    public void Compile_WithTopLevelAwait_ProducesEntryPoint()
-    {
-        const string source = """
-        await nb.Sleep(TimeSpan.FromSeconds(1));
-        """;
-
-        var result = compiler.Compile(source,"async-entry-point.cs");
-
-        AssertCompilationSucceeded(result);
-
-        var script = Assert.IsType<CompiledScript>(result.Script);
-        var loadContext = new TestLoadContext();
-
-        try
-        {
-            var assembly = LoadAssembly(loadContext, script);
-            var entryPoint = Assert.IsType<MethodInfo>(assembly.EntryPoint, exactMatch: false);
-
-            Assert.True(entryPoint.IsStatic);
-
-            var parameter = Assert.Single(entryPoint.GetParameters());
-
-            Assert.Equal(typeof(string[]), parameter.ParameterType);
-        }
-        finally
-        {
-            loadContext.Unload();
-        }
-    }
-
-    [Fact]
-    public void Compile_WithoutTopLevelAwait_ProducesVoidEntryPoint()
-    {
-        const string source = """
-            nb.Print(args[0]);
-            """;
-
-        var result = compiler.Compile(source, "sync-entry-point.cs");
-
-        var script = Assert.IsType<CompiledScript>(result.Script);
-        var loadContext = new TestLoadContext();
-
-        try
-        {
-            var assembly = LoadAssembly(loadContext, script);
-            var entryPoint = Assert.IsType<MethodInfo>(assembly.EntryPoint, exactMatch: false);
-
-            Assert.Equal(typeof(void), entryPoint.ReturnType);
-        }
-        finally
-        {
-            loadContext.Unload();
-        }
     }
 
     [Fact]

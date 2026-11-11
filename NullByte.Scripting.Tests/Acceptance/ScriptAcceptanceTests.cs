@@ -8,11 +8,9 @@ using NullByte.Core.Time;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Loading;
 using NullByte.Scripting.Runtime;
-using NullByte.Scripting.Tests.Runtime;
 
 namespace NullByte.Scripting.Tests.Acceptance;
 
-[Collection(ScriptRuntimeCollection.Name)]
 public sealed class ScriptAcceptanceTests
 {
     [Fact]

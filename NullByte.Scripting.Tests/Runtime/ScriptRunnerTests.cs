@@ -6,7 +6,6 @@ using NullByte.Scripting.Runtime;
 
 namespace NullByte.Scripting.Tests.Runtime;
 
-[Collection(ScriptRuntimeCollection.Name)]
 public sealed class ScriptRunnerTests
 {
     private readonly ScriptCompiler compiler = new();
@@ -119,62 +118,6 @@ public sealed class ScriptRunnerTests
     }
 
     [Fact]
-    public async Task RunAsync_KeepsApiBoundWhileScriptIsSuspended()
-    {
-        var script = Compile(
-            """
-            await nb.Sleep(TimeSpan.FromSeconds(1));
-            """);
-
-        var api = new TestNullByteApi();
-
-        var runTask = runner.RunAsync(script, api,[]);
-
-        await api.WaitUntilSleepRequestedAsync();
-
-        Assert.Same(api, ScriptRuntime.CurrentApi);
-
-        api.CompleteSleep();
-
-        await runTask;
-    }
-
-    [Fact]
-    public async Task RunAsync_UnbindsApiAfterSynchronousScript()
-    {
-        var script = Compile(
-            """
-            nb.Print("Finished");
-            """);
-
-        var api = new TestNullByteApi();
-
-        await runner.RunAsync(script, api, []);
-
-        AssertRuntimeIsUnbound();
-    }
-
-    [Fact]
-    public async Task RunAsync_UnbindsApiAfterAsynchronousScript()
-    {
-        var script = Compile(
-            """
-            await nb.Sleep(TimeSpan.FromSeconds(1));
-            """);
-
-        var api = new TestNullByteApi();
-        var runTask = runner.RunAsync(script, api, []);
-
-        await api.WaitUntilSleepRequestedAsync();
-
-        api.CompleteSleep();
-
-        await runTask;
-
-        AssertRuntimeIsUnbound();
-    }
-
-    [Fact]
     public async Task RunAsync_WithSynchronousException_PropagatesException()
     {
         var script = Compile(
@@ -189,8 +132,6 @@ public sealed class ScriptRunnerTests
                 () => runner.RunAsync(script, api, []));
 
         Assert.Equal("Script failed.", exception.Message);
-
-        AssertRuntimeIsUnbound();
     }
 
     [Fact]
@@ -213,8 +154,6 @@ public sealed class ScriptRunnerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => runTask);
 
         Assert.Equal("Async script failed.", exception.Message);
-
-        AssertRuntimeIsUnbound();
     }
 
     [Fact]
@@ -234,8 +173,6 @@ public sealed class ScriptRunnerTests
         api.CancelSleep();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => runTask);
-
-        AssertRuntimeIsUnbound();
     }
 
     [Fact]
@@ -259,41 +196,6 @@ public sealed class ScriptRunnerTests
 
         Assert.Equal(["First"], firstApi.Output);
         Assert.Equal(["Second"], secondApi.Output);
-
-        AssertRuntimeIsUnbound();
-    }
-
-    [Fact]
-    public async Task RunAsync_WhileAnotherScriptIsRunning_Throws()
-    {
-        var firstScript = Compile(
-            """
-            await nb.Sleep(TimeSpan.FromSeconds(1));
-            """);
-
-        var secondScript = Compile(
-            """
-            nb.Print("Second");
-            """);
-
-        var firstApi = new TestNullByteApi();
-        var secondApi = new TestNullByteApi();
-
-        var firstRunTask = runner.RunAsync(firstScript, firstApi, []);
-
-        await firstApi.WaitUntilSleepRequestedAsync();
-
-        var exception =
-            await Assert.ThrowsAsync<InvalidOperationException>(
-                () => runner.RunAsync(secondScript, secondApi, []));
-
-        Assert.Contains("already bound", exception.Message, StringComparison.OrdinalIgnoreCase);
-
-        firstApi.CompleteSleep();
-
-        await firstRunTask;
-
-        AssertRuntimeIsUnbound();
     }
 
     [Fact]
@@ -310,7 +212,7 @@ public sealed class ScriptRunnerTests
     {
         var script = Compile(
             """
-            Console.WriteLine("Hello");
+            nb.Print("Hello");
             """);
 
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -322,7 +224,7 @@ public sealed class ScriptRunnerTests
     {
         var script = Compile(
             """
-            Console.WriteLine("Hello");
+            nb.Print("Hello");
             """);
 
         var api = new TestNullByteApi();
@@ -353,17 +255,6 @@ public sealed class ScriptRunnerTests
                     diagnostic.Message));
 
         Assert.True(result.Succeeded, diagnostics);
-    }
-
-    private static void AssertRuntimeIsUnbound()
-    {
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => ScriptRuntime.CurrentApi);
-
-        Assert.Contains(
-            "No NullByte API is bound",
-            exception.Message,
-            StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class TestNullByteApi : INullByteApi

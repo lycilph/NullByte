@@ -15,7 +15,6 @@ using NullByte.Scripting.Runtime;
 
 namespace NullByte.ConsoleUI.Tests;
 
-[Collection(ScriptCommandCollection.Name)]
 public sealed class RunCommandTests
 {
     [Fact]

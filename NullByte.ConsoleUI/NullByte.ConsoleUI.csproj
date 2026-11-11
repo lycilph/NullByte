@@ -12,9 +12,4 @@
     <ProjectReference Include="..\NullByte.Scripting\NullByte.Scripting.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="TempTests\" />
-    <Folder Include="temp\" />
-  </ItemGroup>
-
 </Project>

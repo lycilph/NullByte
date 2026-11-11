@@ -1,5 +1,18 @@
 # NULLBYTE — C# Incremental Hacker Game - DevJournal
 
+## 11-11-2026
+
+### In Progress
+- Simplification of entire codebase
+
+### Done
+
+### Decisions
+- Removed scriptruntime (kept a per-script api, which was unneeded)
+
+### Future
+
+---
 ## 09-11-2026
 
 ### In Progress

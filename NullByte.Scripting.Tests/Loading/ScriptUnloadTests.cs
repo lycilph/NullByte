@@ -4,11 +4,9 @@ using NullByte.Core.Services;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Loading;
 using NullByte.Scripting.Runtime;
-using NullByte.Scripting.Tests.Runtime;
 
 namespace NullByte.Scripting.Tests.Loading;
 
-[Collection(ScriptRuntimeCollection.Name)]
 public sealed class ScriptUnloadTests
 {
     [Fact]

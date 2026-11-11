@@ -13,7 +13,7 @@ public sealed class ScriptAssemblyLoaderTests
     {
         var compiled = Compile(
             """
-            Console.WriteLine("Hello");
+            nb.Print("Hello");
             """);
 
         var loaded = loader.Load(compiled);
@@ -21,7 +21,6 @@ public sealed class ScriptAssemblyLoaderTests
         try
         {
             Assert.NotNull(loaded.Assembly);
-            Assert.NotNull(loaded.Assembly.EntryPoint);
         }
         finally
         {
@@ -34,7 +33,7 @@ public sealed class ScriptAssemblyLoaderTests
     {
         var compiled = Compile(
             """
-            Console.WriteLine("Hello");
+            nb.Print("Hello");
             """);
 
         var loaded = loader.Load(compiled);

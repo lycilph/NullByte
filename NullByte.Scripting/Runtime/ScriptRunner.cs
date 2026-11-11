@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using NullByte.Core.Domain;
 using NullByte.Core.Scripting;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Loading;
@@ -6,135 +7,39 @@ using NullByte.Scripting.Loading;
 namespace NullByte.Scripting.Runtime;
 
 /// <summary>
-/// Loads and executes compiled player scripts.
+/// Loads a compiled script into its own collectible context, runs it and unloads it again.
 /// </summary>
-public sealed class ScriptRunner
+public sealed class ScriptRunner(ScriptAssemblyLoader assemblyLoader)
 {
+    // Used by the unload tests.
     internal Action<ScriptLoadContext>? LoadContextCreated { get; set; }
 
-    private readonly ScriptAssemblyLoader assemblyLoader;
-
-    public ScriptRunner(ScriptAssemblyLoader assemblyLoader)
-    {
-        ArgumentNullException.ThrowIfNull(assemblyLoader);
-
-        this.assemblyLoader = assemblyLoader;
-    }
-
-    /// <summary>
-    /// Executes a compiled player script with the supplied API and command-line
-    /// arguments.
-    /// </summary>
     public async Task RunAsync(CompiledScript script, INullByteApi api, IReadOnlyList<string> args)
     {
-        ArgumentNullException.ThrowIfNull(script);
         ArgumentNullException.ThrowIfNull(api);
-        ArgumentNullException.ThrowIfNull(args);
 
-        var loadedScript = assemblyLoader.Load(script);
-
-        // Used in the tests
-        LoadContextCreated?.Invoke(loadedScript.LoadContext);
-        
-        var apiWasBound = false;
+        var loaded = assemblyLoader.Load(script);
+        LoadContextCreated?.Invoke(loaded.LoadContext);
 
         try
         {
-            ScriptRuntime.Bind(api);
-            apiWasBound = true;
-
-            var scriptArgs = args.ToArray();
-
-            await InvokeTopLevelProgramAsync(loadedScript.Assembly, scriptArgs);
+            // Separate method: the script instance only lives in that method's
+            // state machine, so nothing here keeps the assembly alive after it finishes.
+            await RunInstanceAsync(loaded.Assembly, api, args.ToArray());
         }
         finally
         {
-            if (apiWasBound)
-                ScriptRuntime.Unbind();
-
-            assemblyLoader.Unload(loadedScript);
+            assemblyLoader.Unload(loaded);
         }
     }
 
-    private static async Task InvokeTopLevelProgramAsync(Assembly assembly, string[] args)
+    private static Task RunInstanceAsync(Assembly assembly, INullByteApi api, string[] args)
     {
-        var entryPoint = assembly.EntryPoint
-            ?? throw new InvalidOperationException("The compiled script does not have an entry point.");
+        var type = assembly.GetType(ScriptSourceGenerator.TypeName)
+            ?? throw new InvalidOperationException("The compiled script does not contain a script class.");
 
-        var method = FindTopLevelImplementation(entryPoint);
+        var instance = (IScript)Activator.CreateInstance(type)!;
 
-        object? result;
-
-        try
-        {
-            result = InvokeMethod(method, args);
-        }
-        catch (TargetInvocationException exception)
-            when (exception.InnerException is not null)
-        {
-            RethrowInnerException(exception.InnerException);
-            throw;
-        }
-
-        if (result is Task task)
-        {
-            await task;
-        }
-    }
-
-    private static MethodInfo FindTopLevelImplementation(MethodInfo entryPoint)
-    {
-        if (typeof(Task).IsAssignableFrom(entryPoint.ReturnType))
-        {
-            return entryPoint;
-        }
-
-        var declaringType = entryPoint.DeclaringType
-            ?? throw new InvalidOperationException("The script entry point does not have a declaring type.");
-
-        var asyncImplementation = declaringType
-            .GetMethods(
-                BindingFlags.Static |
-                BindingFlags.Public |
-                BindingFlags.NonPublic)
-            .Where(method => method != entryPoint)
-            .Where(AcceptsStringArray)
-            .SingleOrDefault(method => typeof(Task).IsAssignableFrom(method.ReturnType));
-
-        return asyncImplementation ?? entryPoint;
-    }
-
-    private static bool AcceptsStringArray(MethodInfo method)
-    {
-        var parameters = method.GetParameters();
-
-        return parameters.Length == 1 &&
-               parameters[0].ParameterType == typeof(string[]);
-    }
-
-    private static object? InvokeMethod(MethodInfo method, string[] args)
-    {
-        var parameters = method.GetParameters();
-
-        if (parameters.Length == 0)
-        {
-            return method.Invoke(obj: null, parameters: null);
-        }
-
-        if (parameters.Length == 1 &&
-            parameters[0].ParameterType == typeof(string[]))
-        {
-            return method.Invoke(obj: null, parameters: [args]);
-        }
-
-        throw new InvalidOperationException($"The script entry method '{method.Name}' has an unsupported signature.");
-    }
-
-    private static void RethrowInnerException(Exception exception)
-    {
-        System.Runtime.ExceptionServices
-            .ExceptionDispatchInfo
-            .Capture(exception)
-            .Throw();
+        return instance.Run(api, args);
     }
 }
