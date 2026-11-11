@@ -12,16 +12,6 @@ Jeg har læst designdokumentet og al kode undtagen detaljerne i testene og termi
 
 ## Hvor det er indviklet, og hvad jeg ville gøre
 
-### 2. `GameLoop` og `GameSynchronizationContext` er for tunge
-
-- **`GameLoop` tager den konkrete `RealGameClock`.** Derfor kan hele loopet ikke køres med `FakeGameClock`, og I har måttet bygge `GameThreadHarness`. Gør `RunIteration` til en offentlig `Tick()`, lad loopet bruge `IGameClock`, og lad tråden bare kalde `Tick()` i en løkke. Så kan hele spillet (systemer, scheduler, scripts) køre deterministisk i tests uden tråde. Det er netop søjle 3 og afsnit 7 i dokumentet.
-- **Syv livscyklustilstande** (`Created…Disposed`), to `TaskCompletionSource`-objekter og `lifecycleLock` er meget til en hobbytråd. Det kan skrumpe til en tråd, en `CancellationToken` og `InvokeAsync`.
-- **`SynchronizationContext.Send`-overrideren er farlig og unødvendig.** Den blokerer en anden tråd med `ManualResetEventSlim` og kan deadlocke. Fjern den, og så forsvinder `IsAbandoned`, `ExceptionDispatchInfo` og det meste af `Complete()`. Konteksten kan blive ca. 100 linjer i stedet for 318. Låsen omkring `Enqueue` underminerer i øvrigt `ConcurrentQueue`.
-- **`UnhandledException` ændrer adfærd efter, om nogen abonnerer** (fatalt uden abonnent, ellers ignoreret). Det er overraskende. Fang og rapportér altid.
-- **To næsten identiske `ExecuteAsync`-overloads** kan blive til én generisk.
-- **`Thread.Sleep(1)`-polling:** et fast tick (fx 20–50 ms) eller en `ManualResetEventSlim`, der vækkes af `Post`, er enklere og mere forudsigeligt. På Windows kan `Sleep(1)` i praksis give ca. 15 ms.
-- **Fremdriftsbjælken kalder `clock.Elapsed` fra UI-tråden** via `Func<double>`. Det er harmløst, men det bryder "kun spiltråden rører tilstand". Dokumentér, at klokken er trådsikker, eller send procenten fra spiltråden.
-
 ### 3. Kommandolaget ligger forkert og er fuld af gentagelser
 
 - **`CommandRegistryFactory` er 992 linjer.** Registrering og handler står adskilt, og `usage` står både i `CommandDefinition` og som hårdkodet `"Usage: money"` i handleren. Næsten alle ca. 20 handlere starter med den samme arity-kontrol. Giv `CommandDefinition` `MinArgs/MaxArgs`, og lad dispatcheren udskrive usage automatisk.

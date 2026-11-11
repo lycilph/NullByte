@@ -1,248 +1,93 @@
 ﻿using System.Collections.Concurrent;
-using System.Runtime.ExceptionServices;
 
 namespace NullByte.Core.Threading;
 
 /// <summary>
-/// A synchronization context that queues callbacks for execution
-/// on one designated game thread.
+/// A synchronization context that queues callbacks for execution on one
+/// designated game thread. Any thread may <see cref="Post"/>; only the game
+/// thread may drain.
 /// </summary>
 public sealed class GameSynchronizationContext : SynchronizationContext
 {
-    private readonly ConcurrentQueue<WorkItem> workItems = new();
+    private readonly ConcurrentQueue<(SendOrPostCallback Callback, object? State)> queue = new();
 
-    private readonly Lock lifecycleLock = new();
+    // Managed thread ids start at 1, so 0 means "not bound yet".
+    private int gameThreadId;
+    private volatile bool isCompleted;
 
-    private int? gameThreadId;
-    private bool isCompleted;
+    public bool IsBound => gameThreadId != 0;
 
-    /// <summary>
-    /// Gets whether the context has been bound to a game thread.
-    /// </summary>
-    public bool IsBound => gameThreadId.HasValue;
+    public bool IsGameThread => gameThreadId == Environment.CurrentManagedThreadId;
 
-    /// <summary>
-    /// Gets whether the calling thread is the game thread.
-    /// </summary>
-    public bool IsGameThread =>
-        gameThreadId == Environment.CurrentManagedThreadId;
+    public bool IsCompleted => isCompleted;
+
+    public int PendingCount => queue.Count;
 
     /// <summary>
-    /// Gets whether the context has stopped accepting work.
-    /// </summary>
-    public bool IsCompleted
-    {
-        get
-        {
-            lock (lifecycleLock)
-                return isCompleted;
-        }
-    }
-
-    /// <summary>
-    /// Gets the number of callbacks currently waiting to execute.
-    /// </summary>
-    public int PendingCount => workItems.Count;
-
-    /// <summary>
-    /// Binds this synchronization context to the calling thread.
+    /// Binds this context to the calling thread and installs it as that
+    /// thread's current <see cref="SynchronizationContext"/>.
     /// </summary>
     public void BindToCurrentThread()
     {
-        lock (lifecycleLock)
-        {
-            if (isCompleted)
-            {
-                throw new InvalidOperationException(
-                    "A completed synchronization context " +
-                    "cannot be bound.");
-            }
+        if (isCompleted)
+            throw new InvalidOperationException("A completed synchronization context cannot be bound.");
 
-            var currentThreadId =
-                Environment.CurrentManagedThreadId;
-
-            if (gameThreadId.HasValue)
-            {
-                throw new InvalidOperationException(
-                    gameThreadId.Value == currentThreadId
-                        ? "The synchronization context is already " +
-                          "bound to the current thread."
-                        : "The synchronization context is already " +
-                          "bound to another thread.");
-            }
-
-            gameThreadId = currentThreadId;
-        }
+        if (Interlocked.CompareExchange(ref gameThreadId, Environment.CurrentManagedThreadId, 0) != 0)
+            throw new InvalidOperationException("The synchronization context is already bound to a thread.");
 
         SetSynchronizationContext(this);
     }
 
+    public void Release() => SetSynchronizationContext(null);
+
     /// <summary>
-    /// Queues a callback for asynchronous execution on the game thread.
+    /// Queues a callback for execution on the game thread. Safe to call from any thread.
     /// </summary>
-    public override void Post(
-        SendOrPostCallback callback,
-        object? state)
+    public override void Post(SendOrPostCallback callback, object? state)
     {
         ArgumentNullException.ThrowIfNull(callback);
 
-        lock (lifecycleLock)
-        {
-            ThrowIfCompleted();
+        if (isCompleted)
+            throw new InvalidOperationException("The synchronization context has completed and no longer accepts work.");
 
-            workItems.Enqueue(
-                new WorkItem(
-                    callback,
-                    state,
-                    completion: null));
-        }
+        // A Post that races with Complete() may enqueue after the queue was
+        // cleared. That callback is simply never run, which is what Complete()
+        // promises anyway, so no lock is needed.
+        queue.Enqueue((callback, state));
     }
 
     /// <summary>
-    /// Executes a callback synchronously on the game thread.
+    /// Blocking cross-thread calls are not supported: they invite deadlocks with
+    /// the game loop. Use <see cref="Post"/> or <c>GameLoop.InvokeAsync</c>.
     /// </summary>
-    public override void Send(
-        SendOrPostCallback callback,
-        object? state)
-    {
-        ArgumentNullException.ThrowIfNull(callback);
+    public override void Send(SendOrPostCallback callback, object? state)
+        => throw new NotSupportedException("Send is not supported. Use Post, or GameLoop.InvokeAsync to await a result.");
 
-        EnsureBound();
-
-        if (IsGameThread)
-        {
-            lock (lifecycleLock)
-            {
-                ThrowIfCompleted();
-            }
-
-            callback(state);
-            return;
-        }
-
-        using var completion =
-            new ManualResetEventSlim(initialState: false);
-
-        var workItem = new WorkItem(
-            callback,
-            state,
-            completion);
-
-        lock (lifecycleLock)
-        {
-            ThrowIfCompleted();
-
-            workItems.Enqueue(workItem);
-        }
-
-        completion.Wait();
-
-        workItem.Exception?.Throw();
-    }
+    // The default implementation would return a plain SynchronizationContext
+    // that posts to the thread pool, silently leaving the game thread.
+    public override SynchronizationContext CreateCopy() => this;
 
     /// <summary>
-    /// Executes queued callbacks until the queue is empty, including
-    /// callbacks that are posted while draining.
+    /// Runs queued callbacks until the queue is empty, including callbacks posted
+    /// while draining. A callback that keeps re-posting itself never returns;
+    /// the game loop uses <see cref="DrainBatch"/> instead.
     /// </summary>
-    /// <remarks>
-    /// A callback that keeps posting itself keeps this call running forever.
-    /// The game loop uses <see cref="DrainBatch"/> instead.
-    /// </remarks>
-    public int Drain() => DrainCore(maxItems: null);
+    public int Drain() => DrainCore(int.MaxValue);
 
     /// <summary>
-    /// Executes only the callbacks that were queued when the call started.
-    /// Callbacks posted while draining wait for the next batch.
+    /// Runs only the callbacks that were queued when the call started. Callbacks
+    /// posted meanwhile wait for the next batch, so a script that awaits
+    /// Task.Yield() in a loop cannot starve the scheduler or the rest of the game.
     /// </summary>
-    /// <remarks>
-    /// This bounds the work done per game tick, so a callback that re-posts
-    /// itself (for example a script awaiting Task.Yield in a loop) cannot
-    /// starve the scheduler or the rest of the game.
-    /// </remarks>
-    public int DrainBatch() => DrainCore(maxItems: workItems.Count);
-
-    private int DrainCore(int? maxItems)
-    {
-        EnsureGameThread();
-
-        var processedCount = 0;
-        List<Exception>? exceptions = null;
-
-        while ((maxItems is null || processedCount < maxItems.Value) &&
-               workItems.TryDequeue(out var workItem))
-        {
-            /*
-             * Complete() may race with a drain and mark an item
-             * as abandoned after it has been dequeued.
-             */
-            if (workItem.IsAbandoned)
-            {
-                workItem.Completion?.Set();
-                processedCount++;
-                continue;
-            }
-
-            try
-            {
-                workItem.Callback(workItem.State);
-            }
-            catch (Exception exception)
-            {
-                workItem.Exception = ExceptionDispatchInfo.Capture(exception);
-
-                exceptions ??= [];
-                exceptions.Add(exception);
-            }
-            finally
-            {
-                processedCount++;
-                workItem.Completion?.Set();
-            }
-        }
-
-        if (exceptions is not null)
-        {
-            throw new AggregateException("One or more callbacks posted to the game thread failed.", exceptions);
-        }
-
-        return processedCount;
-    }
+    public int DrainBatch() => DrainCore(queue.Count);
 
     /// <summary>
-    /// Stops accepting new work and releases synchronous callers
-    /// whose queued callbacks will no longer execute.
+    /// Stops accepting work and discards whatever is still queued.
     /// </summary>
     public void Complete()
     {
-        lock (lifecycleLock)
-        {
-            if (isCompleted)
-                return;
-
-            isCompleted = true;
-
-            while (workItems.TryDequeue(out var workItem))
-            {
-                /*
-                 * Asynchronous Post callers are not waiting for a result,
-                 * so those callbacks can simply be discarded.
-                 *
-                 * Send callers must be released with an exception.
-                 */
-                if (workItem.Completion is null)
-                    continue;
-
-                workItem.IsAbandoned = true;
-
-                workItem.Exception =
-                    ExceptionDispatchInfo.Capture(
-                        new InvalidOperationException(
-                            "The synchronization context completed " +
-                            "before the callback could execute."));
-
-                workItem.Completion.Set();
-            }
-        }
+        isCompleted = true;
+        queue.Clear();
     }
 
     /// <summary>
@@ -250,66 +95,35 @@ public sealed class GameSynchronizationContext : SynchronizationContext
     /// </summary>
     public void VerifyAccess()
     {
-        EnsureGameThread();
-    }
-
-    public override SynchronizationContext CreateCopy()
-    {
-        return this;
-    }
-
-    private void ThrowIfCompleted()
-    {
-        if (isCompleted)
-        {
-            throw new InvalidOperationException(
-                "The synchronization context has completed " +
-                "and no longer accepts work.");
-        }
-    }
-
-    private void EnsureBound()
-    {
-        if (!gameThreadId.HasValue)
-        {
-            throw new InvalidOperationException(
-                "The synchronization context has not been " +
-                "bound to a game thread.");
-        }
-    }
-
-    private void EnsureGameThread()
-    {
-        EnsureBound();
-
         if (!IsGameThread)
-        {
-            throw new InvalidOperationException(
-                "This operation must be performed on " +
-                "the game thread.");
-        }
+            throw new InvalidOperationException("This operation must be performed on the game thread.");
     }
 
-    private sealed class WorkItem
+    private int DrainCore(int maxItems)
     {
-        public WorkItem(
-            SendOrPostCallback callback,
-            object? state,
-            ManualResetEventSlim? completion)
+        VerifyAccess();
+
+        var processed = 0;
+        List<Exception>? exceptions = null;
+
+        while (processed < maxItems && queue.TryDequeue(out var item))
         {
-            Callback = callback;
-            State = state;
-            Completion = completion;
+            processed++;
+
+            try
+            {
+                item.Callback(item.State);
+            }
+            catch (Exception exception)
+            {
+                // One failing callback must not stop the others in the batch.
+                (exceptions ??= []).Add(exception);
+            }
         }
 
-        public SendOrPostCallback Callback { get; }
+        if (exceptions is not null)
+            throw new AggregateException("One or more callbacks posted to the game thread failed.", exceptions);
 
-        public object? State { get; }
-
-        public ManualResetEventSlim? Completion { get; }
-
-        public ExceptionDispatchInfo? Exception { get; set; }
-
-        public bool IsAbandoned { get; set; }
+        return processed;
     }
 }

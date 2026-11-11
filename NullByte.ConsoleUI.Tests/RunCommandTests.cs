@@ -251,8 +251,9 @@ public sealed class RunCommandTests
                 new Player("home"),
                 network);
 
+            var clock = new RealGameClock();
             var gameLoop = new GameLoop(
-                new RealGameClock(),
+                clock,
                 new GameSynchronizationContext());
 
             var hackingFormulas =
@@ -288,6 +289,7 @@ public sealed class RunCommandTests
             context = new CommandContext(
                 GameState,
                 gameLoop,
+                clock,
                 new NetworkService(GameState),
                 serverActions,
                 new BotnetService(

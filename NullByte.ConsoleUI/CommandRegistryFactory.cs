@@ -2,6 +2,7 @@
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Domain;
 using NullByte.Core.Simulation;
+using NullByte.Core.Time;
 using NullByte.Scripting.Compilation;
 
 namespace NullByte.ConsoleUI;
@@ -215,7 +216,7 @@ public static class CommandRegistryFactory
             return Task.CompletedTask;
         }
 
-        var clock = context.GameLoop.Clock;
+        var clock = context.Clock;
         context.Terminal.WriteLine($"Game time: {clock.Elapsed.TotalSeconds:F3}s");
 
         return Task.CompletedTask;
@@ -259,6 +260,7 @@ public static class CommandRegistryFactory
                     name: "operation-a",
                     duration: TimeSpan.FromSeconds(3),
                     context.GameLoop,
+                    context.Clock,
                     terminal);
 
             var fastOperation =
@@ -266,6 +268,7 @@ public static class CommandRegistryFactory
                     name: "operation-b",
                     duration: TimeSpan.FromSeconds(1.5),
                     context.GameLoop,
+                    context.Clock,
                     terminal);
 
             await Task.WhenAll(slowOperation, fastOperation);
@@ -652,7 +655,7 @@ nb.Print($""Operation done"");";
 
         var player = context.GameState.Player;
         var duration = context.HackingFormulas.CalculateHackDuration(player, server);
-        var clock = context.GameLoop.Clock;
+        var clock = context.Clock;
         var startedAt = clock.Elapsed;
         context.Terminal.StartProgress($"Hacking {server.Hostname}...",
             () =>
@@ -693,7 +696,7 @@ nb.Print($""Operation done"");";
 
         var player = context.GameState.Player;
         var duration = context.HackingFormulas.CalculateGrowDuration(player, server);
-        var clock = context.GameLoop.Clock;
+        var clock = context.Clock;
         var startedAt = clock.Elapsed;
         context.Terminal.StartProgress($"Growing {server.Hostname}...",
             () =>
@@ -737,7 +740,7 @@ nb.Print($""Operation done"");";
 
         var player = context.GameState.Player;
         var duration = context.HackingFormulas.CalculateWeakenDuration(player, server);
-        var clock = context.GameLoop.Clock;
+        var clock = context.Clock;
         var startedAt = clock.Elapsed;
         context.Terminal.StartProgress($"Weakening {server.Hostname}...",
             () =>
@@ -941,13 +944,14 @@ nb.Print($""Operation done"");";
         string name,
         TimeSpan duration,
         GameLoop gameLoop,
+        IGameClock clock,
         IGameTerminal terminal)
     {
         var threadBefore = Environment.CurrentManagedThreadId;
 
         terminal.WriteLine(
             $"[M1] {name} started at " +
-            $"{gameLoop.Clock.Elapsed.TotalSeconds:F3}s " +
+            $"{clock.Elapsed.TotalSeconds:F3}s " +
             $"on thread {threadBefore}. " +
             $"Waiting {duration.TotalSeconds:F1} game seconds.");
 
@@ -957,7 +961,7 @@ nb.Print($""Operation done"");";
 
         terminal.WriteLine(
             $"[M1] {name} completed at " +
-            $"{gameLoop.Clock.Elapsed.TotalSeconds:F3}s " +
+            $"{clock.Elapsed.TotalSeconds:F3}s " +
             $"on thread {threadAfter}.");
 
         if (threadBefore != threadAfter || !gameLoop.IsGameThread)

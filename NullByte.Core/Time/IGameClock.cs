@@ -9,4 +9,7 @@ public interface IGameClock
     /// Gets the amount of game time that has elapsed since the clock started.
     /// </summary>
     TimeSpan Elapsed { get; }
+
+    void Start();
+    void Stop();
 }

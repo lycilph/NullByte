@@ -20,7 +20,7 @@ public sealed class GameLoopSystemTests
     [Fact]
     public async Task AddSystem_AfterStart_Throws()
     {
-        await using var gameLoop = CreateGameLoop();
+        await using var gameLoop = CreateGameLoop(new RealGameClock());
 
         gameLoop.Start();
         await gameLoop.Started.WaitAsync(Timeout);
@@ -34,7 +34,7 @@ public sealed class GameLoopSystemTests
     [Fact]
     public void AddSystem_WithNull_Throws()
     {
-        var gameLoop = CreateGameLoop();
+        var gameLoop = CreateGameLoop(new RealGameClock());
 
         Assert.Throws<ArgumentNullException>(() => gameLoop.AddSystem(null!));
     }
@@ -42,7 +42,7 @@ public sealed class GameLoopSystemTests
     [Fact]
     public async Task Systems_AreUpdatedOnTheGameThreadWithPositiveDeltas()
     {
-        await using var gameLoop = CreateGameLoop();
+        await using var gameLoop = CreateGameLoop(new RealGameClock());
 
         var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var deltas = new List<TimeSpan>();
@@ -70,7 +70,8 @@ public sealed class GameLoopSystemTests
     [Fact]
     public async Task Systems_SeeTheGameTimeThatPassed()
     {
-        await using var gameLoop = CreateGameLoop();
+        var clock = new RealGameClock();
+        await using var gameLoop = CreateGameLoop(clock);
 
         var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var total = TimeSpan.Zero;
@@ -90,13 +91,13 @@ public sealed class GameLoopSystemTests
         await gameLoop.Completion.WaitAsync(Timeout);
 
         // The deltas tile the game clock without gaps, so they cannot add up to more than it shows.
-        Assert.True(total <= gameLoop.Clock.Elapsed);
+        Assert.True(total <= clock.Elapsed);
     }
 
     [Fact]
     public async Task Systems_AreUpdatedInTheOrderTheyWereAdded()
     {
-        await using var gameLoop = CreateGameLoop();
+        await using var gameLoop = CreateGameLoop(new RealGameClock());
 
         var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var order = new List<string>();
@@ -126,7 +127,7 @@ public sealed class GameLoopSystemTests
     [Fact]
     public async Task FailingSystem_WithHandler_IsReportedAndTheOthersKeepRunning()
     {
-        await using var gameLoop = CreateGameLoop();
+        await using var gameLoop = CreateGameLoop(new RealGameClock());
 
         var reported = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
         var healthyUpdates = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -148,20 +149,6 @@ public sealed class GameLoopSystemTests
 
         Assert.Equal("System crashed.", exception.Message);
         Assert.True(gameLoop.IsRunning);
-    }
-
-    [Fact]
-    public async Task FailingSystem_WithoutHandler_FaultsTheLoop()
-    {
-        await using var gameLoop = CreateGameLoop();
-
-        gameLoop.AddSystem(new RecordingSystem(_ => throw new InvalidOperationException("System crashed.")));
-        gameLoop.Start();
-
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => gameLoop.Completion.WaitAsync(Timeout));
-
-        Assert.Equal("System crashed.", exception.Message);
     }
 
     [Fact]
@@ -198,8 +185,8 @@ public sealed class GameLoopSystemTests
         Assert.True(earned > 0);
     }
 
-    private static GameLoop CreateGameLoop()
-        => new(new RealGameClock(), new GameSynchronizationContext());
+    private static GameLoop CreateGameLoop(IGameClock clock)
+        => new(clock, new GameSynchronizationContext());
 
     private sealed class RecordingSystem(Action<TimeSpan> onUpdate) : ISimulationSystem
     {

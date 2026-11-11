@@ -68,6 +68,7 @@ public class Program
         var context = new CommandContext(
             gameState,
             gameLoop,
+            clock,
             networkService,
             serverActions,
             botnetService,
@@ -94,7 +95,7 @@ public class Program
                 return Task.CompletedTask;
             });
 
-            WriteStartupMessage(terminal, gameLoop);
+            WriteStartupMessage(terminal, clock);
 
             await ProcessCommandsAsync(context, commandDispatcher, completionCatalog);
         }
@@ -118,12 +119,12 @@ public class Program
         await Task.Delay(500);
     }
 
-    private static void WriteStartupMessage(IGameTerminal terminal, GameLoop gameLoop)
+    private static void WriteStartupMessage(IGameTerminal terminal, IGameClock clock)
     {
         terminal.WriteLine("NullByte");
         terminal.WriteLine();
         terminal.WriteLine("Single-threaded simulation started.");
-        terminal.WriteLine($"Game thread ready. Game time: {gameLoop.Clock.Elapsed.TotalSeconds:F3}s");
+        terminal.WriteLine($"Game thread ready. Game time: {clock.Elapsed.TotalSeconds:F3}s");
         terminal.WriteLine();
         terminal.WriteLine("Type 'help' to see available commands ('debug' for other commands).");
         terminal.WriteLine("Tab completes commands and server names, Up/Down recalls earlier input.");

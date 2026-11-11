@@ -197,6 +197,7 @@ public sealed class BotnetCommandTests
             context = new CommandContext(
                 GameState,
                 gameLoop,
+                clock,
                 new NetworkService(GameState),
                 serverActions,
                 new BotnetService(GameState, botnetFormulas),

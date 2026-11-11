@@ -20,9 +20,7 @@ public sealed class GameScheduler
 {
     private readonly IGameClock clock;
 
-    private readonly PriorityQueue<
-        ScheduledDelay,
-        (long DueTicks, long Sequence)> scheduledDelays = new();
+    private readonly PriorityQueue<ScheduledDelay, (long DueTicks, long Sequence)> scheduledDelays = new();
 
     private long nextSequence;
 
@@ -41,35 +39,21 @@ public sealed class GameScheduler
     /// Returns a task that completes after the specified amount
     /// of game time has elapsed.
     /// </summary>
-    public Task DelayAsync(
-        TimeSpan duration,
-        CancellationToken cancellationToken = default)
+    public Task DelayAsync(TimeSpan duration, CancellationToken cancellationToken = default)
     {
         if (duration < TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(duration),
-                "Delay duration cannot be negative.");
-        }
+            throw new ArgumentOutOfRangeException(nameof(duration), "Delay duration cannot be negative.");
 
         if (cancellationToken.IsCancellationRequested)
-        {
             return Task.FromCanceled(cancellationToken);
-        }
 
-        var dueTime = AddWithSaturation(
-            clock.Elapsed,
-            duration);
+        var dueTime = AddWithSaturation(clock.Elapsed, duration);
 
-        var scheduledDelay = new ScheduledDelay(
-            dueTime,
-            cancellationToken);
+        var scheduledDelay = new ScheduledDelay(dueTime, cancellationToken);
 
         var sequence = nextSequence++;
 
-        scheduledDelays.Enqueue(
-            scheduledDelay,
-            (dueTime.Ticks, sequence));
+        scheduledDelays.Enqueue(scheduledDelay, (dueTime.Ticks, sequence));
 
         return scheduledDelay.Task;
     }
@@ -85,9 +69,7 @@ public sealed class GameScheduler
         var processedCount = 0;
         var currentTime = clock.Elapsed;
 
-        while (scheduledDelays.TryPeek(
-                   out var scheduledDelay,
-                   out var priority))
+        while (scheduledDelays.TryPeek(out var scheduledDelay, out var priority))
         {
             /*
              * Canceled delays may be removed immediately when they
@@ -128,14 +110,11 @@ public sealed class GameScheduler
 
     private sealed class ScheduledDelay : IDisposable
     {
-        private readonly TaskCompletionSource completionSource =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource completionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly CancellationToken cancellationToken;
         private CancellationTokenRegistration cancellationRegistration;
 
-        public ScheduledDelay(
-            TimeSpan dueTime,
-            CancellationToken cancellationToken)
+        public ScheduledDelay(TimeSpan dueTime, CancellationToken cancellationToken)
         {
             DueTime = dueTime;
             this.cancellationToken = cancellationToken;

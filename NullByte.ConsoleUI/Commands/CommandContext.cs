@@ -3,6 +3,7 @@ using NullByte.Core.Domain;
 using NullByte.Core.Formulas;
 using NullByte.Core.Services;
 using NullByte.Core.Simulation;
+using NullByte.Core.Time;
 using NullByte.Scripting.Runtime;
 
 namespace NullByte.ConsoleUI.Commands;
@@ -10,6 +11,7 @@ namespace NullByte.ConsoleUI.Commands;
 public sealed class CommandContext(
     GameState gameState,
     GameLoop gameLoop,
+    IGameClock clock,
     NetworkService networkService,
     ServerActions serverActions,
     BotnetService botnetService,
@@ -21,6 +23,7 @@ public sealed class CommandContext(
 {
     public GameState GameState { get; } = gameState;
     public GameLoop GameLoop { get; } = gameLoop;
+    public IGameClock Clock { get; } = clock;
     public NetworkService NetworkService { get; } = networkService;
     public ServerActions ServerActions { get; } = serverActions;
     public BotnetService BotnetService { get; } = botnetService;
