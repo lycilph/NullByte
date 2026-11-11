@@ -10,20 +10,20 @@ public sealed class GameState
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(network);
 
-        if (!network.TryGetServer(player.HomeServerId, out _))
+        if (!network.TryGetServer(player.HomeHostname, out _))
         {
             throw new ArgumentException(
                 $"The player's home server " +
-                $"'{player.HomeServerId}' does not exist " +
+                $"'{player.HomeHostname}' does not exist " +
                 $"in the network.",
                 nameof(player));
         }
 
-        if (!network.TryGetServer(player.CurrentServerId, out _))
+        if (!network.TryGetServer(player.CurrentHostname, out _))
         {
             throw new ArgumentException(
                 $"The player's current server " +
-                $"'{player.CurrentServerId}' does not exist " +
+                $"'{player.CurrentHostname}' does not exist " +
                 $"in the network.",
                 nameof(player));
         }

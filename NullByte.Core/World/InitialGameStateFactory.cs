@@ -14,7 +14,7 @@ public static class InitialGameStateFactory
         var network = LoadNetwork();
 
         var player = new Player(
-            homeServerId: HomeServerId,
+            homeHostname: HomeServerId,
             startingMoney: StartingMoney);
 
         return new GameState(player, network);

@@ -5,56 +5,38 @@
 /// </summary>
 public sealed class Player
 {
-    private readonly HashSet<string> discoveredServerIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> discoveredHostnames = new(StringComparer.OrdinalIgnoreCase);
 
     public Player(
-        string homeServerId,
+        string homeHostname,
         double startingMoney = 0,
         double startingHackingExperience = 0)
     {
-        if (string.IsNullOrWhiteSpace(homeServerId))
-        {
-            throw new ArgumentException(
-                "The home server ID cannot be empty.",
-                nameof(homeServerId));
-        }
+        if (string.IsNullOrWhiteSpace(homeHostname))
+            throw new ArgumentException("The home hostname cannot be empty.", nameof(homeHostname));
+        if (!double.IsFinite(startingMoney) || startingMoney < 0)
+            throw new ArgumentOutOfRangeException(nameof(startingMoney), "Starting money must be a finite, non-negative value.");
+        if (!double.IsFinite(startingHackingExperience) || startingHackingExperience < 0)
+            throw new ArgumentOutOfRangeException(nameof(startingHackingExperience), "Starting hacking experience must be a finite, non-negative value.");
 
-        if (!double.IsFinite(startingMoney) ||
-            startingMoney < 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(startingMoney),
-                "Starting money must be a finite, " +
-                "non-negative value.");
-        }
-
-        if (!double.IsFinite(startingHackingExperience) ||
-            startingHackingExperience < 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(startingHackingExperience),
-                "Starting hacking experience must be a finite, " +
-                "non-negative value.");
-        }
-
-        HomeServerId = homeServerId;
-        CurrentServerId = homeServerId;
+        HomeHostname = homeHostname;
+        CurrentHostname = homeHostname;
         Money = startingMoney;
         HackingExperience = startingHackingExperience;
 
-        DiscoverServer(homeServerId);
+        DiscoverServer(homeHostname);
     }
 
     /// <summary>
     /// Gets the identifier of the player's home server.
     /// </summary>
-    public string HomeServerId { get; }
+    public string HomeHostname { get; }
 
     /// <summary>
     /// Gets the identifier of the server the player
     /// is currently connected to.
     /// </summary>
-    public string CurrentServerId { get; internal set; }
+    public string CurrentHostname { get; internal set; }
 
     /// <summary>
     /// Gets the player's current money.
@@ -69,7 +51,7 @@ public sealed class Player
     /// <summary>
     /// Gets the IDs of servers known to the player.
     /// </summary>
-    public IReadOnlySet<string> DiscoveredServerIds => discoveredServerIds;
+    public IReadOnlySet<string> DiscoveredHostnames => discoveredHostnames;
 
     /// <summary>
     /// Adds hacking experience to the player.
@@ -79,8 +61,7 @@ public sealed class Player
         if (!double.IsFinite(amount) || amount < 0)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(amount),
-                "Hacking experience must be a finite, non-negative value.");
+                nameof(amount), "Hacking experience must be a finite, non-negative value.");
         }
 
         HackingExperience += amount;
@@ -91,8 +72,7 @@ public sealed class Player
         if (!double.IsFinite(amount) || amount < 0)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(amount),
-                "Money must be a finite, non-negative value.");
+                nameof(amount), "Money must be a finite, non-negative value.");
         }
 
         Money += amount;
@@ -123,10 +103,10 @@ public sealed class Player
     /// <returns>
     /// True if the server was newly discovered.
     /// </returns>
-    internal bool DiscoverServer(string serverId)
+    internal bool DiscoverServer(string hostname)
     {
-        if (string.IsNullOrWhiteSpace(serverId))
-            throw new ArgumentException("The server ID cannot be empty.", nameof(serverId));
-        return discoveredServerIds.Add(serverId);
+        if (string.IsNullOrWhiteSpace(hostname))
+            throw new ArgumentException("The hostname cannot be empty.", nameof(hostname));
+        return discoveredHostnames.Add(hostname);
     }
 }

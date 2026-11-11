@@ -40,10 +40,8 @@ Jeg har læst designdokumentet og al kode undtagen detaljerne i testene og termi
 
 ## Forslag til rækkefølge
 
-1. Skift `ScriptRuntime` til `AsyncLocal` + `global using static`, og slet kildeomskrivningen. Det frigør M6, og testene kan køre parallelt.
-2. Gør `Tick()` offentlig og `GameLoop` afhængig af `IGameClock`. Fjern `Send`.
+1. ~~Skift `ScriptRuntime` til `AsyncLocal` + `global using static`, og slet kildeomskrivningen. Det frigør M6, og testene kan køre parallelt.~~
+2. ~~Gør `Tick()` offentlig og `GameLoop` afhængig af `IGameClock`. Fjern `Send`.~~
 3. Slå `Id` og `Hostname` sammen, og indfør én `ActionResult`.
 4. Del kommandoerne op i grupper med automatisk arity/usage, og flyt dem til `NullByte.Shell`.
 5. Ryd op i validering og null-tjek, og ret formlerne mod Bitburner, før I balancerer i M8.
-
-Vil du have, at jeg skitserer koden for punkt 1 (scriptruntime) eller for den nye kommandostruktur først?

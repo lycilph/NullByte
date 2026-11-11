@@ -8,15 +8,15 @@ public sealed class PlayerTests
     public void Constructor_InitializesPlayer()
     {
         var player = new Player(
-            homeServerId: "home",
+            homeHostname: "home",
             startingMoney: 1_000,
             startingHackingExperience: 50);
 
-        Assert.Equal("home", player.HomeServerId);
-        Assert.Equal("home", player.CurrentServerId);
+        Assert.Equal("home", player.HomeHostname);
+        Assert.Equal("home", player.CurrentHostname);
         Assert.Equal(1_000, player.Money);
         Assert.Equal(50, player.HackingExperience);
-        Assert.Contains("home", player.DiscoveredServerIds);
+        Assert.Contains("home", player.DiscoveredHostnames);
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public sealed class PlayerTests
         Assert.True(discovered);
         Assert.Contains(
             "foodnstuff",
-            player.DiscoveredServerIds);
+            player.DiscoveredHostnames);
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public sealed class PlayerTests
 
         Assert.False(discoveredAgain);
         Assert.Single(
-            player.DiscoveredServerIds,
+            player.DiscoveredHostnames,
             id => string.Equals(
                 id,
                 "foodnstuff",

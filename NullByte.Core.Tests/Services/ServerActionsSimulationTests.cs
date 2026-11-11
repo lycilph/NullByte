@@ -17,7 +17,7 @@ public sealed class ServerActionsSimulationTests
         var balance = new BalanceConfig();
 
         var player = new Player(
-            homeServerId: "home",
+            homeHostname: "home",
             startingMoney: 0,
             startingHackingExperience: ExperienceForLevel(
                 level: 10,

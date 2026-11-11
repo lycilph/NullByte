@@ -12,9 +12,9 @@ public sealed class NetworkServiceTests
 
         Assert.Contains(
             fixture.Home.Id,
-            fixture.Player.DiscoveredServerIds);
+            fixture.Player.DiscoveredHostnames);
 
-        Assert.Single(fixture.Player.DiscoveredServerIds);
+        Assert.Single(fixture.Player.DiscoveredHostnames);
     }
 
     [Fact]
@@ -48,19 +48,19 @@ public sealed class NetworkServiceTests
 
         Assert.Contains(
             fixture.Home.Id,
-            fixture.Player.DiscoveredServerIds);
+            fixture.Player.DiscoveredHostnames);
 
         Assert.Contains(
             fixture.N00dles.Id,
-            fixture.Player.DiscoveredServerIds);
+            fixture.Player.DiscoveredHostnames);
 
         Assert.Contains(
             fixture.FoodNStuff.Id,
-            fixture.Player.DiscoveredServerIds);
+            fixture.Player.DiscoveredHostnames);
 
         Assert.DoesNotContain(
             fixture.SigmaCosmetics.Id,
-            fixture.Player.DiscoveredServerIds);
+            fixture.Player.DiscoveredHostnames);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public sealed class NetworkServiceTests
         fixture.Service.Scan();
         fixture.Service.Scan();
 
-        Assert.Equal(3, fixture.Player.DiscoveredServerIds.Count);
+        Assert.Equal(3, fixture.Player.DiscoveredHostnames.Count);
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public sealed class NetworkServiceTests
             result.Error,
             StringComparison.OrdinalIgnoreCase);
 
-        Assert.Equal(fixture.Home.Id, fixture.Player.CurrentServerId);
+        Assert.Equal(fixture.Home.Id, fixture.Player.CurrentHostname);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public sealed class NetworkServiceTests
             result.Error,
             StringComparison.OrdinalIgnoreCase);
 
-        Assert.Equal(fixture.Home.Id, fixture.Player.CurrentServerId);
+        Assert.Equal(fixture.Home.Id, fixture.Player.CurrentHostname);
     }
 
     [Fact]
@@ -130,7 +130,7 @@ public sealed class NetworkServiceTests
 
         Assert.Equal(
             fixture.N00dles.Id,
-            fixture.Player.CurrentServerId);
+            fixture.Player.CurrentHostname);
     }
 
     [Fact]
@@ -175,7 +175,7 @@ public sealed class NetworkServiceTests
 
         fixture.Service.Scan();
 
-        Assert.Contains(fixture.SigmaCosmetics.Id, fixture.Player.DiscoveredServerIds);
+        Assert.Contains(fixture.SigmaCosmetics.Id, fixture.Player.DiscoveredHostnames);
 
         /*
          * Return directly home. Sigma remains discovered,
@@ -193,7 +193,7 @@ public sealed class NetworkServiceTests
             result.Error,
             StringComparison.OrdinalIgnoreCase);
 
-        Assert.Equal(fixture.Home.Id, fixture.Player.CurrentServerId);
+        Assert.Equal(fixture.Home.Id, fixture.Player.CurrentHostname);
     }
 
     [Fact]
@@ -207,7 +207,7 @@ public sealed class NetworkServiceTests
 
         Assert.True(result.Succeeded);
 
-        Assert.Equal(fixture.N00dles.Id, fixture.Player.CurrentServerId);
+        Assert.Equal(fixture.N00dles.Id, fixture.Player.CurrentHostname);
     }
 
     [Fact]
@@ -242,7 +242,7 @@ public sealed class NetworkServiceTests
         Assert.True(result.Succeeded);
         Assert.Same(fixture.Home, result.Server);
         Assert.Null(result.Error);
-        Assert.Equal(fixture.Home.Id, fixture.Player.CurrentServerId);
+        Assert.Equal(fixture.Home.Id, fixture.Player.CurrentHostname);
     }
 
     [Fact]
@@ -255,7 +255,7 @@ public sealed class NetworkServiceTests
         Assert.True(result.Succeeded);
         Assert.Same(fixture.Home, result.Server);
         Assert.Null(result.Error);
-        Assert.Equal(fixture.Home.Id, fixture.Player.CurrentServerId);
+        Assert.Equal(fixture.Home.Id, fixture.Player.CurrentHostname);
     }
 
     private static NetworkFixture CreateFixture()
@@ -321,7 +321,7 @@ public sealed class NetworkServiceTests
         network.Connect(home.Id, foodNStuff.Id);
         network.Connect(n00dles.Id, sigmaCosmetics.Id);
 
-        var player = new Player(homeServerId: home.Id);
+        var player = new Player(homeHostname: home.Id);
         var gameState = new GameState(player, network);
         var service = new NetworkService(gameState);
 

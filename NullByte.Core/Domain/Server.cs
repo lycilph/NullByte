@@ -10,7 +10,6 @@ public sealed class Server
     private double usedRam;
 
     public Server(
-        string id,
         string hostname,
         double maximumMoney,
         double startingMoney,
@@ -21,8 +20,6 @@ public sealed class Server
         double maximumRam,
         bool hasRootAccess = false)
     {
-        if (string.IsNullOrWhiteSpace(id))
-            throw new ArgumentException("Server ID cannot be empty.", nameof(id));
         if (string.IsNullOrWhiteSpace(hostname))
             throw new ArgumentException("Host name cannot be empty.", nameof(hostname));
         if (!double.IsFinite(maximumMoney) || maximumMoney < 0)
@@ -40,7 +37,6 @@ public sealed class Server
         if (!double.IsFinite(maximumRam) || maximumRam < 0)
             throw new ArgumentOutOfRangeException(nameof(maximumRam), "Maximum RAM must be finite and non-negative.");
 
-        Id = id;
         Hostname = hostname;
 
         MaximumMoney = maximumMoney;
@@ -57,28 +53,16 @@ public sealed class Server
         HasRootAccess = hasRootAccess;
     }
 
-    public string Id { get; }
-
     public string Hostname { get; }
-
     public double MaximumMoney { get; }
-
     public double Money => money;
-
     public double MinimumSecurity { get; }
-
     public double Security => security;
-
     public int RequiredHackingLevel { get; }
-
     public double GrowthParameter { get; }
-
     public bool HasRootAccess { get; private set; }
-
     public double MaximumRam { get; }
-
     public double UsedRam => usedRam;
-
     public double AvailableRam => MaximumRam - usedRam;
 
     public bool TryGainRootAccess(int hackingLevel)
@@ -166,15 +150,9 @@ public sealed class Server
         usedRam -= amount;
     }
 
-    private static void ValidateNonNegativeFinite(
-        double value,
-        string parameterName)
+    private static void ValidateNonNegativeFinite(double value, string parameterName)
     {
         if (!double.IsFinite(value) || value < 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                parameterName,
-                "Value must be finite and non-negative.");
-        }
+            throw new ArgumentOutOfRangeException(parameterName, "Value must be finite and non-negative.");
     }
 }

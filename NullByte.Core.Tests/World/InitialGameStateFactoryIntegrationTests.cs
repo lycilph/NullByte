@@ -21,7 +21,7 @@ public sealed class InitialGameStateFactoryIntegrationTests
         Assert.InRange(gameState.Network.Servers.Count, 10, 15);
 
         // The player must start somewhere that actually exists.
-        var currentServer = gameState.Network.GetServer(gameState.Player.CurrentServerId);
+        var currentServer = gameState.Network.GetServer(gameState.Player.CurrentHostname);
 
         Assert.NotNull(currentServer);
 
@@ -48,7 +48,7 @@ public sealed class InitialGameStateFactoryIntegrationTests
         // Arrange
         var gameState = InitialGameStateFactory.Create();
 
-        var startServerId = gameState.Player.CurrentServerId;
+        var startServerId = gameState.Player.CurrentHostname;
 
         // Act
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

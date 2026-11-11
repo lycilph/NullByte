@@ -14,7 +14,6 @@ public sealed record NetworkDefinition
 /// </summary>
 public sealed record ServerDefinition
 {
-    public required string Id { get; init; }
     public required string Hostname { get; init; }
     public required double MaximumMoney { get; init; }
     public required double StartingMoney { get; init; }

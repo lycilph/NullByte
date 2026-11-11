@@ -88,7 +88,7 @@ public sealed class BotnetEarlyGameTests
 
         foreach (var server in gameState.Network.Servers)
         {
-            if (server.Id == player.HomeServerId || !server.TryGainRootAccess(level))
+            if (server.Id == player.HomeHostname || !server.TryGainRootAccess(level))
                 continue;
 
             var chance = formulas.CalculateHackChance(player, server);

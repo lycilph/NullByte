@@ -61,7 +61,6 @@ public sealed class NetworkLoader
         ArgumentNullException.ThrowIfNull(definition);
 
         return new Server(
-            id: definition.Id,
             hostname: definition.Hostname,
             maximumMoney: definition.MaximumMoney,
             startingMoney: definition.StartingMoney,

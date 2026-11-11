@@ -506,7 +506,7 @@ public sealed class ServerActionsTests
             balance.HackingLevelExperienceFactor;
 
         var player = new Player(
-            homeServerId: "home",
+            homeHostname: "home",
             startingMoney: 1_000,
             startingHackingExperience: experience);
 

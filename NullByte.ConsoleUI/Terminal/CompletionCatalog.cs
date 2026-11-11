@@ -54,13 +54,13 @@ public sealed class CompletionCatalog : ICompletionProvider
         foreach (var exit in ExitCommands)
             commands.Add(new CommandCompletionInfo(exit, ArgumentCompletionKind.None));
 
-        var known = player.DiscoveredServerIds
+        var known = player.DiscoveredHostnames
             .Select(id => network.TryGetServer(id, out var server) ? server : null)
             .OfType<Server>()
             .ToArray();
 
-        var connectable = network.GetNeighbors(player.CurrentServerId)
-            .Where(server => player.DiscoveredServerIds.Contains(server.Id))
+        var connectable = network.GetNeighbors(player.CurrentHostname)
+            .Where(server => player.DiscoveredHostnames.Contains(server.Id))
             .Select(server => server.Hostname)
             .ToArray();
 

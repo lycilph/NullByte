@@ -19,7 +19,7 @@ public sealed class ScriptAcceptanceTests
         var balance = new BalanceConfig();
 
         var player = new Player(
-            homeServerId: "home",
+            homeHostname: "home",
             startingMoney: 1_000,
             startingHackingExperience: ExperienceForLevel(
                 level: 10,

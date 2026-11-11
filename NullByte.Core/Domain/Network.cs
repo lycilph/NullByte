@@ -1,23 +1,22 @@
-﻿namespace NullByte.Core.Domain;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace NullByte.Core.Domain;
 
 /// <summary>
-/// Represents the servers and topology of the game network.
+/// Represents the servers and topology of the game network. A server is identified
+/// by its hostname everywhere (case-insensitive), exactly as the player types it.
 /// </summary>
 public sealed class Network
 {
-    private readonly Dictionary<string, Server> serversById =
-        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Server> servers = new(StringComparer.OrdinalIgnoreCase);
 
-    private readonly Dictionary<string, Server> serversByHostname =
-        new(StringComparer.OrdinalIgnoreCase);
-
-    private readonly Dictionary<string, HashSet<string>> connections =
-        new(StringComparer.OrdinalIgnoreCase);
+    // Hostname -> hostnames of the directly connected servers.
+    private readonly Dictionary<string, HashSet<string>> connections = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets all servers in the network.
     /// </summary>
-    public IReadOnlyCollection<Server> Servers => serversById.Values;
+    public IReadOnlyCollection<Server> Servers => servers.Values;
 
     /// <summary>
     /// Adds a server to the network.
@@ -26,107 +25,74 @@ public sealed class Network
     {
         ArgumentNullException.ThrowIfNull(server);
 
-        if (serversById.ContainsKey(server.Id))
-        {
-            throw new InvalidOperationException(
-                $"A server with ID '{server.Id}' " +
-                "already exists.");
-        }
+        if (!servers.TryAdd(server.Hostname, server))
+            throw new InvalidOperationException($"A server with hostname '{server.Hostname}' already exists.");
 
-        if (serversByHostname.ContainsKey(server.Hostname))
-        {
-            throw new InvalidOperationException(
-                $"A server with hostname '{server.Hostname}' " +
-                "already exists.");
-        }
-
-        serversById.Add(server.Id, server);
-        serversByHostname.Add(server.Hostname, server);
-
-        connections.Add(server.Id, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+        connections.Add(server.Hostname, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
     }
 
     /// <summary>
     /// Creates a bidirectional connection between two servers.
     /// </summary>
-    public void Connect(string firstServerId, string secondServerId)
+    public void Connect(string firstHostname, string secondHostname)
     {
-        var firstServer = GetServer(firstServerId);
-        var secondServer = GetServer(secondServerId);
+        var first = GetServer(firstHostname);
+        var second = GetServer(secondHostname);
 
-        if (ReferenceEquals(firstServer, secondServer))
+        if (ReferenceEquals(first, second))
             throw new InvalidOperationException("A server cannot be connected to itself.");
 
-        connections[firstServer.Id].Add(secondServer.Id);
-        connections[secondServer.Id].Add(firstServer.Id);
+        connections[first.Hostname].Add(second.Hostname);
+        connections[second.Hostname].Add(first.Hostname);
     }
 
     /// <summary>
-    /// Gets a server by its stable ID.
+    /// Gets a server by hostname.
     /// </summary>
-    public Server GetServer(string serverId)
+    public Server GetServer(string hostname)
     {
-        if (string.IsNullOrWhiteSpace(serverId))
-            throw new ArgumentException("The server ID cannot be empty.", nameof(serverId));
+        if (string.IsNullOrWhiteSpace(hostname))
+            throw new ArgumentException("The hostname cannot be empty.", nameof(hostname));
 
-        if (!serversById.TryGetValue(serverId, out var server))
-            throw new KeyNotFoundException($"Server '{serverId}' does not exist.");
-
-        return server;
+        return servers.TryGetValue(hostname, out var server)
+            ? server
+            : throw new KeyNotFoundException($"Server '{hostname}' does not exist.");
     }
 
     /// <summary>
-    /// Attempts to get a server by its stable ID.
+    /// Attempts to get a server by hostname.
     /// </summary>
-    public bool TryGetServer(string serverId, out Server? server)
+    public bool TryGetServer(string hostname, [NotNullWhen(true)] out Server? server)
     {
-        if (string.IsNullOrWhiteSpace(serverId))
+        if (string.IsNullOrWhiteSpace(hostname))
         {
             server = null;
             return false;
         }
 
-        return serversById.TryGetValue(serverId, out server);
-    }
-
-    /// <summary>
-    /// Attempts to find a server by either its ID or hostname.
-    /// </summary>
-    public bool TryFindServer(string name, out Server? server)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            server = null;
-            return false;
-        }
-
-        if (serversById.TryGetValue(name, out server))
-            return true;
-
-        return serversByHostname.TryGetValue(name, out server);
+        return servers.TryGetValue(hostname, out server);
     }
 
     /// <summary>
     /// Gets all servers directly connected to the specified server.
     /// </summary>
-    public IReadOnlyList<Server> GetNeighbors(string serverId)
+    public IReadOnlyList<Server> GetNeighbors(string hostname)
     {
-        var server = GetServer(serverId);
+        var server = GetServer(hostname);
 
-        return connections[server.Id]
-            .Select(GetServer)
+        return connections[server.Hostname]
+            .Select(neighbor => servers[neighbor])
             .ToArray();
     }
 
     /// <summary>
     /// Determines whether two servers are directly connected.
     /// </summary>
-    public bool AreConnected(string firstServerId, string secondServerId)
+    public bool AreConnected(string firstHostname, string secondHostname)
     {
-        var firstServer = GetServer(firstServerId);
-        var secondServer = GetServer(secondServerId);
+        var first = GetServer(firstHostname);
+        var second = GetServer(secondHostname);
 
-        return connections[firstServer.Id]
-            .Contains(secondServer.Id);
+        return connections[first.Hostname].Contains(second.Hostname);
     }
 }
