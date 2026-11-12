@@ -158,7 +158,7 @@ public sealed class GameLoopSystemTests
         var clock = new RealGameClock { SpeedMultiplier = 100 };
         await using var gameLoop = new GameLoop(clock, new GameSynchronizationContext());
 
-        var home = new Server("home", 0, 0, 1, 1, 1, 0, 8, hasRootAccess: true);
+        var home = new Server("home", 0, 0, 5, 1, 1, 1, 0, 8, hasRootAccess: true);
         var network = new Network();
         network.AddServer(home);
 

@@ -17,18 +17,18 @@ public sealed class ScriptAcceptanceTests
     public async Task PlayerScript_CompilesAndHacksRealServer()
     {
         var balance = new BalanceConfig();
+        var formulas = new HackingFormulas(balance);
 
         var player = new Player(
             homeHostname: "home",
             startingMoney: 1_000,
-            startingHackingExperience: ExperienceForLevel(
-                level: 10,
-                balance));
+            startingHackingExperience: formulas.CalculateExperienceForHackingLevel(1));
 
         var home = new Server(
             hostname: "home",
             maximumMoney: 0,
             startingMoney: 0,
+            baseDifficulty: 1,
             minimumSecurity: 1,
             startingSecurity: 1,
             requiredHackingLevel: 1,
@@ -40,6 +40,7 @@ public sealed class ScriptAcceptanceTests
             hostname: "n00dles",
             maximumMoney: 1_000_000,
             startingMoney: 1_000_000,
+            baseDifficulty: 1,
             minimumSecurity: 1,
             startingSecurity: 1,
             requiredHackingLevel: 1,
@@ -55,9 +56,6 @@ public sealed class ScriptAcceptanceTests
         var gameState = new GameState(player, network);
         var clock = new FakeGameClock();
         var scheduler = new GameScheduler(clock);
-        var formulas = new HackingFormulas(balance);
-
-        var level = formulas.CalculateHackingLevel(player.HackingExperience);
 
         // Zero guarantees that the hack succeeds.
         var randomSource = new FixedRandomSource(0);
@@ -114,11 +112,6 @@ public sealed class ScriptAcceptanceTests
         Assert.True(target.Money < initialServerMoney);
 
         Assert.Equal(["Hacking n00dles", "Hack complete"], output.Lines);
-    }
-
-    private static double ExperienceForLevel(int level, BalanceConfig balance)
-    {
-        return Math.Pow(level - 1, 2) * balance.HackingLevelExperienceFactor;
     }
 
     private static string FormatDiagnostics(ScriptCompilationResult result)

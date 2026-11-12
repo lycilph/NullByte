@@ -13,6 +13,7 @@ public sealed class Server
         string hostname,
         double maximumMoney,
         double startingMoney,
+        double baseDifficulty,
         double minimumSecurity,
         double startingSecurity,
         int requiredHackingLevel,
@@ -26,6 +27,8 @@ public sealed class Server
             throw new ArgumentOutOfRangeException(nameof(maximumMoney), "Maximum money must be finite and non-negative.");
         if (!double.IsFinite(startingMoney) || startingMoney < 0 || startingMoney > maximumMoney)
             throw new ArgumentOutOfRangeException(nameof(startingMoney), "Starting money must be finite and between zero and maximum money.");
+        if (!double.IsFinite(baseDifficulty) || baseDifficulty < minimumSecurity)
+            throw new ArgumentOutOfRangeException(nameof(baseDifficulty), "Base difficulty must be finite and at least minimum security.");
         if (!double.IsFinite(minimumSecurity) || minimumSecurity < 0)
             throw new ArgumentOutOfRangeException(nameof(minimumSecurity), "Minimum security must be finite and non-negative.");
         if (!double.IsFinite(startingSecurity) || startingSecurity < minimumSecurity)
@@ -42,6 +45,8 @@ public sealed class Server
         MaximumMoney = maximumMoney;
         money = startingMoney;
 
+        BaseDifficulty = baseDifficulty;
+
         MinimumSecurity = minimumSecurity;
         security = startingSecurity;
 
@@ -56,6 +61,7 @@ public sealed class Server
     public string Hostname { get; }
     public double MaximumMoney { get; }
     public double Money => money;
+    public double BaseDifficulty { get; }
     public double MinimumSecurity { get; }
     public double Security => security;
     public int RequiredHackingLevel { get; }

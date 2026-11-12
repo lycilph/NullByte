@@ -203,7 +203,6 @@ public sealed class NullByteApiTests
         public Fixture()
         {
             var home = CreateServer(
-                id: "home",
                 hostname: "home",
                 maximumMoney: 0,
                 startingMoney: 0,
@@ -211,7 +210,6 @@ public sealed class NullByteApiTests
                 startingSecurity: 1);
 
             Target = CreateServer(
-                id: "server-n00dles",
                 hostname: "n00dles",
                 maximumMoney: 50_000,
                 startingMoney: 25_000,
@@ -272,7 +270,6 @@ public sealed class NullByteApiTests
         }
 
         private static Server CreateServer(
-            string id,
             string hostname,
             double maximumMoney,
             double startingMoney,
@@ -283,8 +280,9 @@ public sealed class NullByteApiTests
                 hostname,
                 maximumMoney,
                 startingMoney,
-                minimumSecurity,
-                startingSecurity,
+                baseDifficulty: 5,
+                minimumSecurity: minimumSecurity,
+                startingSecurity: startingSecurity,
                 requiredHackingLevel: 1,
                 growthParameter: 30,
                 maximumRam: 8,

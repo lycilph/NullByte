@@ -15,18 +15,18 @@ public sealed class ServerActionsSimulationTests
         const int hackCount = 1_000;
 
         var balance = new BalanceConfig();
+        var formulas = new HackingFormulas(balance);
 
         var player = new Player(
             homeHostname: "home",
             startingMoney: 0,
-            startingHackingExperience: ExperienceForLevel(
-                level: 10,
-                balance));
+            startingHackingExperience: formulas.CalculateExperienceForHackingLevel(10));
 
         var home = new Server(
             hostname: "home",
             maximumMoney: 0,
             startingMoney: 0,
+            baseDifficulty: 5,
             minimumSecurity: 1,
             startingSecurity: 1,
             requiredHackingLevel: 1,
@@ -38,6 +38,7 @@ public sealed class ServerActionsSimulationTests
             hostname: "target",
             maximumMoney: 1_000_000,
             startingMoney: 1_000_000,
+            baseDifficulty: 5,
             minimumSecurity: 1,
             startingSecurity: 2,
             requiredHackingLevel: 10,
@@ -55,7 +56,6 @@ public sealed class ServerActionsSimulationTests
 
         var clock = new FakeGameClock();
         var scheduler = new GameScheduler(clock);
-        var formulas = new HackingFormulas(balance);
         var randomSource = new SeededRandomSource(balance.RandomSeed);
 
         var actions = new ServerActions(
@@ -110,7 +110,4 @@ public sealed class ServerActionsSimulationTests
         Assert.InRange(target.Money, 0, target.MaximumMoney);
         Assert.True(target.Security >= target.MinimumSecurity);
     }
-
-    private static double ExperienceForLevel(int level, BalanceConfig balance)
-        => Math.Pow(level - 1, 2) * balance.HackingLevelExperienceFactor;
 }

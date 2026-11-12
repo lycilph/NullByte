@@ -153,6 +153,7 @@ public sealed class BotnetCommandTests
                 hostname: "home",
                 maximumMoney: 0,
                 startingMoney: 0,
+                baseDifficulty: 1,
                 minimumSecurity: 1,
                 startingSecurity: 1,
                 requiredHackingLevel: 1,

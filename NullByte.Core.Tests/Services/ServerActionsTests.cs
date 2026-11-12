@@ -500,10 +500,9 @@ public sealed class ServerActionsTests
         bool hasRootAccess = true)
     {
         var balance = new BalanceConfig();
+        var formulas = new HackingFormulas(balance);
 
-        var experience =
-            Math.Pow(playerLevel - 1, 2) *
-            balance.HackingLevelExperienceFactor;
+        var experience = formulas.CalculateExperienceForHackingLevel(playerLevel);
 
         var player = new Player(
             homeHostname: "home",
@@ -514,6 +513,7 @@ public sealed class ServerActionsTests
             hostname: "home",
             maximumMoney: 0,
             startingMoney: 0,
+            baseDifficulty: 5,
             minimumSecurity: 1,
             startingSecurity: 1,
             requiredHackingLevel: 1,
@@ -525,6 +525,7 @@ public sealed class ServerActionsTests
             hostname: "target",
             maximumMoney: maximumMoney,
             startingMoney: startingMoney,
+            baseDifficulty: 5,
             minimumSecurity: minimumSecurity,
             startingSecurity: startingSecurity,
             requiredHackingLevel: requiredHackingLevel,
@@ -540,7 +541,6 @@ public sealed class ServerActionsTests
         var gameState = new GameState(player, network);
         var clock = new FakeGameClock();
         var scheduler = new GameScheduler(clock);
-        var formulas = new HackingFormulas(balance);
         var randomSource = new SequenceRandomSource(randomValue);
 
         var actions = new ServerActions(

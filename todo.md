@@ -1,4 +1,16 @@
-﻿# Review af NullByte, M0–M5
+﻿# Todo
+
+1. Fix diviations from bitburner formulas and constants
+2. Simplify tab-completion
+3. `nb`-API'et eksponerer `CancellationToken` på `Hack/Grow/Weaken/Sleep`. Sæt annullering pr. proces (M6), og lad `kill` virke implicit.
+4. Del kommandoerne op i grupper med automatisk arity/usage, og flyt dem til `NullByte.Shell`.
+5. Do another clean up round
+6. M6 milestone
+
+
+--- Old stuff below ---
+
+# Review af NullByte, M0–M5
 
 Jeg har læst designdokumentet og al kode undtagen detaljerne i testene og terminalens tegnekode. Kort version: **fundamentet er solidt, men det er over-konstrueret på tværs af hele løsningen.** Mængden af ceremoni skjuler den gode arkitektur.
 

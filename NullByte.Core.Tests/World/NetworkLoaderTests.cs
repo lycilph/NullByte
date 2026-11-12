@@ -23,6 +23,7 @@ public sealed class NetworkLoaderTests
         Assert.Equal("target", target.Hostname);
         Assert.Equal(100_000, target.MaximumMoney);
         Assert.Equal(50_000, target.Money);
+        Assert.Equal(2, target.BaseDifficulty);
         Assert.Equal(1, target.MinimumSecurity);
         Assert.Equal(2, target.Security);
         Assert.Equal(10, target.RequiredHackingLevel);
@@ -67,6 +68,28 @@ public sealed class NetworkLoaderTests
 
         Assert.Equal("home", home.Hostname);
         Assert.Equal("target", target.Hostname);
+    }
+
+    [Fact]
+    public void Load_WithBaseDifficultyBelowMinimumSecurity_Throws()
+    {
+        var loader = new NetworkLoader();
+        var definition = CreateValidDefinition();
+
+        definition = definition with
+        {
+            Servers =
+            [
+                CreateServerDefinition(
+                hostname: "invalid",
+                minimumSecurity: 5,
+                baseDifficulty: 4,
+                startingSecurity: 5)
+            ]
+        };
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => loader.Load(definition));
     }
 
     [Theory]
@@ -292,6 +315,7 @@ public sealed class NetworkLoaderTests
         string hostname,
         double maximumMoney = 100_000,
         double startingMoney = 50_000,
+        double baseDifficulty = 2,
         double minimumSecurity = 1,
         double startingSecurity = 2,
         int requiredHackingLevel = 10,
@@ -304,6 +328,7 @@ public sealed class NetworkLoaderTests
             Hostname = hostname,
             MaximumMoney = maximumMoney,
             StartingMoney = startingMoney,
+            BaseDifficulty = baseDifficulty,
             MinimumSecurity = minimumSecurity,
             StartingSecurity = startingSecurity,
             RequiredHackingLevel = requiredHackingLevel,
@@ -320,6 +345,7 @@ public sealed class NetworkLoaderTests
               "hostname": "home",
               "maximumMoney": 0,
               "startingMoney": 0,
+              "baseDifficulty": 1,
               "minimumSecurity": 1,
               "startingSecurity": 1,
               "requiredHackingLevel": 1,
@@ -331,6 +357,7 @@ public sealed class NetworkLoaderTests
               "hostname": "target",
               "maximumMoney": 100000,
               "startingMoney": 50000,
+              "baseDifficulty": 2,
               "minimumSecurity": 1,
               "startingSecurity": 2,
               "requiredHackingLevel": 10,

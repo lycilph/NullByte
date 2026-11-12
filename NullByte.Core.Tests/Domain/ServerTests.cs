@@ -47,6 +47,8 @@ public sealed class ServerTests
         Assert.Equal(1, server.MinimumSecurity);
         Assert.Equal(5, server.Security);
 
+        Assert.Equal(5, server.BaseDifficulty);
+
         Assert.Equal(10, server.RequiredHackingLevel);
         Assert.Equal(20, server.GrowthParameter);
 
@@ -55,6 +57,18 @@ public sealed class ServerTests
         Assert.Equal(8, server.AvailableRam);
 
         Assert.False(server.HasRootAccess);
+    }
+    
+    [Fact]
+    public void BaseDifficulty_DoesNotChangeWhenSecurityChanges()
+    {
+        var server = CreateServer();
+
+        server.IncreaseSecurity(2);
+        server.DecreaseSecurity(3);
+
+        Assert.Equal(5, server.BaseDifficulty);
+        Assert.Equal(4, server.Security);
     }
 
     [Fact]
@@ -245,6 +259,7 @@ public sealed class ServerTests
             hostname: "n00dles",
             maximumMoney: 100_000,
             startingMoney: 50_000,
+            baseDifficulty: 5,
             minimumSecurity: 1,
             startingSecurity: 5,
             requiredHackingLevel: requiredHackingLevel,

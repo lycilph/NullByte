@@ -26,15 +26,26 @@ public sealed class HackingFormulas
     public int CalculateHackingLevel(double experience)
     {
         if (!double.IsFinite(experience) || experience < 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(experience),
-                "Experience must be finite and non-negative.");
-        }
+            throw new ArgumentOutOfRangeException(nameof(experience), "Experience must be finite and non-negative.");
 
-        var level = Math.Sqrt(experience / balance.HackingLevelExperienceFactor) + 1.0;
+        var baseSkill =
+            balance.SkillLogarithmMultiplier
+            * Math.Log(experience + balance.SkillExperienceOffset)
+            - balance.SkillLevelOffset;
 
-        return Math.Max(1, (int)Math.Floor(level));
+        var modifiedSkill =
+            baseSkill
+            * balance.HackingSkillMultiplier;
+
+        return Math.Max(1, (int)Math.Floor(modifiedSkill));
+    }
+
+    public double CalculateExperienceForHackingLevel(int level)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(level, 1);
+
+        var experience = Math.Exp((level + balance.SkillLevelOffset) / balance.SkillLogarithmMultiplier) - balance.SkillExperienceOffset;
+        return Math.Max(0, Math.Ceiling(experience));
     }
 
     /// <summary>
@@ -46,11 +57,27 @@ public sealed class HackingFormulas
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(server);
 
-        var hackingLevel = CalculateHackingLevel(player.HackingExperience);
-        var skillFactor = (double)hackingLevel / server.RequiredHackingLevel;
-        var securityFactor = server.MinimumSecurity / server.Security;
+        if (!server.HasRootAccess || server.Security >= 100.0)
+            return 0.0;
 
-        return Math.Clamp(skillFactor * securityFactor, 0.0,1.0);
+        var hackingLevel = CalculateHackingLevel(player.HackingExperience);
+
+        var difficultyMultiplier = (100.0 - server.Security) / 100.0;
+
+        var effectiveSkill = Math.Max(1.0, balance.HackChanceSkillFactor * hackingLevel);
+
+        var skillChance =
+            (effectiveSkill
+             - server.RequiredHackingLevel)
+            / effectiveSkill;
+
+        var chance =
+            skillChance
+            * difficultyMultiplier
+            * balance.HackingChanceMultiplier
+            * balance.HackingIntelligenceBonus;
+
+        return Math.Clamp(chance, 0.0, 1.0);
     }
 
     /// <summary>
@@ -62,11 +89,22 @@ public sealed class HackingFormulas
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(server);
 
-        var hackingLevel = CalculateHackingLevel(player.HackingExperience);
-        var skillFactor = (double)hackingLevel / server.RequiredHackingLevel;
-        var securityFactor = server.MinimumSecurity / server.Security;
+        if (server.Security >= 100.0)
+            return 0.0;
 
-        return Math.Clamp(balance.HackMoneyFraction * skillFactor * securityFactor, 0.0, 1.0);
+        var hackingLevel = CalculateHackingLevel(player.HackingExperience);
+
+        var difficultyMultiplier = (100.0 - server.Security) / 100.0;
+
+        var skillMultiplier = (hackingLevel - (server.RequiredHackingLevel - 1.0)) / hackingLevel;
+
+        var percent =
+            difficultyMultiplier
+            * skillMultiplier
+            * balance.HackingMoneyMultiplier
+            / balance.HackBalanceFactor;
+
+        return Math.Clamp(percent, 0.0, 1.0);
     }
 
     /// <summary>
@@ -77,6 +115,7 @@ public sealed class HackingFormulas
         ValidateThreads(threads);
 
         var percentPerThread = CalculateHackPercent(player, server);
+
         var totalPercent = Math.Min(1.0, percentPerThread * threads);
 
         return server.Money * totalPercent;
@@ -91,61 +130,100 @@ public sealed class HackingFormulas
         ArgumentNullException.ThrowIfNull(server);
 
         var hackingLevel = CalculateHackingLevel(player.HackingExperience);
-        var skillFactor = Math.Max(1.0, (double)server.RequiredHackingLevel / hackingLevel);
-        var securityFactor = server.Security / server.MinimumSecurity;
-        var multiplier = skillFactor * securityFactor;
 
-        return MultiplyDuration(balance.HackBaseDuration, multiplier);
+        var difficulty = server.RequiredHackingLevel * server.Security;
+
+        var skillFactor =
+            (balance.HackDifficultyFactor * difficulty + balance.HackDifficultyBase)
+            / (hackingLevel + balance.HackSkillBase);
+
+        var seconds =
+            balance.HackTimeMultiplier * skillFactor
+            / (balance.HackingSpeedMultiplier * balance.HackingIntelligenceBonus);
+
+        return TimeSpan.FromSeconds(seconds);
     }
 
     /// <summary>
     /// Calculates the duration of a grow operation.
     /// </summary>
     public TimeSpan CalculateGrowDuration(Player player, Server server)
-        => MultiplyDuration(CalculateHackDuration(player, server), balance.GrowDurationMultiplier);
+    {
+        return MultiplyDuration(
+            CalculateHackDuration(player, server),
+            balance.GrowDurationMultiplier);
+    }
 
     /// <summary>
     /// Calculates the duration of a weaken operation.
     /// </summary>
     public TimeSpan CalculateWeakenDuration(Player player, Server server)
-        => MultiplyDuration(CalculateHackDuration(player, server), balance.WeakenDurationMultiplier);
+    {
+        return MultiplyDuration(
+            CalculateHackDuration(player, server),
+            balance.WeakenDurationMultiplier);
+    }
 
     /// <summary>
     /// Calculates the amount by which a grow operation multiplies
-    /// the server's current money.
+    /// server money.
     /// </summary>
-    public double CalculateGrowthFactor(Server server, int threads = 1)
+    public double CalculateGrowthFactor(Server server, int threads = 1, int cores = 1)
     {
         ArgumentNullException.ThrowIfNull(server);
         ValidateThreads(threads);
+        ValidateCores(cores);
 
-        var securityFactor = server.MinimumSecurity / server.Security;
-        var growthPerThread =
-            1.0 +
-            (balance.ServerBaseGrowthRate - 1.0) *
-            server.GrowthParameter *
-            securityFactor;
+        if (server.GrowthParameter <= 0)
+            return 1.0;
 
-        return Math.Pow(growthPerThread, threads);
+        var adjustedGrowthLog = Math.Log(1.0 + balance.ServerBaseGrowthIncrement / server.Security);
+
+        var maximumGrowthLog =Math.Log(balance.ServerMaximumGrowthRate);
+
+        adjustedGrowthLog = Math.Min(adjustedGrowthLog, maximumGrowthLog);
+
+        var growthPercentage = server.GrowthParameter / 100.0;
+
+        var coreBonus = 1.0 + (cores - 1.0) / 16.0;
+
+        var growthLog =
+            adjustedGrowthLog
+            * growthPercentage
+            * balance.ServerGrowthMultiplier
+            * coreBonus
+            * threads;
+
+        return Math.Exp(growthLog);
     }
 
     /// <summary>
     /// Calculates how much money should be added by a grow
     /// operation without exceeding the server's maximum money.
     /// </summary>
-    public double CalculateGrowthAmount(Server server, int threads = 1)
+    public double CalculateGrowthAmount(Server server, int threads = 1, int cores = 1)
     {
         ArgumentNullException.ThrowIfNull(server);
         ValidateThreads(threads);
+        ValidateCores(cores);
 
-        if (server.Money <= 0 || server.Money >= server.MaximumMoney)
-            return 0;
+        if (server.Money >= server.MaximumMoney)
+            return 0.0;
 
-        var growthFactor = CalculateGrowthFactor(server, threads);
-        var targetMoney = server.Money * growthFactor;
+        var growthFactor =
+            CalculateGrowthFactor(
+                server,
+                threads,
+                cores);
+
+        // Bitburner adds one monetary unit per growth thread before
+        // applying multiplicative growth. This lets an empty server
+        // recover from zero money.
+        var targetMoney = (server.Money + threads)* growthFactor;
+
         var clampedTarget = Math.Min(targetMoney, server.MaximumMoney);
 
-        return clampedTarget - server.Money;
+        return Math.Max(0.0, clampedTarget - server.Money);
     }
 
     /// <summary>
@@ -182,36 +260,37 @@ public sealed class HackingFormulas
     /// <summary>
     /// Calculates the hacking experience awarded for an operation.
     /// </summary>
-    public double CalculateHackingExperience(Server server, int threads = 1)
+    public double CalculateHackingExperience(Server server,int threads = 1)
     {
         ArgumentNullException.ThrowIfNull(server);
         ValidateThreads(threads);
 
-        var difficultyMultiplier = Math.Max(1.0, server.RequiredHackingLevel);
+        var experiencePerThread =
+            balance.BaseHackingExperience
+            + server.BaseDifficulty
+            * balance.HackingExperienceDifficultyFactor;
 
-        return balance.BaseHackingExperience *
-               difficultyMultiplier *
-               threads;
+        return experiencePerThread
+               * balance.HackingExperienceMultiplier
+               * threads;
     }
 
     private static void ValidateThreads(int threads)
     {
         if (threads < 1)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(threads),
-                "Thread count must be at least one.");
-        }
+            throw new ArgumentOutOfRangeException(nameof(threads), "Thread count must be at least one.");
+    }
+
+    private static void ValidateCores(int cores)
+    {
+        if (cores < 1)
+            throw new ArgumentOutOfRangeException(nameof(cores), "Core count must be at least one.");
     }
 
     private static TimeSpan MultiplyDuration(TimeSpan duration, double multiplier)
     {
         if (!double.IsFinite(multiplier) || multiplier < 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(multiplier),
-                "Duration multiplier must be finite and non-negative.");
-        }
+            throw new ArgumentOutOfRangeException(nameof(multiplier), "Duration multiplier must be finite and non-negative.");
 
         return TimeSpan.FromTicks(checked((long)(duration.Ticks * multiplier)));
     }

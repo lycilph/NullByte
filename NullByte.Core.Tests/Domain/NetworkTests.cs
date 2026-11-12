@@ -227,6 +227,7 @@ public sealed class NetworkTests
             hostname,
             maximumMoney: 100_000,
             startingMoney: 50_000,
+            baseDifficulty: 5,
             minimumSecurity: 1,
             startingSecurity: 5,
             requiredHackingLevel: 1,

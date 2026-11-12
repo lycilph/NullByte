@@ -17,6 +17,7 @@ public sealed record ServerDefinition
     public required string Hostname { get; init; }
     public required double MaximumMoney { get; init; }
     public required double StartingMoney { get; init; }
+    public required double BaseDifficulty { get; init; }
     public required double MinimumSecurity { get; init; }
     public required double StartingSecurity { get; init; }
     public required int RequiredHackingLevel { get; init; }

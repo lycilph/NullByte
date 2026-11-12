@@ -131,6 +131,7 @@ public sealed class BotnetSystemTests
             hostname: "home",
             maximumMoney: 0,
             startingMoney: 0,
+            baseDifficulty: 5,
             minimumSecurity: 1,
             startingSecurity: 1,
             requiredHackingLevel: 1,

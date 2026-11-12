@@ -42,7 +42,7 @@ public sealed class BotnetFormulas
             throw new ArgumentOutOfRangeException(nameof(cores), "Cores must be at least one.");
 
         var levelFactor = level * balance.BotnetProductionPerLevel;
-        var ramFactor = Math.Pow(balance.BotnetRamBonusBase, ram - 1);
+        var ramFactor = Math.Pow(balance.BotnetRamProductionBase, ram - 1);
         var coreFactor = (cores + 5) / 6.0;
 
         return levelFactor * ramFactor * coreFactor * balance.BotnetProductionMultiplier;
@@ -72,7 +72,9 @@ public sealed class BotnetFormulas
         if (existingNodeCount < 0)
             throw new ArgumentOutOfRangeException(nameof(existingNodeCount), "Node count cannot be negative.");
 
-        return balance.BotnetNodeBaseCost * Math.Pow(balance.BotnetNodeCostGrowth, existingNodeCount);
+        return balance.BotnetNodeBaseCost 
+            * Math.Pow(balance.BotnetNodeCostGrowth, existingNodeCount)
+            * balance.BotnetPurchaseCostMultiplier;
     }
 
     /// <summary>
@@ -83,7 +85,9 @@ public sealed class BotnetFormulas
         if (currentLevel < 1)
             throw new ArgumentOutOfRangeException(nameof(currentLevel), "Level must be at least one.");
 
-        return balance.BotnetLevelBaseCost * Math.Pow(balance.BotnetLevelCostGrowth, currentLevel - 1);
+        return balance.BotnetLevelBaseCost 
+            * Math.Pow(balance.BotnetLevelCostGrowth, currentLevel - 1)
+            * balance.BotnetPurchaseCostMultiplier;
     }
 
     /// <summary>
@@ -96,7 +100,9 @@ public sealed class BotnetFormulas
 
         var upgradesSoFar = int.Log2(currentRam);
 
-        return currentRam * balance.BotnetRamBaseCost * Math.Pow(balance.BotnetRamCostGrowth, upgradesSoFar);
+        return currentRam 
+            * balance.BotnetRamBaseCost * Math.Pow(balance.BotnetRamCostGrowth, upgradesSoFar)
+            * balance.BotnetPurchaseCostMultiplier;
     }
 
     /// <summary>
@@ -107,7 +113,9 @@ public sealed class BotnetFormulas
         if (currentCores < 1)
             throw new ArgumentOutOfRangeException(nameof(currentCores), "Cores must be at least one.");
 
-        return balance.BotnetCoreBaseCost * Math.Pow(balance.BotnetCoreCostGrowth, currentCores - 1);
+        return balance.BotnetCoreBaseCost 
+            * Math.Pow(balance.BotnetCoreCostGrowth, currentCores - 1)
+            * balance.BotnetPurchaseCostMultiplier;
     }
 
     /// <summary>

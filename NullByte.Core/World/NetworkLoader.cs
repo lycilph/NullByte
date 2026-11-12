@@ -64,6 +64,7 @@ public sealed class NetworkLoader
             hostname: definition.Hostname,
             maximumMoney: definition.MaximumMoney,
             startingMoney: definition.StartingMoney,
+            baseDifficulty: definition.BaseDifficulty,
             minimumSecurity: definition.MinimumSecurity,
             startingSecurity: definition.StartingSecurity,
             requiredHackingLevel: definition.RequiredHackingLevel,
