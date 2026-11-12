@@ -43,6 +43,37 @@ public sealed class HackingFormulasTests
     }
 
     [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(10)]
+    [InlineData(25)]
+    [InlineData(50)]
+    [InlineData(100)]
+    [InlineData(200)]
+    [InlineData(299)]
+    public void CalculateExperienceForHackingLevel_RoundTrips(
+    int level)
+    {
+        var formulas = CreateFormulas();
+
+        var experience = formulas.CalculateExperienceForHackingLevel(level);
+
+        Assert.Equal(level, formulas.CalculateHackingLevel(experience));
+    }
+
+    [Fact]
+    public void CalculateExperienceForHackingLevel_UsesSkillMultiplier()
+    {
+        var modifiedBalance = balance with { HackingSkillMultiplier = 2.0 };
+
+        var formulas = new HackingFormulas(modifiedBalance);
+
+        var experience = formulas.CalculateExperienceForHackingLevel(100);
+
+        Assert.Equal(100, formulas.CalculateHackingLevel(experience));
+    }
+
+    [Theory]
     [InlineData(-1)]
     [InlineData(double.NaN)]
     [InlineData(double.PositiveInfinity)]
@@ -54,6 +85,21 @@ public sealed class HackingFormulasTests
 
         Assert.Throws<ArgumentOutOfRangeException>(
             () => formulas.CalculateHackingLevel(experience));
+    }
+    
+    [Fact]
+    public void CalculateHackingExperience_WithZeroBaseDifficulty_ReturnsZero()
+    {
+        var formulas = CreateFormulas();
+
+        var server = CreateServer(
+            minimumSecurity: 0,
+            baseDifficulty: 0,
+            startingSecurity: 0);
+
+        var experience = formulas.CalculateHackingExperience(server, threads: 10);
+
+        Assert.Equal(0.0, experience);
     }
 
     [Fact]

@@ -44,8 +44,32 @@ public sealed class HackingFormulas
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(level, 1);
 
-        var experience = Math.Exp((level + balance.SkillLevelOffset) / balance.SkillLogarithmMultiplier) - balance.SkillExperienceOffset;
-        return Math.Max(0, Math.Ceiling(experience));
+        if (!double.IsFinite(balance.HackingSkillMultiplier) || balance.HackingSkillMultiplier <= 0)
+            throw new InvalidOperationException("Hacking skill multiplier must be finite and positive.");
+
+        var requiredBaseSkill = level / balance.HackingSkillMultiplier;
+
+        var experience =
+            Math.Exp((requiredBaseSkill + balance.SkillLevelOffset)
+                / balance.SkillLogarithmMultiplier)
+            - balance.SkillExperienceOffset;
+
+        experience = Math.Max(0.0, experience);
+
+        while (CalculateHackingLevel(experience) < level)
+        {
+            var next = Math.BitIncrement(experience);
+
+            if (!double.IsFinite(next) || next <= experience)
+            {
+                throw new OverflowException(
+                    $"Could not calculate finite experience for level {level}.");
+            }
+
+            experience = next;
+        }
+
+        return experience;
     }
 
     /// <summary>
@@ -250,11 +274,14 @@ public sealed class HackingFormulas
     /// Calculates the maximum security reduction caused by
     /// weakening.
     /// </summary>
-    public double CalculateWeakenSecurityDecrease(int threads = 1)
+    public double CalculateWeakenSecurityDecrease(int threads = 1, int cores = 1)
     {
         ValidateThreads(threads);
+        ValidateCores(cores);
+        
+        var coreBonus = 1.0 + (cores - 1.0) / 16.0;
 
-        return balance.WeakenSecurityDecrease * threads;
+        return balance.WeakenSecurityDecrease * threads * coreBonus;
     }
 
     /// <summary>
@@ -264,6 +291,9 @@ public sealed class HackingFormulas
     {
         ArgumentNullException.ThrowIfNull(server);
         ValidateThreads(threads);
+        
+        if (server.BaseDifficulty <= 0)
+            return 0.0;
 
         var experiencePerThread =
             balance.BaseHackingExperience

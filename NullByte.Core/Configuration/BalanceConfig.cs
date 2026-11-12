@@ -123,7 +123,7 @@ public sealed record BalanceConfig
     /// <summary>
     /// Experience offset in the skill-from-experience formula.
     /// </summary>
-    public double SkillExperienceOffset { get; init; } = 534.5;
+    public double SkillExperienceOffset { get; init; } = 534.6;
 
     /// <summary>
     /// Level offset subtracted by the skill-from-experience formula.

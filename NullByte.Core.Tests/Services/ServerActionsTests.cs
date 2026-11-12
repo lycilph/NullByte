@@ -112,9 +112,9 @@ public sealed class ServerActionsTests
         var fixture = CreateFixture(randomValue: 0.75, startingSecurity: 2);
 
         /*
-         * Player level and required level are equal, while current
-         * security is twice minimum security. The resulting chance
-         * is therefore 0.5, so a roll of 0.75 fails.
+         * With hacking level 10, required level 10, and security 2,
+         * the Bitburner chance formula gives approximately 0.42.
+         * A roll of 0.75 therefore fails.
          */
         var initialServerMoney = fixture.Target.Money;
         var initialPlayerMoney = fixture.Player.Money;
