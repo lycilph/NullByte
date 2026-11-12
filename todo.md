@@ -1,11 +1,10 @@
 ﻿# Todo
 
-1. Fix diviations from bitburner formulas and constants
-2. Simplify tab-completion
-3. `nb`-API'et eksponerer `CancellationToken` på `Hack/Grow/Weaken/Sleep`. Sæt annullering pr. proces (M6), og lad `kill` virke implicit.
-4. Del kommandoerne op i grupper med automatisk arity/usage, og flyt dem til `NullByte.Shell`.
-5. Do another clean up round
-6. M6 milestone
+1. Simplify tab-completion
+2. `nb`-API'et eksponerer `CancellationToken` på `Hack/Grow/Weaken/Sleep`. Sæt annullering pr. proces (M6), og lad `kill` virke implicit.
+3. Del kommandoerne op i grupper med automatisk arity/usage, og flyt dem til `NullByte.Shell`.
+4. Do another clean up round
+5. M6 milestone
 
 
 --- Old stuff below ---
@@ -33,14 +32,6 @@ Jeg har læst designdokumentet og al kode undtagen detaljerne i testene og termi
 - **`IScriptOutput` (Core) og `IGameTerminal.WriteLine` (ConsoleUI) er det samme**, og `TerminalScriptOutput` er kun en adapter mellem dem. Lav én `IGameOutput` i Core.
 - **Tab-completion hårdkoder botnet** (`BotnetSubcommand`, `BotnetNodes`, `BotnetUpgradeKinds` i snapshot og motor). Det skalerer ikke til flere kommandoer. Lad hver kommando levere sin egen completer, så snapshot og `ArgumentCompletionKind` kan forsvinde.
 - **`edit` er stadig en stub:** den skriver et hårdkodet script til `test.cx` uanset argument, og der ligger udkommenteret kode. Ret den, eller fjern den, indtil WPF-editoren kommer. Der er også rester i `ConsoleUI.csproj` (`TempTests\`, `temp\`).
-
-### 5. Afvigelser fra designdokumentet
-
-- **Formler:** M2 krævede verifikation mod Bitburner, og formlerne er forenklede egne versioner. Hack-chance er `level/required × minSec/sec`, så den er 100 % ved niveau = krav, mens Bitburner ligger omkring 50 %. Varigheden bruger `max(1, required/level)`, så den falder **aldrig** med højere niveau. Der er altså ingen belønning for at levle ud over kravet. Det er en balance-/gameplayfejl, ikke kun en afvigelse.
-- **Division med nul:** `MinimumSecurity / Security` giver NaN, hvis begge er 0, og `Server` tillader `minimumSecurity = 0`. Kræv `> 0`.
-- **Compile-cache på kildehash** (4.5) er ikke lavet endnu. Det er fint til M5, men husk det til M6.
-- **`ScriptCompiler` refererer hele `TRUSTED_PLATFORM_ASSEMBLIES`.** Det er ok nu, men skal erstattes af en tilladelsesliste i M7. Gør det til en parameter nu, så skiftet bliver nemt.
-- **`nb`-API'et eksponerer `CancellationToken` på `Hack/Grow/Weaken/Sleep`.** Scriptforfatteren skal ikke se det. Sæt annullering pr. proces (M6), og lad `kill` virke implicit.
 
 ## Forslag til rækkefølge
 

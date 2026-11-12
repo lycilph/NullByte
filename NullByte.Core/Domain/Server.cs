@@ -29,7 +29,7 @@ public sealed class Server
             throw new ArgumentOutOfRangeException(nameof(startingMoney), "Starting money must be finite and between zero and maximum money.");
         if (!double.IsFinite(baseDifficulty) || baseDifficulty < minimumSecurity)
             throw new ArgumentOutOfRangeException(nameof(baseDifficulty), "Base difficulty must be finite and at least minimum security.");
-        if (!double.IsFinite(minimumSecurity) || minimumSecurity < 0)
+        if (!double.IsFinite(minimumSecurity) || minimumSecurity <= 0)
             throw new ArgumentOutOfRangeException(nameof(minimumSecurity), "Minimum security must be finite and non-negative.");
         if (!double.IsFinite(startingSecurity) || startingSecurity < minimumSecurity)
             throw new ArgumentOutOfRangeException(nameof(startingSecurity), "Starting security must be finite and at least minimum security.");
