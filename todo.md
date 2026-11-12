@@ -1,6 +1,7 @@
 ﻿# Todo
 
 1. Simplify tab-completion
+1. Make the command parser use the usage field on commands if they are not used correctly (and not a hardcoded thing)
 2. `nb`-API'et eksponerer `CancellationToken` på `Hack/Grow/Weaken/Sleep`. Sæt annullering pr. proces (M6), og lad `kill` virke implicit.
 3. Del kommandoerne op i grupper med automatisk arity/usage, og flyt dem til `NullByte.Shell`.
 4. Do another clean up round

@@ -6,19 +6,32 @@
 /// </summary>
 public sealed record CompletionSnapshot(
     IReadOnlyList<CommandCompletionInfo> Commands,
-    IReadOnlyList<string> ConnectableServers,
-    IReadOnlyList<string> KnownServers,
-    IReadOnlyList<string> BotnetSubcommands,
-    IReadOnlyList<string> BotnetNodes,
-    IReadOnlyList<string> BotnetUpgradeKinds)
+    IReadOnlyDictionary<CompletionKind, IReadOnlyList<string>> Values)
 {
-    public static CompletionSnapshot Empty { get; } = new([], [], [], [], [], []);
+    public static CompletionSnapshot Empty { get; } =
+        new([], new Dictionary<CompletionKind, IReadOnlyList<string>>());
+
+    public IReadOnlyList<string> GetValues(CompletionKind kind)
+    {
+        return Values.TryGetValue(kind, out var values)
+             ? values : [];
+    }
 }
 
-/// <param name="Name">The command name or alias.</param>
-/// <param name="ArgumentCompletion">What its first argument completes to.</param>
-/// <param name="Hidden">Hidden commands are never suggested, but still drive argument completion.</param>
+/// <summary>
+/// Completion metadata for a registered command or alias.
+/// </summary>
+/// <param name="Name">
+/// The command name or alias.
+/// </param>
+/// <param name="Completions">
+/// Completion definitions for its arguments.
+/// </param>
+/// <param name="Hidden">
+/// Hidden commands are never suggested, but can still provide
+/// argument completion when explicitly entered.
+/// </param>
 public sealed record CommandCompletionInfo(
     string Name,
-    ArgumentCompletionKind ArgumentCompletion,
+    IReadOnlyList<ArgumentCompletion> Completions,
     bool Hidden = false);

@@ -37,49 +37,78 @@ public sealed class CompletionCatalog : ICompletionProvider
         var player = gameState.Player;
         var network = gameState.Network;
 
+        var commands =
+            BuildCommands();
+
+        var knownServers =
+            player.DiscoveredHostnames
+                .Select(hostname =>
+                    network.TryGetServer(
+                        hostname,
+                        out var server)
+                        ? server
+                        : null)
+                .OfType<Server>()
+                .Select(server => server.Hostname)
+                .ToArray();
+
+        var connectableServers =
+            network
+                .GetNeighbors(player.CurrentHostname)
+                .Where(server =>
+                    player.DiscoveredHostnames.Contains(
+                        server.Hostname))
+                .Select(server => server.Hostname)
+                .ToArray();
+
+        var files =
+            gameState.FileSystem
+                .ListFiles(player.CurrentHostname)
+                .ToArray();
+
+        var botnetNodes =
+            Enumerable
+                .Range(1, gameState.Botnet.NodeCount)
+                .Select(node => node.ToString())
+                .ToArray();
+
+        var values = new Dictionary<CompletionKind, IReadOnlyList<string>>
+            {
+                [CompletionKind.ConnectableServer] = connectableServers,
+                [CompletionKind.KnownServer] = knownServers,
+                [CompletionKind.Filename] = files,
+                [CompletionKind.BotnetNode] = botnetNodes
+            };
+
+        snapshot = new CompletionSnapshot(commands, values);
+    }
+
+    private IReadOnlyList<CommandCompletionInfo> BuildCommands()
+    {
         var commands = new List<CommandCompletionInfo>();
 
         foreach (var command in registry.Commands)
         {
-            // Debug commands stay hidden (as in 'help'), except 'debug' itself.
-            var hidden = command.Debug && !command.Name.Equals("debug", StringComparison.OrdinalIgnoreCase);
+            var hidden =
+                command.Debug &&
+                !command.Name.Equals("debug",StringComparison.OrdinalIgnoreCase);
 
-            commands.Add(new CommandCompletionInfo(command.Name, command.ArgumentCompletion, hidden));
+            commands.Add(new CommandCompletionInfo(command.Name, command.Completions, hidden));
 
             foreach (var alias in command.Aliases)
-                commands.Add(new CommandCompletionInfo(alias, command.ArgumentCompletion, hidden));
+            {
+                commands.Add(new CommandCompletionInfo(alias, command.Completions, hidden));
+            }
         }
 
-        // 'exit' and 'quit' are handled by Program, not by the registry.
+        // 'exit' and 'quit' are handled by Program,
+        // rather than CommandRegistry.
         foreach (var exit in ExitCommands)
-            commands.Add(new CommandCompletionInfo(exit, ArgumentCompletionKind.None));
+        {
+            commands.Add(new CommandCompletionInfo(exit, []));
+        }
 
-        var known = player.DiscoveredHostnames
-            .Select(id => network.TryGetServer(id, out var server) ? server : null)
-            .OfType<Server>()
-            .ToArray();
-
-        var connectable = network.GetNeighbors(player.CurrentHostname)
-            .Where(server => player.DiscoveredHostnames.Contains(server.Hostname))
-            .Select(server => server.Hostname)
-            .ToArray();
-
-        var botnetSubcommands = new[] {"status", "buy", "upgrade"};
-
-        var botnetNodes = Enumerable
-            .Range(1, gameState.Botnet.NodeCount)
-            .Select(node => node.ToString())
-            .ToArray();
-
-        var botnetUpgradeKinds = new[] {"level", "ram", "core"};
-
-        snapshot = new CompletionSnapshot(
-            commands,
-            connectable,
-            known.Select(server => server.Hostname).ToArray(),
-            botnetSubcommands,
-            botnetNodes,
-            botnetUpgradeKinds);
+        return commands;
     }
 
     public CompletionResult Complete(string input, int cursorIndex)

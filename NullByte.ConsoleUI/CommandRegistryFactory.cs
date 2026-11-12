@@ -110,7 +110,13 @@ public static class CommandRegistryFactory
                 "run",
                 "run <script> [args...]",
                 "Run a script.",
-                RunScriptAsync));
+                RunScriptAsync)
+            {
+                Completions =
+                [
+                    new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename}
+                ]
+            });
 
         registry.Register(
             new CommandDefinition(
@@ -125,7 +131,12 @@ public static class CommandRegistryFactory
                 "analyze [hostname]",
                 "Show server information.",
                 AnalyzeAsync)
-            { ArgumentCompletion = ArgumentCompletionKind.KnownServer });
+            {
+                Completions =
+                [ 
+                    new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.KnownServer }
+                ]
+            });
 
         registry.Register(
             new CommandDefinition(
@@ -133,7 +144,12 @@ public static class CommandRegistryFactory
                 "connect <hostname>",
                 "Connect to a discovered server.",
                 ConnectAsync)
-            { ArgumentCompletion = ArgumentCompletionKind.ConnectableServer });
+            {
+                Completions =
+                [
+                    new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.ConnectableServer }
+                ]
+            });
 
         registry.Register(
             new CommandDefinition(
@@ -176,7 +192,16 @@ public static class CommandRegistryFactory
                 "botnet <subcommand>",
                 "Manage your botnet (status, buy, upgrade).",
                 BotnetAsync)
-            { ArgumentCompletion = ArgumentCompletionKind.BotnetSubcommand });
+            {
+                Completions =
+                [
+                    new ArgumentCompletion { ArgumentIndex = 0, Values = ["status","buy", "upgrade"]},
+                    new ArgumentCompletion { ArgumentIndex = 1, Kind = CompletionKind.BotnetNode,
+                        When = new CompletionCondition(ArgumentIndex: 0,Value: "upgrade")},
+                    new ArgumentCompletion { ArgumentIndex = 2, Values = ["level", "ram", "core"],
+                        When = new CompletionCondition(ArgumentIndex: 0, Value: "upgrade")}
+                ]
+            });
 
         registry.Register(
             new CommandDefinition(

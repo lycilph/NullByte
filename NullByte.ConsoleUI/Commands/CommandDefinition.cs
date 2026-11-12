@@ -33,6 +33,8 @@ public sealed class CommandDefinition
     /// <summary>Is this a debugging command.</summary>
     public bool Debug { get; init; } = false;
 
-    /// <summary>What the command's first argument can be tab-completed to.</summary>
-    public ArgumentCompletionKind ArgumentCompletion { get; init; } = ArgumentCompletionKind.None;
+    /// <summary>
+    /// Describes tab completion for the command's positional arguments.
+    /// </summary>
+    public IReadOnlyList<ArgumentCompletion> Completions { get; init; } = [];
 }
