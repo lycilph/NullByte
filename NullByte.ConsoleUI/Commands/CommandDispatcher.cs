@@ -34,6 +34,12 @@ public sealed class CommandDispatcher
         }
 
         var commandArguments = arguments.Skip(1).ToArray();
+        if (!command!.ArgumentsCountCheck(commandArguments.Length))
+        {
+            context.Terminal.WriteLine($"Usage: {command!.Usage}");
+            return false;
+        }
+
         await command!.Handler(context, commandArguments);
 
         return true;

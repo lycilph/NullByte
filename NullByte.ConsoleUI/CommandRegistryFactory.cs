@@ -83,35 +83,57 @@ public static class CommandRegistryFactory
                 "ls",
                 "List files.",
                 ListFilesAsync));
-      
+
         registry.Register(
             new CommandDefinition(
                 "cat",
                 "cat <filename>",
                 "Display a file's contents.",
-                CatAsync));
+                CatAsync)
+            {
+                ArgumentsCountCheck = c => c == 1,
+                Completions =
+                [
+                    new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename}
+                ]
+            });
 
         registry.Register(
             new CommandDefinition(
                 "rm",
                 "rm <filename>",
                 "Delete a file.",
-                RemoveFileAsync));
+                RemoveFileAsync)
+            {
+                ArgumentsCountCheck = c => c == 1,
+                Completions =
+                [
+                    new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename}
+                ]
+            });
 
         registry.Register(
             new CommandDefinition(
                 "edit",
                 "edit <filename>",
                 "Create or replace a file.",
-                EditFileAsync));
+                EditFileAsync)
+            {
+                ArgumentsCountCheck = c => c == 1,
+                Completions =
+                [
+                    new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename}
+                ]
+            });
 
         registry.Register(
             new CommandDefinition(
                 "run",
-                "run <script> [args...]",
+                "run <filename> [args...]",
                 "Run a script.",
                 RunScriptAsync)
             {
+                ArgumentsCountCheck = c => c >= 1,
                 Completions =
                 [
                     new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename}
@@ -132,8 +154,9 @@ public static class CommandRegistryFactory
                 "Show server information.",
                 AnalyzeAsync)
             {
+                ArgumentsCountCheck = c => c == 0 || c == 1,
                 Completions =
-                [ 
+                [
                     new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.KnownServer }
                 ]
             });
@@ -145,6 +168,7 @@ public static class CommandRegistryFactory
                 "Connect to a discovered server.",
                 ConnectAsync)
             {
+                ArgumentsCountCheck = c => c == 1,
                 Completions =
                 [
                     new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.ConnectableServer }
@@ -193,6 +217,7 @@ public static class CommandRegistryFactory
                 "Manage your botnet (status, buy, upgrade).",
                 BotnetAsync)
             {
+                ArgumentsCountCheck = c => c >= 0,
                 Completions =
                 [
                     new ArgumentCompletion { ArgumentIndex = 0, Values = ["status","buy", "upgrade"]},
@@ -210,6 +235,14 @@ public static class CommandRegistryFactory
                 "Clear the terminal.",
                 ClearAsync,
                 "cls"));
+
+        registry.Register(
+            new CommandDefinition(
+               "exit",
+               "exit",
+               "Exit NullByte.",
+               (c, a) => Task.CompletedTask,
+               "quit"));
     }
 
     // Register debug commands
@@ -218,12 +251,6 @@ public static class CommandRegistryFactory
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: debug");
-            return Task.CompletedTask;
-        }
-
         context.Terminal.WriteLine("Debugging commands:");
         foreach (var command in context.CommandRegistry.Commands.Where(c => c.Debug))
             context.Terminal.WriteLine($"  {command.Usage,-22} {command.Description}");
@@ -235,12 +262,6 @@ public static class CommandRegistryFactory
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: time");
-            return Task.CompletedTask;
-        }
-
         var clock = context.Clock;
         context.Terminal.WriteLine($"Game time: {clock.Elapsed.TotalSeconds:F3}s");
 
@@ -251,12 +272,6 @@ public static class CommandRegistryFactory
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: thread");
-            return Task.CompletedTask;
-        }
-
         context.Terminal.WriteLine($"Thread ID: {Environment.CurrentManagedThreadId}");
         context.Terminal.WriteLine($"Is game thread: {context.GameLoop.IsGameThread}");
 
@@ -267,12 +282,6 @@ public static class CommandRegistryFactory
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: demo");
-            return;
-        }
-
         var terminal = context.Terminal;
         try
         {
@@ -313,16 +322,9 @@ public static class CommandRegistryFactory
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: help");
-            return Task.CompletedTask;
-        }
-
         context.Terminal.WriteLine("Available commands:");
         foreach (var command in context.CommandRegistry.Commands.Where(c => !c.Debug))
             context.Terminal.WriteLine($"  {command.Usage,-22} {command.Description}");
-        context.Terminal.WriteLine("  exit                   Exit NullByte");
 
         return Task.CompletedTask;
     }
@@ -331,12 +333,6 @@ public static class CommandRegistryFactory
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: money");
-            return Task.CompletedTask;
-        }
-
         context.Terminal.WriteLine($"Money: ${context.GameState.Player.Money:N2}");
 
         return Task.CompletedTask;
@@ -346,12 +342,6 @@ public static class CommandRegistryFactory
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: status");
-            return Task.CompletedTask;
-        }
-
         var server = context.NetworkService.GetCurrentServer();
         var player = context.GameState.Player;
         var hackingLevel = context.HackingFormulas.CalculateHackingLevel(player.HackingExperience);
@@ -370,12 +360,6 @@ public static class CommandRegistryFactory
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: ls");
-            return Task.CompletedTask;
-        }
-
         var server = context.NetworkService.GetCurrentServer();
         var files = context.GameState.FileSystem.ListFiles(server.Hostname);
 
@@ -395,12 +379,6 @@ public static class CommandRegistryFactory
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 1)
-        {
-            context.Terminal.WriteLine("Usage: cat <filename>");
-            return Task.CompletedTask;
-        }
-
         var server = context.NetworkService.GetCurrentServer();
 
         if (!context.GameState.FileSystem.TryReadFile(server.Hostname, arguments[0], out var content))
@@ -419,12 +397,6 @@ public static class CommandRegistryFactory
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 1)
-        {
-            context.Terminal.WriteLine("Usage: rm <filename>");
-            return Task.CompletedTask;
-        }
-
         var server = context.NetworkService.GetCurrentServer();
         var fileName = arguments[0];
 
@@ -444,12 +416,6 @@ public static class CommandRegistryFactory
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 1)
-        {
-            context.Terminal.WriteLine("Usage: edit <filename>");
-            return Task.CompletedTask;
-        }
-
         var server = context.NetworkService.GetCurrentServer();
         var fileName = "test.cx"; // arguments[0];
         var source =
@@ -497,12 +463,6 @@ nb.Print($""Operation done"");";
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count == 0)
-        {
-            context.Terminal.WriteLine("Usage: run <script> [args...]");
-            return Task.CompletedTask;
-        }
-
         var server = context.NetworkService.GetCurrentServer();
         var fileName = arguments[0];
         var scriptArguments = arguments.Skip(1).ToArray();
@@ -537,12 +497,6 @@ nb.Print($""Operation done"");";
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: scan");
-            return Task.CompletedTask;
-        }
-
         var currentServer = context.NetworkService.GetCurrentServer();
         var servers = context.NetworkService.Scan();
 
@@ -564,12 +518,6 @@ nb.Print($""Operation done"");";
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count > 1)
-        {
-            context.Terminal.WriteLine("Usage: analyze [hostname]");
-            return Task.CompletedTask;
-        }
-
         var server =
             arguments.Count == 1
                 ? context.NetworkService.GetServer(arguments[0])
@@ -597,12 +545,6 @@ nb.Print($""Operation done"");";
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 1)
-        {
-            context.Terminal.WriteLine("Usage: connect <hostname>");
-            return Task.CompletedTask;
-        }
-
         var result = context.NetworkService.Connect(arguments[0]);
         if (!result.Succeeded)
         {
@@ -619,12 +561,6 @@ nb.Print($""Operation done"");";
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: home");
-            return Task.CompletedTask;
-        }
-
         var result = context.NetworkService.GoHome();
 
         context.Terminal.SetPrompt($"root@{result.Server!.Hostname} $ ");
@@ -637,12 +573,6 @@ nb.Print($""Operation done"");";
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: nuke");
-            return Task.CompletedTask;
-        }
-
         var server = context.NetworkService.GetCurrentServer();
         if (server.HasRootAccess)
         {
@@ -670,12 +600,6 @@ nb.Print($""Operation done"");";
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: hack");
-            return;
-        }
-
         var server = context.NetworkService.GetCurrentServer();
 
         var player = context.GameState.Player;
@@ -711,12 +635,6 @@ nb.Print($""Operation done"");";
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: grow");
-            return;
-        }
-
         var server = context.NetworkService.GetCurrentServer();
 
         var player = context.GameState.Player;
@@ -755,12 +673,6 @@ nb.Print($""Operation done"");";
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: weaken");
-            return;
-        }
-
         var server = context.NetworkService.GetCurrentServer();
 
         var player = context.GameState.Player;
@@ -798,12 +710,6 @@ nb.Print($""Operation done"");";
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
-        if (arguments.Count != 0)
-        {
-            context.Terminal.WriteLine("Usage: clear/cls");
-            return Task.CompletedTask;
-        }
-
         context.Terminal.Clear();
 
         return Task.CompletedTask;

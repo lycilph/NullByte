@@ -522,9 +522,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
         Console.CursorVisible = true;
     }
 
-    private List<string> BuildVisibleOutput(
-        int usableWidth,
-        int outputHeight)
+    private List<string> BuildVisibleOutput(int usableWidth, int outputHeight)
     {
         if (outputHeight == 0)
             return [];

@@ -30,11 +30,11 @@ public sealed class CommandDefinition
     public Func<CommandContext, IReadOnlyList<string>, Task> Handler { get; }
     public IReadOnlyList<string> Aliases { get; }
 
+    /// <summary>Checks if the number of arguments are correct</summary>
+    public Func<int, bool> ArgumentsCountCheck { get; init; } = c => c == 0;
+
     /// <summary>Is this a debugging command.</summary>
     public bool Debug { get; init; } = false;
-
-    /// <summary>
-    /// Describes tab completion for the command's positional arguments.
-    /// </summary>
+    /// <summary>Describes tab completion for the command's positional arguments.</summary>
     public IReadOnlyList<ArgumentCompletion> Completions { get; init; } = [];
 }

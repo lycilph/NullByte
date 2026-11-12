@@ -3,7 +3,6 @@
     <File Path="AIPrompts.md" />
     <File Path="DevJournal.md" />
     <File Path="NullByte Game Design Document.md" />
-    <File Path="tab-completion.md" />
     <File Path="todo.md" />
   </Folder>
   <Folder Name="/src/">
