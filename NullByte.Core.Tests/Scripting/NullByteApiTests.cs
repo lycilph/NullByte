@@ -223,7 +223,7 @@ public sealed class NullByteApiTests
             network.AddServer(Target);
 
             var player = new Player(
-                homeServerId: home.Id,
+                homeHostname: home.Hostname,
                 startingMoney: 1_000);
 
             GameState = new GameState(player, network);
@@ -280,7 +280,6 @@ public sealed class NullByteApiTests
             double startingSecurity)
         {
             return new Server(
-                id,
                 hostname,
                 maximumMoney,
                 startingMoney,

@@ -50,9 +50,9 @@ public sealed class ScriptService
     /// script. Player scripts may contain infinite asynchronous loops, so the
     /// terminal must remain available after the script starts.
     /// </remarks>
-    public ScriptStartResult Start(string serverId, string fileName, IReadOnlyList<string> args)
+    public ScriptStartResult Start(string hostname, string fileName, IReadOnlyList<string> args)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(serverId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
         ArgumentNullException.ThrowIfNull(args);
 
@@ -61,7 +61,7 @@ public sealed class ScriptService
         if (IsScriptRunning)
             return ScriptStartResult.Failure("A script is already running.");
 
-        if (!gameState.FileSystem.TryReadFile(serverId, fileName, out var source))
+        if (!gameState.FileSystem.TryReadFile(hostname, fileName, out var source))
             return ScriptStartResult.Failure($"File not found: {fileName}");
 
         var compilation = compiler.Compile(source!, fileName);

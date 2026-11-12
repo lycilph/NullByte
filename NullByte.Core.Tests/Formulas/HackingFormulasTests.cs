@@ -519,7 +519,6 @@ public sealed class HackingFormulasTests
         double maximumRam = 8)
     {
         return new Server(
-            id: "n00dles",
             hostname: "n00dles",
             maximumMoney: maximumMoney,
             startingMoney: startingMoney,

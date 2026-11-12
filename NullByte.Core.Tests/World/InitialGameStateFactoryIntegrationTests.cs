@@ -48,23 +48,23 @@ public sealed class InitialGameStateFactoryIntegrationTests
         // Arrange
         var gameState = InitialGameStateFactory.Create();
 
-        var startServerId = gameState.Player.CurrentHostname;
+        var startHostname = gameState.Player.CurrentHostname;
 
         // Act
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var pending = new Queue<string>();
 
-        visited.Add(startServerId);
-        pending.Enqueue(startServerId);
+        visited.Add(startHostname);
+        pending.Enqueue(startHostname);
 
         while (pending.Count > 0)
         {
-            var serverId = pending.Dequeue();
+            var hostname = pending.Dequeue();
 
-            foreach (var neighbor in gameState.Network.GetNeighbors(serverId))
+            foreach (var neighbor in gameState.Network.GetNeighbors(hostname))
             {
-                if (visited.Add(neighbor.Id))
-                    pending.Enqueue(neighbor.Id);
+                if (visited.Add(neighbor.Hostname))
+                    pending.Enqueue(neighbor.Hostname);
             }
         }
 
@@ -87,7 +87,7 @@ public sealed class InitialGameStateFactoryIntegrationTests
         var balance = new BalanceConfig();
         var formulas = new HackingFormulas(balance);
 
-        var server = gameState.Network.GetServer("server-n00dles");
+        var server = gameState.Network.GetServer("n00dles");
         var experience = formulas.CalculateHackingExperience(server);
 
         // Act
@@ -121,7 +121,7 @@ public sealed class InitialGameStateFactoryIntegrationTests
 
         const int maximumReasonableHackCount = 110_000;
 
-        var server = gameState.Network.GetServer("server-n00dles");
+        var server = gameState.Network.GetServer("n00dles");
         var experience = formulas.CalculateHackingExperience(server);
 
         // Act

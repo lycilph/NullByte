@@ -17,12 +17,10 @@ public sealed class NetworkLoaderTests
         var home = network.GetServer("home");
         var target = network.GetServer("target");
 
-        Assert.Equal("home", home.Id);
         Assert.Equal("home", home.Hostname);
         Assert.True(home.HasRootAccess);
 
-        Assert.Equal("target", target.Id);
-        Assert.Equal("target-server", target.Hostname);
+        Assert.Equal("target", target.Hostname);
         Assert.Equal(100_000, target.MaximumMoney);
         Assert.Equal(50_000, target.Money);
         Assert.Equal(1, target.MinimumSecurity);
@@ -41,7 +39,7 @@ public sealed class NetworkLoaderTests
         var neighbors = network.GetNeighbors("home");
         var target = Assert.Single(neighbors);
 
-        Assert.Equal("target", target.Id);
+        Assert.Equal("target", target.Hostname);
     }
 
     [Fact]
@@ -52,7 +50,7 @@ public sealed class NetworkLoaderTests
         var neighbors = network.GetNeighbors("target");
         var home = Assert.Single(neighbors);
 
-        Assert.Equal("home", home.Id);
+        Assert.Equal("home", home.Hostname);
     }
 
     [Fact]
@@ -68,7 +66,7 @@ public sealed class NetworkLoaderTests
         var target = network.GetServer("target");
 
         Assert.Equal("home", home.Hostname);
-        Assert.Equal("target-server", target.Hostname);
+        Assert.Equal("target", target.Hostname);
     }
 
     [Theory]
@@ -123,24 +121,6 @@ public sealed class NetworkLoaderTests
     }
 
     [Fact]
-    public void Load_WithDuplicateServerId_Throws()
-    {
-        var loader = new NetworkLoader();
-        var definition = CreateValidDefinition();
-
-        definition = definition with
-        {
-            Servers =
-            [
-                CreateServerDefinition(id: "duplicate", hostname: "first"),
-                CreateServerDefinition(id: "duplicate", hostname: "second")
-            ]
-        };
-
-        Assert.Throws<InvalidOperationException>(() => loader.Load(definition));
-    }
-
-    [Fact]
     public void Load_WithDuplicateHostname_Throws()
     {
         var loader = new NetworkLoader();
@@ -150,8 +130,8 @@ public sealed class NetworkLoaderTests
         {
             Servers =
             [
-                CreateServerDefinition(id: "first", hostname: "duplicate"),
-                CreateServerDefinition(id: "second", hostname: "duplicate")
+                CreateServerDefinition(hostname: "n00dles"),
+                CreateServerDefinition(hostname: "n00dles")
             ]
         };
 
@@ -169,7 +149,6 @@ public sealed class NetworkLoaderTests
             Servers =
             [
                 CreateServerDefinition(
-                    id: "invalid",
                     hostname: "invalid",
                     maximumMoney: 100,
                     startingMoney: 200)
@@ -291,14 +270,12 @@ public sealed class NetworkLoaderTests
             Servers =
             [
                 CreateServerDefinition(
-                    id: "home",
                     hostname: "home",
                     maximumMoney: 0,
                     startingMoney: 0,
                     hasRootAccess: true),
                 CreateServerDefinition(
-                    id: "target",
-                    hostname: "target-server")
+                    hostname: "target")
             ],
             Connections =
             [
@@ -312,7 +289,6 @@ public sealed class NetworkLoaderTests
     }
 
     private static ServerDefinition CreateServerDefinition(
-        string id,
         string hostname,
         double maximumMoney = 100_000,
         double startingMoney = 50_000,
@@ -325,7 +301,6 @@ public sealed class NetworkLoaderTests
     {
         return new ServerDefinition
         {
-            Id = id,
             Hostname = hostname,
             MaximumMoney = maximumMoney,
             StartingMoney = startingMoney,
@@ -342,7 +317,6 @@ public sealed class NetworkLoaderTests
         {
           "servers": [
             {
-              "id": "home",
               "hostname": "home",
               "maximumMoney": 0,
               "startingMoney": 0,
@@ -354,8 +328,7 @@ public sealed class NetworkLoaderTests
               "hasRootAccess": true
             },
             {
-              "id": "target",
-              "hostname": "target-server",
+              "hostname": "target",
               "maximumMoney": 100000,
               "startingMoney": 50000,
               "minimumSecurity": 1,

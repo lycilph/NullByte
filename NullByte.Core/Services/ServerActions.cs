@@ -43,13 +43,13 @@ public sealed class ServerActions
     /// Attempts to steal money from a server.
     /// </summary>
     public async Task<HackResult> HackAsync(
-        string serverId,
+        string hostname,
         int threads = 1,
         CancellationToken cancellationToken = default)
     {
         ValidateThreads(threads);
 
-        var server = ResolveTarget(serverId);
+        var server = ResolveTarget(hostname);
 
         if (!server.HasRootAccess)
             return HackResult.Failed("Hack failed: root access required.");
@@ -92,13 +92,13 @@ public sealed class ServerActions
     /// Increases a server's available money.
     /// </summary>
     public async Task<GrowResult> GrowAsync(
-        string serverId,
+        string hostname,
         int threads = 1,
         CancellationToken cancellationToken = default)
     {
         ValidateThreads(threads);
 
-        var server = ResolveTarget(serverId);
+        var server = ResolveTarget(hostname);
 
         if (!server.HasRootAccess)
             return GrowResult.Failed("Grow failed: root access required.");
@@ -129,13 +129,13 @@ public sealed class ServerActions
     /// Reduces a server's security level.
     /// </summary>
     public async Task<WeakenResult> WeakenAsync(
-        string serverId,
+        string hostname,
         int threads = 1,
         CancellationToken cancellationToken = default)
     {
         ValidateThreads(threads);
 
-        var server = ResolveTarget(serverId);
+        var server = ResolveTarget(hostname);
 
         if (!server.HasRootAccess)
             return WeakenResult.Failed("Weaken failed: root access required.");
@@ -158,32 +158,13 @@ public sealed class ServerActions
             Duration: duration);
     }
 
-    private Server ResolveTarget(string serverId)
+    private Server ResolveTarget(string hostname)
     {
-        if (string.IsNullOrWhiteSpace(serverId))
-            throw new ArgumentException("The target server ID cannot be empty.", nameof(serverId));
+        if (string.IsNullOrWhiteSpace(hostname))
+            throw new ArgumentException("The target hostname cannot be empty.", nameof(hostname));
 
-        return gameState.Network.GetServer(serverId);
+        return gameState.Network.GetServer(hostname);
     }
-
-    //private void ValidateHackingLevel(Server server)
-    //{
-    //    var hackingLevel = formulas.CalculateHackingLevel(gameState.Player.HackingExperience);
-
-    //    if (hackingLevel < server.RequiredHackingLevel)
-    //    {
-    //        throw new InvalidOperationException(
-    //            $"Hacking level {hackingLevel} is too low to hack " +
-    //            $"server '{server.Hostname}'. Required level: " +
-    //            $"{server.RequiredHackingLevel}.");
-    //    }
-    //}
-
-    //private static void ValidateRootAccess(Server server)
-    //{
-    //    if (!server.HasRootAccess)
-    //        throw new InvalidOperationException($"Root access is required for server '{server.Hostname}'.");
-    //}
 
     private static void ValidateThreads(int threads)
     {

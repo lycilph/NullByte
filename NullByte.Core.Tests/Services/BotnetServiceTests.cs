@@ -168,7 +168,6 @@ public sealed class BotnetServiceTests
     private static (GameState State, BotnetService Service) Create(double money, BalanceConfig? balance = null)
     {
         var home = new Server(
-            id: "home",
             hostname: "home",
             maximumMoney: 0,
             startingMoney: 0,

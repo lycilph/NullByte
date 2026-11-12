@@ -233,7 +233,6 @@ public sealed class RunCommandTests
             var balance = new BalanceConfig();
 
             Home = new Server(
-                id: "home",
                 hostname: "home",
                 maximumMoney: 0,
                 startingMoney: 0,
@@ -314,7 +313,7 @@ public sealed class RunCommandTests
 
         public void WriteScript(string fileName, string source)
         {
-            GameState.FileSystem.WriteFile(Home.Id, fileName, source);
+            GameState.FileSystem.WriteFile(Home.Hostname, fileName, source);
         }
 
         public Task RunAsync(string commandLine)

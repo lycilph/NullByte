@@ -38,7 +38,7 @@ public sealed class BotnetEarlyGameTests
             var target = ChooseHackTarget(gameState, hackingFormulas);
             var duration = hackingFormulas.CalculateHackDuration(player, target);
 
-            var hack = actions.HackAsync(target.Id);
+            var hack = actions.HackAsync(target.Hostname);
 
             // The botnet keeps paying while the player waits for the hack.
             Advance(clock, scheduler, system, duration);
@@ -88,7 +88,7 @@ public sealed class BotnetEarlyGameTests
 
         foreach (var server in gameState.Network.Servers)
         {
-            if (server.Id == player.HomeHostname || !server.TryGainRootAccess(level))
+            if (server.Hostname == player.HomeHostname || !server.TryGainRootAccess(level))
                 continue;
 
             var chance = formulas.CalculateHackChance(player, server);

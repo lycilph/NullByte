@@ -26,7 +26,6 @@ public sealed class ScriptAcceptanceTests
                 balance));
 
         var home = new Server(
-            id: "home",
             hostname: "home",
             maximumMoney: 0,
             startingMoney: 0,
@@ -38,7 +37,6 @@ public sealed class ScriptAcceptanceTests
             hasRootAccess: true);
 
         var target = new Server(
-            id: "n00dles",
             hostname: "n00dles",
             maximumMoney: 1_000_000,
             startingMoney: 1_000_000,
@@ -52,7 +50,7 @@ public sealed class ScriptAcceptanceTests
         var network = new Network();
         network.AddServer(home);
         network.AddServer(target);
-        network.Connect(home.Id, target.Id);
+        network.Connect(home.Hostname, target.Hostname);
 
         var gameState = new GameState(player, network);
         var clock = new FakeGameClock();

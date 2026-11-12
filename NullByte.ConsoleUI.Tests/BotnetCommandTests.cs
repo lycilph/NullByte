@@ -150,7 +150,6 @@ public sealed class BotnetCommandTests
             balance ??= new BalanceConfig();
 
             var home = new Server(
-                id: "home",
                 hostname: "home",
                 maximumMoney: 0,
                 startingMoney: 0,

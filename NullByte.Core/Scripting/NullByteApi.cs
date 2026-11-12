@@ -47,7 +47,7 @@ public sealed class NullByteApi : INullByteApi
         var server = GetServer(hostname);
 
         return _serverActions.HackAsync(
-            server.Id,
+            server.Hostname,
             threads: 1,
             cancellationToken);
     }
@@ -57,7 +57,7 @@ public sealed class NullByteApi : INullByteApi
         var server = GetServer(hostname);
 
         return _serverActions.GrowAsync(
-            server.Id,
+            server.Hostname,
             threads: 1,
             cancellationToken);
     }
@@ -67,7 +67,7 @@ public sealed class NullByteApi : INullByteApi
         var server = GetServer(hostname);
 
         return _serverActions.WeakenAsync(
-            server.Id,
+            server.Hostname,
             threads: 1,
             cancellationToken);
     }
@@ -96,7 +96,7 @@ public sealed class NullByteApi : INullByteApi
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
 
-        if (!_gameState.Network.TryFindServer(hostname, out var server))
+        if (!_gameState.Network.TryGetServer(hostname, out var server))
             throw new InvalidOperationException($"Server '{hostname}' does not exist.");
 
         return server!;

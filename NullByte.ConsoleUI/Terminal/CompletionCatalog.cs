@@ -60,7 +60,7 @@ public sealed class CompletionCatalog : ICompletionProvider
             .ToArray();
 
         var connectable = network.GetNeighbors(player.CurrentHostname)
-            .Where(server => player.DiscoveredHostnames.Contains(server.Id))
+            .Where(server => player.DiscoveredHostnames.Contains(server.Hostname))
             .Select(server => server.Hostname)
             .ToArray();
 

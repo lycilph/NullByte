@@ -39,7 +39,6 @@ public sealed class ServerTests
     {
         var server = CreateServer();
 
-        Assert.Equal("n00dles", server.Id);
         Assert.Equal("n00dles", server.Hostname);
 
         Assert.Equal(100_000, server.MaximumMoney);
@@ -243,7 +242,6 @@ public sealed class ServerTests
     private static Server CreateServer(int requiredHackingLevel = 10, bool hasRootAccess = false)
     {
         return new Server(
-            id: "n00dles",
             hostname: "n00dles",
             maximumMoney: 100_000,
             startingMoney: 50_000,

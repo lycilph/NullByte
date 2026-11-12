@@ -352,7 +352,7 @@ public static class CommandRegistryFactory
         }
 
         var server = context.NetworkService.GetCurrentServer();
-        var files = context.GameState.FileSystem.ListFiles(server.Id);
+        var files = context.GameState.FileSystem.ListFiles(server.Hostname);
 
         if (files.Count == 0)
         {
@@ -378,7 +378,7 @@ public static class CommandRegistryFactory
 
         var server = context.NetworkService.GetCurrentServer();
 
-        if (!context.GameState.FileSystem.TryReadFile(server.Id, arguments[0], out var content))
+        if (!context.GameState.FileSystem.TryReadFile(server.Hostname, arguments[0], out var content))
         {
             context.Terminal.WriteLine($"File not found: {arguments[0]}");
 
@@ -403,7 +403,7 @@ public static class CommandRegistryFactory
         var server = context.NetworkService.GetCurrentServer();
         var fileName = arguments[0];
 
-        if (!context.GameState.FileSystem.DeleteFile(server.Id, fileName))
+        if (!context.GameState.FileSystem.DeleteFile(server.Hostname, fileName))
         {
             context.Terminal.WriteLine($"File not found: {fileName}");
 
@@ -461,7 +461,7 @@ nb.Print($""Operation done"");";
 //    nb.Print($""Operation done"");
 //}";
 
-        context.GameState.FileSystem.WriteFile(server.Id, fileName, source);
+        context.GameState.FileSystem.WriteFile(server.Hostname, fileName, source);
 
         context.Terminal.WriteLine($"Saved {fileName}.");
 
@@ -483,7 +483,7 @@ nb.Print($""Operation done"");";
         var scriptArguments = arguments.Skip(1).ToArray();
 
         var result = context.ScriptService.Start(
-            server.Id,
+            server.Hostname,
             fileName,
             scriptArguments);
 
@@ -668,7 +668,7 @@ nb.Print($""Operation done"");";
             context.Terminal,
             async () =>
             {
-                var result = await context.ServerActions.HackAsync(server.Id, threads: 1, context.Terminal.StoppingToken);
+                var result = await context.ServerActions.HackAsync(server.Hostname, threads: 1, context.Terminal.StoppingToken);
                 context.Terminal.StopProgress();
 
                 if (result.Succeeded)
@@ -709,7 +709,7 @@ nb.Print($""Operation done"");";
             context.Terminal,
             async () =>
             {
-                var result = await context.ServerActions.GrowAsync(server.Id, threads: 1, context.Terminal.StoppingToken);
+                var result = await context.ServerActions.GrowAsync(server.Hostname, threads: 1, context.Terminal.StoppingToken);
                 context.Terminal.StopProgress();
 
                 if (result.Succeeded)
@@ -753,7 +753,7 @@ nb.Print($""Operation done"");";
             context.Terminal,
             async () =>
             {
-                var result = await context.ServerActions.WeakenAsync(server.Id, threads: 1, context.Terminal.StoppingToken);
+                var result = await context.ServerActions.WeakenAsync(server.Hostname, threads: 1, context.Terminal.StoppingToken);
                 context.Terminal.StopProgress();
 
                 if (result.Succeeded)

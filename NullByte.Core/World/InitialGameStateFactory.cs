@@ -4,7 +4,7 @@ namespace NullByte.Core.World;
 
 public static class InitialGameStateFactory
 {
-    private const string HomeServerId = "home";
+    private const string HomeHostname = "home";
     private const double StartingMoney = 1000;
 
     private static readonly string NetworkDefinitionPath = Path.Combine("Data", "initial-network.json");
@@ -14,7 +14,7 @@ public static class InitialGameStateFactory
         var network = LoadNetwork();
 
         var player = new Player(
-            homeHostname: HomeServerId,
+            homeHostname: HomeHostname,
             startingMoney: StartingMoney);
 
         return new GameState(player, network);

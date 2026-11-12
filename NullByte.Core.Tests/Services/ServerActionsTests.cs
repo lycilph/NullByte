@@ -15,7 +15,7 @@ public sealed class ServerActionsTests
         var fixture = CreateFixture(randomValue: 0);
 
         var duration = fixture.Formulas.CalculateHackDuration(fixture.Player, fixture.Target);
-        var action = fixture.Actions.HackAsync(fixture.Target.Id);
+        var action = fixture.Actions.HackAsync(fixture.Target.Hostname);
 
         fixture.Clock.Advance(duration - TimeSpan.FromTicks(1));
         fixture.Scheduler.Update();
@@ -44,7 +44,7 @@ public sealed class ServerActionsTests
                 fixture.Target,
                 threads: 1);
 
-        var action = fixture.Actions.HackAsync(fixture.Target.Id);
+        var action = fixture.Actions.HackAsync(fixture.Target.Hostname);
 
         await CompleteHackAsync(fixture, action);
 
@@ -80,7 +80,7 @@ public sealed class ServerActionsTests
         var expectedSecurityIncrease = fixture.Formulas.CalculateHackSecurityIncrease(threads);
         var expectedExperience = fixture.Formulas.CalculateHackingExperience(fixture.Target, threads);
 
-        var action = fixture.Actions.HackAsync(fixture.Target.Id, threads);
+        var action = fixture.Actions.HackAsync(fixture.Target.Hostname, threads);
         await CompleteHackAsync(fixture, action);
 
         var result = await action;
@@ -119,7 +119,7 @@ public sealed class ServerActionsTests
         var initialServerMoney = fixture.Target.Money;
         var initialPlayerMoney = fixture.Player.Money;
 
-        var action = fixture.Actions.HackAsync(fixture.Target.Id);
+        var action = fixture.Actions.HackAsync(fixture.Target.Hostname);
         await CompleteHackAsync(fixture, action);
 
         var result = await action;
@@ -140,7 +140,7 @@ public sealed class ServerActionsTests
         var expectedSecurityIncrease = fixture.Formulas.CalculateHackSecurityIncrease();
         var expectedExperience = fixture.Formulas.CalculateHackingExperience(fixture.Target);
 
-        var action = fixture.Actions.HackAsync(fixture.Target.Id);
+        var action = fixture.Actions.HackAsync(fixture.Target.Hostname);
         await CompleteHackAsync(fixture, action);
 
         var result = await action;
@@ -167,12 +167,12 @@ public sealed class ServerActionsTests
 
         var singleThreadAction =
             singleThreadFixture.Actions.HackAsync(
-                singleThreadFixture.Target.Id,
+                singleThreadFixture.Target.Hostname,
                 threads: 1);
 
         var multiThreadAction =
             multiThreadFixture.Actions.HackAsync(
-                multiThreadFixture.Target.Id,
+                multiThreadFixture.Target.Hostname,
                 threads: 5);
 
         await CompleteHackAsync(singleThreadFixture, singleThreadAction);
@@ -211,7 +211,7 @@ public sealed class ServerActionsTests
 
         using var cancellationSource = new CancellationTokenSource();
 
-        var action = fixture.Actions.HackAsync(fixture.Target.Id, cancellationToken: cancellationSource.Token);
+        var action = fixture.Actions.HackAsync(fixture.Target.Hostname, cancellationToken: cancellationSource.Token);
         Assert.Equal(1, fixture.Scheduler.PendingCount);
         
         cancellationSource.Cancel();
@@ -229,7 +229,7 @@ public sealed class ServerActionsTests
     {
         var fixture = CreateFixture(randomValue: 0, hasRootAccess: false);
 
-        var action = await fixture.Actions.HackAsync(fixture.Target.Id);
+        var action = await fixture.Actions.HackAsync(fixture.Target.Hostname);
 
         Assert.False(action.Succeeded);
         Assert.False(string.IsNullOrWhiteSpace(action.FailureMessage));
@@ -244,7 +244,7 @@ public sealed class ServerActionsTests
             playerLevel: 5,
             requiredHackingLevel: 10);
 
-        var action = await fixture.Actions.HackAsync(fixture.Target.Id);
+        var action = await fixture.Actions.HackAsync(fixture.Target.Hostname);
 
         Assert.False(action.Succeeded);
         Assert.False(string.IsNullOrWhiteSpace(action.FailureMessage));
@@ -260,7 +260,7 @@ public sealed class ServerActionsTests
         var fixture = CreateFixture(randomValue: 0);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => fixture.Actions.HackAsync(fixture.Target.Id, threads));
+            () => fixture.Actions.HackAsync(fixture.Target.Hostname, threads));
 
         Assert.Equal(0, fixture.Scheduler.PendingCount);
     }
@@ -279,7 +279,7 @@ public sealed class ServerActionsTests
         var expectedSecurityIncrease = fixture.Formulas.CalculateGrowSecurityIncrease(threads);
         var expectedExperience = fixture.Formulas.CalculateHackingExperience(fixture.Target, threads);
 
-        var action = fixture.Actions.GrowAsync(fixture.Target.Id, threads);
+        var action = fixture.Actions.GrowAsync(fixture.Target.Hostname, threads);
         await CompleteGrowAsync(fixture, action);
 
         var result = await action;
@@ -314,7 +314,7 @@ public sealed class ServerActionsTests
             startingMoney: 99_000,
             growthParameter: 100);
 
-        var action = fixture.Actions.GrowAsync(fixture.Target.Id, threads: 100);
+        var action = fixture.Actions.GrowAsync(fixture.Target.Hostname, threads: 100);
         await CompleteGrowAsync(fixture, action);
 
         var result = await action;
@@ -338,7 +338,7 @@ public sealed class ServerActionsTests
             maximumMoney: 100_000,
             startingMoney: 100_000);
 
-        var action = fixture.Actions.GrowAsync(fixture.Target.Id);
+        var action = fixture.Actions.GrowAsync(fixture.Target.Hostname);
         await CompleteGrowAsync(fixture,action);
 
         var result = await action;
@@ -360,7 +360,7 @@ public sealed class ServerActionsTests
         var initialExperience = fixture.Player.HackingExperience;
         var expectedExperience = fixture.Formulas.CalculateHackingExperience(fixture.Target, threads);
 
-        var action = fixture.Actions.WeakenAsync(fixture.Target.Id, threads);
+        var action = fixture.Actions.WeakenAsync(fixture.Target.Hostname, threads);
         await CompleteWeakenAsync(fixture,action);
 
         var result = await action;
@@ -389,7 +389,7 @@ public sealed class ServerActionsTests
             minimumSecurity: 1,
             startingSecurity: 1.2);
 
-        var action = fixture.Actions.WeakenAsync(fixture.Target.Id, threads: 100);
+        var action = fixture.Actions.WeakenAsync(fixture.Target.Hostname, threads: 100);
         await CompleteWeakenAsync(fixture, action);
 
         var result = await action;
@@ -416,7 +416,7 @@ public sealed class ServerActionsTests
 
         using var cancellationSource = new CancellationTokenSource();
 
-        var action = fixture.Actions.GrowAsync(fixture.Target.Id, cancellationToken: cancellationSource.Token);
+        var action = fixture.Actions.GrowAsync(fixture.Target.Hostname, cancellationToken: cancellationSource.Token);
         cancellationSource.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await action);
@@ -438,7 +438,7 @@ public sealed class ServerActionsTests
 
         using var cancellationSource = new CancellationTokenSource();
 
-        var action = fixture.Actions.WeakenAsync(fixture.Target.Id, cancellationToken: cancellationSource.Token);
+        var action = fixture.Actions.WeakenAsync(fixture.Target.Hostname, cancellationToken: cancellationSource.Token);
         cancellationSource.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await action);
@@ -448,7 +448,7 @@ public sealed class ServerActionsTests
     }
 
     [Fact]
-    public async Task Action_WithUnknownServerId_ThrowsBeforeScheduling()
+    public async Task Action_WithUnknownHostname_ThrowsBeforeScheduling()
     {
         var fixture = CreateFixture(randomValue: 0);
 
@@ -511,7 +511,6 @@ public sealed class ServerActionsTests
             startingHackingExperience: experience);
 
         var home = new Server(
-            id: "home",
             hostname: "home",
             maximumMoney: 0,
             startingMoney: 0,
@@ -523,7 +522,6 @@ public sealed class ServerActionsTests
             hasRootAccess: true);
 
         var target = new Server(
-            id: "target",
             hostname: "target",
             maximumMoney: maximumMoney,
             startingMoney: startingMoney,
@@ -537,7 +535,7 @@ public sealed class ServerActionsTests
         var network = new Network();
         network.AddServer(home);
         network.AddServer(target);
-        network.Connect(home.Id, target.Id);
+        network.Connect(home.Hostname, target.Hostname);
 
         var gameState = new GameState(player, network);
         var clock = new FakeGameClock();

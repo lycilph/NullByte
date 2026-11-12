@@ -8,7 +8,7 @@ public sealed class VirtualFileSystem
 {
     private readonly Network network;
 
-    // The outer dictionary uses case-insensitive server IDs, matching the network's existing conventions.
+    // The outer dictionary uses case-insensitive server hostnamess, matching the network's existing conventions.
     // File names are case-sensitive.
     private readonly Dictionary<string, Dictionary<string, string>> filesByServer =
         new(StringComparer.OrdinalIgnoreCase);
@@ -22,11 +22,11 @@ public sealed class VirtualFileSystem
     /// <summary>
     /// Gets the names of all files on a server, sorted alphabetically.
     /// </summary>
-    public IReadOnlyList<string> ListFiles(string serverId)
+    public IReadOnlyList<string> ListFiles(string hostname)
     {
-        ValidateServer(serverId);
+        ValidateServer(hostname);
 
-        if (!filesByServer.TryGetValue(serverId, out var files))
+        if (!filesByServer.TryGetValue(hostname, out var files))
             return Array.Empty<string>();
 
         return files.Keys
@@ -37,12 +37,12 @@ public sealed class VirtualFileSystem
     /// <summary>
     /// Attempts to read a file from a server.
     /// </summary>
-    public bool TryReadFile(string serverId, string fileName, out string? content)
+    public bool TryReadFile(string hostname, string fileName, out string? content)
     {
-        ValidateServer(serverId);
+        ValidateServer(hostname);
         ValidateFileName(fileName);
 
-        if (filesByServer.TryGetValue(serverId, out var files) && files.TryGetValue(fileName, out content))
+        if (filesByServer.TryGetValue(hostname, out var files) && files.TryGetValue(fileName, out content))
             return true;
 
         content = null;
@@ -52,16 +52,16 @@ public sealed class VirtualFileSystem
     /// <summary>
     /// Creates a new file or replaces the contents of an existing file.
     /// </summary>
-    public void WriteFile(string serverId, string fileName, string content)
+    public void WriteFile(string hostname, string fileName, string content)
     {
-        ValidateServer(serverId);
+        ValidateServer(hostname);
         ValidateFileName(fileName);
         ArgumentNullException.ThrowIfNull(content);
 
-        if (!filesByServer.TryGetValue(serverId, out var files))
+        if (!filesByServer.TryGetValue(hostname, out var files))
         {
             files = new Dictionary<string, string>(StringComparer.Ordinal);
-            filesByServer.Add(serverId, files);
+            filesByServer.Add(hostname, files);
         }
 
         files[fileName] = content;
@@ -70,20 +70,20 @@ public sealed class VirtualFileSystem
     /// <summary>
     /// Deletes a file. Returns false if the file does not exist.
     /// </summary>
-    public bool DeleteFile(string serverId, string fileName)
+    public bool DeleteFile(string hostname, string fileName)
     {
-        ValidateServer(serverId);
+        ValidateServer(hostname);
         ValidateFileName(fileName);
 
-        return filesByServer.TryGetValue(serverId, out var files) && files.Remove(fileName);
+        return filesByServer.TryGetValue(hostname, out var files) && files.Remove(fileName);
     }
 
-    private void ValidateServer(string serverId)
+    private void ValidateServer(string hostname)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(serverId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
 
-        if (!network.TryGetServer(serverId, out _))
-            throw new KeyNotFoundException($"Server '{serverId}' does not exist.");
+        if (!network.TryGetServer(hostname, out _))
+            throw new KeyNotFoundException($"Server '{hostname}' does not exist.");
     }
 
     private static void ValidateFileName(string fileName)

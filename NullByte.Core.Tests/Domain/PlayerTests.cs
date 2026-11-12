@@ -31,11 +31,10 @@ public sealed class PlayerTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void Constructor_WithInvalidHomeServerId_Throws(
-        string homeServerId)
+    public void Constructor_WithInvalidHomeHostname_Throws(string homeHostname)
     {
         Assert.Throws<ArgumentException>(
-            () => new Player(homeServerId));
+            () => new Player(homeHostname));
     }
 
     [Theory]
@@ -150,12 +149,11 @@ public sealed class PlayerTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void DiscoverServer_WithInvalidId_Throws(
-        string serverId)
+    public void DiscoverServer_WithInvalidHostname_Throws(string hostname)
     {
         var player = new Player("home");
 
         Assert.Throws<ArgumentException>(
-            () => player.DiscoverServer(serverId));
+            () => player.DiscoverServer(hostname));
     }
 }

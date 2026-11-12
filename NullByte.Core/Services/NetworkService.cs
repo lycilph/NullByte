@@ -54,35 +54,16 @@ public sealed class NetworkService
     {
         if (string.IsNullOrWhiteSpace(serverName))
             return NetworkConnectionResult.Failure("A server name is required.");
-
         if (!gameState.Network.TryGetServer(serverName, out var targetServer))
             return NetworkConnectionResult.Failure($"Unknown server: {serverName}");
+        if (string.Equals(targetServer!.Hostname, gameState.Player.CurrentHostname,StringComparison.OrdinalIgnoreCase))
+            return NetworkConnectionResult.Failure($"Already connected to {targetServer.Hostname}.");
+        if (!gameState.Player.DiscoveredHostnames.Contains(targetServer.Hostname))
+            return NetworkConnectionResult.Failure($"Server '{targetServer.Hostname}' has not been discovered.");
+        if (!gameState.Network.AreConnected(gameState.Player.CurrentHostname, targetServer.Hostname))
+            return NetworkConnectionResult.Failure($"Server '{targetServer.Hostname}' is not directly connected to the current server.");
 
-        if (string.Equals(
-                targetServer!.Id,
-                gameState.Player.CurrentHostname,
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return NetworkConnectionResult.Failure(
-                $"Already connected to " +
-                $"{targetServer.Hostname}.");
-        }
-
-        if (!gameState.Player.DiscoveredHostnames.Contains(targetServer.Id))
-        {
-            return NetworkConnectionResult.Failure(
-                $"Server '{targetServer.Hostname}' " +
-                "has not been discovered.");
-        }
-
-        if (!gameState.Network.AreConnected(gameState.Player.CurrentHostname, targetServer.Id))
-        {
-            return NetworkConnectionResult.Failure(
-                $"Server '{targetServer.Hostname}' is not " +
-                "directly connected to the current server.");
-        }
-
-        gameState.Player.CurrentHostname = targetServer.Id;
+        gameState.Player.CurrentHostname = targetServer.Hostname;
 
         return NetworkConnectionResult.Success(targetServer);
     }

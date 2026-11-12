@@ -24,7 +24,6 @@ public sealed class ServerActionsSimulationTests
                 balance));
 
         var home = new Server(
-            id: "home",
             hostname: "home",
             maximumMoney: 0,
             startingMoney: 0,
@@ -36,7 +35,6 @@ public sealed class ServerActionsSimulationTests
             hasRootAccess: true);
 
         var target = new Server(
-            id: "target",
             hostname: "target",
             maximumMoney: 1_000_000,
             startingMoney: 1_000_000,
@@ -51,7 +49,7 @@ public sealed class ServerActionsSimulationTests
 
         network.AddServer(home);
         network.AddServer(target);
-        network.Connect(home.Id, target.Id);
+        network.Connect(home.Hostname, target.Hostname);
 
         var gameState = new GameState(player, network);
 
@@ -73,7 +71,7 @@ public sealed class ServerActionsSimulationTests
         {
             var duration = formulas.CalculateHackDuration(player, target);
 
-            var action = actions.HackAsync(target.Id);
+            var action = actions.HackAsync(target.Hostname);
 
             Assert.False(action.IsCompleted);
             Assert.Equal(1, scheduler.PendingCount);

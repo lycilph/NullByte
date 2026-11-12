@@ -128,7 +128,6 @@ public sealed class BotnetSystemTests
         double startingMoney = 0)
     {
         var home = new Server(
-            id: "home",
             hostname: "home",
             maximumMoney: 0,
             startingMoney: 0,

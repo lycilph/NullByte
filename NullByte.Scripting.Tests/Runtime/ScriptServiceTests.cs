@@ -20,7 +20,7 @@ public sealed class ScriptServiceTests
             nb.Print("Hello from script");
             """);
 
-        var result = fixture.Service.Start(fixture.Home.Id, "hello.cs", []);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "hello.cs", []);
 
         Assert.True(result.Succeeded, result.FailureMessage);
 
@@ -35,7 +35,7 @@ public sealed class ScriptServiceTests
         var fixture = new Fixture();
 
         var result = fixture.Service.Start(
-            fixture.Home.Id,
+            fixture.Home.Hostname,
             "missing.cs",
             []);
 
@@ -57,7 +57,7 @@ public sealed class ScriptServiceTests
             nb.Print(missingValue);
             """);
 
-        var result = fixture.Service.Start(fixture.Home.Id, "broken.cs", []);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "broken.cs", []);
 
         Assert.False(result.Succeeded);
         Assert.Contains("Compilation failed", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
@@ -81,7 +81,7 @@ public sealed class ScriptServiceTests
             nb.Print(args[1]);
             """);
 
-        var result = fixture.Service.Start(fixture.Home.Id, "args.cs", ["n00dles", "second"]);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "args.cs", ["n00dles", "second"]);
 
         Assert.True(result.Succeeded, result.FailureMessage);
 
@@ -103,7 +103,7 @@ public sealed class ScriptServiceTests
             """);
 
         var args = new List<string> { "n00dles" };
-        var result = fixture.Service.Start(fixture.Home.Id, "args.cs", args);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "args.cs", args);
 
         Assert.True(result.Succeeded, result.FailureMessage);
 
@@ -131,7 +131,7 @@ public sealed class ScriptServiceTests
             nb.Print("After");
             """);
 
-        var result = fixture.Service.Start(fixture.Home.Id, "sleep.cs", []);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "sleep.cs", []);
 
         Assert.True(result.Succeeded, result.FailureMessage);
 
@@ -164,13 +164,13 @@ public sealed class ScriptServiceTests
             nb.Print("Second");
             """);
 
-        var firstResult = fixture.Service.Start(fixture.Home.Id, "first.cs",[]);
+        var firstResult = fixture.Service.Start(fixture.Home.Hostname, "first.cs",[]);
 
         Assert.True(firstResult.Succeeded, firstResult.FailureMessage);
 
         await fixture.Api.WaitUntilSleepRequestedAsync();
 
-        var secondResult = fixture.Service.Start(fixture.Home.Id, "second.cs", []);
+        var secondResult = fixture.Service.Start(fixture.Home.Hostname, "second.cs", []);
 
         Assert.False(secondResult.Succeeded);
         Assert.Contains("already running", secondResult.FailureMessage,StringComparison.OrdinalIgnoreCase);
@@ -197,13 +197,13 @@ public sealed class ScriptServiceTests
             nb.Print("Second");
             """);
 
-        var firstResult = fixture.Service.Start(fixture.Home.Id, "first.cs", []);
+        var firstResult = fixture.Service.Start(fixture.Home.Hostname, "first.cs", []);
 
         Assert.True(firstResult.Succeeded, firstResult.FailureMessage);
 
         await fixture.WaitForCompletionAsync();
 
-        var secondResult = fixture.Service.Start(fixture.Home.Id, "second.cs", []);
+        var secondResult = fixture.Service.Start(fixture.Home.Hostname, "second.cs", []);
 
         Assert.True(secondResult.Succeeded, secondResult.FailureMessage);
 
@@ -227,7 +227,7 @@ public sealed class ScriptServiceTests
 
         fixture.Service.ScriptCompleted += () => completed.TrySetResult();
 
-        var result = fixture.Service.Start(fixture.Home.Id,"complete.cs",[]);
+        var result = fixture.Service.Start(fixture.Home.Hostname,"complete.cs",[]);
 
         Assert.True(result.Succeeded, result.FailureMessage);
 
@@ -251,7 +251,7 @@ public sealed class ScriptServiceTests
 
         fixture.Service.ScriptFailed += exception => failed.TrySetResult(exception);
 
-        var result = fixture.Service.Start(fixture.Home.Id, "failure.cs", []);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "failure.cs", []);
 
         Assert.True(result.Succeeded, result.FailureMessage);
 
@@ -284,13 +284,13 @@ public sealed class ScriptServiceTests
 
         fixture.Service.ScriptFailed += _ => failed.TrySetResult();
 
-        var firstResult = fixture.Service.Start(fixture.Home.Id, "failure.cs", []);
+        var firstResult = fixture.Service.Start(fixture.Home.Hostname, "failure.cs", []);
 
         Assert.True(firstResult.Succeeded, firstResult.FailureMessage);
 
         await failed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        var secondResult = fixture.Service.Start(fixture.Home.Id, "recovery.cs", []);
+        var secondResult = fixture.Service.Start(fixture.Home.Hostname, "recovery.cs", []);
 
         Assert.True(secondResult.Succeeded, secondResult.FailureMessage);
 
@@ -311,7 +311,7 @@ public sealed class ScriptServiceTests
             nb.Print("Running");
             """);
 
-        var result = fixture.Service.Start(fixture.Home.Id, "warning.cs", []);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "warning.cs", []);
 
         Assert.True(result.Succeeded, result.FailureMessage);
 
@@ -333,7 +333,7 @@ public sealed class ScriptServiceTests
         var fixture = new Fixture();
 
         Assert.Throws<ArgumentException>(
-            () => fixture.Service.Start(fixture.Home.Id, "", []));
+            () => fixture.Service.Start(fixture.Home.Hostname, "", []));
     }
 
     [Fact]
@@ -348,7 +348,7 @@ public sealed class ScriptServiceTests
             """);
 
         Assert.Throws<ArgumentNullException>(
-            () => fixture.Service.Start(fixture.Home.Id, "script.cs", null!));
+            () => fixture.Service.Start(fixture.Home.Hostname, "script.cs", null!));
     }
 
     private sealed class Fixture
@@ -358,7 +358,6 @@ public sealed class ScriptServiceTests
         public Fixture()
         {
             Home = new Server(
-                id: "home",
                 hostname: "home",
                 maximumMoney: 0,
                 startingMoney: 0,
@@ -403,7 +402,7 @@ public sealed class ScriptServiceTests
 
         public void WriteScript(string fileName, string source)
         {
-            GameState.FileSystem.WriteFile(Home.Id, fileName,source);
+            GameState.FileSystem.WriteFile(Home.Hostname, fileName,source);
         }
 
         public Task WaitForCompletionAsync()
