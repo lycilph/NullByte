@@ -22,14 +22,6 @@ Jeg har læst designdokumentet og al kode undtagen detaljerne i testene og termi
 - **Tab-completion hårdkoder botnet** (`BotnetSubcommand`, `BotnetNodes`, `BotnetUpgradeKinds` i snapshot og motor). Det skalerer ikke til flere kommandoer. Lad hver kommando levere sin egen completer, så snapshot og `ArgumentCompletionKind` kan forsvinde.
 - **`edit` er stadig en stub:** den skriver et hårdkodet script til `test.cx` uanset argument, og der ligger udkommenteret kode. Ret den, eller fjern den, indtil WPF-editoren kommer. Der er også rester i `ConsoleUI.csproj` (`TempTests\`, `temp\`).
 
-### 4. Duplikering i Core
-
-- **To identifikatorer pr. server (`Id` og `Hostname`)** giver to ordbøger i `Network`, både `TryGetServer` og `TryFindServer`, og dobbelt opslag: `NullByteApi` slår op på hostname og sender `server.Id` videre til `ServerActions`, som slår op igen. Bitburner bruger kun hostname. Brug én nøgle, og så falder meget væk i `Network`, `Player.DiscoveredServerIds`, `VirtualFileSystem` og JSON-filen.
-- **Seks håndskrevne resultattyper** (`HackResult`, `GrowResult`, `WeakenResult`, `BotnetPurchaseResult`, `NetworkConnectionResult`, `ScriptStartResult`) med hver sin `Failed(...)`. Giv de tre handlinger én `ActionResult(Succeeded, Error, MoneyDelta, SecurityDelta, Xp, Duration)`, og brug evt. en enkelt `Result`/`Result<T>` til resten.
-- **`ServerActions.Hack/Grow/Weaken` deler rod-/niveau-/trådtjek** og kan dele én privat `RunAsync`.
-- **Defensiv validering overalt:** `?? throw new ArgumentNullException` i hver konstruktør og `ThrowIfNull` på parametre, som allerede er ikke-nullable (nullable er slået til). `Server` har en lang valideringsblok, og `Player.Money` har både `internal set` og `AddMoney`. Valider én gang ved datagrænsen (`NetworkLoader`, kommandoparsing og script-API'et), og stol på interne typer. Primary constructors kan fjerne meget af resten. Det alene kunne spare flere hundrede linjer uden at ændre adfærd.
-- **Wiring findes to steder:** `Program.cs` (ca. 60 linjer manuel opsætning) og `Harness` i `RunCommandTests`. Lav en `GameSession`/`GameBuilder`, som begge bruger, og som WPF-værten senere genbruger.
-
 ### 5. Afvigelser fra designdokumentet
 
 - **Formler:** M2 krævede verifikation mod Bitburner, og formlerne er forenklede egne versioner. Hack-chance er `level/required × minSec/sec`, så den er 100 % ved niveau = krav, mens Bitburner ligger omkring 50 %. Varigheden bruger `max(1, required/level)`, så den falder **aldrig** med højere niveau. Der er altså ingen belønning for at levle ud over kravet. Det er en balance-/gameplayfejl, ikke kun en afvigelse.
@@ -42,6 +34,6 @@ Jeg har læst designdokumentet og al kode undtagen detaljerne i testene og termi
 
 1. ~~Skift `ScriptRuntime` til `AsyncLocal` + `global using static`, og slet kildeomskrivningen. Det frigør M6, og testene kan køre parallelt.~~
 2. ~~Gør `Tick()` offentlig og `GameLoop` afhængig af `IGameClock`. Fjern `Send`.~~
-3. Slå `Id` og `Hostname` sammen, og indfør én `ActionResult`.
+3. ~~Slå `Id` og `Hostname` sammen, og indfør én `ActionResult`.~~
 4. Del kommandoerne op i grupper med automatisk arity/usage, og flyt dem til `NullByte.Shell`.
 5. Ryd op i validering og null-tjek, og ret formlerne mod Bitburner, før I balancerer i M8.

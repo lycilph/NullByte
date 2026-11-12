@@ -28,13 +28,10 @@ public sealed class ServerActions
     {
         this.gameState = gameState
             ?? throw new ArgumentNullException(nameof(gameState));
-
         this.scheduler = scheduler
             ?? throw new ArgumentNullException(nameof(scheduler));
-
         this.formulas = formulas
             ?? throw new ArgumentNullException(nameof(formulas));
-
         this.randomSource = randomSource
             ?? throw new ArgumentNullException(nameof(randomSource));
     }

@@ -11,6 +11,7 @@
 - Removed scriptruntime (kept a per-script api, which was unneeded)
 
 ### Future
+- Refactor tab-completion
 
 ---
 ## 09-11-2026
