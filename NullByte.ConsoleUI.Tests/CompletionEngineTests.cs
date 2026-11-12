@@ -4,33 +4,55 @@ namespace NullByte.ConsoleUI.Tests;
 
 public sealed class CompletionEngineTests
 {
-    private static readonly CompletionSnapshot Snapshot = new(
+
+    private static readonly CompletionSnapshot Snapshot =
+    new(
         Commands:
         [
-            new("help", ArgumentCompletionKind.None),
-            new("hack", ArgumentCompletionKind.None),
-            new("home", ArgumentCompletionKind.None),
-            new("connect", ArgumentCompletionKind.ConnectableServer),
-            new("analyze", ArgumentCompletionKind.KnownServer),
-            new("clear", ArgumentCompletionKind.None),
-            new("cls", ArgumentCompletionKind.None),
-            new("time", ArgumentCompletionKind.None, Hidden: true),
-            new("debug", ArgumentCompletionKind.None)
+            new("help", []),
+            new("hack", []),
+            new("home", []),
+            new("connect",
+                [
+                    new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.ConnectableServer }
+                ]),
+            new("analyze",
+                [
+                    new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.KnownServer }
+                ]),
+            new("run",
+                [
+                    new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.Filename }
+                ]),
+            new("botnet",
+                [
+                    new ArgumentCompletion { ArgumentIndex = 0, Values = ["status", "buy", "upgrade" ] },
+                    new ArgumentCompletion { ArgumentIndex = 1, Kind = CompletionKind.BotnetNode,
+                        When = new CompletionCondition(ArgumentIndex: 0, Value: "upgrade")},
+                    new ArgumentCompletion { ArgumentIndex = 2, Values = ["level", "ram", "core"],
+                        When = new CompletionCondition(ArgumentIndex: 0, Value: "upgrade")}
+                ]),
+            new("clear", []),
+            new("cls", []),
+            new("time", [], Hidden: true),
+            new("debug", [])
         ],
-        ConnectableServers: ["n00dles", "foodnstuff", "foodcourt"],
-        KnownServers: ["home", "n00dles", "sigma-cosmetics"],
-        ["status", "buy", "upgrade"],
-        ["1", "2", "3"],
-        ["level", "ram", "core"]);
+
+        Values:
+            new Dictionary<CompletionKind, IReadOnlyList<string>>
+            {
+                [CompletionKind.ConnectableServer] = ["n00dles", "foodnstuff", "foodcourt"],
+                [CompletionKind.KnownServer] = ["home", "n00dles", "sigma-cosmetics"],
+                [CompletionKind.Filename] = ["hack.cs", "grow.cs", "early-hack.cs"],
+                [CompletionKind.BotnetNode] = ["1", "2", "3"]
+            });
 
     [Fact]
     public void EmptyInput_OffersEveryVisibleCommand()
     {
         var result = Complete(string.Empty);
 
-        Assert.Equal(
-            ["analyze", "clear", "cls", "connect", "debug", "hack", "help", "home"],
-            result.Candidates);
+        Assert.Equal(["analyze", "botnet", "clear", "cls", "connect", "debug", "hack", "help", "home", "run"], result.Candidates);
         Assert.Equal(string.Empty, result.Replacement);
     }
 
@@ -95,7 +117,7 @@ public sealed class CompletionEngineTests
     {
         var result = Complete("connect n0");
 
-        Assert.Equal("n00dles", result.Replacement);
+        Assert.Equal("n00dles ", result.Replacement);
         Assert.Equal(8, result.ReplaceStart);
         Assert.Equal(2, result.ReplaceLength);
     }
@@ -125,7 +147,71 @@ public sealed class CompletionEngineTests
     {
         var result = Complete("analyze s");
 
-        Assert.Equal("sigma-cosmetics", result.Replacement);
+        Assert.Equal("sigma-cosmetics ", result.Replacement);
+    }
+
+    [Fact]
+    public void RunArgument_CompletesAgainstScripts()
+    {
+        var result = Complete("run h");
+
+        Assert.Equal("hack.cs ", result.Replacement);
+    }
+
+    [Fact]
+    public void RunArgument_WithNothingTypedOffersAllScripts()
+    {
+        var result = Complete("run ");
+
+        Assert.Equal(["early-hack.cs", "grow.cs", "hack.cs"], result.Candidates);
+    }
+
+    [Fact]
+    public void Run_DoesNotCompleteScriptArguments()
+    {
+        var result = Complete("run hack.cs n00");
+
+        Assert.False(result.HasCandidates);
+    }
+
+    [Fact]
+    public void Botnet_FirstArgument_CompletesSubcommands()
+    {
+        var result = Complete("botnet u");
+
+        Assert.Equal("upgrade ", result.Replacement);
+    }
+
+    [Fact]
+    public void Botnet_Upgrade_CompletesNodeNumber()
+    {
+        var result = Complete("botnet upgrade ");
+
+        Assert.Equal(["1", "2", "3"], result.Candidates);
+    }
+
+    [Fact]
+    public void Botnet_Upgrade_CompletesUpgradeKind()
+    {
+        var result = Complete("botnet upgrade 1 r");
+
+        Assert.Equal("ram ", result.Replacement);
+    }
+
+    [Fact]
+    public void Botnet_Status_DoesNotCompleteSecondArgument()
+    {
+        var result = Complete("botnet status ");
+
+        Assert.False(result.HasCandidates);
+    }
+
+    [Fact]
+    public void Botnet_Buy_DoesNotCompleteSecondArgument()
+    {
+        var result = Complete("botnet buy ");
+
+        Assert.False(result.HasCandidates);
     }
 
     [Fact]
@@ -145,7 +231,7 @@ public sealed class CompletionEngineTests
     {
         var result = Complete("CONNECT n0");
 
-        Assert.Equal("n00dles", result.Replacement);
+        Assert.Equal("n00dles ", result.Replacement);
     }
 
     [Fact]

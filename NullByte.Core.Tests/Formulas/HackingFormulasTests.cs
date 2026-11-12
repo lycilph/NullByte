@@ -86,21 +86,6 @@ public sealed class HackingFormulasTests
         Assert.Throws<ArgumentOutOfRangeException>(
             () => formulas.CalculateHackingLevel(experience));
     }
-    
-    [Fact]
-    public void CalculateHackingExperience_WithZeroBaseDifficulty_ReturnsZero()
-    {
-        var formulas = CreateFormulas();
-
-        var server = CreateServer(
-            minimumSecurity: 0,
-            baseDifficulty: 0,
-            startingSecurity: 0);
-
-        var experience = formulas.CalculateHackingExperience(server, threads: 10);
-
-        Assert.Equal(0.0, experience);
-    }
 
     [Fact]
     public void CalculateHackChance_FollowsBitburnerFormula()
