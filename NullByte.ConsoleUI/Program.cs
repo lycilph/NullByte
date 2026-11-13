@@ -1,20 +1,9 @@
 ﻿using System.Text;
 using NullByte.ConsoleUI.Commands;
 using NullByte.ConsoleUI.Terminal;
-using NullByte.Core.Configuration;
-using NullByte.Core.Formulas;
-using NullByte.Core.Randomness;
-using NullByte.Core.Scripting;
 using NullByte.Core.Services;
-using NullByte.Core.Simulation;
-using NullByte.Core.Systems;
-using NullByte.Core.Threading;
 using NullByte.Core.Time;
-using NullByte.Core.World;
-using NullByte.Scripting.Compilation;
-using NullByte.Scripting.Loading;
-using NullByte.Scripting.Runtime;
-using static Microsoft.CodeAnalysis.CSharp.SyntaxTokenParser;
+using NullByte.Shell;
 
 namespace NullByte.ConsoleUI;
 
@@ -24,101 +13,37 @@ public class Program
     {
         Console.OutputEncoding = Encoding.UTF8;
 
-        var balanceConfig = new BalanceConfig() { RandomSeed = DateTime.Now.Millisecond };
-        var clock = new RealGameClock() { SpeedMultiplier = balanceConfig.GameSpeedMultiplier };
-        
-        var synchronizationContext = new GameSynchronizationContext();
-        var scheduler = new GameScheduler(clock);
-        await using var gameLoop = new GameLoop(clock, synchronizationContext, scheduler);
+        await using var terminal = new ThreadSafeConsoleTerminal(prompt: "root@home $ ", maximumHistoryLines: 2_000);
 
-        var gameState = InitialGameStateFactory.Create();
-        var networkService = new NetworkService(gameState);
-        var hackingFormulas = new HackingFormulas(balanceConfig);
-        var botnetFormulas = new BotnetFormulas(balanceConfig);
-        var randomSource = new SeededRandomSource(balanceConfig.RandomSeed);
-        var serverActions = new ServerActions(gameState, scheduler, hackingFormulas, randomSource);
-        var botnetService = new BotnetService(gameState, botnetFormulas);
+        var sessionOptions = new GameSessionOptions() { Output = terminal };
+        await using var session = GameSession.Create(sessionOptions);
 
-        // Systems are updated by the game loop on the game thread; they must be added before it starts.
-        gameLoop.AddSystem(new BotnetSystem(gameState, botnetFormulas));
+        var commandRegistry = CommandSetup.Create(session, terminal);
+        var commandDispatcher = new CommandDispatcher(commandRegistry, terminal);
+        var completionCatalog = new CompletionCatalog(commandRegistry, session.State);
+        terminal.SetCompletionProvider(completionCatalog);
 
-        var commandRegistry = CommandRegistryFactory.Create();
-        var commandDispatcher = new CommandDispatcher(commandRegistry);
-
-        // Tab completion reads an immutable snapshot that is refreshed on the game thread.
-        var completionCatalog = new CompletionCatalog(commandRegistry, gameState);
-
-        await using var terminal = new ThreadSafeConsoleTerminal(
-            prompt: "root@home $ ", 
-            maximumHistoryLines: 2_000,
-            completionProvider: completionCatalog);
-        
         var terminalTask = terminal.RunAsync();
-        var scriptCompiler = new ScriptCompiler();
-        var scriptLoader = new ScriptAssemblyLoader();
-        var scriptRunner = new ScriptRunner(scriptLoader);
-
-        // Warm up the script compiler (should i await this somewhere???)
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-        Task.Run(() => scriptCompiler.Compile("{}", "warmup"));
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-
-        var api = new NullByteApi(gameState, scheduler, serverActions, terminal);
-        var scriptService = new ScriptService(
-            gameState,
-            scriptCompiler,
-            scriptRunner,
-            api);
-        
-        scriptService.ScriptFailed += exception => terminal.WriteLine($"Script failed: {exception.Message}");
-
-        var context = new CommandContext(
-            gameState,
-            gameLoop,
-            clock,
-            networkService,
-            serverActions,
-            botnetService,
-            scriptService,
-            hackingFormulas,
-            botnetFormulas,
-            commandRegistry,
-            terminal);
-
-        // Work that throws on the game thread is reported, not fatal.
-        gameLoop.UnhandledException += exception =>
-            terminal.WriteLine($"Unhandled error on the game thread: {exception.Message}");
-
-        gameLoop.Start();
 
         try
         {
-            await gameLoop.Started;
-            
+            await session.StartAsync();
+
             // Initialize the completion catalog
-            await gameLoop.InvokeAsync(() =>
+            await session.GameThread.InvokeAsync(() =>
             {
                 completionCatalog.Refresh();
                 return Task.CompletedTask;
             });
 
-            WriteStartupMessage(terminal, clock);
+            WriteStartupMessage(terminal, session.Clock);
 
-            await ProcessCommandsAsync(context, commandDispatcher, completionCatalog);
+            await ProcessCommandsAsync(terminal, session, commandDispatcher, completionCatalog);
         }
         finally
         {
             terminal.RequestStop();
-            gameLoop.RequestStop();
-
-            try
-            {
-                await gameLoop.Completion;
-            }
-            catch (Exception exception)
-            {
-                terminal.WriteLine($"Game loop stopped with an error: {exception.Message}");
-            }
+            await session.StopAsync();
             await terminalTask;
         }
 
@@ -126,26 +51,24 @@ public class Program
         await Task.Delay(500);
     }
 
-    private static void WriteStartupMessage(IGameTerminal terminal, IGameClock clock)
+    private static void WriteStartupMessage(IGameOutput output, IGameClock clock)
     {
-        terminal.WriteLine("NullByte");
-        terminal.WriteLine();
-        terminal.WriteLine("Single-threaded simulation started.");
-        terminal.WriteLine($"Game thread ready. Game time: {clock.Elapsed.TotalSeconds:F3}s");
-        terminal.WriteLine();
-        terminal.WriteLine("Type 'help' to see available commands ('debug' for other commands).");
-        terminal.WriteLine("Tab completes commands and server names, Up/Down recalls earlier input.");
-        terminal.WriteLine();
+        output.WriteLine("NullByte");
+        output.WriteLine();
+        output.WriteLine("Single-threaded simulation started.");
+        output.WriteLine($"Game thread ready. Game time: {clock.Elapsed.TotalSeconds:F3}s");
+        output.WriteLine();
+        output.WriteLine("Type 'help' to see available commands ('debug' for other commands).");
+        output.WriteLine("Tab completes commands and server names, Up/Down recalls earlier input.");
+        output.WriteLine();
     }
 
     private static async Task ProcessCommandsAsync(
-        CommandContext context, 
+        IGameTerminal terminal,
+        GameSession session,
         CommandDispatcher dispatcher,
         CompletionCatalog completionCatalog)
     {
-        var terminal = context.Terminal;
-        var gameThread = context.GameThread;
-
         await foreach (var commandLine in terminal.ReadCommandsAsync())
         {
             if (string.IsNullOrWhiteSpace(commandLine))
@@ -159,15 +82,15 @@ public class Program
 
             try
             {
-                await gameThread.InvokeAsync(async () =>
+                await session.GameThread.InvokeAsync(async () =>
                 {
                     try
                     {
                         terminal.SetInputEnabled(false);
-                        await dispatcher.DispatchAsync(commandLine, context);
+                        await dispatcher.DispatchAsync(commandLine);
 
                         // Update terminal prompt
-                        terminal.SetPrompt($"root@{context.GameState.Player.CurrentHostname} $ ");
+                        terminal.SetPrompt($"root@{session.State.Player.CurrentHostname} $ ");
                     }
                     finally
                     {
@@ -183,7 +106,7 @@ public class Program
                 return;
             }
             catch (InvalidOperationException)
-                when (!gameThread.IsRunning)
+                when (!session.GameThread.IsRunning)
             {
                 return;
             }

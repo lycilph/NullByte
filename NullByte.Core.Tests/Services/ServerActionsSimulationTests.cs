@@ -56,7 +56,7 @@ public sealed class ServerActionsSimulationTests
 
         var clock = new FakeGameClock();
         var scheduler = new GameScheduler(clock);
-        var randomSource = new SeededRandomSource(balance.RandomSeed);
+        var randomSource = new SeededRandomSource(1337);
 
         var actions = new ServerActions(
             gameState,

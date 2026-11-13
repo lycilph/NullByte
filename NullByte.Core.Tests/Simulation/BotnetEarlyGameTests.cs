@@ -29,7 +29,7 @@ public sealed class BotnetEarlyGameTests
         var scheduler = new GameScheduler(clock);
         var hackingFormulas = new HackingFormulas(balance);
         var botnetFormulas = new BotnetFormulas(balance);
-        var actions = new ServerActions(gameState, scheduler, hackingFormulas, new SeededRandomSource(balance.RandomSeed));
+        var actions = new ServerActions(gameState, scheduler, hackingFormulas, new SeededRandomSource(1337));
         var service = new BotnetService(gameState, botnetFormulas);
         var system = new BotnetSystem(gameState, botnetFormulas);
 

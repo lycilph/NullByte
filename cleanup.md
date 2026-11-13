@@ -39,8 +39,8 @@ var result = await action.Task;
 One `RunManualAction(...)` helper then replaces the three handlers.
 
 ### 4. The composition root is in the console host
-`Program.Main` wires about 25 objects by hand, and `CommandContext` repeats 11 of them. The doc says a WPF host should reuse Core and Scripting unchanged, so the wiring should be reusable too.
-- Add a `GameSession` (GameState, loop, scheduler, services) that both hosts create.
+~~`Program.Main` wires about 25 objects by hand, and `CommandContext` repeats 11 of them. The doc says a WPF host should reuse Core and Scripting unchanged, so the wiring should be reusable too.~~
+- ~~Add a `GameSession` (GameState, loop, scheduler, services) that both hosts create.~~
 - ~~The doc's `IGameHost` doesn't exist yet. Today there is a console-specific `IGameTerminal`, plus `IScriptOutput` and a `TerminalScriptOutput` adapter that only forwards `WriteLine`. Introduce one `IGameOutput` (`WriteLine`) in Core. Scripts and commands both write to it, and the adapter goes away. Terminal-only features stay in ConsoleUI.~~
 - ~~Construct `GameScheduler` first and pass it to `GameLoop`. `ServerActions` and `NullByteApi` then depend on the scheduler, not the loop. `GameLoop` is currently used as a service provider.~~
 - ~~`context.GameLoop` is only used for `InvokeAsync` and `IsGameThread`. A tiny `IGameThread` interface covers that.~~

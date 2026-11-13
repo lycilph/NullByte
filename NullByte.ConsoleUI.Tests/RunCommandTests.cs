@@ -283,7 +283,7 @@ public sealed class RunCommandTests
                 CommandRegistryFactory.Create();
 
             dispatcher =
-                new CommandDispatcher(registry);
+                new CommandDispatcher(registry, terminal);
 
             context = new CommandContext(
                 GameState,
@@ -318,7 +318,7 @@ public sealed class RunCommandTests
 
         public Task RunAsync(string commandLine)
         {
-            return dispatcher.DispatchAsync(commandLine, context);
+            return dispatcher.DispatchAsync(commandLine);
         }
     }
 

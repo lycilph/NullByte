@@ -1,6 +1,8 @@
-﻿namespace NullByte.ConsoleUI.Terminal;
+﻿using NullByte.Core.Services;
 
-public interface IGameTerminal
+namespace NullByte.ConsoleUI.Terminal;
+
+public interface IGameTerminal : IGameOutput
 {
     CancellationToken StoppingToken { get; }
 
@@ -13,7 +15,5 @@ public interface IGameTerminal
 
     IAsyncEnumerable<string> ReadCommandsAsync(CancellationToken cancellationToken = default);
 
-    void WriteLine();
-    void WriteLine(string message);
     void Clear();
 }

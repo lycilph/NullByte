@@ -1,22 +1,24 @@
 ﻿using NullByte.ConsoleUI.Terminal;
+using NullByte.Core.Services;
 
 namespace NullByte.ConsoleUI.Commands;
 
 public sealed class CommandDispatcher
 {
     private readonly CommandRegistry registry;
+    private readonly IGameOutput output;
 
-    public CommandDispatcher(CommandRegistry registry)
+    public CommandDispatcher(CommandRegistry registry, IGameOutput output)
     {
         ArgumentNullException.ThrowIfNull(registry);
 
         this.registry = registry;
+        this.output = output;
     }
 
-    public async Task<bool> DispatchAsync(string commandLine, CommandContext context)
+    public async Task<bool> DispatchAsync(string commandLine)
     {
         ArgumentNullException.ThrowIfNull(commandLine);
-        ArgumentNullException.ThrowIfNull(context);
 
         var arguments = CommandLineParser.Parse(commandLine);
 
@@ -27,20 +29,20 @@ public sealed class CommandDispatcher
 
         if (!registry.TryGet(commandName, out var command))
         {
-            context.Terminal.WriteLine($"Unknown command: {commandName}");
-            context.Terminal.WriteLine("Type 'help' to see available commands.");
+            output.WriteLine($"Unknown command: {commandName}");
+            output.WriteLine("Type 'help' to see available commands.");
 
             return false;
         }
 
         var commandArguments = arguments.Skip(1).ToArray();
-        if (!command!.ArgumentsCountCheck(commandArguments.Length))
+        if (commandArguments.Length < command!.MinArgs || commandArguments.Length > command!.MaxArgs)
         {
-            context.Terminal.WriteLine($"Usage: {command!.Usage}");
+            output.WriteLine($"Usage: {command!.Usage}");
             return false;
         }
 
-        await command!.Handler(context, commandArguments);
+        await command!.Handler(commandArguments);
 
         return true;
     }

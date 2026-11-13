@@ -9,7 +9,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
     private const int RefreshDelayMilliseconds = 16;
 
     private readonly int maximumHistoryLines;
-    private readonly ICompletionProvider? completionProvider;
+    private ICompletionProvider? completionProvider;
     private string prompt;
 
     /*
@@ -75,6 +75,8 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
     }
 
     public CancellationToken StoppingToken => stopSource.Token;
+
+    public void SetCompletionProvider(ICompletionProvider provider) => completionProvider = provider;
 
     public void StartProgress(string label, Func<double> progress)
     {
@@ -446,6 +448,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
 
         return true;
     }
+
     private bool CompleteInput()
     {
         if (completionProvider is null)

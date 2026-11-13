@@ -191,7 +191,7 @@ public sealed class BotnetCommandTests
 
             var registry = CommandRegistryFactory.Create();
 
-            dispatcher = new CommandDispatcher(registry);
+            dispatcher = new CommandDispatcher(registry, terminal);
 
             context = new CommandContext(
                 GameState,
@@ -211,7 +211,7 @@ public sealed class BotnetCommandTests
 
         public string Output => string.Join(Environment.NewLine, terminal.Lines);
 
-        public Task RunAsync(string commandLine) => dispatcher.DispatchAsync(commandLine, context);
+        public Task RunAsync(string commandLine) => dispatcher.DispatchAsync(commandLine);
     }
 
     private sealed class FakeTerminal : IGameTerminal, IGameOutput

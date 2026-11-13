@@ -234,12 +234,4 @@ public sealed record BalanceConfig
 
     public int BotnetMaxCores { get; init; } = 16;
     #endregion
-
-    // Randomness
-
-    /// <summary>
-    /// Default random seed used when deterministic game randomness
-    /// is required.
-    /// </summary>
-    public int RandomSeed { get; init; } = 1337;
 }
