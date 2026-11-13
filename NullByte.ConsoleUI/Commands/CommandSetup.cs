@@ -6,14 +6,14 @@ namespace NullByte.ConsoleUI.Commands;
 
 public static class CommandSetup
 {
-    public static CommandRegistry Create(GameSession session, IGameTerminal terminal)
+    public static CommandRegistry Create(GameSession session, IGameTerminal terminal, ShutdownRequest? shutdownRequest = null)
     {
         var registry = new CommandRegistry();
 
         ICommandGroup[] groups =
         [
             new DebugCommands(session.Services.Network, session.State.FileSystem, session.Clock, registry, terminal),
-            new SystemCommands(registry, terminal),
+            new SystemCommands(registry, terminal, shutdownRequest),
             new PlayerCommands(session.State.Player, session.Services.Network, session.Services.HackingFormulas, terminal),
             new NetworkCommands(session.Services.Network, terminal),
             new FileCommands(session.State.FileSystem, session.Services.Network, terminal),

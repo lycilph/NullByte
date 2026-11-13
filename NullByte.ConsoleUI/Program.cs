@@ -18,7 +18,9 @@ public class Program
         var sessionOptions = new GameSessionOptions() { Output = terminal };
         await using var session = GameSession.Create(sessionOptions);
 
-        var commandRegistry = CommandSetup.Create(session, terminal);
+        var shutdownRequest = new ShutdownRequest();
+
+        var commandRegistry = CommandSetup.Create(session, terminal, shutdownRequest);
         var commandDispatcher = new CommandDispatcher(commandRegistry, terminal);
         var completionCatalog = new CompletionCatalog(commandRegistry, session.State);
         terminal.SetCompletionProvider(completionCatalog);
@@ -38,7 +40,7 @@ public class Program
 
             WriteStartupMessage(terminal, session.Clock);
 
-            await ProcessCommandsAsync(terminal, session, commandDispatcher, completionCatalog);
+            await ProcessCommandsAsync(terminal, session, commandDispatcher, completionCatalog, shutdownRequest);
         }
         finally
         {
@@ -67,18 +69,13 @@ public class Program
         IGameTerminal terminal,
         GameSession session,
         CommandDispatcher dispatcher,
-        CompletionCatalog completionCatalog)
+        CompletionCatalog completionCatalog,
+        ShutdownRequest shutdownRequest)
     {
         await foreach (var commandLine in terminal.ReadCommandsAsync())
         {
             if (string.IsNullOrWhiteSpace(commandLine))
                 continue;
-
-            if (IsExitCommand(commandLine))
-            {
-                terminal.WriteLine("Shutting down...");
-                return;
-            }
 
             try
             {
@@ -114,17 +111,9 @@ public class Program
             {
                 terminal.WriteLine($"Command failed: {exception.Message}");
             }
+
+            if (shutdownRequest.IsRequested)
+                break;
         }
-    }
-
-    private static bool IsExitCommand(string commandLine)
-    {
-        var arguments = CommandLineParser.Parse(commandLine);
-
-        if (arguments.Count != 1)
-            return false;
-
-        return arguments[0].Equals("exit", StringComparison.OrdinalIgnoreCase) ||
-               arguments[0].Equals("quit", StringComparison.OrdinalIgnoreCase);
     }
 }

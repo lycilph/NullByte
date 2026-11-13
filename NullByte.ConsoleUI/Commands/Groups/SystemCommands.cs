@@ -2,7 +2,7 @@
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
-public sealed class SystemCommands(CommandRegistry registry, IGameTerminal terminal) : ICommandGroup
+public sealed class SystemCommands(CommandRegistry registry, IGameTerminal terminal, ShutdownRequest? shutdownRequest) : ICommandGroup
 {
     public void Register(CommandRegistry registry)
     {
@@ -18,7 +18,7 @@ public sealed class SystemCommands(CommandRegistry registry, IGameTerminal termi
                "exit",
                "exit",
                "Exit NullByte.",
-               (_) => Task.CompletedTask)
+               RequestShutdownAsync)
             { Aliases = ["quit"] });
 
         registry.Register(
@@ -40,5 +40,11 @@ public sealed class SystemCommands(CommandRegistry registry, IGameTerminal termi
     private async Task ClearAsync(IReadOnlyList<string> arguments)
     {
         terminal.Clear();
+    }
+
+    private async Task RequestShutdownAsync(IReadOnlyList<string> arguments)
+    {
+        terminal.WriteLine("Shutting down...");
+        shutdownRequest?.Request();
     }
 }

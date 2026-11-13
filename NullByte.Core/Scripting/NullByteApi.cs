@@ -10,10 +10,10 @@ namespace NullByte.Core.Scripting;
 /// </summary>
 public sealed class NullByteApi : INullByteApi
 {
-    private readonly GameState _gameState;
-    private readonly GameScheduler _scheduler;
-    private readonly ServerActions _serverActions;
-    private readonly IGameOutput _output;
+    private readonly GameState gameState;
+    private readonly GameScheduler scheduler;
+    private readonly ServerActions serverActions;
+    private readonly IGameOutput output;
 
     public NullByteApi(
         GameState gameState,
@@ -26,27 +26,27 @@ public sealed class NullByteApi : INullByteApi
         ArgumentNullException.ThrowIfNull(serverActions);
         ArgumentNullException.ThrowIfNull(output);
 
-        _gameState = gameState;
-        _scheduler = scheduler;
-        _serverActions = serverActions;
-        _output = output;
+        this.gameState = gameState;
+        this.scheduler = scheduler;
+        this.serverActions = serverActions;
+        this.output = output;
     }
 
     public void Print(object? value)
     {
-        _output.WriteLine(value?.ToString() ?? string.Empty);
+        output.WriteLine(value?.ToString() ?? string.Empty);
     }
 
     public Task Sleep(TimeSpan duration, CancellationToken cancellationToken = default)
     {
-        return _scheduler.DelayAsync(duration, cancellationToken);
+        return scheduler.DelayAsync(duration, cancellationToken);
     }
 
     public Task<HackResult> Hack(string hostname, CancellationToken cancellationToken = default)
     {
         var server = GetServer(hostname);
 
-        return _serverActions.HackAsync(
+        return serverActions.HackAsync(
             server.Hostname,
             threads: 1,
             cancellationToken);
@@ -56,7 +56,7 @@ public sealed class NullByteApi : INullByteApi
     {
         var server = GetServer(hostname);
 
-        return _serverActions.GrowAsync(
+        return serverActions.GrowAsync(
             server.Hostname,
             threads: 1,
             cancellationToken);
@@ -66,7 +66,7 @@ public sealed class NullByteApi : INullByteApi
     {
         var server = GetServer(hostname);
 
-        return _serverActions.WeakenAsync(
+        return serverActions.WeakenAsync(
             server.Hostname,
             threads: 1,
             cancellationToken);
@@ -96,7 +96,7 @@ public sealed class NullByteApi : INullByteApi
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
 
-        if (!_gameState.Network.TryGetServer(hostname, out var server))
+        if (!gameState.Network.TryGetServer(hostname, out var server))
             throw new InvalidOperationException($"Server '{hostname}' does not exist.");
 
         return server!;

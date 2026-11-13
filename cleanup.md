@@ -17,13 +17,6 @@ Your "convoluted" feeling is accurate. Most of it comes from a few causes: repea
 
 ## Where the complexity comes from, and how to cut it
 
-### 1. `CommandContext` is a service locator, and `CommandRegistryFactory` is 954 lines
-Every handler can reach 11 services, and registration, implementations and debug scaffolding all live in one file.
-- Split into small groups (`NetworkCommands`, `FileCommands`, `BotnetCommands`, `ScriptCommands`, `ActionCommands`). Each takes only what it needs through its constructor and has a `Register(registry)` method.
-- Delete the `[M1]` demo, `thread` and `time` commands, and the `scripts` command once you have the host-folder sync. Moving them to tests also removes the `Debug` flag and the special case for the name `"debug"` in `CompletionCatalog`.
-- Replace `ArgumentsCountCheck = c => ...` lambdas with `MinArgs` and `MaxArgs`.
-- `exit` is registered with a no-op handler and also special-cased in `Program` with its own parsing. Pick one.
-
 ### 2. Hack, grow and weaken are written three times at every layer
 That's three handlers of about 35 lines, three result records, and three near-identical `ServerActions` methods.
 - Merge the three results into one `ActionResult(Kind, Succeeded, FailureMessage, MoneyDelta, SecurityDelta, Xp, Duration)`.
@@ -38,13 +31,6 @@ var result = await action.Task;
 
 One `RunManualAction(...)` helper then replaces the three handlers.
 
-### 4. The composition root is in the console host
-~~`Program.Main` wires about 25 objects by hand, and `CommandContext` repeats 11 of them. The doc says a WPF host should reuse Core and Scripting unchanged, so the wiring should be reusable too.~~
-- ~~Add a `GameSession` (GameState, loop, scheduler, services) that both hosts create.~~
-- ~~The doc's `IGameHost` doesn't exist yet. Today there is a console-specific `IGameTerminal`, plus `IScriptOutput` and a `TerminalScriptOutput` adapter that only forwards `WriteLine`. Introduce one `IGameOutput` (`WriteLine`) in Core. Scripts and commands both write to it, and the adapter goes away. Terminal-only features stay in ConsoleUI.~~
-- ~~Construct `GameScheduler` first and pass it to `GameLoop`. `ServerActions` and `NullByteApi` then depend on the scheduler, not the loop. `GameLoop` is currently used as a service provider.~~
-- ~~`context.GameLoop` is only used for `InvokeAsync` and `IsGameThread`. A tiny `IGameThread` interface covers that.~~
-- ~~Prompt state lives in two places: `Player.CurrentHostname`, and `SetPrompt` called by hand in `connect`, in `home`, and hardcoded in `Program`. After each command, set the prompt and refresh completion from one place. Both already need to happen there.~~
 
 ### 5. The terminal mixes three jobs in 700 lines
 `ThreadSafeConsoleTerminal` contains the key-handling state machine, the renderer and the cross-thread marshalling (seven request records). Because key handling is welded to `Console.KeyAvailable`, none of it can be tested, including the "discarded input" acceptance criterion.
@@ -72,7 +58,7 @@ One `RunManualAction(...)` helper then replaces the three handlers.
 - `IGameClock` exposes `Start()` and `Stop()`, and `FakeGameClock` implements both as empty methods. Keep lifecycle off the read interface.
 - Six test files each define their own copy of `TestNullByteApi`, `TestScriptOutput` or `FixedRandomSource`. Create one shared test-support project.
 - `HackingFormulasTests` is 1,105 lines and is probably a `[Theory]`/`InlineData` candidate (I didn't read it closely).
-- `NullByteApi` uses `_field` naming while the rest of the code doesn't.
+- ~~`NullByteApi` uses `_field` naming while the rest of the code doesn't.~~
 
 ## Decide this before M6/M7
 
