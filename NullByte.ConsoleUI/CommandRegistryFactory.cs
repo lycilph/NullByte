@@ -52,7 +52,16 @@ public static class CommandRegistryFactory
                 "Run a scheduler demonstration.",
                 RunDemoAsync)
             { Debug = true });
+
+        registry.Register(
+            new CommandDefinition(
+                "scripts",
+                "scripts",
+                "Create test scripts.",
+                TestScriptsAsync)
+            { Debug = true });
     }
+
 
     private static void RegisterGameCommands(CommandRegistry registry)
     {
@@ -119,7 +128,7 @@ public static class CommandRegistryFactory
                 "Create or replace a file.",
                 EditFileAsync)
             {
-                ArgumentsCountCheck = c => c == 1,
+                ArgumentsCountCheck = c => c == 2,
                 Completions =
                 [
                     new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename}
@@ -316,6 +325,73 @@ public static class CommandRegistryFactory
         }
     }
 
+    private static Task TestScriptsAsync(
+        CommandContext context,
+        IReadOnlyList<string> arguments)
+    {
+        var server = context.NetworkService.GetCurrentServer();
+        var fileName = "single_hack_test.cx";
+        var source =
+@"nb.Print($""Hacking n00dles"");
+var result = await nb.Hack(""n00dles"");
+if (!result.Succeeded)
+    nb.Print($""{result.FailureMessage}"");
+nb.Print($""Operation done"");";
+
+        context.GameState.FileSystem.WriteFile(server.Hostname, fileName, source);
+        context.Terminal.WriteLine($"{fileName} created.");
+
+        fileName = "basic_hack.cx";
+        source =
+@"var target = args[0];
+nb.Print($""Starting against {target}"");
+int iteration = 0;
+
+while (true)
+{
+    nb.Print($""Iteration {iteration}"");
+    iteration++;
+
+    if (nb.GetServerSecurityLevel(target) > nb.GetServerMinSecurityLevel(target) + 5)
+    {
+        nb.Print($""Weakening {target}"");
+        var result = await nb.Weaken(target);
+        if (!result.Succeeded)
+        {
+            nb.Print($""{result.FailureMessage}"");
+            return;
+        }
+    }
+    else if (nb.GetServerMoneyAvailable(target) < nb.GetServerMaxMoney(target) * 0.75)
+    {
+        nb.Print($""Growing {target}"");
+        var result = await nb.Grow(target);
+        if (!result.Succeeded)
+        {
+            nb.Print($""{result.FailureMessage}"");
+            return;
+        }
+    }
+    else
+    {
+        nb.Print($""Hacking {target}"");
+        var result = await nb.Hack(target);
+        if (!result.Succeeded)
+        {
+            nb.Print($""{result.FailureMessage}"");
+            return;
+        }
+    }
+
+    nb.Print($""Operation done"");
+}";
+
+        context.GameState.FileSystem.WriteFile(server.Hostname, fileName, source);
+        context.Terminal.WriteLine($"{fileName} created.");
+     
+        return Task.CompletedTask;
+    }
+
     // Register game commands
 
     private static Task HelpAsync(
@@ -417,40 +493,8 @@ public static class CommandRegistryFactory
         IReadOnlyList<string> arguments)
     {
         var server = context.NetworkService.GetCurrentServer();
-        var fileName = "test.cx"; // arguments[0];
-        var source =
-@"nb.Print($""Hacking n00dles"");
-var result = await nb.Hack(""n00dles"");
-if (!result.Succeeded)
-    nb.Print($""{result.FailureMessage}"");
-nb.Print($""Operation done"");"; 
-//@"var target = args[0];
-//nb.Print($""Starting against {target}"");
-//int iteration = 0;
-
-//while (true)
-//{
-//    nb.Print($""Iteration {iteration}"");
-//    iteration++;
-
-//    if (nb.GetServerSecurityLevel(target) > nb.GetServerMinSecurityLevel(target) + 5)
-//    {
-//        nb.Print($""Weakening {target}"");
-//        await nb.Weaken(target);
-//    }
-//    else if (nb.GetServerMoneyAvailable(target) < nb.GetServerMaxMoney(target) * 0.75)
-//    {
-//        nb.Print($""Growing {target}"");
-//        await nb.Grow(target);
-//    }
-//    else
-//    {
-//        nb.Print($""Hacking {target}"");
-//        await nb.Hack(target);
-//    }
-
-//    nb.Print($""Operation done"");
-//}";
+        var fileName = arguments[0];
+        var source = arguments[1];
 
         context.GameState.FileSystem.WriteFile(server.Hostname, fileName, source);
 
@@ -467,28 +511,15 @@ nb.Print($""Operation done"");";
         var fileName = arguments[0];
         var scriptArguments = arguments.Skip(1).ToArray();
 
-        var result = context.ScriptService.Start(
-            server.Hostname,
-            fileName,
-            scriptArguments);
+        context.Terminal.WriteLine($"Executing {fileName}...");
+
+        var result = context.ScriptService.Start(server.Hostname, fileName, scriptArguments);
 
         foreach (var diagnostic in result.Diagnostics)
-        {
-            WriteScriptDiagnostic(
-                context.Terminal,
-                fileName,
-                diagnostic);
-        }
+            WriteScriptDiagnostic(context.Terminal, fileName, diagnostic);
 
-        if (!result.Succeeded)
-        {
-            if (result.Diagnostics.Count == 0)
-                context.Terminal.WriteLine(result.FailureMessage);
-
-            return Task.CompletedTask;
-        }
-
-        context.Terminal.WriteLine($"Started {fileName}.");
+        if (!result.Succeeded && result.Diagnostics.Count == 0)
+            context.Terminal.WriteLine(result.FailureMessage);
 
         return Task.CompletedTask;
     }

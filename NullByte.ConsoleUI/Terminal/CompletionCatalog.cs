@@ -13,8 +13,6 @@ namespace NullByte.ConsoleUI.Terminal;
 /// </remarks>
 public sealed class CompletionCatalog : ICompletionProvider
 {
-    private static readonly string[] ExitCommands = ["exit", "quit"];
-
     private readonly CommandRegistry registry;
     private readonly GameState gameState;
 
@@ -99,13 +97,6 @@ public sealed class CompletionCatalog : ICompletionProvider
             {
                 commands.Add(new CommandCompletionInfo(alias, command.Completions, hidden));
             }
-        }
-
-        // 'exit' and 'quit' are handled by Program,
-        // rather than CommandRegistry.
-        foreach (var exit in ExitCommands)
-        {
-            commands.Add(new CommandCompletionInfo(exit, []));
         }
 
         return commands;
