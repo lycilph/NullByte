@@ -16,7 +16,7 @@ public sealed class ScriptService
     private readonly GameState gameState;
     private readonly IScriptCompiler compiler;
     private readonly ScriptRunner runner;
-    private readonly Func<INullByteApi> createApi;
+    private readonly INullByteApi api;
 
     private Task? runningScript;
 
@@ -24,17 +24,17 @@ public sealed class ScriptService
         GameState gameState,
         IScriptCompiler compiler,
         ScriptRunner runner,
-        Func<INullByteApi> createApi)
+        INullByteApi api)
     {
         ArgumentNullException.ThrowIfNull(gameState);
         ArgumentNullException.ThrowIfNull(compiler);
         ArgumentNullException.ThrowIfNull(runner);
-        ArgumentNullException.ThrowIfNull(createApi);
+        ArgumentNullException.ThrowIfNull(api);
 
         this.gameState = gameState;
         this.compiler = compiler;
         this.runner = runner;
-        this.createApi = createApi;
+        this.api = api;
     }
 
     /// <summary>
@@ -72,12 +72,7 @@ public sealed class ScriptService
         var compiledScript = compilation.Script
             ?? throw new InvalidOperationException("Successful compilation did not produce a script.");
 
-        var api = createApi();
-
-        runningScript = RunAndObserveAsync(
-            compiledScript,
-            api,
-            args.ToArray());
+        runningScript = RunAndObserveAsync(compiledScript, api, args.ToArray());
 
         return ScriptStartResult.Success(compilation.Diagnostics);
     }

@@ -14,6 +14,7 @@ using NullByte.Core.World;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Loading;
 using NullByte.Scripting.Runtime;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxTokenParser;
 
 namespace NullByte.ConsoleUI;
 
@@ -27,14 +28,15 @@ public class Program
         var clock = new RealGameClock() { SpeedMultiplier = balanceConfig.GameSpeedMultiplier };
         
         var synchronizationContext = new GameSynchronizationContext();
-        await using var gameLoop = new GameLoop(clock, synchronizationContext);
+        var scheduler = new GameScheduler(clock);
+        await using var gameLoop = new GameLoop(clock, synchronizationContext, scheduler);
 
         var gameState = InitialGameStateFactory.Create();
         var networkService = new NetworkService(gameState);
         var hackingFormulas = new HackingFormulas(balanceConfig);
         var botnetFormulas = new BotnetFormulas(balanceConfig);
         var randomSource = new SeededRandomSource(balanceConfig.RandomSeed);
-        var serverActions = new ServerActions(gameState, gameLoop.Scheduler, hackingFormulas, randomSource);
+        var serverActions = new ServerActions(gameState, scheduler, hackingFormulas, randomSource);
         var botnetService = new BotnetService(gameState, botnetFormulas);
 
         // Systems are updated by the game loop on the game thread; they must be added before it starts.
@@ -52,7 +54,6 @@ public class Program
             completionProvider: completionCatalog);
         
         var terminalTask = terminal.RunAsync();
-        var scriptOutput = new TerminalScriptOutput(terminal);
         var scriptCompiler = new ScriptCompiler();
         var scriptLoader = new ScriptAssemblyLoader();
         var scriptRunner = new ScriptRunner(scriptLoader);
@@ -62,11 +63,12 @@ public class Program
         Task.Run(() => scriptCompiler.Compile("{}", "warmup"));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
+        var api = new NullByteApi(gameState, scheduler, serverActions, terminal);
         var scriptService = new ScriptService(
             gameState,
             scriptCompiler,
             scriptRunner,
-            () => new NullByteApi(gameState, gameLoop.Scheduler, serverActions, scriptOutput));
+            api);
         
         scriptService.ScriptFailed += exception => terminal.WriteLine($"Script failed: {exception.Message}");
 
@@ -142,7 +144,7 @@ public class Program
         CompletionCatalog completionCatalog)
     {
         var terminal = context.Terminal;
-        var gameLoop = context.GameLoop;
+        var gameThread = context.GameThread;
 
         await foreach (var commandLine in terminal.ReadCommandsAsync())
         {
@@ -157,12 +159,15 @@ public class Program
 
             try
             {
-                await gameLoop.InvokeAsync(async () =>
+                await gameThread.InvokeAsync(async () =>
                 {
                     try
                     {
                         terminal.SetInputEnabled(false);
                         await dispatcher.DispatchAsync(commandLine, context);
+
+                        // Update terminal prompt
+                        terminal.SetPrompt($"root@{context.GameState.Player.CurrentHostname} $ ");
                     }
                     finally
                     {
@@ -178,7 +183,7 @@ public class Program
                 return;
             }
             catch (InvalidOperationException)
-                when (!gameLoop.IsRunning)
+                when (!gameThread.IsRunning)
             {
                 return;
             }

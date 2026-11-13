@@ -290,7 +290,7 @@ public sealed class NullByteApiTests
         }
     }
 
-    private sealed class TestScriptOutput : IScriptOutput
+    private sealed class TestScriptOutput : IGameOutput
     {
         public List<string> Lines { get; } = [];
         public void WriteLine(string message) => Lines.Add(message);

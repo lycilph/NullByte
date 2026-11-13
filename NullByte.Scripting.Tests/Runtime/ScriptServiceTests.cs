@@ -386,7 +386,7 @@ public sealed class ScriptServiceTests
                 GameState,
                 compiler,
                 runner,
-                () => Api);
+                Api);
 
             Service.ScriptCompleted += () => scriptFinished.TrySetResult();
 

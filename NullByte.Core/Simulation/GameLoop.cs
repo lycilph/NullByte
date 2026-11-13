@@ -8,13 +8,14 @@ namespace NullByte.Core.Simulation;
 /// <summary>
 /// Runs the core game simulation on a dedicated thread.
 /// </summary>
-public sealed class GameLoop : IAsyncDisposable
+public sealed class GameLoop : IAsyncDisposable, IGameThread
 {
     // How long the game thread sleeps between ticks. A stop request wakes it immediately.
     private static readonly TimeSpan TickInterval = TimeSpan.FromMilliseconds(10);
 
     private readonly IGameClock clock;
     private readonly GameSynchronizationContext synchronizationContext;
+    private readonly GameScheduler scheduler;
 
     private readonly CancellationTokenSource stopSource = new();
     private readonly TaskCompletionSource startedSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -27,7 +28,7 @@ public sealed class GameLoop : IAsyncDisposable
     private readonly List<ISimulationSystem> systems = [];
     private TimeSpan lastSystemUpdate;
 
-    public GameLoop(IGameClock clock, GameSynchronizationContext synchronizationContext)
+    public GameLoop(IGameClock clock, GameSynchronizationContext synchronizationContext, GameScheduler scheduler)
     {
         this.clock = clock
             ?? throw new ArgumentNullException(nameof(clock));
@@ -35,13 +36,11 @@ public sealed class GameLoop : IAsyncDisposable
         this.synchronizationContext = synchronizationContext
             ?? throw new ArgumentNullException(nameof(synchronizationContext));
 
-        Scheduler = new GameScheduler(clock);
+        this.scheduler = scheduler;
 
         // Systems see the time that passes from now on, not the time before they existed.
         lastSystemUpdate = clock.Elapsed;
     }
-
-    public GameScheduler Scheduler { get; }
 
     /// <summary>
     /// Raised on the game thread when posted work or a system throws. See
@@ -50,15 +49,17 @@ public sealed class GameLoop : IAsyncDisposable
     /// </summary>
     public event Action<Exception>? UnhandledException;
 
-    public bool IsGameThread => synchronizationContext.IsGameThread;
+    public bool IsGameThread { get => synchronizationContext.IsGameThread; }
 
     /// <summary>
     /// Gets whether the loop has started and has not been asked to stop.
     /// </summary>
-    public bool IsRunning =>
-        startedSource.Task.IsCompletedSuccessfully &&
-        !stopSource.IsCancellationRequested &&
-        !stoppedSource.Task.IsCompleted;
+    public bool IsRunning
+    {
+        get => startedSource.Task.IsCompletedSuccessfully &&
+               !stopSource.IsCancellationRequested &&
+               !stoppedSource.Task.IsCompleted;
+    }
 
     /// <summary>
     /// Completes when the game thread is initialized and ready.
@@ -238,7 +239,7 @@ public sealed class GameLoop : IAsyncDisposable
     public void Tick()
     {
         // Timers first, so the continuations they release run in this tick's batch.
-        Scheduler.Update();
+        scheduler.Update();
         UpdateSystems();
         DrainPendingWork();
     }

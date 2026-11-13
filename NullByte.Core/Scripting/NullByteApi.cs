@@ -13,13 +13,13 @@ public sealed class NullByteApi : INullByteApi
     private readonly GameState _gameState;
     private readonly GameScheduler _scheduler;
     private readonly ServerActions _serverActions;
-    private readonly IScriptOutput _output;
+    private readonly IGameOutput _output;
 
     public NullByteApi(
         GameState gameState,
         GameScheduler scheduler,
         ServerActions serverActions,
-        IScriptOutput output)
+        IGameOutput output)
     {
         ArgumentNullException.ThrowIfNull(gameState);
         ArgumentNullException.ThrowIfNull(scheduler);

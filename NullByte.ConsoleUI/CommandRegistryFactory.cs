@@ -48,14 +48,6 @@ public static class CommandRegistryFactory
 
         registry.Register(
             new CommandDefinition(
-                "demo",
-                "demo",
-                "Run a scheduler demonstration.",
-                RunDemoAsync)
-            { Debug = true });
-
-        registry.Register(
-            new CommandDefinition(
                 "scripts",
                 "scripts",
                 "Create test scripts.",
@@ -283,47 +275,9 @@ public static class CommandRegistryFactory
         IReadOnlyList<string> arguments)
     {
         context.Terminal.WriteLine($"Thread ID: {Environment.CurrentManagedThreadId}");
-        context.Terminal.WriteLine($"Is game thread: {context.GameLoop.IsGameThread}");
+        context.Terminal.WriteLine($"Is game thread: {context.GameThread.IsGameThread}");
 
         return Task.CompletedTask;
-    }
-
-    private static async Task RunDemoAsync(
-        CommandContext context,
-        IReadOnlyList<string> arguments)
-    {
-        var terminal = context.Terminal;
-        try
-        {
-            terminal.WriteLine("[M1] Starting scheduler demonstration.");
-            terminal.WriteLine($"[M1] Game thread ID: {Environment.CurrentManagedThreadId}");
-            terminal.WriteLine();
-
-            var slowOperation =
-                DemonstrateOperationAsync(
-                    name: "operation-a",
-                    duration: TimeSpan.FromSeconds(3),
-                    context.GameLoop,
-                    context.Clock,
-                    terminal);
-
-            var fastOperation =
-                DemonstrateOperationAsync(
-                    name: "operation-b",
-                    duration: TimeSpan.FromSeconds(1.5),
-                    context.GameLoop,
-                    context.Clock,
-                    terminal);
-
-            await Task.WhenAll(slowOperation, fastOperation);
-
-            terminal.WriteLine();
-            terminal.WriteLine("[M1] Both scheduled operations completed.");
-        }
-        catch (Exception exception)
-        {
-            terminal.WriteLine($"[M1] Demonstration failed: {exception.Message}");
-        }
     }
 
     private static Task TestScriptsAsync(
@@ -583,7 +537,6 @@ while (true)
             return Task.CompletedTask;
         }
 
-        context.Terminal.SetPrompt($"root@{result.Server!.Hostname} $ ");
         context.Terminal.WriteLine($"Connected to {result.Server!.Hostname}.");
         return Task.CompletedTask;
     }
@@ -594,9 +547,7 @@ while (true)
     {
         var result = context.NetworkService.GoHome();
 
-        context.Terminal.SetPrompt($"root@{result.Server!.Hostname} $ ");
         context.Terminal.WriteLine($"Returned to {result.Server!.Hostname}.");
-
         return Task.CompletedTask;
     }
 
@@ -889,34 +840,6 @@ while (true)
         => cost is null ? "max" : $"${cost.Value:N0}";
 
     // Support methods
-
-    private static async Task DemonstrateOperationAsync(
-        string name,
-        TimeSpan duration,
-        GameLoop gameLoop,
-        IGameClock clock,
-        IGameTerminal terminal)
-    {
-        var threadBefore = Environment.CurrentManagedThreadId;
-
-        terminal.WriteLine(
-            $"[M1] {name} started at " +
-            $"{clock.Elapsed.TotalSeconds:F3}s " +
-            $"on thread {threadBefore}. " +
-            $"Waiting {duration.TotalSeconds:F1} game seconds.");
-
-        await gameLoop.Scheduler.DelayAsync(duration);
-
-        var threadAfter = Environment.CurrentManagedThreadId;
-
-        terminal.WriteLine(
-            $"[M1] {name} completed at " +
-            $"{clock.Elapsed.TotalSeconds:F3}s " +
-            $"on thread {threadAfter}.");
-
-        if (threadBefore != threadAfter || !gameLoop.IsGameThread)
-            throw new InvalidOperationException($"{name} resumed on the wrong thread.");
-    }
 
     private static void WriteScriptDiagnostic(IGameTerminal terminal, string fileName, ScriptDiagnostic diagnostic)
     {

@@ -15,7 +15,7 @@ public sealed class GameLoopResilienceTests
     [Fact]
     public async Task CallbackFailure_WithHandler_ReportsExceptionAndKeepsRunning()
     {
-        await using var gameLoop = CreateGameLoop(out _);
+        await using var gameLoop = CreateGameLoop(out _, out _);
 
         var reported = new TaskCompletionSource<Exception>(
             TaskCreationOptions.RunContinuationsAsynchronously);
@@ -41,7 +41,7 @@ public sealed class GameLoopResilienceTests
     [Fact]
     public async Task CallbackFailure_WithHandler_ReportsEveryFailure()
     {
-        await using var gameLoop = CreateGameLoop(out _);
+        await using var gameLoop = CreateGameLoop(out _, out _);
 
         var messages = new List<string>();
         var allReported = new TaskCompletionSource(
@@ -71,7 +71,7 @@ public sealed class GameLoopResilienceTests
     [Fact]
     public async Task CallbackFailure_WhenHandlerThrows_DoesNotFaultLoop()
     {
-        await using var gameLoop = CreateGameLoop(out _);
+        await using var gameLoop = CreateGameLoop(out _, out _);
 
         gameLoop.UnhandledException += _ => throw new InvalidOperationException("Bad handler.");
 
@@ -89,7 +89,7 @@ public sealed class GameLoopResilienceTests
     [Fact]
     public async Task AsyncVoidFailure_WithHandler_IsReportedAndLoopSurvives()
     {
-        await using var gameLoop = CreateGameLoop(out _);
+        await using var gameLoop = CreateGameLoop(out _, out _);
 
         var reported = new TaskCompletionSource<Exception>(
             TaskCreationOptions.RunContinuationsAsynchronously);
@@ -115,7 +115,7 @@ public sealed class GameLoopResilienceTests
     [Fact]
     public async Task SelfPostingCallback_DoesNotStarveOtherWork()
     {
-        await using var gameLoop = CreateGameLoop(out var context);
+        await using var gameLoop = CreateGameLoop(out var context, out _);
 
         var stop = false;
         var runs = 0;
@@ -150,7 +150,7 @@ public sealed class GameLoopResilienceTests
     [Fact]
     public async Task ZeroDelayLoop_DoesNotStarveOtherWork()
     {
-        await using var gameLoop = CreateGameLoop(out _);
+        await using var gameLoop = CreateGameLoop(out _, out GameScheduler scheduler);
 
         gameLoop.Start();
         await gameLoop.Started.WaitAsync(Timeout);
@@ -163,7 +163,7 @@ public sealed class GameLoopResilienceTests
         {
             while (!cancellation.IsCancellationRequested)
             {
-                await gameLoop.Scheduler.DelayAsync(TimeSpan.Zero);
+                await scheduler.DelayAsync(TimeSpan.Zero);
                 Interlocked.Increment(ref iterations);
             }
         });
@@ -184,11 +184,13 @@ public sealed class GameLoopResilienceTests
         }
     }
 
-    private static GameLoop CreateGameLoop(out GameSynchronizationContext context)
+    private static GameLoop CreateGameLoop(out GameSynchronizationContext context, out GameScheduler scheduler)
     {
+        var clock = new RealGameClock();
         context = new GameSynchronizationContext();
+        scheduler = new GameScheduler(clock);
 
-        return new GameLoop(new RealGameClock(), context);
+        return new GameLoop(clock, context, scheduler);
     }
 
     private static async void ThrowFromAsyncVoid()

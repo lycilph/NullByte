@@ -10,7 +10,7 @@ namespace NullByte.ConsoleUI.Commands;
 
 public sealed class CommandContext(
     GameState gameState,
-    GameLoop gameLoop,
+    IGameThread gameThread,
     IGameClock clock,
     NetworkService networkService,
     ServerActions serverActions,
@@ -22,7 +22,7 @@ public sealed class CommandContext(
     IGameTerminal terminal)
 {
     public GameState GameState { get; } = gameState;
-    public GameLoop GameLoop { get; } = gameLoop;
+    public IGameThread GameThread { get; } = gameThread;
     public IGameClock Clock { get; } = clock;
     public NetworkService NetworkService { get; } = networkService;
     public ServerActions ServerActions { get; } = serverActions;

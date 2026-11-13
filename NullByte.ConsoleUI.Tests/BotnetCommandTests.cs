@@ -167,28 +167,27 @@ public sealed class BotnetCommandTests
             GameState = new GameState(new Player("home", startingMoney: money), network);
 
             var clock = new RealGameClock();
-            var gameLoop = new GameLoop(clock, new GameSynchronizationContext());
+            var scheduler = new GameScheduler(clock);
+            var gameLoop = new GameLoop(clock, new GameSynchronizationContext(), scheduler);
 
             var hackingFormulas = new HackingFormulas(balance);
             var botnetFormulas = new BotnetFormulas(balance);
 
             var serverActions = new ServerActions(
                 GameState,
-                gameLoop.Scheduler,
+                scheduler,
                 hackingFormulas,
                 new SeededRandomSource(1));
-
-            var scriptOutput = new TerminalScriptOutput(terminal);
 
             var scriptService = new ScriptService(
                 GameState,
                 new ScriptCompiler(),
                 new ScriptRunner(new ScriptAssemblyLoader()),
-                () => new NullByteApi(
+                new NullByteApi(
                     GameState,
-                    gameLoop.Scheduler,
+                    scheduler,
                     serverActions,
-                    scriptOutput));
+                    terminal));
 
             var registry = CommandRegistryFactory.Create();
 
@@ -215,7 +214,7 @@ public sealed class BotnetCommandTests
         public Task RunAsync(string commandLine) => dispatcher.DispatchAsync(commandLine, context);
     }
 
-    private sealed class FakeTerminal : IGameTerminal
+    private sealed class FakeTerminal : IGameTerminal, IGameOutput
     {
         public List<string> Lines { get; } = [];
 

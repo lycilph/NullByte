@@ -156,7 +156,7 @@ public sealed class GameLoopSystemTests
     {
         // At 100x speed one real second is 100 game seconds, so a level one node makes about 150 per real second.
         var clock = new RealGameClock { SpeedMultiplier = 100 };
-        await using var gameLoop = new GameLoop(clock, new GameSynchronizationContext());
+        await using var gameLoop = CreateGameLoop(clock);
 
         var home = new Server("home", 0, 0, 5, 1, 1, 1, 0, 8, hasRootAccess: true);
         var network = new Network();
@@ -186,7 +186,7 @@ public sealed class GameLoopSystemTests
     }
 
     private static GameLoop CreateGameLoop(IGameClock clock)
-        => new(clock, new GameSynchronizationContext());
+        => new(clock, new GameSynchronizationContext(), new GameScheduler(clock));
 
     private sealed class RecordingSystem(Action<TimeSpan> onUpdate) : ISimulationSystem
     {

@@ -1,9 +1,10 @@
 ﻿using System.Text;
 using System.Threading.Channels;
+using NullByte.Core.Services;
 
 namespace NullByte.ConsoleUI.Terminal;
 
-public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IAsyncDisposable
+public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsyncDisposable
 {
     private const int RefreshDelayMilliseconds = 16;
 

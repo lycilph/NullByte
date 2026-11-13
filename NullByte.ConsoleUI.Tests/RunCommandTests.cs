@@ -252,9 +252,11 @@ public sealed class RunCommandTests
                 network);
 
             var clock = new RealGameClock();
+            var scheduler = new GameScheduler(clock);
             var gameLoop = new GameLoop(
                 clock,
-                new GameSynchronizationContext());
+                new GameSynchronizationContext(),
+                scheduler);
 
             var hackingFormulas =
                 new HackingFormulas(balance);
@@ -264,12 +266,9 @@ public sealed class RunCommandTests
 
             var serverActions = new ServerActions(
                 GameState,
-                gameLoop.Scheduler,
+                scheduler,
                 hackingFormulas,
                 new SeededRandomSource(1));
-
-            var scriptOutput =
-                new TerminalScriptOutput(terminal);
 
             ScriptApi = new TestNullByteApi(terminal);
 
@@ -278,7 +277,7 @@ public sealed class RunCommandTests
                 new ScriptCompiler(),
                 new ScriptRunner(
                     new ScriptAssemblyLoader()),
-                () => ScriptApi);
+                ScriptApi);
 
             var registry =
                 CommandRegistryFactory.Create();

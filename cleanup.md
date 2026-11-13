@@ -14,17 +14,6 @@ The foundation is solid and M0–M5 are all there. The single-thread model is we
 
 Your "convoluted" feeling is accurate. Most of it comes from a few causes: repeated structure, a service-locator context, and leftover scaffolding. It isn't an architecture problem. Fixing it should remove several hundred lines without changing behaviour.
 
-## Bugs and things to verify first
-
-- ~~**`RunCommandTests` looks out of sync with the code.** It asserts `"Started hello.cs."` and `"Usage: run <script> [args...]"`, but the code prints `"Executing {file}..."` and declares `run <filename> [args...]`. Run `dotnet test`. Either those tests fail or the snapshot is stale.~~
-- ~~**The progress bar can get stuck.** In the hack/grow/weaken handlers, `StopProgress()` is not in a `finally`. If the action throws or is cancelled, the bar stays up.~~
-- **Duration is computed twice.** The console computes it for the progress bar and `ServerActions` computes it again. They can diverge. A refused hack, for example when you have no root, also briefly shows a progress bar for something that never ran.
-- ~~**Dead code in `GameLoop.cs`.** 414 of its 731 lines are the commented-out previous implementation. Delete it. There's also a stale `<see cref="GameSimulation...">` and a malformed `<Gets` XML comment in `GameState`.~~
-- ~~**`HackAsync` writes `player.Money += ...` directly.** That bypasses the validated `AddMoney`. Make the setter private.~~
-- ~~**Please double-check against Bitburner:** security increases on a failed hack, and XP on failure. I believe Bitburner only fortifies on success and gives reduced XP on failure, but I'm not certain. The doc already says to verify these in M2.~~
-- ~~**The RNG seed is fixed at 1337 in production**, so every new game has identical hack luck. Use a time-based seed outside tests.~~
-- ~~**Scripts compile on the game thread.** First-compile latency freezes the whole simulation. The handler is already async, so `await Task.Run(() => compile)` is a small change, and the continuation resumes on the game thread. Also warm the compiler at startup.~~
-- ~~**Inconsistent extensions:** the debug scripts are `.cx` and the tests use `.cs`.~~
 
 ## Where the complexity comes from, and how to cut it
 
@@ -49,18 +38,13 @@ var result = await action.Task;
 
 One `RunManualAction(...)` helper then replaces the three handlers.
 
-### 3. Input blocking belongs in the command loop, not in three handlers
-The loop in `Program` should disable input before dispatching every command and re-enable it after. That removes `RunWithInputBlockedAsync` entirely.
-
-It also fixes a small race. `SetInputEnabled(false)` goes through a channel and applies on the next UI tick. A line submitted in that 10–30 ms window gets queued and runs after the hack, which violates "input is discarded". Disabling input synchronously on Enter closes the gap.
-
 ### 4. The composition root is in the console host
 `Program.Main` wires about 25 objects by hand, and `CommandContext` repeats 11 of them. The doc says a WPF host should reuse Core and Scripting unchanged, so the wiring should be reusable too.
 - Add a `GameSession` (GameState, loop, scheduler, services) that both hosts create.
-- The doc's `IGameHost` doesn't exist yet. Today there is a console-specific `IGameTerminal`, plus `IScriptOutput` and a `TerminalScriptOutput` adapter that only forwards `WriteLine`. Introduce one `IGameOutput` (`WriteLine`) in Core. Scripts and commands both write to it, and the adapter goes away. Terminal-only features stay in ConsoleUI.
-- Construct `GameScheduler` first and pass it to `GameLoop`. `ServerActions` and `NullByteApi` then depend on the scheduler, not the loop. `GameLoop` is currently used as a service provider.
-- `context.GameLoop` is only used for `InvokeAsync` and `IsGameThread`. A tiny `IGameThread` interface covers that.
-- Prompt state lives in two places: `Player.CurrentHostname`, and `SetPrompt` called by hand in `connect`, in `home`, and hardcoded in `Program`. After each command, set the prompt and refresh completion from one place. Both already need to happen there.
+- ~~The doc's `IGameHost` doesn't exist yet. Today there is a console-specific `IGameTerminal`, plus `IScriptOutput` and a `TerminalScriptOutput` adapter that only forwards `WriteLine`. Introduce one `IGameOutput` (`WriteLine`) in Core. Scripts and commands both write to it, and the adapter goes away. Terminal-only features stay in ConsoleUI.~~
+- ~~Construct `GameScheduler` first and pass it to `GameLoop`. `ServerActions` and `NullByteApi` then depend on the scheduler, not the loop. `GameLoop` is currently used as a service provider.~~
+- ~~`context.GameLoop` is only used for `InvokeAsync` and `IsGameThread`. A tiny `IGameThread` interface covers that.~~
+- ~~Prompt state lives in two places: `Player.CurrentHostname`, and `SetPrompt` called by hand in `connect`, in `home`, and hardcoded in `Program`. After each command, set the prompt and refresh completion from one place. Both already need to happen there.~~
 
 ### 5. The terminal mixes three jobs in 700 lines
 `ThreadSafeConsoleTerminal` contains the key-handling state machine, the renderer and the cross-thread marshalling (seven request records). Because key handling is welded to `Console.KeyAvailable`, none of it can be tested, including the "discarded input" acceptance criterion.

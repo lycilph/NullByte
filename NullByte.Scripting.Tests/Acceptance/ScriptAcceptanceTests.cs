@@ -121,7 +121,7 @@ public sealed class ScriptAcceptanceTests
             result.Diagnostics.Select(diagnostic => $"{diagnostic.Id}: {diagnostic.Message}"));
     }
 
-    private sealed class TestScriptOutput : IScriptOutput
+    private sealed class TestScriptOutput : IGameOutput
     {
         public List<string> Lines { get; } = [];
 

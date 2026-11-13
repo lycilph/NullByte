@@ -1,14 +1,14 @@
-﻿namespace NullByte.Core.Scripting;
+﻿namespace NullByte.Core.Services;
 
 /// <summary>
-/// Receives text written by a running player script.
+/// All text that the game output will go through this
 /// </summary>
 /// <remarks>
 /// The core scripting API knows nothing about the concrete user interface.
 /// ConsoleUI can write this output to the terminal, while a later WPF host
 /// can provide its own implementation.
 /// </remarks>
-public interface IScriptOutput
+public interface IGameOutput
 {
     void WriteLine(string message);
 }
