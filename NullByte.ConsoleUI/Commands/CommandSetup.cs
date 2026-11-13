@@ -19,7 +19,7 @@ public static class CommandSetup
             new FileCommands(session.State.FileSystem, session.Services.Network, terminal),
             new ScriptCommands(session.Services.Network, session.Services.Scripts, terminal),
             new ActionCommands(session.State.Player, session.Clock, session.Services.HackingFormulas, session.Services.Actions, session.Services.Network, terminal),
-            //new BotnetCommands(session.State.Botnet, s.Botnet, s.BotnetFormulas, terminal),
+            new BotnetCommands(),
         ];
 
         foreach (var group in groups)
