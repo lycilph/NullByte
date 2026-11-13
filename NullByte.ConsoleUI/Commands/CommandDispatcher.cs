@@ -18,32 +18,34 @@ public sealed class CommandDispatcher
 
     public async Task<bool> DispatchAsync(string commandLine)
     {
-        ArgumentNullException.ThrowIfNull(commandLine);
-
-        var arguments = CommandLineParser.Parse(commandLine);
-
-        if (arguments.Count == 0)
+        var tokens = CommandLineParser.Parse(commandLine);
+        if (tokens.Count == 0)
             return false;
 
-        var commandName = arguments[0];
-
-        if (!registry.TryGet(commandName, out var command))
+        if (!registry.TryResolve(tokens, out var command, out var consumed))
         {
-            output.WriteLine($"Unknown command: {commandName}");
+            output.WriteLine($"Unknown command: {tokens[0]}");
             output.WriteLine("Type 'help' to see available commands.");
-
             return false;
         }
 
-        var commandArguments = arguments.Skip(1).ToArray();
-        if (commandArguments.Length < command!.MinArgs || commandArguments.Length > command!.MaxArgs)
+        var args = tokens.Skip(consumed).ToArray();
+        if (args.Length < command.MinArgs || args.Length > command.MaxArgs)
         {
-            output.WriteLine($"Usage: {command!.Usage}");
+            WriteUsage(command);
             return false;
         }
 
-        await command!.Handler(commandArguments);
-
+        await command.Handler(args);
         return true;
+    }
+
+    private void WriteUsage(CommandDefinition command)
+    {
+        output.WriteLine($"Usage: {command.Usage}");
+
+        // "botnet foo" lands on "botnet" with a stray argument: show the subcommands too.
+        foreach (var sub in registry.Subcommands(command))
+            output.WriteLine($"       {sub.Usage}");
     }
 }

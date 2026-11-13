@@ -1,6 +1,8 @@
-﻿using NullByte.ConsoleUI.Terminal;
+﻿using NullByte.ConsoleUI.Commands;
+using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Services;
 using NullByte.Core.World;
+using NullByte.Shell;
 
 namespace NullByte.ConsoleUI.Tests;
 
@@ -91,8 +93,10 @@ public sealed class CompletionCatalogTests
 
     private static Fixture CreateFixture()
     {
+        var terminal = new FakeTerminal();
         var gameState = InitialGameStateFactory.Create();
-        var registry = CommandRegistryFactory.Create();
+        var session = GameSession.Create(new GameSessionOptions() { Output = terminal });
+        var registry = CommandSetup.Create(session, terminal);
 
         return new Fixture(
             new NetworkService(gameState),

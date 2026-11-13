@@ -34,4 +34,7 @@ public sealed record CompletionSnapshot(
 public sealed record CommandCompletionInfo(
     string Name,
     IReadOnlyList<ArgumentCompletion> Completions,
-    bool Hidden = false);
+    bool Hidden = false)
+{
+    public IReadOnlyList<string> Words { get; } = Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+}

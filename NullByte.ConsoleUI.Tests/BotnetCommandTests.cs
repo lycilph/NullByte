@@ -2,16 +2,8 @@
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Configuration;
 using NullByte.Core.Domain;
-using NullByte.Core.Formulas;
-using NullByte.Core.Randomness;
-using NullByte.Core.Scripting;
 using NullByte.Core.Services;
-using NullByte.Core.Simulation;
-using NullByte.Core.Threading;
-using NullByte.Core.Time;
-using NullByte.Scripting.Compilation;
-using NullByte.Scripting.Loading;
-using NullByte.Scripting.Runtime;
+using NullByte.Shell;
 
 namespace NullByte.ConsoleUI.Tests;
 
@@ -20,7 +12,9 @@ public sealed class BotnetCommandTests
     [Fact]
     public void BotnetCommand_IsRegistered()
     {
-        var registry = CommandRegistryFactory.Create();
+        var terminal = new FakeTerminal();
+        var session = GameSession.Create(new GameSessionOptions() { Output = terminal });
+        var registry = CommandSetup.Create(session, terminal);
 
         Assert.True(registry.TryGet("botnet", out var command));
         Assert.NotNull(command);
@@ -142,7 +136,6 @@ public sealed class BotnetCommandTests
     private sealed class Harness
     {
         private readonly CommandDispatcher dispatcher;
-        private readonly CommandContext context;
         private readonly FakeTerminal terminal = new();
 
         public Harness(double money, BalanceConfig? balance = null)
@@ -166,45 +159,9 @@ public sealed class BotnetCommandTests
 
             GameState = new GameState(new Player("home", startingMoney: money), network);
 
-            var clock = new RealGameClock();
-            var scheduler = new GameScheduler(clock);
-            var gameLoop = new GameLoop(clock, new GameSynchronizationContext(), scheduler);
-
-            var hackingFormulas = new HackingFormulas(balance);
-            var botnetFormulas = new BotnetFormulas(balance);
-
-            var serverActions = new ServerActions(
-                GameState,
-                scheduler,
-                hackingFormulas,
-                new SeededRandomSource(1));
-
-            var scriptService = new ScriptService(
-                GameState,
-                new ScriptCompiler(),
-                new ScriptRunner(new ScriptAssemblyLoader()),
-                new NullByteApi(
-                    GameState,
-                    scheduler,
-                    serverActions,
-                    terminal));
-
-            var registry = CommandRegistryFactory.Create();
-
+            var session = GameSession.Create(new GameSessionOptions() { Balance = balance, State = GameState, Output = terminal});
+            var registry = CommandSetup.Create(session, terminal);
             dispatcher = new CommandDispatcher(registry, terminal);
-
-            context = new CommandContext(
-                GameState,
-                gameLoop,
-                clock,
-                new NetworkService(GameState),
-                serverActions,
-                new BotnetService(GameState, botnetFormulas),
-                scriptService,
-                hackingFormulas,
-                botnetFormulas,
-                registry,
-                terminal);
         }
 
         public GameState GameState { get; }
@@ -212,28 +169,5 @@ public sealed class BotnetCommandTests
         public string Output => string.Join(Environment.NewLine, terminal.Lines);
 
         public Task RunAsync(string commandLine) => dispatcher.DispatchAsync(commandLine);
-    }
-
-    private sealed class FakeTerminal : IGameTerminal, IGameOutput
-    {
-        public List<string> Lines { get; } = [];
-
-        public CancellationToken StoppingToken => CancellationToken.None;
-
-        public void StartProgress(string msg, Func<double> progress) { }
-        public void StopProgress() { }
-        public void SetPrompt(string prompt) { }
-        public void SetInputEnabled(bool enabled) { }
-
-        public async IAsyncEnumerable<string> ReadCommandsAsync(
-            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
-        {
-            await Task.CompletedTask;
-            yield break;
-        }
-
-        public void WriteLine() => Lines.Add(string.Empty);
-        public void WriteLine(string message) => Lines.Add(message);
-        public void Clear() => Lines.Clear();
     }
 }

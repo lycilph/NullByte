@@ -29,45 +29,15 @@ public static class CompletionEngine
 
         var previousTokens = CommandLineParser.Parse(beforeCursor[..tokenStart]);
 
-        IReadOnlyList<string> pool;
+        var pool = SubcommandWords(snapshot, previousTokens)
+            .Concat(ArgumentValues(snapshot, previousTokens))
+            .ToArray();
 
-        if (previousTokens.Count == 0)
-        {
-            pool =
-                snapshot.Commands
-                    .Where(command => !command.Hidden)
-                    .Select(command => command.Name)
-                    .ToArray();
-        }
-        else
-        {
-            var command = FindCommand(snapshot, previousTokens[0]);
-
-            if (command is null)
-                return CompletionResult.None;
-
-            var argumentIndex = previousTokens.Count - 1;
-
-            var completion = FindCompletion(command, argumentIndex, previousTokens);
-
-            if (completion is null)
-                return CompletionResult.None;
-
-            pool = GetCompletionValues(snapshot, completion);
-        }
-
-        var candidates =
-            pool
-                .Where(name =>
-                    name.StartsWith(
-                        token,
-                        StringComparison.OrdinalIgnoreCase))
-                .Distinct(
-                    StringComparer.OrdinalIgnoreCase)
-                .OrderBy(
-                    name => name,
-                    StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+        var candidates = pool
+            .Where(name => name.StartsWith(token, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
         if (candidates.Length == 0)
             return CompletionResult.None;
@@ -98,45 +68,50 @@ public static class CompletionEngine
             candidates);
     }
 
-    private static CommandCompletionInfo? FindCommand(CompletionSnapshot snapshot, string commandName)
+    // The next word of every command name that starts with the tokens typed so far.
+    // With nothing typed this yields every command's first word, so plain
+    // command-name completion needs no special case.
+    private static IEnumerable<string> SubcommandWords(CompletionSnapshot snapshot, IReadOnlyList<string> typed)
     {
-        return snapshot.Commands.FirstOrDefault(
-            command =>
-                command.Name.Equals(
-                    commandName,
-                    StringComparison.OrdinalIgnoreCase));
+        foreach (var command in snapshot.Commands.Where(command => !command.Hidden))
+        {
+            if (command.Words.Count > typed.Count && PrefixMatches(command.Words, typed, typed.Count))
+                yield return command.Words[typed.Count];
+        }
     }
 
-    private static ArgumentCompletion? FindCompletion(
-        CommandCompletionInfo command,
-        int argumentIndex,
-        IReadOnlyList<string> tokens)
+    // Argument values for the longest registered command that the typed tokens start with.
+    private static IEnumerable<string> ArgumentValues(CompletionSnapshot snapshot, IReadOnlyList<string> typed)
     {
-        return command.Completions.FirstOrDefault(
-            completion =>
-                completion.ArgumentIndex == argumentIndex &&
-                ConditionMatches(completion.When, tokens));
+        CommandCompletionInfo? best = null;
+
+        foreach (var command in snapshot.Commands.Where(command => !command.Hidden))
+        {
+            if (command.Words.Count <= typed.Count &&
+                PrefixMatches(command.Words, typed, command.Words.Count) &&
+                (best is null || command.Words.Count > best.Words.Count))
+            {
+                best = command;
+            }
+        }
+
+        if (best is null)
+            return [];
+
+        var argumentIndex = typed.Count - best.Words.Count;
+        var completion = best.Completions.FirstOrDefault(c => c.ArgumentIndex == argumentIndex);
+
+        return completion is null ? [] : GetCompletionValues(snapshot, completion);
     }
 
-    private static bool ConditionMatches(CompletionCondition? condition, IReadOnlyList<string> tokens)
+    private static bool PrefixMatches(IReadOnlyList<string> words, IReadOnlyList<string> typed, int count)
     {
-        if (condition is null)
-            return true;
-
-        /*
-         * tokens[0] is the command name.
-         * CompletionCondition.ArgumentIndex is relative to
-         * command arguments, so add one.
-         */
-        var tokenIndex =
-            condition.ArgumentIndex + 1;
-
-        if (tokenIndex >= tokens.Count)
-            return false;
-
-        return tokens[tokenIndex].Equals(
-            condition.Value,
-            StringComparison.OrdinalIgnoreCase);
+        for (var i = 0; i < count; i++)
+        {
+            if (!words[i].Equals(typed[i], StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+        return true;
     }
 
     private static IReadOnlyList<string> GetCompletionValues(CompletionSnapshot snapshot, ArgumentCompletion completion)

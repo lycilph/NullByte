@@ -12,6 +12,7 @@ using NullByte.Core.Time;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Loading;
 using NullByte.Scripting.Runtime;
+using NullByte.Shell;
 
 namespace NullByte.ConsoleUI.Tests;
 
@@ -20,7 +21,9 @@ public sealed class RunCommandTests
     [Fact]
     public void RunCommand_IsRegistered()
     {
-        var registry = CommandRegistryFactory.Create();
+        var terminal = new FakeTerminal();
+        var session = GameSession.Create(new GameSessionOptions() { Output = terminal });
+        var registry = CommandSetup.Create(session, terminal);
 
         Assert.True(registry.TryGet("run", out var command));
         Assert.NotNull(command);
@@ -225,7 +228,6 @@ public sealed class RunCommandTests
     private sealed class Harness
     {
         private readonly CommandDispatcher dispatcher;
-        private readonly CommandContext context;
         private readonly FakeTerminal terminal = new();
 
         public Harness()
@@ -247,58 +249,15 @@ public sealed class RunCommandTests
             var network = new Network();
             network.AddServer(Home);
 
-            GameState = new GameState(
-                new Player("home"),
-                network);
-
-            var clock = new RealGameClock();
-            var scheduler = new GameScheduler(clock);
-            var gameLoop = new GameLoop(
-                clock,
-                new GameSynchronizationContext(),
-                scheduler);
-
-            var hackingFormulas =
-                new HackingFormulas(balance);
-
-            var botnetFormulas =
-                new BotnetFormulas(balance);
-
-            var serverActions = new ServerActions(
-                GameState,
-                scheduler,
-                hackingFormulas,
-                new SeededRandomSource(1));
+            GameState = new GameState(new Player("home"), network);
 
             ScriptApi = new TestNullByteApi(terminal);
 
-            ScriptService = new ScriptService(
-                GameState,
-                new ScriptCompiler(),
-                new ScriptRunner(
-                    new ScriptAssemblyLoader()),
-                ScriptApi);
+            var session = GameSession.Create(new GameSessionOptions() { Balance = balance, State = GameState, Api = ScriptApi, Output = terminal });
+            var registry = CommandSetup.Create(session, terminal);
+            dispatcher = new CommandDispatcher(registry, terminal);
 
-            var registry =
-                CommandRegistryFactory.Create();
-
-            dispatcher =
-                new CommandDispatcher(registry, terminal);
-
-            context = new CommandContext(
-                GameState,
-                gameLoop,
-                clock,
-                new NetworkService(GameState),
-                serverActions,
-                new BotnetService(
-                    GameState,
-                    botnetFormulas),
-                ScriptService,
-                hackingFormulas,
-                botnetFormulas,
-                registry,
-                terminal);
+            ScriptService = session.Services.Scripts;
         }
 
         public Server Home { get; }
@@ -319,46 +278,6 @@ public sealed class RunCommandTests
         public Task RunAsync(string commandLine)
         {
             return dispatcher.DispatchAsync(commandLine);
-        }
-    }
-
-    private sealed class FakeTerminal : IGameTerminal
-    {
-        public List<string> Lines { get; } = [];
-
-        public CancellationToken StoppingToken =>
-            CancellationToken.None;
-
-        public void StartProgress(string message, Func<double> progress) {}
-
-        public void StopProgress() {}
-
-        public void SetPrompt(string prompt) {}
-
-        public void SetInputEnabled(bool enabled) {}
-
-        public async IAsyncEnumerable<string>
-            ReadCommandsAsync(
-                [System.Runtime.CompilerServices.EnumeratorCancellation]
-                CancellationToken cancellationToken = default)
-        {
-            await Task.CompletedTask;
-            yield break;
-        }
-
-        public void WriteLine()
-        {
-            Lines.Add(string.Empty);
-        }
-
-        public void WriteLine(string message)
-        {
-            Lines.Add(message);
-        }
-
-        public void Clear()
-        {
-            Lines.Clear();
         }
     }
 

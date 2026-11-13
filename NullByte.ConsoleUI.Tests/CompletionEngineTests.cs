@@ -4,7 +4,6 @@ namespace NullByte.ConsoleUI.Tests;
 
 public sealed class CompletionEngineTests
 {
-
     private static readonly CompletionSnapshot Snapshot =
     new(
         Commands:
@@ -24,20 +23,19 @@ public sealed class CompletionEngineTests
                 [
                     new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.Filename }
                 ]),
-            new("botnet",
+            new("botnet upgrade",
                 [
-                    new ArgumentCompletion { ArgumentIndex = 0, Values = ["status", "buy", "upgrade" ] },
-                    new ArgumentCompletion { ArgumentIndex = 1, Kind = CompletionKind.BotnetNode,
-                        When = new CompletionCondition(ArgumentIndex: 0, Value: "upgrade")},
-                    new ArgumentCompletion { ArgumentIndex = 2, Values = ["level", "ram", "core"],
-                        When = new CompletionCondition(ArgumentIndex: 0, Value: "upgrade")}
+                    new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.BotnetNode },
+                    new ArgumentCompletion { ArgumentIndex = 1, Values = ["level", "ram", "core"] }
                 ]),
+            new("botnet", []),
+            new("botnet buy", []),
             new("clear", []),
             new("cls", []),
             new("time", [], Hidden: true),
             new("debug", [])
         ],
-
+        
         Values:
             new Dictionary<CompletionKind, IReadOnlyList<string>>
             {

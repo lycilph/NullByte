@@ -91,12 +91,8 @@ public sealed class CompletionCatalog : ICompletionProvider
                 command.Debug &&
                 !command.Name.Equals("debug",StringComparison.OrdinalIgnoreCase);
 
-            commands.Add(new CommandCompletionInfo(command.Name, command.Completions, hidden));
-
-            foreach (var alias in command.Aliases)
-            {
+            foreach (var alias in command.Aliases.Prepend(command.Name))
                 commands.Add(new CommandCompletionInfo(alias, command.Completions, hidden));
-            }
         }
 
         return commands;

@@ -22,6 +22,7 @@ public sealed record GameSessionOptions
     public GameState? State { get; init; }                  // null = new game; M9 passes a loaded one
     public IGameClock? Clock { get; init; }                 // tests pass FakeGameClock
     public IRandomSource? Random { get; init; }             // tests pass a fixed source
+    public INullByteApi? Api { get; init; }                 // tests pass a fake api
 }
 
 public sealed record GameServices(
@@ -121,7 +122,7 @@ public sealed class GameSession : IAsyncDisposable
         var scriptCompiler = new ScriptCompiler();
         var scriptLoader = new ScriptAssemblyLoader();
         var scriptRunner = new ScriptRunner(scriptLoader);
-        var api = new NullByteApi(state, scheduler, serverActions, options.Output);
+        var api = options.Api ?? new NullByteApi(state, scheduler, serverActions, options.Output);
         var scriptService = new ScriptService(state, scriptCompiler, scriptRunner, api);
 
         var services = new GameServices(networkService, serverActions, botnetService, scriptService, hackingFormulas, botnetFormulas);
