@@ -15,7 +15,11 @@ public class Program
 
         await using var terminal = new ThreadSafeConsoleTerminal(prompt: "root@home $ ", maximumHistoryLines: 2_000);
 
-        var sessionOptions = new GameSessionOptions() { Output = terminal };
+        var sessionOptions = new GameSessionOptions()
+        {
+            Output = terminal, 
+            Balance = new Core.Configuration.BalanceConfig() { GameSpeedMultiplier = 5.0 }
+        };
         await using var session = GameSession.Create(sessionOptions);
 
         var shutdownRequest = new ShutdownRequest();

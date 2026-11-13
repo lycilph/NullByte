@@ -83,7 +83,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
         if (hasDisposed || stopSource.IsCancellationRequested)
             return;
 
-        WriteLine(label); // This reserves the space for the progress to be displayed properly
+        //WriteLine(label); // This reserves the space for the progress to be displayed properly
         requests.Writer.TryWrite(new StartProgressRequest(label, progress));
     }
 
@@ -174,14 +174,14 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
                     changed = true;
                 }
 
-                if (changed || screenInvalidated)
+                if (changed || screenInvalidated || progressRunning)
                 {
                     Render();
                     screenInvalidated = false;
                 }
 
-                if (progressRunning)
-                    RenderProgressLine();
+                //if (progressRunning)
+                //    RenderProgressLine();
 
                 await Task.Delay(RefreshDelayMilliseconds, token);
             }
@@ -492,6 +492,40 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
             history.RemoveRange(0, extraLines);
     }
 
+    //private void Render()
+    //{
+    //    var width = SafeWindowWidth();
+    //    var height = SafeWindowHeight();
+
+    //    /*
+    //     * Avoid writing into the console's final physical column.
+    //     * In some terminal hosts that causes an automatic line wrap
+    //     * and can scroll the whole display.
+    //     */
+    //    var usableWidth = Math.Max(1, width - 1);
+
+    //    // The final row is reserved for input.
+    //    var outputHeight = Math.Max(0, height - 1);
+
+    //    Console.CursorVisible = false;
+
+    //    var wrappedOutput = BuildVisibleOutput(usableWidth, outputHeight);
+    //    wrappedOutput.Reverse();
+
+    //    for (var row = 0; row < outputHeight; row++)
+    //    {
+    //        var text = row < wrappedOutput.Count
+    //            ? wrappedOutput[row]
+    //            : string.Empty;
+
+    //        WriteRow(outputHeight - row - 1, text, usableWidth);
+    //    }
+
+    //    RenderInputLine(row: height - 1, usableWidth);
+
+    //    Console.CursorVisible = true;
+    //}
+
     private void Render()
     {
         var width = SafeWindowWidth();
@@ -507,23 +541,27 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
         // The final row is reserved for input.
         var outputHeight = Math.Max(0, height - 1);
 
+        // While progress is running, the last output row belongs to the bar.
+        var historyHeight = Math.Max(0, outputHeight - (progressRunning ? 1 : 0));
+
         Console.CursorVisible = false;
 
-        var wrappedOutput = BuildVisibleOutput(usableWidth, outputHeight);
+        var wrappedOutput = BuildVisibleOutput(usableWidth, historyHeight);
         wrappedOutput.Reverse();
 
-        for (var row = 0; row < outputHeight; row++)
+        for (var row = 0; row < historyHeight; row++)
         {
-            var text = row < wrappedOutput.Count
-                ? wrappedOutput[row]
-                : string.Empty;
-
-            WriteRow(outputHeight - row - 1, text, usableWidth);
+            var text = row < wrappedOutput.Count ? wrappedOutput[row] : string.Empty;
+            WriteRow(historyHeight - row - 1, text, usableWidth);
         }
+
+        if (progressRunning && outputHeight > 0)
+            WriteProgressRow(outputHeight - 1, usableWidth);
 
         RenderInputLine(row: height - 1, usableWidth);
 
-        Console.CursorVisible = true;
+        if (!progressRunning)
+            Console.CursorVisible = true;
     }
 
     private List<string> BuildVisibleOutput(int usableWidth, int outputHeight)
@@ -617,18 +655,20 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
             Console.Write(new string(' ', remaining));
     }
 
-    private void RenderProgressLine()
-    {
-        Console.CursorVisible = false;
+    //private void RenderProgressLine()
+    //{
+    //    Console.CursorVisible = false;
 
-        var width = SafeWindowWidth();
-        var height = SafeWindowHeight();
+    //    var width = SafeWindowWidth();
+    //    var height = SafeWindowHeight();
 
-        var usableWidth = Math.Max(1, width - 1);
+    //    var usableWidth = Math.Max(1, width - 1);
 
-        var text = FormatProgress(progressLabel, progressFunc());
-        WriteRow(height - 2, text, usableWidth);
-    }
+    //    var text = FormatProgress(progressLabel, progressFunc());
+    //    WriteRow(height - 2, text, usableWidth);
+    //}
+    private void WriteProgressRow(int row, int usableWidth)
+        => WriteRow(row, FormatProgress(progressLabel, progressFunc()), usableWidth);
 
     private static string FormatProgress(string label, double progress)
     {

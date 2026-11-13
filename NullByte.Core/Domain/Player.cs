@@ -56,7 +56,7 @@ public sealed class Player
     /// <summary>
     /// Adds hacking experience to the player.
     /// </summary>
-    internal void AddHackingExperience(double amount)
+    public void AddHackingExperience(double amount)
     {
         if (!double.IsFinite(amount) || amount < 0)
         {
@@ -67,7 +67,7 @@ public sealed class Player
         HackingExperience += amount;
     }
 
-    internal void AddMoney(double amount)
+    public void AddMoney(double amount)
     {
         if (!double.IsFinite(amount) || amount < 0)
         {
@@ -85,7 +85,7 @@ public sealed class Player
     /// True if the money was spent; false if the player has too little,
     /// in which case nothing changes.
     /// </returns>
-    internal bool TrySpendMoney(double amount)
+    public bool TrySpendMoney(double amount)
     {
         if (!double.IsFinite(amount) || amount < 0)
             throw new ArgumentOutOfRangeException(nameof(amount), "Money must be a finite, non-negative value.");
@@ -103,7 +103,7 @@ public sealed class Player
     /// <returns>
     /// True if the server was newly discovered.
     /// </returns>
-    internal bool DiscoverServer(string hostname)
+    public bool DiscoverServer(string hostname)
     {
         if (string.IsNullOrWhiteSpace(hostname))
             throw new ArgumentException("The hostname cannot be empty.", nameof(hostname));

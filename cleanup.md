@@ -41,7 +41,6 @@ One `RunManualAction(...)` helper then replaces the three handlers.
 ### 6. Tab completion spans nine types
 `ArgumentCompletion`, `CompletionCondition`, `CompletionKind`, `CompletionSnapshot`, `CommandCompletionInfo`, `CompletionResult`, `ICompletionProvider`, `CompletionCatalog` and `CompletionEngine`.
 - The immutable snapshot is the right idea, because it keeps game state off the terminal thread.
-- `CompletionCondition` and `When` exist only for `botnet upgrade`. If `botnet status`, `botnet buy` and `botnet upgrade` become registered subcommands, both disappear. You'd also stop encoding the grammar twice, once in the hand-written `switch` and once in the completion metadata.
 - `CommandCompletionInfo` just mirrors `CommandDefinition`, and the registry is immutable after startup. Read the registry directly and snapshot only the dynamic values.
 
 ### 7. Result types and guard clauses
@@ -58,7 +57,6 @@ One `RunManualAction(...)` helper then replaces the three handlers.
 - `IGameClock` exposes `Start()` and `Stop()`, and `FakeGameClock` implements both as empty methods. Keep lifecycle off the read interface.
 - Six test files each define their own copy of `TestNullByteApi`, `TestScriptOutput` or `FixedRandomSource`. Create one shared test-support project.
 - `HackingFormulasTests` is 1,105 lines and is probably a `[Theory]`/`InlineData` candidate (I didn't read it closely).
-- ~~`NullByteApi` uses `_field` naming while the rest of the code doesn't.~~
 
 ## Decide this before M6/M7
 

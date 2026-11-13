@@ -4,7 +4,7 @@ using NullByte.Core.Time;
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
-public sealed class DebugCommands(NetworkService networkService, VirtualFileSystem fileSystem, IGameClock clock, CommandRegistry registry, IGameOutput output) : ICommandGroup
+public sealed class DebugCommands(Player player, NetworkService networkService, VirtualFileSystem fileSystem, IGameClock clock, CommandRegistry registry, IGameOutput output) : ICommandGroup
 {
     public void Register(CommandRegistry registry)
     {
@@ -26,6 +26,14 @@ public sealed class DebugCommands(NetworkService networkService, VirtualFileSyst
 
         registry.Register(
             new CommandDefinition(
+                "cheat",
+                "cheat",
+                "Add money and experience to player.",
+                CheatAsync)
+            { Debug = true });
+
+        registry.Register(
+            new CommandDefinition(
                 "scripts",
                 "scripts",
                 "Create test scripts.",
@@ -43,6 +51,13 @@ public sealed class DebugCommands(NetworkService networkService, VirtualFileSyst
     private async Task TimeAsync(IReadOnlyList<string> arguments)
     {
         output.WriteLine($"Game time: {clock.Elapsed.TotalSeconds:F3}s");
+    }
+    private async Task CheatAsync(IReadOnlyList<string> arguments)
+    {
+        player.AddMoney(1000);
+        player.AddHackingExperience(1000);
+
+        output.WriteLine($"Player - money: {player.Money}, experience: {player.HackingExperience}");
     }
 
     private async Task TestScriptsAsync(IReadOnlyList<string> arguments)

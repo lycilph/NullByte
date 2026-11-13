@@ -69,7 +69,7 @@ public sealed class ActionCommands(Player player, IGameClock clock, HackingFormu
 
         var duration = hackingFormulas.CalculateHackDuration(player, server);
         var startedAt = clock.Elapsed;
-        terminal.StartProgress($"Hacking {server.Hostname}...",
+        terminal.StartProgress($"Hacking {server.Hostname}",
             () =>
             {
                 var elapsed = clock.Elapsed - startedAt;
@@ -96,7 +96,7 @@ public sealed class ActionCommands(Player player, IGameClock clock, HackingFormu
 
         var duration = hackingFormulas.CalculateGrowDuration(player, server);
         var startedAt = clock.Elapsed;
-        terminal.StartProgress($"Growing {server.Hostname}...",
+        terminal.StartProgress($"Growing {server.Hostname}",
             () =>
             {
                 var elapsed = clock.Elapsed - startedAt;
@@ -126,7 +126,7 @@ public sealed class ActionCommands(Player player, IGameClock clock, HackingFormu
 
         var duration = hackingFormulas.CalculateWeakenDuration(player, server);
         var startedAt = clock.Elapsed;
-        terminal.StartProgress($"Weakening {server.Hostname}...",
+        terminal.StartProgress($"Weakening {server.Hostname}",
             () =>
             {
                 var elapsed = clock.Elapsed - startedAt;

@@ -12,7 +12,7 @@ public static class CommandSetup
 
         ICommandGroup[] groups =
         [
-            new DebugCommands(session.Services.Network, session.State.FileSystem, session.Clock, registry, terminal),
+            new DebugCommands(session.State.Player, session.Services.Network, session.State.FileSystem, session.Clock, registry, terminal),
             new SystemCommands(registry, terminal, shutdownRequest),
             new PlayerCommands(session.State.Player, session.Services.Network, session.Services.HackingFormulas, terminal),
             new NetworkCommands(session.Services.Network, terminal),
