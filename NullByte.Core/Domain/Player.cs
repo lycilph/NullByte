@@ -41,7 +41,7 @@ public sealed class Player
     /// <summary>
     /// Gets the player's current money.
     /// </summary>
-    public double Money { get; internal set; }
+    public double Money { get; private set; }
 
     /// <summary>
     /// Gets the player's accumulated hacking experience.

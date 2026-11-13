@@ -1,6 +1,7 @@
 ﻿using NullByte.ConsoleUI.Commands;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Domain;
+using NullByte.Core.Services;
 using NullByte.Core.Simulation;
 using NullByte.Core.Time;
 using NullByte.Scripting.Compilation;
@@ -503,7 +504,7 @@ while (true)
         return Task.CompletedTask;
     }
 
-    private static Task RunScriptAsync(
+    private static async Task RunScriptAsync(
         CommandContext context,
         IReadOnlyList<string> arguments)
     {
@@ -513,15 +514,14 @@ while (true)
 
         context.Terminal.WriteLine($"Executing {fileName}...");
 
-        var result = context.ScriptService.Start(server.Hostname, fileName, scriptArguments);
+        //var result = context.ScriptService.Start(server.Hostname, fileName, scriptArguments);
+        var result = await Task.Run(() => context.ScriptService.Start(server.Hostname, fileName, scriptArguments));
 
         foreach (var diagnostic in result.Diagnostics)
             WriteScriptDiagnostic(context.Terminal, fileName, diagnostic);
 
         if (!result.Succeeded && result.Diagnostics.Count == 0)
             context.Terminal.WriteLine(result.FailureMessage);
-
-        return Task.CompletedTask;
     }
 
     private static Task ScanAsync(
@@ -644,22 +644,18 @@ while (true)
                 return Math.Clamp(elapsed.TotalSeconds / duration.TotalSeconds, 0.0, 1.0);
             });
 
-        await RunWithInputBlockedAsync(
-            context.Terminal,
-            async () =>
-            {
-                var result = await context.ServerActions.HackAsync(server.Hostname, threads: 1, context.Terminal.StoppingToken);
-                context.Terminal.StopProgress();
+        HackResult result;
+        try { result = await context.ServerActions.HackAsync(server.Hostname, threads: 1, context.Terminal.StoppingToken); }
+        finally { context.Terminal.StopProgress(); }
 
-                if (result.Succeeded)
-                    context.Terminal.WriteLine($"Hack succeeded. Stole ${result.MoneyStolen:N2}.");
-                else
-                    context.Terminal.WriteLine(result.FailureMessage);
+        if (result.Succeeded)
+            context.Terminal.WriteLine($"Hack succeeded. Stole ${result.MoneyStolen:N2}.");
+        else
+            context.Terminal.WriteLine(result.FailureMessage);
 
-                context.Terminal.WriteLine($"Experience gained: {result.ExperienceGained:N2}");
-                context.Terminal.WriteLine($"Security increased by {result.SecurityIncrease:F3}.");
-                context.Terminal.WriteLine($"Completed in {result.Duration.TotalSeconds:F1} game seconds.");
-            });
+        context.Terminal.WriteLine($"Experience gained: {result.ExperienceGained:N2}");
+        context.Terminal.WriteLine($"Security increased by {result.SecurityIncrease:F3}.");
+        context.Terminal.WriteLine($"Completed in {result.Duration.TotalSeconds:F1} game seconds.");
     }
 
     private static async Task GrowAsync(
@@ -679,25 +675,21 @@ while (true)
                 return Math.Clamp(elapsed.TotalSeconds / duration.TotalSeconds, 0.0, 1.0);
             });
 
-        await RunWithInputBlockedAsync(
-            context.Terminal,
-            async () =>
-            {
-                var result = await context.ServerActions.GrowAsync(server.Hostname, threads: 1, context.Terminal.StoppingToken);
-                context.Terminal.StopProgress();
+        GrowResult result;
+        try { result = await context.ServerActions.GrowAsync(server.Hostname, threads: 1, context.Terminal.StoppingToken); }
+        finally { context.Terminal.StopProgress(); }
 
-                if (result.Succeeded)
-                {
-                    context.Terminal.WriteLine($"Grew server money by ${result.MoneyGrown:N2}.");
-                    context.Terminal.WriteLine($"Experience gained: {result.ExperienceGained:N2}");
-                    context.Terminal.WriteLine($"Security increased by {result.SecurityIncrease:F3}.");
-                    context.Terminal.WriteLine($"Completed in {result.Duration.TotalSeconds:F1} game seconds.");
-                }
-                else
-                {
-                    context.Terminal.WriteLine(result.FailureMessage);
-                }
-            });
+        if (result.Succeeded)
+        {
+            context.Terminal.WriteLine($"Grew server money by ${result.MoneyGrown:N2}.");
+            context.Terminal.WriteLine($"Experience gained: {result.ExperienceGained:N2}");
+            context.Terminal.WriteLine($"Security increased by {result.SecurityIncrease:F3}.");
+            context.Terminal.WriteLine($"Completed in {result.Duration.TotalSeconds:F1} game seconds.");
+        }
+        else
+        {
+            context.Terminal.WriteLine(result.FailureMessage);
+        }
     }
 
     private static async Task WeakenAsync(
@@ -717,24 +709,20 @@ while (true)
                 return Math.Clamp(elapsed.TotalSeconds / duration.TotalSeconds, 0.0, 1.0);
             });
 
-        await RunWithInputBlockedAsync(
-            context.Terminal,
-            async () =>
-            {
-                var result = await context.ServerActions.WeakenAsync(server.Hostname, threads: 1, context.Terminal.StoppingToken);
-                context.Terminal.StopProgress();
+        WeakenResult result;
+        try { result = await context.ServerActions.WeakenAsync(server.Hostname, threads: 1, context.Terminal.StoppingToken); }
+        finally { context.Terminal.StopProgress(); }
 
-                if (result.Succeeded)
-                {
-                    context.Terminal.WriteLine($"Security decreased by {result.SecurityDecrease:F3}.");
-                    context.Terminal.WriteLine($"Experience gained: {result.ExperienceGained:N2}");
-                    context.Terminal.WriteLine($"Completed in {result.Duration.TotalSeconds:F1} game seconds.");
-                }
-                else
-                {
-                    context.Terminal.WriteLine(result.FailureMessage);
-                }
-            });
+        if (result.Succeeded)
+        {
+            context.Terminal.WriteLine($"Security decreased by {result.SecurityDecrease:F3}.");
+            context.Terminal.WriteLine($"Experience gained: {result.ExperienceGained:N2}");
+            context.Terminal.WriteLine($"Completed in {result.Duration.TotalSeconds:F1} game seconds.");
+        }
+        else
+        {
+            context.Terminal.WriteLine(result.FailureMessage);
+        }
     }
 
     private static Task ClearAsync(
@@ -928,20 +916,6 @@ while (true)
 
         if (threadBefore != threadAfter || !gameLoop.IsGameThread)
             throw new InvalidOperationException($"{name} resumed on the wrong thread.");
-    }
-
-    private static async Task RunWithInputBlockedAsync(IGameTerminal terminal, Func<Task> operation)
-    {
-        terminal.SetInputEnabled(false);
-
-        try
-        {
-            await operation();
-        }
-        finally
-        {
-            terminal.SetInputEnabled(true);
-        }
     }
 
     private static void WriteScriptDiagnostic(IGameTerminal terminal, string fileName, ScriptDiagnostic diagnostic)

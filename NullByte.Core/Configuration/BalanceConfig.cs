@@ -136,6 +136,11 @@ public sealed record BalanceConfig
     public double BaseHackingExperience { get; init; } = 3.0;
 
     /// <summary>
+    /// A percentage of the experience a failed hack awards
+    /// </summary>
+    public double FailedHackExperienceFactor { get; init; } = 0.25;
+
+    /// <summary>
     /// Amount of additional experience awarded per point of
     /// server base difficulty.
     /// </summary>

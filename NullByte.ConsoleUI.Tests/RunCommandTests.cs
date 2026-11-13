@@ -25,7 +25,7 @@ public sealed class RunCommandTests
         Assert.True(registry.TryGet("run", out var command));
         Assert.NotNull(command);
         Assert.False(command!.Debug);
-        Assert.Equal("run <script> [args...]", command.Usage);
+        Assert.Equal("run <filename> [args...]", command.Usage);
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public sealed class RunCommandTests
 
         await harness.RunAsync("run");
 
-        Assert.Contains("Usage: run <script> [args...]", harness.Output);
+        Assert.Contains("Usage: run <filename> [args...]", harness.Output);
     }
 
     [Fact]
@@ -43,9 +43,9 @@ public sealed class RunCommandTests
     {
         var harness = new Harness();
 
-        await harness.RunAsync("run missing.cs");
+        await harness.RunAsync("run missing.cx");
 
-        Assert.Contains("File not found: missing.cs", harness.Output);
+        Assert.Contains("File not found: missing.cx", harness.Output);
     }
 
     [Fact]
@@ -54,14 +54,14 @@ public sealed class RunCommandTests
         var harness = new Harness();
 
         harness.WriteScript(
-            "hello.cs",
+            "hello.cx",
             """
             nb.Print("Hello from script");
             """);
 
-        await harness.RunAsync("run hello.cs");
+        await harness.RunAsync("run hello.cx");
 
-        Assert.Contains("Started hello.cs.", harness.Output);
+        Assert.Contains("Executing hello.cx.", harness.Output);
         Assert.Contains("Hello from script", harness.Output);
     }
 
@@ -71,13 +71,13 @@ public sealed class RunCommandTests
         var harness = new Harness();
 
         harness.WriteScript(
-            "args.cs",
+            "args.cx",
             """
             nb.Print($"Target: {args[0]}");
             nb.Print($"Mode: {args[1]}");
             """);
 
-        await harness.RunAsync("run args.cs n00dles aggressive");
+        await harness.RunAsync("run args.cx n00dles aggressive");
 
         Assert.Contains("Target: n00dles", harness.Output);
         Assert.Contains("Mode: aggressive", harness.Output);
@@ -89,12 +89,12 @@ public sealed class RunCommandTests
         var harness = new Harness();
 
         harness.WriteScript(
-            "args.cs",
+            "args.cx",
             """
             nb.Print(args[0]);
             """);
 
-        await harness.RunAsync("""run args.cs "hello world""");
+        await harness.RunAsync("""run args.cx "hello world""");
 
         Assert.Contains("hello world", harness.Output);
     }
@@ -105,17 +105,17 @@ public sealed class RunCommandTests
         var harness = new Harness();
 
         harness.WriteScript(
-            "broken.cs",
+            "broken.cx",
             """
             nb.Print(missingValue);
             """);
 
-        await harness.RunAsync("run broken.cs");
+        await harness.RunAsync("run broken.cx");
 
-        Assert.Contains("broken.cs(1,", harness.Output);
+        Assert.Contains("broken.cx(1,", harness.Output);
         Assert.Contains("error CS0103", harness.Output);
         Assert.Contains("missingValue", harness.Output);
-        Assert.DoesNotContain("Started broken.cs.", harness.Output);
+        Assert.DoesNotContain("Started broken.cx.", harness.Output);
     }
 
     [Fact]
@@ -124,12 +124,12 @@ public sealed class RunCommandTests
         var harness = new Harness();
 
         harness.WriteScript(
-            "broken.cs",
+            "broken.cx",
             """
             nb.Print(missingValue);
             """);
 
-        await harness.RunAsync("run broken.cs");
+        await harness.RunAsync("run broken.cx");
 
         Assert.Contains("error CS0103", harness.Output);
         Assert.DoesNotContain("Compilation failed", harness.Output);
@@ -141,20 +141,20 @@ public sealed class RunCommandTests
         var harness = new Harness();
 
         harness.WriteScript(
-            "waiting.cs",
+            "waiting.cx",
             """
         nb.Print("Before sleep");
         await nb.Sleep(TimeSpan.FromHours(1));
         nb.Print("After sleep");
         """);
 
-        await harness.RunAsync("run waiting.cs");
+        await harness.RunAsync("run waiting.cx");
 
         try
         {
             await harness.ScriptApi.WaitUntilSleepingAsync();
 
-            Assert.Contains("Started waiting.cs.", harness.Output);
+            Assert.Contains("Executing waiting.cx.", harness.Output);
             Assert.Contains("Before sleep", harness.Output);
             Assert.DoesNotContain("After sleep", harness.Output);
             Assert.True(harness.ScriptService.IsScriptRunning);
@@ -175,28 +175,28 @@ public sealed class RunCommandTests
         var harness = new Harness();
 
         harness.WriteScript(
-            "waiting.cs",
+            "waiting.cx",
             """
         await nb.Sleep(TimeSpan.FromHours(1));
         """);
 
         harness.WriteScript(
-            "second.cs",
+            "second.cx",
             """
         nb.Print("Second script");
         """);
 
-        await harness.RunAsync("run waiting.cs");
+        await harness.RunAsync("run waiting.cx");
 
         try
         {
             await harness.ScriptApi.WaitUntilSleepingAsync();
 
-            await harness.RunAsync("run second.cs");
+            await harness.RunAsync("run second.cx");
 
             Assert.Contains("A script is already running.", harness.Output);
             Assert.DoesNotContain("Second script", harness.Output);
-            Assert.DoesNotContain("Started second.cs.", harness.Output);
+            Assert.DoesNotContain("Started second.cx.", harness.Output);
         }
         finally
         {
@@ -212,12 +212,12 @@ public sealed class RunCommandTests
         var harness = new Harness();
 
         harness.WriteScript(
-            "local.cs",
+            "local.cx",
             """
             nb.Print("Local script");
             """);
 
-        await harness.RunAsync("run local.cs");
+        await harness.RunAsync("run local.cx");
 
         Assert.Contains("Local script", harness.Output);
     }

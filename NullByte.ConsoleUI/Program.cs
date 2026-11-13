@@ -23,7 +23,7 @@ public class Program
     {
         Console.OutputEncoding = Encoding.UTF8;
 
-        var balanceConfig = new BalanceConfig();
+        var balanceConfig = new BalanceConfig() { RandomSeed = DateTime.Now.Millisecond };
         var clock = new RealGameClock() { SpeedMultiplier = balanceConfig.GameSpeedMultiplier };
         
         var synchronizationContext = new GameSynchronizationContext();
@@ -56,6 +56,11 @@ public class Program
         var scriptCompiler = new ScriptCompiler();
         var scriptLoader = new ScriptAssemblyLoader();
         var scriptRunner = new ScriptRunner(scriptLoader);
+
+        // Warm up the script compiler (should i await this somewhere???)
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+        Task.Run(() => scriptCompiler.Compile("{}", "warmup"));
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
         var scriptService = new ScriptService(
             gameState,
@@ -156,10 +161,12 @@ public class Program
                 {
                     try
                     {
+                        terminal.SetInputEnabled(false);
                         await dispatcher.DispatchAsync(commandLine, context);
                     }
                     finally
                     {
+                        terminal.SetInputEnabled(true);
                         // Commands such as scan and connect change what can be completed.
                         completionCatalog.Refresh();
                     }

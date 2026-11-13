@@ -63,18 +63,25 @@ public sealed class ServerActions
         var succeeded = randomSource.NextDouble() < hackChance;
         var moneyStolen = 0.0;
 
+        var securityIncrease = formulas.CalculateHackSecurityIncrease(threads);
+        var experienceGained = formulas.CalculateHackingExperience(server,threads);
+
         if (succeeded)
         {
             var requestedAmount = formulas.CalculateHackAmount(player, server, threads);
             moneyStolen = server.RemoveMoney(requestedAmount);
-            player.Money += moneyStolen;
+            player.AddMoney(moneyStolen);
+        
+            server.IncreaseSecurity(securityIncrease);
+            player.AddHackingExperience(experienceGained);
+        }
+        else
+        {
+            var failedHackFactor = formulas.GetFailedHackExperienceFactor();
+            player.AddHackingExperience(experienceGained * failedHackFactor);
         }
 
-        var securityIncrease = formulas.CalculateHackSecurityIncrease(threads);
-        server.IncreaseSecurity(securityIncrease);
 
-        var experienceGained = formulas.CalculateHackingExperience(server,threads);
-        player.AddHackingExperience(experienceGained);
 
         return new HackResult(
             Succeeded: succeeded,

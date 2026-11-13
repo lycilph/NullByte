@@ -61,10 +61,7 @@ public sealed class HackingFormulas
             var next = Math.BitIncrement(experience);
 
             if (!double.IsFinite(next) || next <= experience)
-            {
-                throw new OverflowException(
-                    $"Could not calculate finite experience for level {level}.");
-            }
+                throw new OverflowException($"Could not calculate finite experience for level {level}.");
 
             experience = next;
         }
@@ -304,6 +301,8 @@ public sealed class HackingFormulas
                * balance.HackingExperienceMultiplier
                * threads;
     }
+
+    public double GetFailedHackExperienceFactor() => balance.FailedHackExperienceFactor;
 
     private static void ValidateThreads(int threads)
     {

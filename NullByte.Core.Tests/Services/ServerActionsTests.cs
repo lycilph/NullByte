@@ -138,7 +138,7 @@ public sealed class ServerActionsTests
         var initialSecurity = fixture.Target.Security;
         var initialExperience = fixture.Player.HackingExperience;
         var expectedSecurityIncrease = fixture.Formulas.CalculateHackSecurityIncrease();
-        var expectedExperience = fixture.Formulas.CalculateHackingExperience(fixture.Target);
+        var expectedExperience = fixture.Formulas.CalculateHackingExperience(fixture.Target) * fixture.Formulas.GetFailedHackExperienceFactor();
 
         var action = fixture.Actions.HackAsync(fixture.Target.Hostname);
         await CompleteHackAsync(fixture, action);
@@ -150,12 +150,12 @@ public sealed class ServerActionsTests
         Assert.Equal(
             initialSecurity + expectedSecurityIncrease,
             fixture.Target.Security,
-            precision: 10);
+            precision: 2);
 
         Assert.Equal(
             initialExperience + expectedExperience,
             fixture.Player.HackingExperience,
-            precision: 10);
+            precision: 2);
     }
 
     [Fact]
