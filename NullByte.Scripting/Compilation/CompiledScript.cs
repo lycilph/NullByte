@@ -5,4 +5,5 @@
 /// </summary>
 public sealed record CompiledScript(
     byte[] Assembly,
-    byte[] Symbols);
+    byte[] Symbols,
+    double RamCost);

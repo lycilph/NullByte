@@ -16,31 +16,37 @@ public sealed class ScriptService
     private readonly GameState gameState;
     private readonly IScriptCompiler compiler;
     private readonly ScriptRunner runner;
-    private readonly INullByteApi api;
-
-    private Task? runningScript;
+    private readonly INullByteApiFactory apiFactory;
+    private readonly ScriptProcessManager processManager;
 
     public ScriptService(
         GameState gameState,
         IScriptCompiler compiler,
         ScriptRunner runner,
-        INullByteApi api)
+        INullByteApiFactory apiFactory,
+        ScriptProcessManager processManager)
     {
         ArgumentNullException.ThrowIfNull(gameState);
         ArgumentNullException.ThrowIfNull(compiler);
         ArgumentNullException.ThrowIfNull(runner);
-        ArgumentNullException.ThrowIfNull(api);
+        ArgumentNullException.ThrowIfNull(apiFactory);
+        ArgumentNullException.ThrowIfNull(processManager);
 
         this.gameState = gameState;
         this.compiler = compiler;
         this.runner = runner;
-        this.api = api;
+        this.apiFactory = apiFactory;
+        this.processManager = processManager;
     }
 
-    /// <summary>
-    /// Gets whether an M5 script is currently running.
-    /// </summary>
-    public bool IsScriptRunning => runningScript is { IsCompleted: false };
+    public IReadOnlyList<ScriptProcess> Processes => processManager.Processes;
+
+    public bool Kill(int pid) => processManager.Kill(pid);
+
+    public int KillAll() => processManager.KillAll();
+
+    public bool HasRunningProcesses =>
+        processManager.Processes.Any(process => process.State == ScriptProcessState.Running);
 
     /// <summary>
     /// Compiles and starts a script stored in the game's virtual filesystem.
@@ -58,8 +64,8 @@ public sealed class ScriptService
 
         ClearCompletedScript();
 
-        if (IsScriptRunning)
-            return ScriptStartResult.Failure("A script is already running.");
+        //if (IsScriptRunning)
+        //    return ScriptStartResult.Failure("A script is already running.");
 
         if (!gameState.FileSystem.TryReadFile(hostname, fileName, out var source))
             return ScriptStartResult.Failure($"File not found: {fileName}");
@@ -72,7 +78,8 @@ public sealed class ScriptService
         var compiledScript = compilation.Script
             ?? throw new InvalidOperationException("Successful compilation did not produce a script.");
 
-        runningScript = RunAndObserveAsync(compiledScript, api, args.ToArray());
+        //runningScript = 
+            RunAndObserveAsync(compiledScript, api, args.ToArray());
 
         return ScriptStartResult.Success(compilation.Diagnostics);
     }
@@ -105,9 +112,9 @@ public sealed class ScriptService
         }
     }
 
-    private void ClearCompletedScript()
-    {
-        if (runningScript?.IsCompleted == true)
-            runningScript = null;
-    }
+    private void ClearCompletedScript() => processManager.RemoveCompleted();
+    //{
+    //    if (runningScript?.IsCompleted == true)
+    //        runningScript = null;
+    //}
 }

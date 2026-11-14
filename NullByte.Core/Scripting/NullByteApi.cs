@@ -15,21 +15,29 @@ public sealed class NullByteApi : INullByteApi
     private readonly ServerActions serverActions;
     private readonly IGameOutput output;
 
+    private readonly int threads;
+    private readonly CancellationToken cancellationToken;
+
     public NullByteApi(
         GameState gameState,
         GameScheduler scheduler,
         ServerActions serverActions,
-        IGameOutput output)
+        IGameOutput output,
+        int threads = 1,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(gameState);
         ArgumentNullException.ThrowIfNull(scheduler);
         ArgumentNullException.ThrowIfNull(serverActions);
         ArgumentNullException.ThrowIfNull(output);
+        ArgumentOutOfRangeException.ThrowIfLessThan(threads, 1);
 
         this.gameState = gameState;
         this.scheduler = scheduler;
         this.serverActions = serverActions;
         this.output = output;
+        this.cancellationToken = cancellationToken;
+        this.threads = threads;
     }
 
     public void Print(object? value)
@@ -37,39 +45,30 @@ public sealed class NullByteApi : INullByteApi
         output.WriteLine(value?.ToString() ?? string.Empty);
     }
 
-    public Task Sleep(TimeSpan duration, CancellationToken cancellationToken = default)
+    public Task Sleep(TimeSpan duration)
     {
         return scheduler.DelayAsync(duration, cancellationToken);
     }
 
-    public Task<HackResult> Hack(string hostname, CancellationToken cancellationToken = default)
+    public Task<HackResult> Hack(string hostname)
     {
         var server = GetServer(hostname);
 
-        return serverActions.HackAsync(
-            server.Hostname,
-            threads: 1,
-            cancellationToken);
+        return serverActions.HackAsync(server.Hostname, threads, cancellationToken);
     }
 
-    public Task<GrowResult> Grow(string hostname, CancellationToken cancellationToken = default)
+    public Task<GrowResult> Grow(string hostname)
     {
         var server = GetServer(hostname);
 
-        return serverActions.GrowAsync(
-            server.Hostname,
-            threads: 1,
-            cancellationToken);
+        return serverActions.GrowAsync(server.Hostname, threads, cancellationToken);
     }
 
-    public Task<WeakenResult> Weaken(string hostname, CancellationToken cancellationToken = default)
+    public Task<WeakenResult> Weaken(string hostname)
     {
         var server = GetServer(hostname);
 
-        return serverActions.WeakenAsync(
-            server.Hostname,
-            threads: 1,
-            cancellationToken);
+        return serverActions.WeakenAsync(server.Hostname, threads, cancellationToken);
     }
 
     public double GetServerMoneyAvailable(string hostname)

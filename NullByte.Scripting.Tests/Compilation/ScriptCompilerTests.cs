@@ -324,6 +324,75 @@ public sealed class ScriptCompilerTests
         Assert.Throws<ArgumentException>(() => compiler.Compile("nb.Print(\"Hello\");",fileName));
     }
 
+    [Fact]
+    public void Compile_ReportsBaseRamCostForScriptWithoutApiCalls()
+    {
+        const string source = """
+        var value = 42;
+        """;
+
+        var result = compiler.Compile(source, "ram.cs");
+
+        AssertCompilationSucceeded(result);
+
+        var script = Assert.IsType<CompiledScript>(result.Script);
+
+        Assert.Equal(1.0, script.RamCost);
+    }
+
+    [Fact]
+    public void Compile_AddsRamCostForApiMethod()
+    {
+        const string source = """
+        nb.Print("Hello");
+        """;
+
+        var result = compiler.Compile(source, "ram.cs");
+
+        AssertCompilationSucceeded(result);
+
+        var script = Assert.IsType<CompiledScript>(result.Script);
+
+        Assert.Equal(1.1, script.RamCost);
+    }
+
+    [Fact]
+    public void Compile_CountsEachApiMethodOnlyOnce()
+    {
+        const string source = """
+        nb.Print("One");
+        nb.Print("Two");
+        nb.Print("Three");
+        """;
+
+        var result = compiler.Compile(source, "ram.cs");
+
+        AssertCompilationSucceeded(result);
+
+        var script = Assert.IsType<CompiledScript>(result.Script);
+
+        Assert.Equal(1.1, script.RamCost);
+    }
+
+    [Fact]
+    public void Compile_AddsDistinctApiMethods()
+    {
+        const string source = """
+        nb.Print("Starting");
+        await nb.Hack("n00dles");
+        await nb.Hack("n00dles");
+        await nb.Weaken("n00dles");
+        """;
+
+        var result = compiler.Compile(source, "ram.cs");
+
+        AssertCompilationSucceeded(result);
+
+        var script = Assert.IsType<CompiledScript>(result.Script);
+
+        Assert.Equal(4.5, script.RamCost);
+    }
+
     private static void AssertCompilationSucceeded(ScriptCompilationResult result)
     {
         var diagnostics = string.Join(

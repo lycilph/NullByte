@@ -51,7 +51,7 @@ public sealed class ScriptAssemblyLoaderTests
     [Fact]
     public void Load_WithInvalidAssembly_Throws()
     {
-        var compiled = new CompiledScript([1, 2, 3, 4], []);
+        var compiled = new CompiledScript([1, 2, 3, 4], [], 1.0);
 
         Assert.Throws<BadImageFormatException>(() => loader.Load(compiled));
     }

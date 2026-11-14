@@ -90,6 +90,12 @@ public sealed class ScriptCompiler : IScriptCompiler
             references,
             CompilationOptions);
 
+        var semanticModel = compilation.GetSemanticModel(generatedTree);
+
+        var ramCost = ScriptRamAnalyzer.Calculate(
+            semanticModel,
+            generatedTree.GetRoot());
+
         using var assemblyStream = new MemoryStream();
         using var symbolsStream = new MemoryStream();
 
@@ -107,7 +113,7 @@ public sealed class ScriptCompiler : IScriptCompiler
             return ScriptCompilationResult.Failure(diagnostics);
 
         return ScriptCompilationResult.Success(
-            new CompiledScript(assemblyStream.ToArray(), symbolsStream.ToArray()),
+            new CompiledScript(assemblyStream.ToArray(), symbolsStream.ToArray(), ramCost),
             diagnostics);
     }
 

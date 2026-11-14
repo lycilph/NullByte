@@ -43,7 +43,7 @@ public sealed class ScriptServiceTests
         Assert.Contains("File not found", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("missing.cs", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(result.Diagnostics);
-        Assert.False(fixture.Service.IsScriptRunning);
+        Assert.False(fixture.Service.HasRunningProcesses);
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public sealed class ScriptServiceTests
         Assert.Equal(ScriptDiagnosticSeverity.Error, diagnostic.Severity);
 
         Assert.Equal(1, diagnostic.Line);
-        Assert.False(fixture.Service.IsScriptRunning);
+        Assert.False(fixture.Service.HasRunningProcesses);
     }
 
     [Fact]
@@ -116,68 +116,6 @@ public sealed class ScriptServiceTests
         await fixture.WaitForCompletionAsync();
 
         Assert.Equal(["n00dles"], fixture.Api.Output);
-    }
-
-    [Fact]
-    public async Task Start_WithRunningScript_ReturnsImmediately()
-    {
-        var fixture = new Fixture();
-
-        fixture.WriteScript(
-            "sleep.cs",
-            """
-            nb.Print("Before");
-            await nb.Sleep(TimeSpan.FromSeconds(10));
-            nb.Print("After");
-            """);
-
-        var result = fixture.Service.Start(fixture.Home.Hostname, "sleep.cs", []);
-
-        Assert.True(result.Succeeded, result.FailureMessage);
-
-        await fixture.Api.WaitUntilSleepRequestedAsync();
-
-        Assert.True(fixture.Service.IsScriptRunning);
-        Assert.Equal(["Before"], fixture.Api.Output);
-
-        fixture.Api.CompleteSleep();
-
-        await fixture.WaitForCompletionAsync();
-
-        Assert.Equal(["Before", "After"], fixture.Api.Output);
-    }
-
-    [Fact]
-    public async Task Start_WhileAnotherScriptIsRunning_Fails()
-    {
-        var fixture = new Fixture();
-
-        fixture.WriteScript(
-            "first.cs",
-            """
-            await nb.Sleep(TimeSpan.FromSeconds(10));
-            """);
-
-        fixture.WriteScript(
-            "second.cs",
-            """
-            nb.Print("Second");
-            """);
-
-        var firstResult = fixture.Service.Start(fixture.Home.Hostname, "first.cs",[]);
-
-        Assert.True(firstResult.Succeeded, firstResult.FailureMessage);
-
-        await fixture.Api.WaitUntilSleepRequestedAsync();
-
-        var secondResult = fixture.Service.Start(fixture.Home.Hostname, "second.cs", []);
-
-        Assert.False(secondResult.Succeeded);
-        Assert.Contains("already running", secondResult.FailureMessage,StringComparison.OrdinalIgnoreCase);
-
-        fixture.Api.CompleteSleep();
-
-        await fixture.WaitForCompletionAsync();
     }
 
     [Fact]
@@ -233,7 +171,7 @@ public sealed class ScriptServiceTests
 
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        Assert.False(fixture.Service.IsScriptRunning);
+        Assert.False(fixture.Service.HasRunningProcesses);
     }
 
     [Fact]
@@ -260,7 +198,7 @@ public sealed class ScriptServiceTests
         Assert.IsType<InvalidOperationException>(exception);
         Assert.Equal("Script failed.",exception.Message);
 
-        Assert.False(fixture.Service.IsScriptRunning);
+        Assert.False(fixture.Service.HasRunningProcesses);
     }
 
     [Fact]
@@ -381,12 +319,14 @@ public sealed class ScriptServiceTests
             var compiler = new ScriptCompiler();
             var loader = new ScriptAssemblyLoader();
             var runner = new ScriptRunner(loader);
+            var manager = new ScriptProcessManager();
 
             Service = new ScriptService(
                 GameState,
                 compiler,
                 runner,
-                Api);
+                Api,
+                manager);
 
             Service.ScriptCompleted += () => scriptFinished.TrySetResult();
 

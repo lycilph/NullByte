@@ -160,53 +160,16 @@ public sealed class RunCommandTests
             Assert.Contains("Executing waiting.cx.", harness.Output);
             Assert.Contains("Before sleep", harness.Output);
             Assert.DoesNotContain("After sleep", harness.Output);
-            Assert.True(harness.ScriptService.IsScriptRunning);
+            Assert.True(harness.ScriptService.HasRunningProcesses);
         }
         finally
         {
             harness.ScriptApi.CompleteSleep();
 
-            await WaitUntilAsync(() => !harness.ScriptService.IsScriptRunning);
+            await WaitUntilAsync(() => !harness.ScriptService.HasRunningProcesses);
         }
 
         Assert.Contains("After sleep", harness.Output);
-    }
-
-    [Fact]
-    public async Task Run_WhileAnotherScriptIsRunning_ShowsFailure()
-    {
-        var harness = new Harness();
-
-        harness.WriteScript(
-            "waiting.cx",
-            """
-        await nb.Sleep(TimeSpan.FromHours(1));
-        """);
-
-        harness.WriteScript(
-            "second.cx",
-            """
-        nb.Print("Second script");
-        """);
-
-        await harness.RunAsync("run waiting.cx");
-
-        try
-        {
-            await harness.ScriptApi.WaitUntilSleepingAsync();
-
-            await harness.RunAsync("run second.cx");
-
-            Assert.Contains("A script is already running.", harness.Output);
-            Assert.DoesNotContain("Second script", harness.Output);
-            Assert.DoesNotContain("Started second.cx.", harness.Output);
-        }
-        finally
-        {
-            harness.ScriptApi.CompleteSleep();
-
-            await WaitUntilAsync(() => !harness.ScriptService.IsScriptRunning);
-        }
     }
 
     [Fact]
