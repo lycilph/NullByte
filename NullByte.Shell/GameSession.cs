@@ -131,7 +131,7 @@ public sealed class GameSession : IAsyncDisposable
         // Systems are updated by the game loop on the game thread; they must be added before it starts.
         gameLoop.AddSystem(new BotnetSystem(state, botnetFormulas));
 
-        scriptService.ScriptFailed += exception => options.Output.WriteLine($"Script failed: {exception.Message}");
+        scriptService.ProcessFailed += (proc, exception) => options.Output.WriteLine($"Process {proc.Pid} failed: {exception.Message}");
         gameLoop.UnhandledException += exception => options.Output.WriteLine($"Unhandled error on the game thread: {exception.Message}");
 
         return new GameSession(state, clock, gameLoop, services, options.Output, scriptCompiler);

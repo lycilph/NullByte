@@ -4,6 +4,7 @@ using NullByte.Core.Services;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Loading;
 using NullByte.Scripting.Runtime;
+using System.Reflection;
 
 namespace NullByte.Scripting.Tests.Runtime;
 
@@ -163,9 +164,9 @@ public sealed class ScriptServiceTests
 
         var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        fixture.Service.ScriptCompleted += () => completed.TrySetResult();
+        fixture.Service.ProcessCompleted += (_) => completed.TrySetResult();
 
-        var result = fixture.Service.Start(fixture.Home.Hostname,"complete.cs",[]);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "complete.cs", []);
 
         Assert.True(result.Succeeded, result.FailureMessage);
 
@@ -187,7 +188,7 @@ public sealed class ScriptServiceTests
 
         var failed = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        fixture.Service.ScriptFailed += exception => failed.TrySetResult(exception);
+        fixture.Service.ProcessFailed += (proc, exception) => failed.TrySetResult(exception);
 
         var result = fixture.Service.Start(fixture.Home.Hostname, "failure.cs", []);
 
@@ -196,7 +197,7 @@ public sealed class ScriptServiceTests
         var exception = await failed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.IsType<InvalidOperationException>(exception);
-        Assert.Equal("Script failed.",exception.Message);
+        Assert.Equal("Script failed.", exception.Message);
 
         Assert.False(fixture.Service.HasRunningProcesses);
     }
@@ -220,7 +221,7 @@ public sealed class ScriptServiceTests
 
         var failed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        fixture.Service.ScriptFailed += _ => failed.TrySetResult();
+        fixture.Service.ProcessFailed += (_,_) => failed.TrySetResult();
 
         var firstResult = fixture.Service.Start(fixture.Home.Hostname, "failure.cs", []);
 
@@ -252,7 +253,6 @@ public sealed class ScriptServiceTests
         var result = fixture.Service.Start(fixture.Home.Hostname, "warning.cs", []);
 
         Assert.True(result.Succeeded, result.FailureMessage);
-
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Severity == ScriptDiagnosticSeverity.Warning);
     }
 
@@ -261,8 +261,10 @@ public sealed class ScriptServiceTests
     {
         var fixture = new Fixture();
 
-        Assert.Throws<KeyNotFoundException>(
-            () => fixture.Service.Start("missing-server", "script.cs", []));
+        var result = fixture.Service.Start("missing-server", "script.cs", []);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("Unknown server: missing-server", result.FailureMessage);
     }
 
     [Fact]
@@ -315,6 +317,7 @@ public sealed class ScriptServiceTests
                 network);
 
             Api = new TestNullByteApi();
+            var apiFactory = new TestNullByteApiFactory(Api);
 
             var compiler = new ScriptCompiler();
             var loader = new ScriptAssemblyLoader();
@@ -325,12 +328,12 @@ public sealed class ScriptServiceTests
                 GameState,
                 compiler,
                 runner,
-                Api,
+                apiFactory,
                 manager);
 
-            Service.ScriptCompleted += () => scriptFinished.TrySetResult();
+            Service.ProcessCompleted += _ => scriptFinished.TrySetResult();
 
-            Service.ScriptFailed += _ => scriptFinished.TrySetResult();
+            Service.ProcessFailed += (_,_) => scriptFinished.TrySetResult();
         }
 
         public Server Home { get; }
@@ -343,7 +346,7 @@ public sealed class ScriptServiceTests
 
         public void WriteScript(string fileName, string source)
         {
-            GameState.FileSystem.WriteFile(Home.Hostname, fileName,source);
+            GameState.FileSystem.WriteFile(Home.Hostname, fileName, source);
         }
 
         public Task WaitForCompletionAsync()
@@ -352,24 +355,30 @@ public sealed class ScriptServiceTests
         }
     }
 
+    private sealed class TestNullByteApiFactory(TestNullByteApi api) : INullByteApiFactory
+    {
+        public INullByteApi Create(int threads, CancellationToken cancellationToken) => api;
+    }
+
     private sealed class TestNullByteApi : INullByteApi
     {
         private readonly TaskCompletionSource sleepRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource sleepCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly CancellationToken cancellationToken = new();
 
         public List<string> Output { get; } = [];
 
         public void Print(object? value) => Output.Add(value?.ToString() ?? string.Empty);
 
-        public Task Sleep(TimeSpan duration, CancellationToken cancellationToken = default)
+        public Task Sleep(TimeSpan duration)
         {
             sleepRequested.TrySetResult();
             return sleepCompletion.Task.WaitAsync(cancellationToken);
         }
 
-        public Task<HackResult> Hack(string hostname, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<GrowResult> Grow(string hostname, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<WeakenResult> Weaken(string hostname, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<HackResult> Hack(string hostname) => throw new NotSupportedException();
+        public Task<GrowResult> Grow(string hostname) => throw new NotSupportedException();
+        public Task<WeakenResult> Weaken(string hostname) => throw new NotSupportedException();
         public double GetServerMoneyAvailable(string hostname) => throw new NotSupportedException();
         public double GetServerMaxMoney(string hostname) => throw new NotSupportedException();
         public double GetServerSecurityLevel(string hostname) => throw new NotSupportedException();

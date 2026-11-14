@@ -44,6 +44,7 @@ public sealed class ScriptProcess
     /// Total RAM reserved by this process, across all threads.
     /// </summary>
     public double RamCost { get; }
+    public bool RamReleased { get; set; } = false;
     public ScriptProcessState State { get; internal set; } = ScriptProcessState.Running;
     public Exception? Failure { get; internal set; }
     internal CancellationTokenSource Cancellation { get; }

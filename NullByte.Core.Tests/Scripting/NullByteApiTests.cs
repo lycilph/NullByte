@@ -68,15 +68,14 @@ public sealed class NullByteApiTests
     public async Task Sleep_WithCancellation_CancelsDelay()
     {
         var fixture = new Fixture();
-        var api = fixture.CreateApi();
         using var cancellationSource = new CancellationTokenSource();
+        var api = fixture.CreateApi(cancellationSource.Token);
 
-        var sleep = api.Sleep(TimeSpan.FromSeconds(5), cancellationSource.Token);
+        var sleep = api.Sleep(TimeSpan.FromSeconds(5));
 
         cancellationSource.Cancel();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => sleep);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => sleep);
     }
 
     [Fact]
@@ -246,13 +245,15 @@ public sealed class NullByteApiTests
 
         public TestScriptOutput Output { get; }
 
-        public NullByteApi CreateApi(IReadOnlyList<string>? args = null)
+        public NullByteApi CreateApi(CancellationToken cancellationToken = default)
         {
             return new NullByteApi(
                 GameState,
                 scheduler,
                 serverActions,
-                Output);
+                Output,
+                1,
+                cancellationToken);
         }
 
         public void Advance(TimeSpan amount)

@@ -57,9 +57,9 @@ public sealed class ScriptRunnerTests
             """);
 
         var api = new TestNullByteApi();
-        var args = new List<string> {"n00dles"};
+        var args = new List<string> { "n00dles" };
 
-        var runTask = runner.RunAsync(script, api,args);
+        var runTask = runner.RunAsync(script, api, args);
 
         await api.WaitUntilSleepRequestedAsync();
 
@@ -204,7 +204,7 @@ public sealed class ScriptRunnerTests
         var api = new TestNullByteApi();
 
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => runner.RunAsync(null!, api,[]));
+            () => runner.RunAsync(null!, api, []));
     }
 
     [Fact]
@@ -261,6 +261,7 @@ public sealed class ScriptRunnerTests
     {
         private TaskCompletionSource sleepRequested = CreateCompletionSource();
         private TaskCompletionSource sleepCompletion = CreateCompletionSource();
+        private CancellationToken cancellationToken = new CancellationToken();
 
         public List<string> Output { get; } = [];
 
@@ -271,7 +272,7 @@ public sealed class ScriptRunnerTests
             Output.Add(value?.ToString() ?? string.Empty);
         }
 
-        public Task Sleep(TimeSpan duration, CancellationToken cancellationToken = default)
+        public Task Sleep(TimeSpan duration)
         {
             LastSleepDuration = duration;
 
@@ -280,17 +281,17 @@ public sealed class ScriptRunnerTests
             return sleepCompletion.Task.WaitAsync(cancellationToken);
         }
 
-        public Task<HackResult> Hack(string hostname, CancellationToken cancellationToken = default)
+        public Task<HackResult> Hack(string hostname)
         {
             throw new NotSupportedException("Hack is not used by these runner tests.");
         }
 
-        public Task<GrowResult> Grow(string hostname, CancellationToken cancellationToken = default)
+        public Task<GrowResult> Grow(string hostname)
         {
             throw new NotSupportedException("Grow is not used by these runner tests.");
         }
 
-        public Task<WeakenResult> Weaken(string hostname, CancellationToken cancellationToken = default)
+        public Task<WeakenResult> Weaken(string hostname)
         {
             throw new NotSupportedException("Weaken is not used by these runner tests.");
         }

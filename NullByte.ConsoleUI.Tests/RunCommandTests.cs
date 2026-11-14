@@ -215,8 +215,9 @@ public sealed class RunCommandTests
             GameState = new GameState(new Player("home"), network);
 
             ScriptApi = new TestNullByteApi(terminal);
+            var apiFactory = new TestNullByteApiFactory(ScriptApi);
 
-            var session = GameSession.Create(new GameSessionOptions() { Balance = balance, State = GameState, Api = ScriptApi, Output = terminal });
+            var session = GameSession.Create(new GameSessionOptions() { Balance = balance, State = GameState, ApiFactory = apiFactory, Output = terminal });
             var registry = CommandSetup.Create(session, terminal);
             dispatcher = new CommandDispatcher(registry, terminal);
 
@@ -228,7 +229,7 @@ public sealed class RunCommandTests
         public GameState GameState { get; }
 
         public ScriptService ScriptService { get; }
-        
+
         public TestNullByteApi ScriptApi { get; }
 
         public string Output => string.Join(Environment.NewLine, terminal.Lines);
@@ -244,11 +245,17 @@ public sealed class RunCommandTests
         }
     }
 
+    private sealed class TestNullByteApiFactory(TestNullByteApi api) : INullByteApiFactory
+    {
+        public INullByteApi Create(int threads, CancellationToken cancellationToken) => api;
+    }
+
     private sealed class TestNullByteApi : INullByteApi
     {
         private readonly IGameTerminal terminal;
         private readonly TaskCompletionSource sleepRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource sleepCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly CancellationToken cancellationToken = new();
 
         public TestNullByteApi(IGameTerminal terminal)
         {
@@ -260,7 +267,7 @@ public sealed class RunCommandTests
             terminal.WriteLine(value?.ToString() ?? string.Empty);
         }
 
-        public Task Sleep(TimeSpan duration, CancellationToken cancellationToken = default)
+        public Task Sleep(TimeSpan duration)
         {
             sleepRequested.TrySetResult();
 
@@ -277,17 +284,17 @@ public sealed class RunCommandTests
             sleepCompletion.TrySetResult();
         }
 
-        public Task<HackResult> Hack(string hostname, CancellationToken cancellationToken = default)
+        public Task<HackResult> Hack(string hostname)
         {
             throw new NotSupportedException();
         }
 
-        public Task<GrowResult> Grow(string hostname,CancellationToken cancellationToken = default)
+        public Task<GrowResult> Grow(string hostname)
         {
             throw new NotSupportedException();
         }
 
-        public Task<WeakenResult> Weaken(string hostname, CancellationToken cancellationToken = default)
+        public Task<WeakenResult> Weaken(string hostname)
         {
             throw new NotSupportedException();
         }

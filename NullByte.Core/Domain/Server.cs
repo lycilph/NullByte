@@ -130,7 +130,7 @@ public sealed class Server
         return removed;
     }
 
-    internal void AllocateRam(double amount)
+    public void AllocateRam(double amount)
     {
         ValidateNonNegativeFinite(amount, nameof(amount));
 
@@ -143,7 +143,7 @@ public sealed class Server
         usedRam += amount;
     }
 
-    internal void ReleaseRam(double amount)
+    public void ReleaseRam(double amount)
     {
         ValidateNonNegativeFinite(amount, nameof(amount));
 

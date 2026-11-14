@@ -1,16 +1,15 @@
-﻿using NullByte.Core.Domain;
+﻿
+using NullByte.Core.Domain;
 using NullByte.Core.Scripting;
 using NullByte.Scripting.Compilation;
 
 namespace NullByte.Scripting.Runtime;
 
 /// <summary>
-/// Coordinates compiling and starting player-written scripts.
+/// Coordinates compiling, starting and managing player-written scripts.
+/// Each running script is represented by a ScriptProcess and receives
+/// its own NullByte API instance.
 /// </summary>
-/// <remarks>
-/// M5 supports one running script at a time. Full process management,
-/// cancellation, PIDs, threads, and RAM accounting are introduced in M6.
-/// </remarks>
 public sealed class ScriptService
 {
     private readonly GameState gameState;
@@ -39,82 +38,178 @@ public sealed class ScriptService
         this.processManager = processManager;
     }
 
+    /// <summary>
+    /// All processes currently retained by the process manager.
+    /// </summary>
     public IReadOnlyList<ScriptProcess> Processes => processManager.Processes;
 
-    public bool Kill(int pid) => processManager.Kill(pid);
-
-    public int KillAll() => processManager.KillAll();
-
+    /// <summary>
+    /// Gets whether at least one process is currently running.
+    /// </summary>
     public bool HasRunningProcesses =>
         processManager.Processes.Any(process => process.State == ScriptProcessState.Running);
 
     /// <summary>
-    /// Compiles and starts a script stored in the game's virtual filesystem.
+    /// Raised when a process terminates because of an exception.
     /// </summary>
-    /// <remarks>
-    /// This method starts execution but deliberately does not await the entire
-    /// script. Player scripts may contain infinite asynchronous loops, so the
-    /// terminal must remain available after the script starts.
-    /// </remarks>
-    public ScriptStartResult Start(string hostname, string fileName, IReadOnlyList<string> args)
+    public event Action<ScriptProcess, Exception>? ProcessFailed;
+
+    /// <summary>
+    /// Raised when a process completes normally.
+    /// </summary>
+    public event Action<ScriptProcess>? ProcessCompleted;
+
+    /// <summary>
+    /// Compiles and starts a script stored in the virtual filesystem.
+    /// This method returns immediately after starting the process.
+    /// </summary>
+    public ScriptStartResult Start(string hostname, string filename, IReadOnlyList<string> args, int threads = 1)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
-        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(filename);
         ArgumentNullException.ThrowIfNull(args);
 
-        ClearCompletedScript();
+        if (threads < 1)
+            return ScriptStartResult.Failure("Thread count must be at least 1.");
 
-        //if (IsScriptRunning)
-        //    return ScriptStartResult.Failure("A script is already running.");
+        // Remove old, finished processes before starting another one.
+        processManager.RemoveCompleted();
 
-        if (!gameState.FileSystem.TryReadFile(hostname, fileName, out var source))
-            return ScriptStartResult.Failure($"File not found: {fileName}");
+        // Resolve the target server.
+        if (!gameState.Network.TryGetServer(hostname, out var server))
+            return ScriptStartResult.Failure($"Unknown server: {hostname}");
 
-        var compilation = compiler.Compile(source!, fileName);
+        // Read the script from the target server.
+        if (!gameState.FileSystem.TryReadFile(hostname, filename, out var source))
+            return ScriptStartResult.Failure($"File not found: {filename}");
+
+        // Compile the script.
+        var compilation = compiler.Compile(source!, filename);
 
         if (!compilation.Succeeded)
-            return ScriptStartResult.Failure($"Compilation failed for '{fileName}'.", compilation.Diagnostics);
+            return ScriptStartResult.Failure($"Compilation failed for '{filename}'.", compilation.Diagnostics);
 
         var compiledScript = compilation.Script
             ?? throw new InvalidOperationException("Successful compilation did not produce a script.");
 
-        //runningScript = 
-            RunAndObserveAsync(compiledScript, api, args.ToArray());
+        // Static RAM cost is multiplied by the requested thread count.
+        var ramCost = compiledScript.RamCost * threads;
+
+        if (!double.IsFinite(ramCost) || ramCost < 0)
+            return ScriptStartResult.Failure($"Invalid RAM cost calculated for '{filename}'.");
+
+        // Check available RAM before creating a process.
+        if (ramCost > server!.AvailableRam)
+        {
+            return ScriptStartResult.Failure(
+                $"Not enough RAM on {hostname}. " +
+                $"Required: {ramCost:F2} GB. " +
+                $"Available: {server.AvailableRam:F2} GB.");
+        }
+
+        // Reserve RAM before creating or starting the process.
+        try
+        {
+            server.AllocateRam(ramCost);
+        }
+        catch (InvalidOperationException)
+        {
+            // The allocation check is repeated by Server itself.
+            // This also protects against an allocation failure between
+            // the availability check and reservation.
+            return ScriptStartResult.Failure($"Not enough RAM on {hostname}.");
+        }
+
+        ScriptProcess? process = null;
+
+        try
+        {
+            // Create the process with its own cancellation source,
+            // thread count and RAM allocation.
+            process = processManager.Create(filename, hostname, args.ToArray(), threads, ramCost);
+
+            // Create a distinct API instance for this process.
+            var api = apiFactory.Create(process.Threads, process.Cancellation.Token);
+
+            // Start execution without waiting for the script to finish.
+            process.Execution = RunAndObserveAsync(process, compiledScript, api);
+        }
+        catch (Exception exception)
+        {
+            if (process is not null)
+            {
+                process.State = ScriptProcessState.Failed;
+                process.Failure = exception;
+            }
+
+            server.ReleaseRam(ramCost);
+
+            return ScriptStartResult.Failure($"Could not start '{filename}': {exception.Message}");
+        }
 
         return ScriptStartResult.Success(compilation.Diagnostics);
     }
 
     /// <summary>
-    /// Raised when a running script terminates because of an exception.
+    /// Attempts to terminate a process.
+    /// The process will stop when its next cancellable await is reached.
     /// </summary>
-    public event Action<Exception>? ScriptFailed;
+    public bool Kill(int pid) => processManager.Kill(pid);
 
     /// <summary>
-    /// Raised when a running script finishes normally.
+    /// Terminates all currently running processes.
     /// </summary>
-    public event Action? ScriptCompleted;
+    public int KillAll() => processManager.KillAll();
 
-    private async Task RunAndObserveAsync(CompiledScript script, INullByteApi api, IReadOnlyList<string> args)
+    /// <summary>
+    /// Removes processes that have finished execution.
+    /// </summary>
+    public void RemoveCompleted() => processManager.RemoveCompleted();
+
+    private async Task RunAndObserveAsync(ScriptProcess process, CompiledScript script, INullByteApi api)
     {
         try
         {
-            await runner.RunAsync(script, api, args);
+            await runner.RunAsync(script, api, process.Args);
 
-            ScriptCompleted?.Invoke();
+            // A killed process must remain Killed, even if its
+            // execution happens to finish normally after cancellation.
+            if (process.State == ScriptProcessState.Running)
+            {
+                process.State = ScriptProcessState.Completed;
+                ProcessCompleted?.Invoke(process);
+            }
         }
         catch (OperationCanceledException)
         {
-            // Cancellation becomes part of process management in M6.
+            if (process.State == ScriptProcessState.Running)
+                process.State = ScriptProcessState.Killed;
         }
         catch (Exception exception)
         {
-            ScriptFailed?.Invoke(exception);
+            process.Failure = exception;
+            process.State = ScriptProcessState.Failed;
+
+            ProcessFailed?.Invoke(process, exception);
+        }
+        finally
+        {
+            ReleaseProcessRam(process);
         }
     }
 
-    private void ClearCompletedScript() => processManager.RemoveCompleted();
-    //{
-    //    if (runningScript?.IsCompleted == true)
-    //        runningScript = null;
-    //}
+    private void ReleaseProcessRam(ScriptProcess process)
+    {
+        var server = gameState.Network.GetServer(process.Hostname);
+
+        // The process owns the amount reserved when it was started.
+        // Release it exactly once.
+        if (process.RamReleased)
+            return;
+
+        server.ReleaseRam(process.RamCost);
+
+        // Clear the process's allocation so it cannot be released twice.
+        process.RamReleased = true;
+    }
 }

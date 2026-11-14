@@ -12,12 +12,12 @@ public sealed class ScriptProcessManagerTests
         var first = manager.Create(
             "hack.cs",
             "home",
-            []);
+            [], 1, 1);
 
         var second = manager.Create(
             "grow.cs",
             "home",
-            ["n00dles"]);
+            ["n00dles"], 1, 1);
 
         Assert.Equal(1, first.Pid);
         Assert.Equal(2, second.Pid);
@@ -31,7 +31,7 @@ public sealed class ScriptProcessManagerTests
         var process = manager.Create(
             "hack.cs",
             "home",
-            ["n00dles", "extra"]);
+            ["n00dles", "extra"], 1, 1);
 
         Assert.Equal("hack.cs", process.FileName);
         Assert.Equal("home", process.Hostname);
@@ -47,7 +47,7 @@ public sealed class ScriptProcessManagerTests
         var created = manager.Create(
             "hack.cs",
             "home",
-            []);
+            [], 1, 1);
 
         Assert.True(manager.TryGet(created.Pid, out var found));
         Assert.Same(created, found);
@@ -69,7 +69,7 @@ public sealed class ScriptProcessManagerTests
         var process = manager.Create(
             "hack.cs",
             "home",
-            []);
+            [], 1, 1);
 
         Assert.True(manager.Kill(process.Pid));
         Assert.Equal(ScriptProcessState.Killed, process.State);
@@ -89,8 +89,8 @@ public sealed class ScriptProcessManagerTests
     {
         var manager = new ScriptProcessManager();
 
-        var first = manager.Create("a.cs", "home", []);
-        var second = manager.Create("b.cs", "home", []);
+        var first = manager.Create("a.cs", "home", [], 1, 1);
+        var second = manager.Create("b.cs", "home", [], 1, 1);
 
         var killed = manager.KillAll();
 
@@ -111,7 +111,7 @@ public sealed class ScriptProcessManagerTests
         var process = manager.Create(
             "hack.cs",
             "home",
-            []);
+            [], 1, 1);
 
         process.State = ScriptProcessState.Completed;
 

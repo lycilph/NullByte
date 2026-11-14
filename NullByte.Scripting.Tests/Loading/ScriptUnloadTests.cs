@@ -119,11 +119,11 @@ public sealed class ScriptUnloadTests
 
     private sealed class TestNullByteApi : INullByteApi
     {
-        public void Print(object? value) {}
-        public Task Sleep(TimeSpan duration, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<HackResult> Hack(string hostname, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<GrowResult> Grow(string hostname, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<WeakenResult> Weaken(string hostname, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public void Print(object? value) { }
+        public Task Sleep(TimeSpan duration) => Task.CompletedTask;
+        public Task<HackResult> Hack(string hostname) => throw new NotSupportedException();
+        public Task<GrowResult> Grow(string hostname) => throw new NotSupportedException();
+        public Task<WeakenResult> Weaken(string hostname) => throw new NotSupportedException();
         public double GetServerMoneyAvailable(string hostname) => throw new NotSupportedException();
         public double GetServerMaxMoney(string hostname) => throw new NotSupportedException();
         public double GetServerSecurityLevel(string hostname) => throw new NotSupportedException();
