@@ -16,12 +16,12 @@ public sealed class ScriptServiceTests
         var fixture = new Fixture();
 
         fixture.WriteScript(
-            "hello.cs",
+            "hello.cx",
             """
             nb.Print("Hello from script");
             """);
 
-        var result = fixture.Service.Start(fixture.Home.Hostname, "hello.cs", []);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "hello.cx", []);
 
         Assert.True(result.Succeeded, result.FailureMessage);
 
@@ -37,12 +37,12 @@ public sealed class ScriptServiceTests
 
         var result = fixture.Service.Start(
             fixture.Home.Hostname,
-            "missing.cs",
+            "missing.cx",
             []);
 
         Assert.False(result.Succeeded);
         Assert.Contains("File not found", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("missing.cs", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("missing.cx", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(result.Diagnostics);
         Assert.False(fixture.Service.HasRunningProcesses);
     }
@@ -53,12 +53,12 @@ public sealed class ScriptServiceTests
         var fixture = new Fixture();
 
         fixture.WriteScript(
-            "broken.cs",
+            "broken.cx",
             """
             nb.Print(missingValue);
             """);
 
-        var result = fixture.Service.Start(fixture.Home.Hostname, "broken.cs", []);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "broken.cx", []);
 
         Assert.False(result.Succeeded);
         Assert.Contains("Compilation failed", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
@@ -76,13 +76,13 @@ public sealed class ScriptServiceTests
         var fixture = new Fixture();
 
         fixture.WriteScript(
-            "args.cs",
+            "args.cx",
             """
             nb.Print(args[0]);
             nb.Print(args[1]);
             """);
 
-        var result = fixture.Service.Start(fixture.Home.Hostname, "args.cs", ["n00dles", "second"]);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "args.cx", ["n00dles", "second"]);
 
         Assert.True(result.Succeeded, result.FailureMessage);
 
@@ -97,14 +97,14 @@ public sealed class ScriptServiceTests
         var fixture = new Fixture();
 
         fixture.WriteScript(
-            "args.cs",
+            "args.cx",
             """
             await nb.Sleep(TimeSpan.FromSeconds(1));
             nb.Print(args[0]);
             """);
 
         var args = new List<string> { "n00dles" };
-        var result = fixture.Service.Start(fixture.Home.Hostname, "args.cs", args);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "args.cx", args);
 
         Assert.True(result.Succeeded, result.FailureMessage);
 
@@ -125,24 +125,24 @@ public sealed class ScriptServiceTests
         var fixture = new Fixture();
 
         fixture.WriteScript(
-            "first.cs",
+            "first.cx",
             """
             nb.Print("First");
             """);
 
         fixture.WriteScript(
-            "second.cs",
+            "second.cx",
             """
             nb.Print("Second");
             """);
 
-        var firstResult = fixture.Service.Start(fixture.Home.Hostname, "first.cs", []);
+        var firstResult = fixture.Service.Start(fixture.Home.Hostname, "first.cx", []);
 
         Assert.True(firstResult.Succeeded, firstResult.FailureMessage);
 
         await fixture.WaitForCompletionAsync();
 
-        var secondResult = fixture.Service.Start(fixture.Home.Hostname, "second.cs", []);
+        var secondResult = fixture.Service.Start(fixture.Home.Hostname, "second.cx", []);
 
         Assert.True(secondResult.Succeeded, secondResult.FailureMessage);
 
@@ -157,7 +157,7 @@ public sealed class ScriptServiceTests
         var fixture = new Fixture();
 
         fixture.WriteScript(
-            "complete.cs",
+            "complete.cx",
             """
             nb.Print("Finished");
             """);
@@ -166,7 +166,7 @@ public sealed class ScriptServiceTests
 
         fixture.Service.ProcessCompleted += (_) => completed.TrySetResult();
 
-        var result = fixture.Service.Start(fixture.Home.Hostname, "complete.cs", []);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "complete.cx", []);
 
         Assert.True(result.Succeeded, result.FailureMessage);
 
@@ -181,7 +181,7 @@ public sealed class ScriptServiceTests
         var fixture = new Fixture();
 
         fixture.WriteScript(
-            "failure.cs",
+            "failure.cx",
             """
             throw new InvalidOperationException("Script failed.");
             """);
@@ -190,7 +190,7 @@ public sealed class ScriptServiceTests
 
         fixture.Service.ProcessFailed += (proc, exception) => failed.TrySetResult(exception);
 
-        var result = fixture.Service.Start(fixture.Home.Hostname, "failure.cs", []);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "failure.cx", []);
 
         Assert.True(result.Succeeded, result.FailureMessage);
 
@@ -208,13 +208,13 @@ public sealed class ScriptServiceTests
         var fixture = new Fixture();
 
         fixture.WriteScript(
-            "failure.cs",
+            "failure.cx",
             """
             throw new InvalidOperationException("Boom");
             """);
 
         fixture.WriteScript(
-            "recovery.cs",
+            "recovery.cx",
             """
             nb.Print("Recovered");
             """);
@@ -223,13 +223,13 @@ public sealed class ScriptServiceTests
 
         fixture.Service.ProcessFailed += (_,_) => failed.TrySetResult();
 
-        var firstResult = fixture.Service.Start(fixture.Home.Hostname, "failure.cs", []);
+        var firstResult = fixture.Service.Start(fixture.Home.Hostname, "failure.cx", []);
 
         Assert.True(firstResult.Succeeded, firstResult.FailureMessage);
 
         await failed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        var secondResult = fixture.Service.Start(fixture.Home.Hostname, "recovery.cs", []);
+        var secondResult = fixture.Service.Start(fixture.Home.Hostname, "recovery.cx", []);
 
         Assert.True(secondResult.Succeeded, secondResult.FailureMessage);
 
@@ -244,13 +244,13 @@ public sealed class ScriptServiceTests
         var fixture = new Fixture();
 
         fixture.WriteScript(
-            "warning.cs",
+            "warning.cx",
             """
             var unused = 42;
             nb.Print("Running");
             """);
 
-        var result = fixture.Service.Start(fixture.Home.Hostname, "warning.cs", []);
+        var result = fixture.Service.Start(fixture.Home.Hostname, "warning.cx", []);
 
         Assert.True(result.Succeeded, result.FailureMessage);
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Severity == ScriptDiagnosticSeverity.Warning);
@@ -261,7 +261,7 @@ public sealed class ScriptServiceTests
     {
         var fixture = new Fixture();
 
-        var result = fixture.Service.Start("missing-server", "script.cs", []);
+        var result = fixture.Service.Start("missing-server", "script.cx", []);
 
         Assert.False(result.Succeeded);
         Assert.Contains("Unknown server: missing-server", result.FailureMessage);
@@ -282,13 +282,13 @@ public sealed class ScriptServiceTests
         var fixture = new Fixture();
 
         fixture.WriteScript(
-            "script.cs",
+            "script.cx",
             """
             nb.Print("Hello");
             """);
 
         Assert.Throws<ArgumentNullException>(
-            () => fixture.Service.Start(fixture.Home.Hostname, "script.cs", null!));
+            () => fixture.Service.Start(fixture.Home.Hostname, "script.cx", null!));
     }
 
     private sealed class Fixture

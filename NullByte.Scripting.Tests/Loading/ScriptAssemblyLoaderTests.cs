@@ -58,7 +58,7 @@ public sealed class ScriptAssemblyLoaderTests
 
     private CompiledScript Compile(string source)
     {
-        var result = compiler.Compile(source, "test.cs");
+        var result = compiler.Compile(source, "test.cx");
 
         Assert.True(
             result.Succeeded,

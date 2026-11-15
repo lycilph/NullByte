@@ -18,7 +18,7 @@ public sealed class ScriptUnloadTests
             """
             nb.Print("Hello");
             """,
-            "unload-test.cs");
+            "unload-test.cx");
 
         AssertCompilationSucceeded(result);
 
@@ -39,7 +39,7 @@ public sealed class ScriptUnloadTests
             """
             nb.Print("Version 1");
             """,
-            "hack.cs");
+            "hack.cx");
 
         AssertCompilationSucceeded(firstResult);
 
@@ -50,7 +50,7 @@ public sealed class ScriptUnloadTests
             """
             nb.Print("Version 2");
             """,
-            "hack.cs");
+            "hack.cx");
 
         AssertCompilationSucceeded(secondResult);
 

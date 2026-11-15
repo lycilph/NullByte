@@ -85,7 +85,7 @@ public sealed class ScriptAcceptanceTests
             """;
 
         var compiler = new ScriptCompiler();
-        var compilation = compiler.Compile(source, "acceptance-test.cs");
+        var compilation = compiler.Compile(source, "acceptance-test.cx");
 
         Assert.True(compilation.Succeeded, FormatDiagnostics(compilation));
 

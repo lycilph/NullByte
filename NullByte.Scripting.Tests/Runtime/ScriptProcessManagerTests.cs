@@ -10,12 +10,12 @@ public sealed class ScriptProcessManagerTests
         var manager = new ScriptProcessManager();
 
         var first = manager.Create(
-            "hack.cs",
+            "hack.cx",
             "home",
             [], 1, 1);
 
         var second = manager.Create(
-            "grow.cs",
+            "grow.cx",
             "home",
             ["n00dles"], 1, 1);
 
@@ -29,11 +29,11 @@ public sealed class ScriptProcessManagerTests
         var manager = new ScriptProcessManager();
 
         var process = manager.Create(
-            "hack.cs",
+            "hack.cx",
             "home",
             ["n00dles", "extra"], 1, 1);
 
-        Assert.Equal("hack.cs", process.FileName);
+        Assert.Equal("hack.cx", process.FileName);
         Assert.Equal("home", process.Hostname);
         Assert.Equal(["n00dles", "extra"], process.Args);
         Assert.Equal(ScriptProcessState.Running, process.State);
@@ -45,7 +45,7 @@ public sealed class ScriptProcessManagerTests
         var manager = new ScriptProcessManager();
 
         var created = manager.Create(
-            "hack.cs",
+            "hack.cx",
             "home",
             [], 1, 1);
 
@@ -67,7 +67,7 @@ public sealed class ScriptProcessManagerTests
         var manager = new ScriptProcessManager();
 
         var process = manager.Create(
-            "hack.cs",
+            "hack.cx",
             "home",
             [], 1, 1);
 
@@ -89,8 +89,8 @@ public sealed class ScriptProcessManagerTests
     {
         var manager = new ScriptProcessManager();
 
-        var first = manager.Create("a.cs", "home", [], 1, 1);
-        var second = manager.Create("b.cs", "home", [], 1, 1);
+        var first = manager.Create("a.cx", "home", [], 1, 1);
+        var second = manager.Create("b.cx", "home", [], 1, 1);
 
         var killed = manager.KillAll();
 
@@ -109,7 +109,7 @@ public sealed class ScriptProcessManagerTests
         var manager = new ScriptProcessManager();
 
         var process = manager.Create(
-            "hack.cs",
+            "hack.cx",
             "home",
             [], 1, 1);
 

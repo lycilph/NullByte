@@ -77,12 +77,12 @@ public sealed class ScriptCompiler : IScriptCompiler
         var usingsTree = CSharpSyntaxTree.ParseText(
             SourceText.From(DefaultUsingsSource, Encoding.UTF8),
             ParseOptions,
-            "NullByte.GlobalUsings.g.cs");
+            "NullByte.GlobalUsings.g.cx");
 
         var generatedTree = CSharpSyntaxTree.ParseText(
             SourceText.From(generatedSource, Encoding.UTF8),
             ParseOptions,
-            "NullByte.Script.g.cs");
+            "NullByte.Script.g.cx");
 
         var compilation = CSharpCompilation.Create(
             $"NullByte.Script.{Guid.NewGuid():N}",

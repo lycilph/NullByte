@@ -235,7 +235,7 @@ public sealed class ScriptRunnerTests
 
     private CompiledScript Compile(string source)
     {
-        var result = compiler.Compile(source, "runner-test.cs");
+        var result = compiler.Compile(source, "runner-test.cx");
 
         AssertCompilationSucceeded(result);
 

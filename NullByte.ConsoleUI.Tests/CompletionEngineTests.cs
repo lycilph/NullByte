@@ -41,7 +41,7 @@ public sealed class CompletionEngineTests
             {
                 [CompletionKind.ConnectableServer] = ["n00dles", "foodnstuff", "foodcourt"],
                 [CompletionKind.KnownServer] = ["home", "n00dles", "sigma-cosmetics"],
-                [CompletionKind.Filename] = ["hack.cs", "grow.cs", "early-hack.cs"],
+                [CompletionKind.Filename] = ["hack.cx", "grow.cx", "early-hack.cx"],
                 [CompletionKind.BotnetNode] = ["1", "2", "3"]
             });
 
@@ -153,7 +153,7 @@ public sealed class CompletionEngineTests
     {
         var result = Complete("run h");
 
-        Assert.Equal("hack.cs ", result.Replacement);
+        Assert.Equal("hack.cx ", result.Replacement);
     }
 
     [Fact]
@@ -161,13 +161,13 @@ public sealed class CompletionEngineTests
     {
         var result = Complete("run ");
 
-        Assert.Equal(["early-hack.cs", "grow.cs", "hack.cs"], result.Candidates);
+        Assert.Equal(["early-hack.cx", "grow.cx", "hack.cx"], result.Candidates);
     }
 
     [Fact]
     public void Run_DoesNotCompleteScriptArguments()
     {
-        var result = Complete("run hack.cs n00");
+        var result = Complete("run hack.cx n00");
 
         Assert.False(result.HasCandidates);
     }

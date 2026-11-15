@@ -16,7 +16,7 @@ public sealed class ScriptCompilerTests
             nb.Print(answer);
             """;
 
-        var result = compiler.Compile(source, "simple.cs");
+        var result = compiler.Compile(source, "simple.cx");
 
         AssertCompilationSucceeded(result);
         Assert.NotNull(result.Script);
@@ -33,7 +33,7 @@ public sealed class ScriptCompilerTests
             nb.Print(target);
             """;
 
-        var result = compiler.Compile(source, "args.cs");
+        var result = compiler.Compile(source, "args.cx");
 
         AssertCompilationSucceeded(result);
         Assert.NotNull(result.Script);
@@ -55,7 +55,7 @@ public sealed class ScriptCompilerTests
             nb.Print($"{money}/{maximumMoney}, {security}/{minimumSecurity}");
             """;
 
-        var result = compiler.Compile(source, "api.cs");
+        var result = compiler.Compile(source, "api.cx");
 
         AssertCompilationSucceeded(result);
         Assert.NotNull(result.Script);
@@ -69,7 +69,7 @@ public sealed class ScriptCompilerTests
         nb.Print(delay);
         """;
 
-        var result = compiler.Compile(source, "default-system-using.cs");
+        var result = compiler.Compile(source, "default-system-using.cx");
 
         AssertCompilationSucceeded(result);
     }
@@ -82,7 +82,7 @@ public sealed class ScriptCompilerTests
             nb.Print("Finished");
             """;
 
-        var result = compiler.Compile(source, "await.cs");
+        var result = compiler.Compile(source, "await.cx");
 
         AssertCompilationSucceeded(result);
         Assert.NotNull(result.Script);
@@ -99,7 +99,7 @@ public sealed class ScriptCompilerTests
             await nb.Weaken(target);
             """;
 
-        var result = compiler.Compile(source, "actions.cs");
+        var result = compiler.Compile(source, "actions.cx");
 
         AssertCompilationSucceeded(result);
         Assert.NotNull(result.Script);
@@ -122,7 +122,7 @@ public sealed class ScriptCompilerTests
             }
             """;
 
-        var result = compiler.Compile(source, "early-hack.cs");
+        var result = compiler.Compile(source, "early-hack.cx");
 
         AssertCompilationSucceeded(result);
         Assert.NotNull(result.Script);
@@ -139,7 +139,7 @@ public sealed class ScriptCompilerTests
             nb.Print(value.ToString(CultureInfo.InvariantCulture));
             """;
 
-        var result = compiler.Compile(source, "using.cs");
+        var result = compiler.Compile(source, "using.cx");
 
         AssertCompilationSucceeded(result);
         Assert.NotNull(result.Script);
@@ -153,7 +153,7 @@ public sealed class ScriptCompilerTests
             nb.Print(target);
             """;
 
-        var result = compiler.Compile(source, "syntax-error.cs");
+        var result = compiler.Compile(source, "syntax-error.cx");
 
         Assert.False(result.Succeeded);
         Assert.Null(result.Script);
@@ -170,7 +170,7 @@ public sealed class ScriptCompilerTests
             nb.Print(missingValue);
             """;
 
-        var result = compiler.Compile(source, "semantic-error.cs");
+        var result = compiler.Compile(source, "semantic-error.cx");
 
         Assert.False(result.Succeeded);
         Assert.Null(result.Script);
@@ -192,7 +192,7 @@ public sealed class ScriptCompilerTests
             nb.Print(missingValue);
             """;
 
-        var result = compiler.Compile(source, "line-mapping.cs");
+        var result = compiler.Compile(source, "line-mapping.cx");
 
         var diagnostic = Assert.Single(
             result.Diagnostics,
@@ -212,7 +212,7 @@ public sealed class ScriptCompilerTests
             nb.Print(missingValue);
             """;
 
-        var result = compiler.Compile(source, "using-mapping.cs");
+        var result = compiler.Compile(source, "using-mapping.cx");
 
         var diagnostic = Assert.Single(
             result.Diagnostics,
@@ -234,7 +234,7 @@ public sealed class ScriptCompilerTests
             }
             """;
 
-        var result = compiler.Compile(source, "syntax-location.cs");
+        var result = compiler.Compile(source, "syntax-location.cx");
 
         Assert.False(result.Succeeded);
         Assert.Contains(
@@ -252,7 +252,7 @@ public sealed class ScriptCompilerTests
             nb.Print("Running");
             """;
 
-        var result = compiler.Compile(source, "warning.cs");
+        var result = compiler.Compile(source, "warning.cx");
 
         AssertCompilationSucceeded(result);
         Assert.NotNull(result.Script);
@@ -269,7 +269,7 @@ public sealed class ScriptCompilerTests
             nb.Print("Hello");
             """;
 
-        var result = compiler.Compile(source, "output.cs");
+        var result = compiler.Compile(source, "output.cx");
 
         AssertCompilationSucceeded(result);
 
@@ -286,8 +286,8 @@ public sealed class ScriptCompilerTests
             nb.Print("Hello");
             """;
 
-        var firstResult = compiler.Compile(source, "first.cs");
-        var secondResult = compiler.Compile(source, "second.cs");
+        var firstResult = compiler.Compile(source, "first.cx");
+        var secondResult = compiler.Compile(source, "second.cx");
 
         var firstScript = Assert.IsType<CompiledScript>(firstResult.Script);
         var secondScript = Assert.IsType<CompiledScript>(secondResult.Script);
@@ -312,7 +312,7 @@ public sealed class ScriptCompilerTests
     [Fact]
     public void Compile_WithNullSource_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => compiler.Compile(null!, "null.cs"));
+        Assert.Throws<ArgumentNullException>(() => compiler.Compile(null!, "null.cx"));
     }
 
     [Theory]
@@ -331,7 +331,7 @@ public sealed class ScriptCompilerTests
         var value = 42;
         """;
 
-        var result = compiler.Compile(source, "ram.cs");
+        var result = compiler.Compile(source, "ram.cx");
 
         AssertCompilationSucceeded(result);
 
@@ -347,7 +347,7 @@ public sealed class ScriptCompilerTests
         nb.Print("Hello");
         """;
 
-        var result = compiler.Compile(source, "ram.cs");
+        var result = compiler.Compile(source, "ram.cx");
 
         AssertCompilationSucceeded(result);
 
@@ -365,7 +365,7 @@ public sealed class ScriptCompilerTests
         nb.Print("Three");
         """;
 
-        var result = compiler.Compile(source, "ram.cs");
+        var result = compiler.Compile(source, "ram.cx");
 
         AssertCompilationSucceeded(result);
 
@@ -384,7 +384,7 @@ public sealed class ScriptCompilerTests
         await nb.Weaken("n00dles");
         """;
 
-        var result = compiler.Compile(source, "ram.cs");
+        var result = compiler.Compile(source, "ram.cx");
 
         AssertCompilationSucceeded(result);
 
