@@ -121,5 +121,39 @@ while (true)
 
         fileSystem.WriteFile(server.Hostname, fileName, source);
         output.WriteLine($"{fileName} created.");
+
+        fileName = "scan_network.cx";
+        source =
+@"var visited = new HashSet<string> { ""home"" };
+        var queue = new Queue<string>();
+        queue.Enqueue(""home"");
+
+        while (queue.Count > 0)
+        {
+            string currentServer = queue.Dequeue();
+            IEnumerable<string> neighbors = nb.Scan(currentServer);
+
+            foreach (string neighbor in neighbors)
+            {
+                if (visited.Add(neighbor))
+                    queue.Enqueue(neighbor);
+            }
+        }
+
+        var allServers = new List<string>(visited);
+        nb.Print($""Found {allServers.Count} servers:"");
+        nb.Print(string.Join("", "", allServers));";
+
+        fileSystem.WriteFile(server.Hostname, fileName, source);
+        output.WriteLine($"{fileName} created.");
+
+        fileName = "api_test.cx";
+        source =
+@"var l = nb.Ps();
+foreach (var p in l)
+   nb.Print($""process {p.Pid} - {p.Filename}"");";
+
+        fileSystem.WriteFile(server.Hostname, fileName, source);
+        output.WriteLine($"{fileName} created.");
     }
 }

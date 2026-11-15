@@ -115,6 +115,53 @@ public sealed class NullByteApiTests
     }
 
     [Fact]
+    public void GetServerRequiredHackingLevel_ReturnsRequiredHackingLevel()
+    {
+        var fixture = new Fixture();
+        var api = fixture.CreateApi();
+
+        Assert.Equal(fixture.Target.RequiredHackingLevel, api.GetServerRequiredHackingLevel("n00dles"));
+    }
+
+    [Fact]
+    public void GetServerMaxRam_ReturnsMaxRam()
+    {
+        var fixture = new Fixture();
+        var api = fixture.CreateApi();
+
+        Assert.Equal(fixture.Target.MaximumRam, api.GetServerMaxRam("n00dles"));
+    }
+
+    [Fact]
+    public void GetServerUsedRam_ReturnsUsedRam()
+    {
+        var fixture = new Fixture();
+        var api = fixture.CreateApi();
+
+        Assert.Equal(fixture.Target.UsedRam, api.GetServerUsedRam("n00dles"));
+    }
+
+    [Fact]
+    public void GetHasRootAccess_ReturnsRootAccess()
+    {
+        var fixture = new Fixture();
+        var api = fixture.CreateApi();
+
+        Assert.Equal(fixture.Target.HasRootAccess, api.HasRootAccess("n00dles"));
+    }
+
+    [Fact]
+    public void GetHackingLevel_ReturnsHackingLevel()
+    {
+        var fixture = new Fixture();
+        var api = fixture.CreateApi();
+
+        var level = fixture.HackingFormulas.CalculateHackingLevel(fixture.GameState.Player.HackingExperience);
+
+        Assert.Equal(level, api.GetHackingLevel());
+    }
+
+    [Fact]
     public void ServerGetter_WithUnknownHostname_Throws()
     {
         var fixture = new Fixture();
@@ -198,6 +245,7 @@ public sealed class NullByteApiTests
         private readonly FakeGameClock clock = new();
         private readonly GameScheduler scheduler;
         private readonly ServerActions serverActions;
+        private readonly NetworkService networkService;
 
         public Fixture()
         {
@@ -228,12 +276,14 @@ public sealed class NullByteApiTests
             scheduler = new GameScheduler(clock);
 
             var balance = new BalanceConfig();
-            var formulas = new HackingFormulas(balance);
+            HackingFormulas = new HackingFormulas(balance);
+
+            networkService = new NetworkService(GameState);
 
             serverActions = new ServerActions(
                 GameState,
                 scheduler,
-                formulas,
+                HackingFormulas,
                 new SeededRandomSource(1));
 
             Output = new TestScriptOutput();
@@ -243,6 +293,8 @@ public sealed class NullByteApiTests
 
         public Server Target { get; }
 
+        public HackingFormulas HackingFormulas { get; }
+
         public TestScriptOutput Output { get; }
 
         public NullByteApi CreateApi(CancellationToken cancellationToken = default)
@@ -250,7 +302,9 @@ public sealed class NullByteApiTests
             return new NullByteApi(
                 GameState,
                 scheduler,
+                networkService,
                 serverActions,
+                HackingFormulas,
                 Output,
                 1,
                 cancellationToken);

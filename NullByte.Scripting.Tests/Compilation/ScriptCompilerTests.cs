@@ -337,7 +337,7 @@ public sealed class ScriptCompilerTests
 
         var script = Assert.IsType<CompiledScript>(result.Script);
 
-        Assert.Equal(1.0, script.RamCost);
+        Assert.Equal(1.6, script.RamCost);
     }
 
     [Fact]
@@ -353,7 +353,7 @@ public sealed class ScriptCompilerTests
 
         var script = Assert.IsType<CompiledScript>(result.Script);
 
-        Assert.Equal(1.1, script.RamCost);
+        Assert.Equal(1.7, script.RamCost, 4);
     }
 
     [Fact]
@@ -371,7 +371,7 @@ public sealed class ScriptCompilerTests
 
         var script = Assert.IsType<CompiledScript>(result.Script);
 
-        Assert.Equal(1.1, script.RamCost);
+        Assert.Equal(1.7, script.RamCost, 4);
     }
 
     [Fact]
@@ -390,7 +390,7 @@ public sealed class ScriptCompilerTests
 
         var script = Assert.IsType<CompiledScript>(result.Script);
 
-        Assert.Equal(4.5, script.RamCost);
+        Assert.Equal(5.1, script.RamCost);
     }
 
     private static void AssertCompilationSucceeded(ScriptCompilationResult result)

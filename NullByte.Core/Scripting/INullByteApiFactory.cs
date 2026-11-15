@@ -2,5 +2,5 @@
 
 public interface INullByteApiFactory
 {
-    INullByteApi Create(int threads, CancellationToken cancellationToken);
+    INullByteApi Create(IScriptOperations scriptOperations, int threads, CancellationToken cancellationToken);
 }

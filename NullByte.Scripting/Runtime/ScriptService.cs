@@ -10,7 +10,7 @@ namespace NullByte.Scripting.Runtime;
 /// Each running script is represented by a ScriptProcess and receives
 /// its own NullByte API instance.
 /// </summary>
-public sealed class ScriptService
+public sealed class ScriptService : IScriptOperations
 {
     private readonly GameState gameState;
     private readonly IScriptCompiler compiler;
@@ -129,7 +129,7 @@ public sealed class ScriptService
             process = processManager.Create(filename, hostname, args.ToArray(), threads, ramCost);
 
             // Create a distinct API instance for this process.
-            var api = apiFactory.Create(process.Threads, process.Cancellation.Token);
+            var api = apiFactory.Create(this, process.Threads, process.Cancellation.Token);
 
             // Start execution without waiting for the script to finish.
             process.Execution = RunAndObserveAsync(process, compiledScript, api);
@@ -165,6 +165,33 @@ public sealed class ScriptService
     /// Removes processes that have finished execution.
     /// </summary>
     public void RemoveCompleted() => processManager.RemoveCompleted();
+
+    /// <summary>Returns all process on the given server.</summary>
+    public IReadOnlyList<ScriptProcessInfo> Ps(string hostname)
+    {
+        if (string.IsNullOrWhiteSpace(hostname))
+            hostname = gameState.Player.CurrentHostname;
+
+        return processManager
+            .GetForHost(hostname)
+            .Select(p => new ScriptProcessInfo(
+                p.Pid,
+                p.Filename,
+                p.Args,
+                p.Threads,
+                p.Hostname))
+            .ToList();
+    }
+
+    public bool ScriptRunning(string filename, string hostname)
+    {
+        throw new NotImplementedException();
+    }
+
+    public double GetScriptRam(string filename, string hostname)
+    {
+        throw new NotImplementedException();
+    }
 
     private async Task RunAndObserveAsync(ScriptProcess process, CompiledScript script, INullByteApi api)
     {

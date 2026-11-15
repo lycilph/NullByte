@@ -32,7 +32,7 @@ internal static class ScriptRamAnalyzer
             methods.Add(symbol);
         }
 
-        return 1.0 + methods.Sum(GetRamCost);
+        return 1.6 + methods.Sum(GetRamCost);
     }
 
     private static double GetRamCost(IMethodSymbol method)

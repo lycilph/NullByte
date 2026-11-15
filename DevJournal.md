@@ -1,5 +1,20 @@
 # NULLBYTE — C# Incremental Hacker Game - DevJournal
 
+## 14-11-2026
+
+### In Progress
+
+### Done
+- Started the M6 milestone (Process manager, threads and RAM)
+
+### Decisions
+- Place botnet methods in a separate api (so a script would do api.botnet.buy etc.)
+- Later on extra servers would live in api.cloud.* etc. 
+ 
+### Future
+- print/tprint destinction (script output versus player terminal output)
+
+---
 ## 11-11-2026
 
 ### In Progress

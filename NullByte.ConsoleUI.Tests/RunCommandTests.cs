@@ -318,6 +318,41 @@ public sealed class RunCommandTests
         {
             throw new NotSupportedException();
         }
+
+        public double GetHackingLevel()
+        {
+            throw new NotSupportedException();
+        }
+
+        public double GetServerRequiredHackingLevel(string hostname)
+        {
+            throw new NotSupportedException();
+        }
+
+        public double GetServerMaxRam(string hostname)
+        {
+            throw new NotSupportedException();
+        }
+
+        public double GetServerUsedRam(string hostname)
+        {
+            throw new NotSupportedException();
+        }
+
+        public bool HasRootAccess(string hostname)
+        {
+            throw new NotSupportedException();
+        }
+
+        public NukeResult Nuke(string hostname)
+        {
+            throw new NotSupportedException();
+        }
+
+        public IReadOnlyList<string> Scan(string hostname)
+        {
+            throw new NotSupportedException();
+        }
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition)

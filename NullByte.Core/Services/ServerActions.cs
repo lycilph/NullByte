@@ -162,6 +162,21 @@ public sealed class ServerActions
             Duration: duration);
     }
 
+    public NukeResult Nuke(string hostname)
+    {
+        var server = gameState.Network.GetServer(hostname);
+
+        var hackingLevel = formulas.CalculateHackingLevel(gameState.Player.HackingExperience);
+
+        if (server.HasRootAccess)
+            return NukeResult.Failed($"Nuke failed: You already have root access to {hostname}");
+
+        if (!server.TryGainRootAccess(hackingLevel))
+            return NukeResult.Failed($"Nuke failed: hacking level too low");
+
+        return NukeResult.Success();
+    }
+
     private Server ResolveTarget(string hostname)
     {
         if (string.IsNullOrWhiteSpace(hostname))

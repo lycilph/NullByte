@@ -60,6 +60,7 @@ public sealed class ScriptAcceptanceTests
         // Zero guarantees that the hack succeeds.
         var randomSource = new FixedRandomSource(0);
 
+        var networkServices = new NetworkService(gameState);
         var actions = new ServerActions(
             gameState,
             scheduler,
@@ -73,7 +74,9 @@ public sealed class ScriptAcceptanceTests
         var api = new NullByteApi(
             gameState,
             scheduler,
+            networkServices,
             actions,
+            formulas,
             output);
 
         const string source =

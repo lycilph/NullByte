@@ -33,7 +33,7 @@ public sealed class ScriptProcessManagerTests
             "home",
             ["n00dles", "extra"], 1, 1);
 
-        Assert.Equal("hack.cx", process.FileName);
+        Assert.Equal("hack.cx", process.Filename);
         Assert.Equal("home", process.Hostname);
         Assert.Equal(["n00dles", "extra"], process.Args);
         Assert.Equal(ScriptProcessState.Running, process.State);

@@ -1,4 +1,6 @@
-﻿namespace NullByte.Scripting.Runtime;
+﻿using System.Diagnostics;
+
+namespace NullByte.Scripting.Runtime;
 
 /// <summary>
 /// Owns the player script processes and their PIDs.
@@ -50,6 +52,12 @@ public sealed class ScriptProcessManager
     /// Attempts to find a process by PID.
     /// </summary>
     public bool TryGet(int pid, out ScriptProcess? process) => processes.TryGetValue(pid, out process);
+
+    public IReadOnlyList<ScriptProcess> GetForHost(string hostname)
+        => processes.Values
+        .Where(p => string.Equals(p.Hostname, hostname, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(p => p.Pid)
+        .ToList();
 
     /// <summary>
     /// Requests cancellation of a process.

@@ -29,16 +29,22 @@ public sealed class NetworkService
         return server ?? throw new InvalidOperationException($"Unknown server: {hostname}");
     }
 
-    public bool IsServerKnown(Server server)
-        => gameState.Player.DiscoveredHostnames.Contains(server.Hostname);
+    public bool IsServerKnown(string hostname)
+        => gameState.Player.DiscoveredHostnames.Contains(hostname);
 
     /// <summary>
     /// Discovers and returns all servers directly connected
     /// to the player's current server.
     /// </summary>
-    public IReadOnlyList<Server> Scan()
+    public IReadOnlyList<Server> Scan(string hostname = "")
     {
-        var neighbors = gameState.Network.GetNeighbors(gameState.Player.CurrentHostname);
+        if (string.IsNullOrWhiteSpace(hostname))
+            hostname = gameState.Player.CurrentHostname;
+
+        if (!IsServerKnown(hostname))
+            return [];
+
+        var neighbors = gameState.Network.GetNeighbors(hostname);
 
         foreach (var server in neighbors)
             gameState.Player.DiscoverServer(server.Hostname);

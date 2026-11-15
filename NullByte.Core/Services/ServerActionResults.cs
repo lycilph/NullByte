@@ -77,3 +77,14 @@ public sealed record WeakenResult(
 {
     public static WeakenResult Failed(string msg) => new(false, msg, 0, 0, TimeSpan.Zero);
 }
+
+/// <summary>
+/// Describes the outcome of a completed nuke operation.
+/// </summary>
+public sealed record NukeResult(
+    bool Succeeded,
+    string FailureMessage)
+{
+    public static NukeResult Success() => new(true, "");
+    public static NukeResult Failed(string msg) => new(false, msg);
+}

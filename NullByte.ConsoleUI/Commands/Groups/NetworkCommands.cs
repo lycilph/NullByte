@@ -68,7 +68,7 @@ public sealed class NetworkCommands(NetworkService networkService, IGameOutput o
                 ? networkService.GetServer(arguments[0])
                 : networkService.GetCurrentServer();
 
-        if (networkService.IsServerKnown(server))
+        if (networkService.IsServerKnown(server.Hostname))
         {
             output.WriteLine($"Server: {server.Hostname}");
             output.WriteLine($"Root access: {(server.HasRootAccess ? "Yes" : "No")}");

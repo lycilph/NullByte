@@ -7,7 +7,7 @@ public sealed class ScriptProcess
 {
     internal ScriptProcess(
         int pid,
-        string fileName,
+        string filename,
         string hostname,
         IReadOnlyList<string> args,
         int threads,
@@ -17,7 +17,7 @@ public sealed class ScriptProcess
         ArgumentOutOfRangeException.ThrowIfLessThan(pid, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(threads, 1);
         
-        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(filename);
         ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
         ArgumentNullException.ThrowIfNull(args);
         ArgumentNullException.ThrowIfNull(cancellation);
@@ -26,7 +26,7 @@ public sealed class ScriptProcess
             throw new ArgumentOutOfRangeException(nameof(ramCost));
 
         Pid = pid;
-        FileName = fileName;
+        Filename = filename;
         Hostname = hostname;
         Args = args.ToArray();
         Threads = threads;
@@ -35,7 +35,7 @@ public sealed class ScriptProcess
     }
 
     public int Pid { get; }
-    public string FileName { get; }
+    public string Filename { get; }
     public string Hostname { get; }
     public IReadOnlyList<string> Args { get; }
     public int Threads { get; }
