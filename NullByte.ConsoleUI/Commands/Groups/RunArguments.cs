@@ -2,13 +2,13 @@
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
-internal readonly record struct RunRequest(string Filename, int Threads, IReadOnlyList<string> ScriptArguments);
+internal readonly record struct InputRequest(string Filename, int Threads, IReadOnlyList<string> ScriptArguments);
 
 internal static class RunArguments
 {
     public const string ThreadsFlag = "-t";
 
-    public static bool TryParse(IReadOnlyList<string> arguments, out RunRequest request, out string error)
+    public static bool TryParse(IReadOnlyList<string> arguments, out InputRequest request, out string error)
     {
         request = default;
         error = string.Empty;
@@ -36,7 +36,7 @@ internal static class RunArguments
             next += 2;
         }
 
-        request = new RunRequest(arguments[0], threads, arguments.Skip(next).ToArray());
+        request = new InputRequest(arguments[0], threads, arguments.Skip(next).ToArray());
         return true;
     }
 }

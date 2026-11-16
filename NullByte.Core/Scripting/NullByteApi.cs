@@ -2,6 +2,7 @@
 using NullByte.Core.Formulas;
 using NullByte.Core.Services;
 using NullByte.Core.Time;
+using System.Xml.Linq;
 
 namespace NullByte.Core.Scripting;
 
@@ -64,16 +65,16 @@ public sealed class NullByteApi : INullByteApi
 
     public Task Sleep(TimeSpan duration) => scheduler.DelayAsync(duration, cancellationToken);
 
-    public Task<HackResult> Hack(string hostname) 
-        => serverActions.HackAsync(hostname, processThreads, cancellationToken);
+    public Task<HackResult> Hack(string hostname = "") 
+        => serverActions.HackAsync(GetTargetHostname(hostname), processThreads, cancellationToken);
 
-    public Task<GrowResult> Grow(string hostname)
-        => serverActions.GrowAsync(hostname, processThreads, cancellationToken);
+    public Task<GrowResult> Grow(string hostname = "")
+        => serverActions.GrowAsync(GetTargetHostname(hostname), processThreads, cancellationToken);
 
-    public Task<WeakenResult> Weaken(string hostname)
-        => serverActions.WeakenAsync(hostname, processThreads, cancellationToken);
+    public Task<WeakenResult> Weaken(string hostname = "")
+        => serverActions.WeakenAsync(GetTargetHostname(hostname), processThreads, cancellationToken);
 
-    public NukeResult Nuke(string hostname) => serverActions.Nuke(hostname);
+    public NukeResult Nuke(string hostname = "") => serverActions.Nuke(GetTargetHostname(hostname));
 
     public IReadOnlyList<string> Scan(string hostname = "")
         => networkService.Scan(GetTargetHostname(hostname)).Select(s => s.Hostname).ToList();
@@ -81,15 +82,15 @@ public sealed class NullByteApi : INullByteApi
     public double GetHackingLevel()
         => hackingFormulas.CalculateHackingLevel(gameState.Player.HackingExperience);
 
-    public double GetServerMoneyAvailable(string hostname) => GetServer(hostname).Money;
-    public double GetServerMaxMoney(string hostname) => GetServer(hostname).MaximumMoney;
-    public double GetServerSecurityLevel(string hostname) => GetServer(hostname).Security;
-    public double GetServerMinSecurityLevel(string hostname) => GetServer(hostname).MinimumSecurity;
+    public double GetServerMoneyAvailable(string hostname = "") => GetServer(GetTargetHostname(hostname)).Money;
+    public double GetServerMaxMoney(string hostname = "") => GetServer(GetTargetHostname(hostname)).MaximumMoney;
+    public double GetServerSecurityLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).Security;
+    public double GetServerMinSecurityLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).MinimumSecurity;
 
-    public double GetServerRequiredHackingLevel(string hostname) => GetServer(hostname).RequiredHackingLevel;
-    public double GetServerMaxRam(string hostname) => GetServer(hostname).MaximumRam;
-    public double GetServerUsedRam(string hostname) => GetServer(hostname).UsedRam;
-    public bool HasRootAccess(string hostname) => GetServer(hostname).HasRootAccess;
+    public double GetServerRequiredHackingLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).RequiredHackingLevel;
+    public double GetServerMaxRam(string hostname = "") => GetServer(GetTargetHostname(hostname)).MaximumRam;
+    public double GetServerUsedRam(string hostname = "") => GetServer(GetTargetHostname(hostname)).UsedRam;
+    public bool HasRootAccess(string hostname = "") => GetServer(GetTargetHostname(hostname)).HasRootAccess;
 
     public IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "") => scriptOperations.ProcessesRunning(GetTargetHostname(hostname));
     

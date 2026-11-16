@@ -20,19 +20,19 @@ public interface INullByteApi
 
     /// <summary>Attempts to steal money from a server.</summary>
     [RamCost(1.7)]
-    Task<HackResult> Hack(string hostname);
+    Task<HackResult> Hack(string hostname = "");
 
     /// <summary>Increases the available money on a server.</summary>
     [RamCost(1.7)] 
-    Task<GrowResult> Grow(string hostname);
+    Task<GrowResult> Grow(string hostname = "");
 
     /// <summary>Reduces the security level of a server.</summary>
     [RamCost(1.7)] 
-    Task<WeakenResult> Weaken(string hostname);
+    Task<WeakenResult> Weaken(string hostname = "");
 
     /// <summary>Gives the player root access to a server.</summary>
     [RamCost(0.05)] 
-    NukeResult Nuke(string hostname);
+    NukeResult Nuke(string hostname = "");
     
     /// <summary>Scan the network and returns the neighbors of a server.</summary>
     [RamCost(0.2)]
@@ -44,35 +44,35 @@ public interface INullByteApi
 
     /// <summary>Gets the amount of money currently available on a server.</summary>
     [RamCost(0.1)]
-    double GetServerMoneyAvailable(string hostname);
+    double GetServerMoneyAvailable(string hostname = "");
 
     /// <summary>Gets the maximum amount of money a server can hold.</summary>
     [RamCost(0.1)]
-    double GetServerMaxMoney(string hostname);
+    double GetServerMaxMoney(string hostname = "");
 
     /// <summary>Gets the current security level of a server.</summary>
     [RamCost(0.1)]
-    double GetServerSecurityLevel(string hostname);
+    double GetServerSecurityLevel(string hostname = "");
 
     /// <summary>Gets the minimum security level of a server.</summary>
     [RamCost(0.1)]
-    double GetServerMinSecurityLevel(string hostname);
+    double GetServerMinSecurityLevel(string hostname = "");
 
     /// <summary>Gets the required hacking level of a server.</summary>
     [RamCost(0.1)]
-    double GetServerRequiredHackingLevel(string hostname);
+    double GetServerRequiredHackingLevel(string hostname = "");
 
     /// <summary>Gets the maximum ram of a server.</summary>
     [RamCost(0.1)]
-    double GetServerMaxRam(string hostname);
+    double GetServerMaxRam(string hostname = "");
 
     /// <summary>Gets the currently used ram of a server.</summary>
     [RamCost(0.1)]
-    double GetServerUsedRam(string hostname);
+    double GetServerUsedRam(string hostname = "");
 
     /// <summary>Does the player have root access to a server.</summary>
     [RamCost(0.1)]
-    bool HasRootAccess(string hostname);
+    bool HasRootAccess(string hostname = "");
 
     /// <summary>List running scripts on a server.</summary>
     [RamCost(0.2)]

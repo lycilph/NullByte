@@ -24,6 +24,27 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
 
         registry.Register(
             new CommandDefinition(
+                "mem",
+                "mem <filename> [-t <threads>]",
+                "Displays the amount of RAM required to run the script.",
+                ScriptMemoryAsync)
+            {
+                MinArgs = 1,
+                MaxArgs = 3,
+                Completions = [
+                    new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename},
+                    new ArgumentCompletion { ArgumentIndex = 1, Values = [RunArguments.ThreadsFlag] }]
+            });
+
+        registry.Register(
+            new CommandDefinition(
+                "free",
+                "free",
+                "Check the machine's memory (RAM) usage.",
+                CheckServerMemoryAsync));
+
+        registry.Register(
+            new CommandDefinition(
                 "ps",
                 "ps",
                 "Displays running scripts.",
@@ -43,6 +64,31 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
                 "killall",
                 "Stops all running scripts on the current server .",
                 KillAllScriptAsync));
+    }
+
+    private async Task CheckServerMemoryAsync(IReadOnlyList<string> arguments)
+    {
+        var server = networkService.GetCurrentServer();
+        var free = server.UsedRam / server.MaximumRam * 100;
+
+        output.WriteLine($"Total: {server.MaximumRam,11:N2}GB");
+        output.WriteLine($"Used: {server.UsedRam,12:N2}GB ({free:N2}%)");
+        output.WriteLine($"Available: {server.AvailableRam,7:N2}GB");
+    }
+
+    private async Task ScriptMemoryAsync(IReadOnlyList<string> arguments)
+    {
+        if (!RunArguments.TryParse(arguments, out var request, out var error))
+        {
+            output.WriteLine(error);
+            output.WriteLine("Usage: mem <filename> [-t <threads>]");
+            return;
+        }
+
+        var server = networkService.GetCurrentServer();
+        var cost = scriptService.GetScriptRam(request.Filename, server.Hostname) * request.Threads;
+
+        output.WriteLine($"This script requires {cost:N2}GB of RAM to run for {request.Threads} thread(s)");
     }
 
     private async Task KillAllScriptAsync(IReadOnlyList<string> arguments)
