@@ -1,7 +1,5 @@
 ﻿# Todo
 
-* Simple text editor
-
 * Start M6 milestone
 
 ~~M6.1 — RAM metadata + static RAM analysis~~

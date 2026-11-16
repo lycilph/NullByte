@@ -1,8 +1,22 @@
 # NULLBYTE — C# Incremental Hacker Game - DevJournal
 
-## 14-11-2026
+## 16-11-2026
 
 ### In Progress
+- Finish the GetScriptRam method
+
+### Done
+- Added a (very) simple script editor
+
+### Decisions
+ 
+### Future
+
+---
+## 15-11-2026
+
+### In Progress
+- Working on pc, kill, scriptrunning and getscriptram methods of the api
 
 ### Done
 - Started the M6 milestone (Process manager, threads and RAM)

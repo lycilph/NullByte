@@ -84,8 +84,9 @@ public sealed class NullByteApi : INullByteApi
     public double GetServerUsedRam(string hostname) => GetServer(hostname).UsedRam;
     public bool HasRootAccess(string hostname) => GetServer(hostname).HasRootAccess;
 
-    public IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "") => scriptOperations.Ps(hostname);
+    public IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "") => scriptOperations.ProcessesRunning(hostname);
     public bool Kill(int pid) => scriptOperations.Kill(pid);
+    public int KillAll() => scriptOperations.KillAll();
     public bool ScriptRunning(string filename, string hostname = "") => scriptOperations.ScriptRunning(filename, hostname);
     public double GetScriptRam(string filename, string hostname = "") => scriptOperations.GetScriptRam(filename, hostname);
 

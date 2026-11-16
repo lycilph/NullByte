@@ -167,7 +167,7 @@ public sealed class ScriptService : IScriptOperations
     public void RemoveCompleted() => processManager.RemoveCompleted();
 
     /// <summary>Returns all process on the given server.</summary>
-    public IReadOnlyList<ScriptProcessInfo> Ps(string hostname)
+    public IReadOnlyList<ScriptProcessInfo> ProcessesRunning(string hostname)
     {
         if (string.IsNullOrWhiteSpace(hostname))
             hostname = gameState.Player.CurrentHostname;
@@ -195,7 +195,21 @@ public sealed class ScriptService : IScriptOperations
 
     public double GetScriptRam(string filename, string hostname)
     {
-        throw new NotImplementedException();
+        // Resolve the target server.
+        if (!gameState.Network.TryGetServer(hostname, out var server))
+            return 0.0;
+
+        // Read the script from the target server.
+        if (!gameState.FileSystem.TryReadFile(hostname, filename, out var source))
+            return 0.0;
+
+        // Compile the script.
+        var compilation = compiler.Compile(source!, filename);
+
+        if (!compilation.Succeeded || compilation.Script == null)
+            return 0.0;
+
+        return compilation.Script.RamCost;
     }
 
     private async Task RunAndObserveAsync(ScriptProcess process, CompiledScript script, INullByteApi api)

@@ -19,6 +19,19 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
                 MinArgs = 1, MaxArgs = int.MaxValue,
                 Completions = [new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename}]
             });
+
+        registry.Register(
+            new CommandDefinition(
+                "ps",
+                "ps",
+                "Displays running scripts.",
+                DisplayScriptsAsync));
+    }
+
+    private async Task DisplayScriptsAsync(IReadOnlyList<string> arguments)
+    {
+        var server = networkService.GetCurrentServer();
+        var processes = scriptService.ProcessesRunning(server.Hostname);
     }
 
     private async Task RunScriptAsync(IReadOnlyList<string> arguments)

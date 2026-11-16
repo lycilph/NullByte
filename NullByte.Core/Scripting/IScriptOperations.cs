@@ -2,9 +2,10 @@
 
 public interface IScriptOperations
 {
-    IReadOnlyList<ScriptProcessInfo> Ps(string hostname);
+    IReadOnlyList<ScriptProcessInfo> ProcessesRunning(string hostname);
 
     bool Kill(int pid);
+    int KillAll();
 
     bool ScriptRunning(string filename, string hostname);
 

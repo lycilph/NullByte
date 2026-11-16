@@ -162,7 +162,7 @@ Each method has a RAM cost declared with an attribute (for example `[RamCost(0.1
 | Actions | `Hack`, `Grow`, `Weaken`, `Sleep` |
 | Info | `GetServerMoneyAvailable`, `GetServerMaxMoney`, `GetServerSecurityLevel`, `GetServerMinSecurityLevel`, `GetServerRequiredHackingLevel`, `GetHackingLevel`, `GetServerMaxRam`, `GetServerUsedRam`, `HasRootAccess` |
 | Network | `Scan`, `Nuke` |
-| Scripts | `Run`, `Exec`, `Kill`, `Ps`, `ScriptRunning`, `GetScriptRam` |
+| Scripts | `Run`, `Exec`, `Kill`, `Ps`, `Scp`, `ScriptRunning`, `GetScriptRam` |
 | Botnet | `Botnet.NumNodes`, `PurchaseNode`, `UpgradeLevel`, `UpgradeRam`, `UpgradeCore`, cost getters |
 | Output | `Print`, `Tprint` |
 | Args | `Args` |

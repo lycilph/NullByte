@@ -80,6 +80,10 @@ public interface INullByteApi
     [RamCost(0.5)]
     bool Kill(int pid);
 
+    /// <summary>Kills all processes.</summary>
+    [RamCost(0.5)]
+    int KillAll();
+
     /// <summary>Check if the specified script is running on a server.</summary>
     [RamCost(1)]
     bool ScriptRunning(string filename, string hostname = "");
