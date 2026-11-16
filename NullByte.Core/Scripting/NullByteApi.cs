@@ -88,6 +88,10 @@ public sealed class NullByteApi : INullByteApi
     public bool HasRootAccess(string hostname) => GetServer(hostname).HasRootAccess;
 
     public IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "") => scriptOperations.ProcessesRunning(GetTargetHostname(hostname));
+    
+    public int Run(string filename, params string[] args) => scriptOperations.StartSimple(processHostname, filename, args);
+    public int Exec(string filename, string hostname, params string[] args) => scriptOperations.StartSimple(hostname, filename, args);
+
     public bool Kill(int pid) => scriptOperations.Kill(pid);
     public int KillAll() => scriptOperations.KillAll();
     public bool ScriptRunning(string filename, string hostname = "") => scriptOperations.ScriptRunning(filename, GetTargetHostname(hostname));

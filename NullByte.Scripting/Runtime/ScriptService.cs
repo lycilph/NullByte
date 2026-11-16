@@ -63,6 +63,12 @@ public sealed class ScriptService : IScriptOperations
     /// Compiles and starts a script stored in the virtual filesystem.
     /// This method returns immediately after starting the process.
     /// </summary>
+    public int StartSimple(string hostname, string filename, IReadOnlyList<string> args, int threads = 1)
+    {
+        var result = Start(hostname, filename, args, threads);
+        return result.Succeeded ? result.Pid : 0;
+    }
+
     public ScriptStartResult Start(string hostname, string filename, IReadOnlyList<string> args, int threads = 1)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
@@ -78,6 +84,10 @@ public sealed class ScriptService : IScriptOperations
         // Resolve the target server.
         if (!gameState.Network.TryGetServer(hostname, out var server))
             return ScriptStartResult.Failure($"Unknown server: {hostname}");
+
+        // Check if player has root access to server
+        if (!server.HasRootAccess)
+            return ScriptStartResult.Failure($"You do not have root access on {hostname}");
 
         // Read the script from the target server.
         if (!gameState.FileSystem.TryReadFile(hostname, filename, out var source))
@@ -121,7 +131,6 @@ public sealed class ScriptService : IScriptOperations
         }
 
         ScriptProcess? process = null;
-
         try
         {
             // Create the process with its own cancellation source,
@@ -147,7 +156,7 @@ public sealed class ScriptService : IScriptOperations
             return ScriptStartResult.Failure($"Could not start '{filename}': {exception.Message}");
         }
 
-        return ScriptStartResult.Success(compilation.Diagnostics);
+        return ScriptStartResult.Success(process.Pid, compilation.Diagnostics);
     }
 
     /// <summary>

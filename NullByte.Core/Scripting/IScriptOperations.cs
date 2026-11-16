@@ -4,6 +4,8 @@ public interface IScriptOperations
 {
     IReadOnlyList<ScriptProcessInfo> ProcessesRunning(string hostname);
 
+    int StartSimple(string hostname, string filename, IReadOnlyList<string> args, int threads = 1);
+
     bool Kill(int pid);
     int KillAll();
 

@@ -26,6 +26,23 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
                 "ps",
                 "Displays running scripts.",
                 DisplayScriptsAsync));
+
+        registry.Register(
+            new CommandDefinition(
+                "kill",
+                "kill <pid>",
+                "Stops the specified script on the current server .",
+                KillScriptAsync)
+            { MinArgs = 1, MaxArgs = 1 });
+    }
+
+    private async Task KillScriptAsync(IReadOnlyList<string> arguments)
+    {
+        if (!int.TryParse(arguments[0], out var pid))
+            output.WriteLine($"Not a valid pid: [{arguments[0]}]");
+
+        var result = scriptService.Kill(pid);
+        output.WriteLine($"Killing process {pid}... {result}");
     }
 
     private async Task DisplayScriptsAsync(IReadOnlyList<string> arguments)
@@ -76,15 +93,15 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
     private async Task RunScriptAsync(IReadOnlyList<string> arguments)
     {
         var server = networkService.GetCurrentServer();
-        var fileName = arguments[0];
+        var filename = arguments[0];
         var scriptArguments = arguments.Skip(1).ToArray();
 
-        output.WriteLine($"Executing {fileName}...");
+        output.WriteLine($"Executing {filename}...");
 
-        var result = await Task.Run(() => scriptService.Start(server.Hostname, fileName, scriptArguments));
+        var result = await Task.Run(() => scriptService.Start(server.Hostname, filename, scriptArguments));
 
         foreach (var diagnostic in result.Diagnostics)
-            WriteScriptDiagnostic(output, fileName, diagnostic);
+            WriteScriptDiagnostic(output, filename, diagnostic);
 
         if (!result.Succeeded && result.Diagnostics.Count == 0)
             output.WriteLine(result.FailureMessage);
