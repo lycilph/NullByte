@@ -63,13 +63,13 @@ public sealed class ScriptService : IScriptOperations
     /// Compiles and starts a script stored in the virtual filesystem.
     /// This method returns immediately after starting the process.
     /// </summary>
-    public int StartSimple(string hostname, string filename, IReadOnlyList<string> args, int threads = 1)
+    public async Task<int> StartSimple(string hostname, string filename, IReadOnlyList<string> args, int threads = 1)
     {
-        var result = Start(hostname, filename, args, threads);
+        var result = await Start(hostname, filename, args, threads);
         return result.Succeeded ? result.Pid : 0;
     }
 
-    public ScriptStartResult Start(string hostname, string filename, IReadOnlyList<string> args, int threads = 1)
+    public async Task<ScriptStartResult> Start(string hostname, string filename, IReadOnlyList<string> args, int threads = 1)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
         ArgumentException.ThrowIfNullOrWhiteSpace(filename);
@@ -94,7 +94,10 @@ public sealed class ScriptService : IScriptOperations
             return ScriptStartResult.Failure($"File not found: {filename}");
 
         // Compile the script.
-        var compilation = compiler.Compile(source!, filename);
+        //var compilation = compiler.Compile(source!, filename);
+        // Pure CPU work: source string in, immutable result out. No game state in here.
+        // No ConfigureAwait(false): we must resume on the game thread.
+        var compilation = await Task.Run(() => compiler.Compile(source!, filename));
 
         if (!compilation.Succeeded)
             return ScriptStartResult.Failure($"Compilation failed for '{filename}'.", compilation.Diagnostics);

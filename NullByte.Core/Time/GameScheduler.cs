@@ -18,14 +18,16 @@
 /// </remarks>
 public sealed class GameScheduler
 {
+    private readonly Action? verifyGameThread;
     private readonly IGameClock clock;
 
     private readonly PriorityQueue<ScheduledDelay, (long DueTicks, long Sequence)> scheduledDelays = new();
 
     private long nextSequence;
 
-    public GameScheduler(IGameClock clock)
+    public GameScheduler(IGameClock clock, Action? verifyGameThread = null)
     {
+        this.verifyGameThread = verifyGameThread;
         this.clock = clock
             ?? throw new ArgumentNullException(nameof(clock));
     }
@@ -41,6 +43,8 @@ public sealed class GameScheduler
     /// </summary>
     public Task DelayAsync(TimeSpan duration, CancellationToken cancellationToken = default)
     {
+        verifyGameThread?.Invoke();
+
         if (duration < TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(duration), "Delay duration cannot be negative.");
 
@@ -66,6 +70,8 @@ public sealed class GameScheduler
     /// </returns>
     public int Update()
     {
+        verifyGameThread?.Invoke();
+
         var processedCount = 0;
         var currentTime = clock.Elapsed;
 

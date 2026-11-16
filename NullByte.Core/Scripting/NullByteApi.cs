@@ -20,7 +20,7 @@ public sealed class NullByteApi : INullByteApi
     private readonly IGameOutput output;
 
     private readonly string processHostname;
-    private readonly int threads;
+    private readonly int processThreads;
     private readonly CancellationToken cancellationToken;
 
     public NullByteApi(
@@ -32,7 +32,7 @@ public sealed class NullByteApi : INullByteApi
         IScriptOperations scriptOperations,
         IGameOutput output,
         string processHostname,
-        int threads = 1,
+        int processThreads = 1,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(gameState);
@@ -42,7 +42,7 @@ public sealed class NullByteApi : INullByteApi
         ArgumentNullException.ThrowIfNull(hackingFormulas);
         ArgumentNullException.ThrowIfNull(scriptOperations);
         ArgumentNullException.ThrowIfNull(output);
-        ArgumentOutOfRangeException.ThrowIfLessThan(threads, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(processThreads, 1);
 
         this.gameState = gameState;
         this.scheduler = scheduler;
@@ -53,7 +53,7 @@ public sealed class NullByteApi : INullByteApi
         this.scriptOperations = scriptOperations;
         this.cancellationToken = cancellationToken;
         this.processHostname = processHostname;
-        this.threads = threads;
+        this.processThreads = processThreads;
     }
 
     public void Print(object? value) => output.WriteLine(value?.ToString() ?? string.Empty);
@@ -61,13 +61,13 @@ public sealed class NullByteApi : INullByteApi
     public Task Sleep(TimeSpan duration) => scheduler.DelayAsync(duration, cancellationToken);
 
     public Task<HackResult> Hack(string hostname) 
-        => serverActions.HackAsync(hostname, threads, cancellationToken);
+        => serverActions.HackAsync(hostname, processThreads, cancellationToken);
 
     public Task<GrowResult> Grow(string hostname)
-        => serverActions.GrowAsync(hostname, threads, cancellationToken);
+        => serverActions.GrowAsync(hostname, processThreads, cancellationToken);
 
     public Task<WeakenResult> Weaken(string hostname)
-        => serverActions.WeakenAsync(hostname, threads, cancellationToken);
+        => serverActions.WeakenAsync(hostname, processThreads, cancellationToken);
 
     public NukeResult Nuke(string hostname) => serverActions.Nuke(hostname);
 
@@ -89,8 +89,8 @@ public sealed class NullByteApi : INullByteApi
 
     public IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "") => scriptOperations.ProcessesRunning(GetTargetHostname(hostname));
     
-    public int Run(string filename, params string[] args) => scriptOperations.StartSimple(processHostname, filename, args);
-    public int Exec(string filename, string hostname, params string[] args) => scriptOperations.StartSimple(hostname, filename, args);
+    public async Task<int> RunAsync(string filename, params string[] args) => await scriptOperations.StartSimple(processHostname, filename, args, processThreads);
+    public async Task<int> ExecAsync(string filename, string hostname, params string[] args) => await scriptOperations.StartSimple(hostname, filename, args, processThreads);
 
     public bool Kill(int pid) => scriptOperations.Kill(pid);
     public int KillAll() => scriptOperations.KillAll();

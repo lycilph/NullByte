@@ -1,8 +1,7 @@
 ﻿# Todo
 
-* Add kill and killall to manual actions
 * Add process state to ps output...
-* Add threads to run, exec (and the run manual command)
+* Analyze should be a timed command
 
 * Start M6 milestone
 ~~M6.1 — RAM metadata + static RAM analysis~~

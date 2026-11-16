@@ -12,12 +12,14 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
         registry.Register(
             new CommandDefinition(
                 "run",
-                "run <filename> [args...]",
-                "Run a script.",
+                "run <filename> [-t <threads>] [args...]",
+                "Run a script, optionally with several threads.",
                 RunScriptAsync)
             {
                 MinArgs = 1, MaxArgs = int.MaxValue,
-                Completions = [new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename}]
+                Completions = [
+                    new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename},
+                    new ArgumentCompletion { ArgumentIndex = 1, Values = [RunArguments.ThreadsFlag] }]
             });
 
         registry.Register(
@@ -108,16 +110,23 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
 
     private async Task RunScriptAsync(IReadOnlyList<string> arguments)
     {
+        if (!RunArguments.TryParse(arguments, out var request, out var error))
+        {
+            output.WriteLine(error);
+            output.WriteLine("Usage: run <filename> [-t <threads>] [args...]");
+            return;
+        }
+
         var server = networkService.GetCurrentServer();
-        var filename = arguments[0];
-        var scriptArguments = arguments.Skip(1).ToArray();
 
-        output.WriteLine($"Executing {filename}...");
+        output.WriteLine(request.Threads > 1
+            ? $"Executing {request.Filename} ({request.Threads} threads)..."
+            : $"Executing {request.Filename}...");
 
-        var result = await Task.Run(() => scriptService.Start(server.Hostname, filename, scriptArguments));
+        var result = await scriptService.Start(server.Hostname, request.Filename, request.ScriptArguments, request.Threads);
 
         foreach (var diagnostic in result.Diagnostics)
-            WriteScriptDiagnostic(output, filename, diagnostic);
+            WriteScriptDiagnostic(output, request.Filename, diagnostic);
 
         if (!result.Succeeded && result.Diagnostics.Count == 0)
             output.WriteLine(result.FailureMessage);

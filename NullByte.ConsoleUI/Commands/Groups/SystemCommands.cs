@@ -34,7 +34,7 @@ public sealed class SystemCommands(CommandRegistry registry, IGameTerminal termi
     {
         terminal.WriteLine("Available commands:");
         foreach (var command in registry.Commands.Where(c => !c.Debug))
-            terminal.WriteLine($"  {command.Usage,-22} {command.Description}");
+            terminal.WriteLine($"  {command.Usage,-40} {command.Description}");
     }
 
     private async Task ClearAsync(IReadOnlyList<string> arguments)

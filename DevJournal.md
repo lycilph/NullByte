@@ -9,6 +9,7 @@
 - Added a (very) simple script editor
 
 ### Decisions
+- For now threads is on script level and all commands will use the # that the script was started with
  
 ### Future
 

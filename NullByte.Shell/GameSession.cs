@@ -106,7 +106,7 @@ public sealed class GameSession : IAsyncDisposable
         var clock = options.Clock ?? new RealGameClock() { SpeedMultiplier = options.Balance.GameSpeedMultiplier };
 
         var synchronizationContext = new GameSynchronizationContext();
-        var scheduler = new GameScheduler(clock);
+        var scheduler = new GameScheduler(clock, synchronizationContext.VerifyAccess);
         var gameLoop = new GameLoop(clock, synchronizationContext, scheduler);
 
         var state = options.State ?? InitialGameStateFactory.Create();

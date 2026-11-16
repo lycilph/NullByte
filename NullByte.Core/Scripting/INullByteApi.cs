@@ -81,14 +81,14 @@ public interface INullByteApi
     /// Returns the new process ID, or 0 if the script could not be started.
     /// </summary>
     [RamCost(1.0)]
-    int Run(string filename, params string[] args);
+    Task<int> RunAsync(string filename, params string[] args);
 
     /// <summary>
     /// Starts a script on the specified server.
     /// Returns the new process ID, or 0 if the script could not be started.
     /// </summary>
     [RamCost(1.3)]
-    int Exec(string filename, string hostname, params string[] args);
+    Task<int> ExecAsync(string filename, string hostname, params string[] args);
 
     /// <summary>Kills the specified process.</summary>
     [RamCost(0.5)]
