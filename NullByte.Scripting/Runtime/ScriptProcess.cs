@@ -1,4 +1,6 @@
-﻿namespace NullByte.Scripting.Runtime;
+﻿using NullByte.Core.Scripting;
+
+namespace NullByte.Scripting.Runtime;
 
 /// <summary>
 /// Represents one running or completed player script process.

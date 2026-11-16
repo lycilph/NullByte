@@ -1,4 +1,5 @@
-﻿using NullByte.Scripting.Runtime;
+﻿using NullByte.Core.Scripting;
+using NullByte.Scripting.Runtime;
 
 namespace NullByte.Scripting.Tests.Runtime;
 

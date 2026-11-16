@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+﻿using NullByte.Core.Scripting;
 
 namespace NullByte.Scripting.Runtime;
 

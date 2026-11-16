@@ -76,7 +76,7 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
 
         output.WriteLine($"Scripts running on {server.Hostname}:");
         output.WriteLine(
-            $"{"Filename",-24} {"PID",5} {"Threads",8}  Arguments");
+            $"{"Filename",-24} {"PID",5} {"Threads",8} {"State",12} Arguments");
 
         foreach (var process in processes)
         {
@@ -85,7 +85,8 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
             output.WriteLine(
                 $"{process.Filename,-24} " +
                 $"{process.Pid,5} " +
-                $"{process.Threads,8}  " +
+                $"{process.Threads,8} " +
+                $"{process.State,12} " +
                 $"{scriptArguments}");
         }
     }

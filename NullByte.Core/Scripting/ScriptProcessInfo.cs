@@ -5,4 +5,5 @@ public sealed record ScriptProcessInfo(
     string Filename,
     IReadOnlyList<string> Args,
     int Threads,
-    string Hostname);
+    string Hostname,
+    ScriptProcessState State);

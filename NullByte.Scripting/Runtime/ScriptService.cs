@@ -190,7 +190,8 @@ public sealed class ScriptService : IScriptOperations
                 p.Filename,
                 p.Args,
                 p.Threads,
-                p.Hostname))
+                p.Hostname,
+                p.State))
             .ToList();
     }
 

@@ -1,4 +1,4 @@
-﻿namespace NullByte.Scripting.Runtime;
+﻿namespace NullByte.Core.Scripting;
 
 public enum ScriptProcessState
 {

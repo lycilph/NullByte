@@ -20,7 +20,7 @@ M6.4 — Expand the nb API to the full M6 API
   * All botnet stuff (Botnet.NumNodes, PurchaseNode, UpgradeLevel, UpgradeRam, UpgradeCore, cost getters) 
 	* Place botnet methods in a separate api (so a script would do api.botnet.buy etc.)
   * Add tests for new script methods
-M6.5 — Console commands: ~~ps, kill, killall~~, free, mem, scp, exec
+M6.5 — Console commands: ~~ps, kill, killall~~, free, mem, scp
 M6.6 — Integration/acceptance tests and cleanup
 
 
