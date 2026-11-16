@@ -37,12 +37,12 @@ public sealed class VirtualFileSystem
     /// <summary>
     /// Attempts to read a file from a server.
     /// </summary>
-    public bool TryReadFile(string hostname, string fileName, out string? content)
+    public bool TryReadFile(string hostname, string filename, out string? content)
     {
         ValidateServer(hostname);
-        ValidateFileName(fileName);
+        ValidateFileName(filename);
 
-        if (filesByServer.TryGetValue(hostname, out var files) && files.TryGetValue(fileName, out content))
+        if (filesByServer.TryGetValue(hostname, out var files) && files.TryGetValue(filename, out content))
             return true;
 
         content = null;
@@ -52,10 +52,10 @@ public sealed class VirtualFileSystem
     /// <summary>
     /// Creates a new file or replaces the contents of an existing file.
     /// </summary>
-    public void WriteFile(string hostname, string fileName, string content)
+    public void WriteFile(string hostname, string filename, string content)
     {
         ValidateServer(hostname);
-        ValidateFileName(fileName);
+        ValidateFileName(filename);
         ArgumentNullException.ThrowIfNull(content);
 
         if (!filesByServer.TryGetValue(hostname, out var files))
@@ -64,18 +64,18 @@ public sealed class VirtualFileSystem
             filesByServer.Add(hostname, files);
         }
 
-        files[fileName] = content;
+        files[filename] = content;
     }
 
     /// <summary>
     /// Deletes a file. Returns false if the file does not exist.
     /// </summary>
-    public bool DeleteFile(string hostname, string fileName)
+    public bool DeleteFile(string hostname, string filename)
     {
         ValidateServer(hostname);
-        ValidateFileName(fileName);
+        ValidateFileName(filename);
 
-        return filesByServer.TryGetValue(hostname, out var files) && files.Remove(fileName);
+        return filesByServer.TryGetValue(hostname, out var files) && files.Remove(filename);
     }
 
     private void ValidateServer(string hostname)
@@ -86,18 +86,18 @@ public sealed class VirtualFileSystem
             throw new KeyNotFoundException($"Server '{hostname}' does not exist.");
     }
 
-    private static void ValidateFileName(string fileName)
+    private static void ValidateFileName(string filename)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(filename);
 
-        if (fileName is "." or ".." ||
-            fileName.Contains('/') ||
-            fileName.Contains('\\') ||
-            fileName.Any(char.IsControl))
+        if (filename is "." or ".." ||
+            filename.Contains('/') ||
+            filename.Contains('\\') ||
+            filename.Any(char.IsControl))
         {
             throw new ArgumentException(
                 "File names must be simple names without directory separators.",
-                nameof(fileName));
+                nameof(filename));
         }
     }
 }

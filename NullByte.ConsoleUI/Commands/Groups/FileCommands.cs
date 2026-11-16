@@ -4,7 +4,7 @@ using NullByte.Core.Services;
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
-public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService networkService, IGameOutput output) : ICommandGroup
+public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService networkService, IGameTerminal terminal) : ICommandGroup
 {
     public void Register(CommandRegistry registry)
     {
@@ -40,11 +40,11 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
         registry.Register(
             new CommandDefinition(
                 "edit",
-                "edit <filename> <source>",
+                "edit <filename>",
                 "Create or replace a file.",
                 EditFileAsync)
             {
-                MinArgs = 2, MaxArgs = 2,
+                MinArgs = 1, MaxArgs = 1,
                 Completions = [new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename}]
             });
     }
@@ -55,12 +55,12 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
 
         if (files.Count == 0)
         {
-            output.WriteLine("No files on this server.");
+            terminal.WriteLine("No files on this server.");
             return;
         }
 
         foreach (var file in files)
-            output.WriteLine(file);
+            terminal.WriteLine(file);
     }
 
     private Task CatAsync(IReadOnlyList<string> arguments)
@@ -69,12 +69,12 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
 
         if (!fileSystem.TryReadFile(server.Hostname, arguments[0], out var content))
         {
-            output.WriteLine($"File not found: {arguments[0]}");
+            terminal.WriteLine($"File not found: {arguments[0]}");
 
             return Task.CompletedTask;
         }
 
-        output.WriteLine(content!);
+        terminal.WriteLine(content!);
 
         return Task.CompletedTask;
     }
@@ -86,26 +86,30 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
 
         if (!fileSystem.DeleteFile(server.Hostname, fileName))
         {
-            output.WriteLine($"File not found: {fileName}");
+            terminal.WriteLine($"File not found: {fileName}");
 
             return Task.CompletedTask;
         }
 
-        output.WriteLine($"Deleted {fileName}.");
+        terminal.WriteLine($"Deleted {fileName}.");
 
         return Task.CompletedTask;
     }
 
-    private Task EditFileAsync(IReadOnlyList<string> arguments)
+    private async Task EditFileAsync(IReadOnlyList<string> arguments)
     {
         var server = networkService.GetCurrentServer();
-        var fileName = arguments[0];
-        var source = arguments[1];
+        var filename = arguments[0];
+        var source =
+            fileSystem.TryReadFile(server.Hostname, filename, out var content) ? content! : "new file";
 
-        fileSystem.WriteFile(server.Hostname, fileName, source);
+        terminal.SuspendProcessing();
+        await Task.Delay(50); // We need to make sure the last update cycle of the terminal has finised
 
-        output.WriteLine($"Saved {fileName}.");
+        var editor = new NanoEditor(filename, source);
+        var edited_source = await Task.Run(() => editor.Run(""));
 
-        return Task.CompletedTask;
+        fileSystem.WriteFile(server.Hostname, filename, edited_source);
+        terminal.ResumeProcessing();
     }
 }

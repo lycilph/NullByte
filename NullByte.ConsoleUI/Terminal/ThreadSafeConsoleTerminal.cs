@@ -45,6 +45,8 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
     private readonly InputHistory inputHistory;    // Previously submitted commands (Up/Down).
     private readonly StringBuilder input = new();
 
+    private bool suspended = false;
+
     private bool progressRunning = false;
     private string progressLabel = string.Empty;
     private Func<double> progressFunc = () => 1;
@@ -77,6 +79,22 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
     public CancellationToken StoppingToken => stopSource.Token;
 
     public void SetCompletionProvider(ICompletionProvider provider) => completionProvider = provider;
+    
+    public void SuspendProcessing()
+    {
+        if (hasDisposed || stopSource.IsCancellationRequested)
+            return;
+
+        requests.Writer.TryWrite(SuspendRequest.Instance);
+    }
+
+    public void ResumeProcessing()
+    {
+        if (hasDisposed || stopSource.IsCancellationRequested)
+            return;
+
+        requests.Writer.TryWrite(ResumeRequest.Instance);
+    }
 
     public void StartProgress(string label, Func<double> progress)
     {
@@ -160,6 +178,11 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
             while (!token.IsCancellationRequested)
             {
                 var changed = ProcessPendingRequests();
+                if (suspended)
+                {
+                    await Task.Delay(RefreshDelayMilliseconds, token);
+                    continue;
+                }
 
                 changed |= ProcessKeyboardInput();
 
@@ -179,9 +202,6 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
                     Render();
                     screenInvalidated = false;
                 }
-
-                //if (progressRunning)
-                //    RenderProgressLine();
 
                 await Task.Delay(RefreshDelayMilliseconds, token);
             }
@@ -288,6 +308,15 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
 
                 case StopProgressRequest:
                     progressRunning = false;
+                    changed = true;
+                    break;
+
+                case SuspendRequest:
+                    suspended = true;
+                    break;
+
+                case ResumeRequest:
+                    suspended = false;
                     changed = true;
                     break;
             }
@@ -492,40 +521,6 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
             history.RemoveRange(0, extraLines);
     }
 
-    //private void Render()
-    //{
-    //    var width = SafeWindowWidth();
-    //    var height = SafeWindowHeight();
-
-    //    /*
-    //     * Avoid writing into the console's final physical column.
-    //     * In some terminal hosts that causes an automatic line wrap
-    //     * and can scroll the whole display.
-    //     */
-    //    var usableWidth = Math.Max(1, width - 1);
-
-    //    // The final row is reserved for input.
-    //    var outputHeight = Math.Max(0, height - 1);
-
-    //    Console.CursorVisible = false;
-
-    //    var wrappedOutput = BuildVisibleOutput(usableWidth, outputHeight);
-    //    wrappedOutput.Reverse();
-
-    //    for (var row = 0; row < outputHeight; row++)
-    //    {
-    //        var text = row < wrappedOutput.Count
-    //            ? wrappedOutput[row]
-    //            : string.Empty;
-
-    //        WriteRow(outputHeight - row - 1, text, usableWidth);
-    //    }
-
-    //    RenderInputLine(row: height - 1, usableWidth);
-
-    //    Console.CursorVisible = true;
-    //}
-
     private void Render()
     {
         var width = SafeWindowWidth();
@@ -655,18 +650,6 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
             Console.Write(new string(' ', remaining));
     }
 
-    //private void RenderProgressLine()
-    //{
-    //    Console.CursorVisible = false;
-
-    //    var width = SafeWindowWidth();
-    //    var height = SafeWindowHeight();
-
-    //    var usableWidth = Math.Max(1, width - 1);
-
-    //    var text = FormatProgress(progressLabel, progressFunc());
-    //    WriteRow(height - 2, text, usableWidth);
-    //}
     private void WriteProgressRow(int row, int usableWidth)
         => WriteRow(row, FormatProgress(progressLabel, progressFunc()), usableWidth);
 
@@ -741,5 +724,15 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
     private sealed record StopProgressRequest() : TerminalRequest
     {
         public static StopProgressRequest Instance { get; } = new();
+    }
+
+    private sealed record SuspendRequest() : TerminalRequest
+    {
+        public static SuspendRequest Instance { get; } = new();
+    }
+
+    private sealed record ResumeRequest() : TerminalRequest
+    {
+        public static ResumeRequest Instance { get; } = new();
     }
 }
