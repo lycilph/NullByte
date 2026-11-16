@@ -50,6 +50,29 @@ public class NanoEditor
                     statusMessage = $"[ Wrote {lines.Count} lines to {filename} ]";
                     continue;
                 }
+                if (keyInfo.Key == ConsoleKey.C)
+                {
+                    statusMessage = "Clear entire file? (Y)es / (N)o";
+                    Render();
+
+                    var confirm = Console.ReadKey(intercept: true);
+                    if (confirm.Key == ConsoleKey.Y)
+                    {
+                        lines.Clear();
+                        lines.Add(string.Empty);
+                        cursorX = 0;
+                        cursorY = 0;
+                        scrollOffsetX = 0;
+                        scrollOffsetY = 0;
+                        isDirty = true;
+                        statusMessage = "[ Buffer cleared ]";
+                    }
+                    else
+                    {
+                        statusMessage = "[ Cancelled ]";
+                    }
+                    continue;
+                }
                 if (keyInfo.Key == ConsoleKey.X)
                 {
                     if (!isDirty)
@@ -251,7 +274,7 @@ public class NanoEditor
         sb.Append($"\u001b[7m{centeredStatus.PadRight(width)}\u001b[0m\n");
 
         // 4. Bottom Nano Shortcut Footer (2 rows)
-        string row1 = FormatShortcut("^O", "Write Out") + FormatShortcut("^X", "Exit");
+        string row1 = FormatShortcut("^O", "Write Out") + FormatShortcut("^C", "Clear") + FormatShortcut("^X", "Exit");
         string row2 = FormatShortcut("Tab", "Indent (2sp)") + FormatShortcut("Arrows", "Move Cursor");
         sb.Append(row1.PadRight(width)).Append('\n');
         sb.Append(row2.PadRight(width));

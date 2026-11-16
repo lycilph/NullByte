@@ -12,6 +12,7 @@ public class Program
     static async Task Main()
     {
         Console.OutputEncoding = Encoding.UTF8;
+        Console.TreatControlCAsInput = true; // Ctrl+c no longer exists the application
 
         await using var terminal = new ThreadSafeConsoleTerminal(prompt: "root@home $ ", maximumHistoryLines: 2_000);
 
