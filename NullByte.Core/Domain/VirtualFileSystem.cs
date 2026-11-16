@@ -99,6 +99,38 @@ public sealed class VirtualFileSystem
         return filesByServer.TryGetValue(hostname, out var files) && files.Remove(filename);
     }
 
+    /// <summary>
+    /// Moves a file on a server.
+    ///
+    /// Returns false when the source file does not exist or the target filename
+    /// is already in use. In either case, the filesystem is left unchanged.
+    /// </summary>
+    public bool MoveFile(string hostname, string sourceFilename, string destinationFilename)
+    {
+        ValidateServer(hostname);
+        ValidateFileName(sourceFilename);
+        ValidateFileName(destinationFilename);
+
+        if (!filesByServer.TryGetValue(hostname, out var files))
+            return false;
+
+        if (!files.TryGetValue(sourceFilename, out var content))
+            return false;
+
+        // File names are case-sensitive, so an identical name is the same file.
+        if (string.Equals(sourceFilename, destinationFilename, StringComparison.Ordinal))
+            return true;
+
+        // Do not silently overwrite another file.
+        if (files.ContainsKey(destinationFilename))
+            return false;
+
+        files.Add(destinationFilename, content);
+        files.Remove(sourceFilename);
+
+        return true;
+    }
+
     private void ValidateServer(string hostname)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hostname);

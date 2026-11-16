@@ -16,9 +16,9 @@ public interface INullByteFilesApi
 
     /// <summary>Renames a file on a server.</summary>
     [RamCost(0.1)]
-    bool Rename(string filename, string hostname = "");
+    bool Move(string sourceFilename, string destinationFilename, string hostname = "");
 
     /// <summary>Copies files from one server to another.</summary>
     [RamCost(0.6)]
-    IReadOnlyList<string> Copy(string source, string destination, IReadOnlyList<string> files);
+    bool Copy(string source, string destination, IReadOnlyList<string> files);
 }

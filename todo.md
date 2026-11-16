@@ -1,6 +1,6 @@
 ﻿# Todo
 
-* Add files stuff in the api
+* free, mem
 * Make sure that hostnames are handled correct in the api (process hostname if not specified)
   * check hack, weaken, grow and nuke (and the rest)
 
@@ -14,12 +14,14 @@
 	  * ~~Ps, Kill, ScriptRunning, GetScriptRam~~
 		* ~~in scan and ps - an empty hostname should resolve to the hostname of the process - when called from a script, if manual the current server~~
 	  * ~~Run, Exec~~
-	  * scp, rm, ls, mv (should be in a sub class)
+	  * ~~scp, rm, ls, mv (should be in a sub class)~~
+	  * free, mem as script commands
 	  * All botnet stuff (Botnet.NumNodes, PurchaseNode, UpgradeLevel, UpgradeRam, UpgradeCore, cost getters) 
 		* Place botnet methods in a separate api (so a script would do api.botnet.buy etc.)
 	  * Add tests for new script methods
-	* M6.5 — Console commands: ~~ps, kill, killall, scp~~, free, mem, mv
+	* M6.5 — Console commands: ~~ps, kill, killall, scp, mv~~, free, mem
 	* M6.6 — Integration/acceptance tests and cleanup
+	* Align script method names and console commands
 
 
 * Use mocks in the tests

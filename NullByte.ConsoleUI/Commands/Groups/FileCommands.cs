@@ -38,6 +38,14 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
             });
 
         registry.Register(
+           new CommandDefinition(
+               "mv",
+               "mv <source> <destination>",
+               "Moves a file on a server.",
+               MoveFileAsync)
+           { MinArgs = 2, MaxArgs = 2 });
+
+        registry.Register(
             new CommandDefinition(
                 "scp",
                 "scp <file...> <hostname>",
@@ -55,6 +63,33 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
                 MinArgs = 1, MaxArgs = 1,
                 Completions = [new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename}]
             });
+    }
+
+    private async Task MoveFileAsync(IReadOnlyList<string> arguments)
+    {
+        var server = networkService.GetCurrentServer();
+        var sourceFilename = arguments[0];
+        var destinationFilename = arguments[1];
+
+        if (!fileSystem.TryReadFile(server.Hostname, sourceFilename, out _))
+        {
+            terminal.WriteLine($"File not found: {sourceFilename}");
+            return;
+        }
+
+        if (fileSystem.TryReadFile(server.Hostname, destinationFilename, out _))
+        {
+            terminal.WriteLine($"File already exists: {destinationFilename}");
+            return;
+        }
+
+        if (!fileSystem.MoveFile(server.Hostname, sourceFilename, destinationFilename))
+        {
+            terminal.WriteLine($"Could not rename {sourceFilename}.");
+            return;
+        }
+
+        terminal.WriteLine($"Moved {sourceFilename} to {destinationFilename} on {server.Hostname}.");
     }
 
     private async Task CopyFilesAsync(IReadOnlyList<string> arguments)
