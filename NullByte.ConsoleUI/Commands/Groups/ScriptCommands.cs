@@ -34,12 +34,28 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
                 "Stops the specified script on the current server .",
                 KillScriptAsync)
             { MinArgs = 1, MaxArgs = 1 });
+
+        registry.Register(
+            new CommandDefinition(
+                "killall",
+                "killall",
+                "Stops all running scripts on the current server .",
+                KillAllScriptAsync));
+    }
+
+    private async Task KillAllScriptAsync(IReadOnlyList<string> arguments)
+    {
+        var result = scriptService.KillAll();
+        output.WriteLine($"Killing all processes... [{result} processes killed]");
     }
 
     private async Task KillScriptAsync(IReadOnlyList<string> arguments)
     {
         if (!int.TryParse(arguments[0], out var pid))
+        {
             output.WriteLine($"Not a valid pid: [{arguments[0]}]");
+            return;
+        }
 
         var result = scriptService.Kill(pid);
         output.WriteLine($"Killing process {pid}... {result}");

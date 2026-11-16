@@ -81,8 +81,6 @@ public sealed class ServerActions
             player.AddHackingExperience(experienceGained * failedHackFactor);
         }
 
-
-
         return new HackResult(
             Succeeded: succeeded,
             FailureMessage: succeeded ? string.Empty : "Hack failed. No money was stolen.",
