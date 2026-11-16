@@ -38,7 +38,7 @@ public sealed class BotnetEarlyGameTests
             var target = ChooseHackTarget(gameState, hackingFormulas);
             var duration = hackingFormulas.CalculateHackDuration(player, target);
 
-            var hack = actions.HackAsync(target.Hostname);
+            var hack = actions.HackAsync(target.Hostname, 1, TestContext.Current.CancellationToken);
 
             // The botnet keeps paying while the player waits for the hack.
             Advance(clock, scheduler, system, duration);

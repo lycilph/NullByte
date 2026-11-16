@@ -22,7 +22,7 @@ public sealed class NetworkServiceTests
     {
         var fixture = CreateFixture();
 
-        var result = fixture.Service.Scan();
+        var result = fixture.Service.Scan(fixture.Home.Hostname);
 
         Assert.Equal(2, result.Count);
 
@@ -44,7 +44,7 @@ public sealed class NetworkServiceTests
     {
         var fixture = CreateFixture();
 
-        fixture.Service.Scan();
+        fixture.Service.Scan(fixture.Home.Hostname);
 
         Assert.Contains(
             fixture.Home.Hostname,
@@ -68,8 +68,8 @@ public sealed class NetworkServiceTests
     {
         var fixture = CreateFixture();
 
-        fixture.Service.Scan();
-        fixture.Service.Scan();
+        fixture.Service.Scan(fixture.Home.Hostname);
+        fixture.Service.Scan(fixture.Home.Hostname);
 
         Assert.Equal(3, fixture.Player.DiscoveredHostnames.Count);
     }
@@ -115,7 +115,7 @@ public sealed class NetworkServiceTests
     {
         var fixture = CreateFixture();
 
-        fixture.Service.Scan();
+        fixture.Service.Scan(fixture.Home.Hostname);
 
         var result =
             fixture.Service.Connect(
@@ -167,13 +167,13 @@ public sealed class NetworkServiceTests
          *  |
          * sigma-cosmetics
          */
-        fixture.Service.Scan();
+        fixture.Service.Scan(fixture.Home.Hostname);
 
         var firstConnection = fixture.Service.Connect(fixture.N00dles.Hostname);
 
         Assert.True(firstConnection.Succeeded);
 
-        fixture.Service.Scan();
+        fixture.Service.Scan(fixture.N00dles.Hostname);
 
         Assert.Contains(fixture.SigmaCosmetics.Hostname, fixture.Player.DiscoveredHostnames);
 
@@ -201,7 +201,7 @@ public sealed class NetworkServiceTests
     {
         var fixture = CreateFixture();
 
-        fixture.Service.Scan();
+        fixture.Service.Scan(fixture.Home.Hostname);
 
         var result = fixture.Service.Connect(fixture.N00dles.Hostname.ToUpperInvariant());
 
@@ -215,7 +215,7 @@ public sealed class NetworkServiceTests
     {
         var fixture = CreateFixture();
 
-        fixture.Service.Scan();
+        fixture.Service.Scan(fixture.Home.Hostname);
 
         var connection = fixture.Service.Connect(fixture.N00dles.Hostname);
 
@@ -231,7 +231,7 @@ public sealed class NetworkServiceTests
     {
         var fixture = CreateFixture();
 
-        fixture.Service.Scan();
+        fixture.Service.Scan(fixture.Home.Hostname);
 
         var connection = fixture.Service.Connect(fixture.N00dles.Hostname);
 

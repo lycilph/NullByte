@@ -15,7 +15,7 @@ public sealed class ServerActionsTests
         var fixture = CreateFixture(randomValue: 0);
 
         var duration = fixture.Formulas.CalculateHackDuration(fixture.Player, fixture.Target);
-        var action = fixture.Actions.HackAsync(fixture.Target.Hostname);
+        var action = fixture.Actions.HackAsync(fixture.Target.Hostname, 1, TestContext.Current.CancellationToken);
 
         fixture.Clock.Advance(duration - TimeSpan.FromTicks(1));
         fixture.Scheduler.Update();
@@ -44,7 +44,7 @@ public sealed class ServerActionsTests
                 fixture.Target,
                 threads: 1);
 
-        var action = fixture.Actions.HackAsync(fixture.Target.Hostname);
+        var action = fixture.Actions.HackAsync(fixture.Target.Hostname, 1, TestContext.Current.CancellationToken);
 
         await CompleteHackAsync(fixture, action);
 
@@ -80,7 +80,7 @@ public sealed class ServerActionsTests
         var expectedSecurityIncrease = fixture.Formulas.CalculateHackSecurityIncrease(threads);
         var expectedExperience = fixture.Formulas.CalculateHackingExperience(fixture.Target, threads);
 
-        var action = fixture.Actions.HackAsync(fixture.Target.Hostname, threads);
+        var action = fixture.Actions.HackAsync(fixture.Target.Hostname, threads, TestContext.Current.CancellationToken);
         await CompleteHackAsync(fixture, action);
 
         var result = await action;
@@ -119,7 +119,7 @@ public sealed class ServerActionsTests
         var initialServerMoney = fixture.Target.Money;
         var initialPlayerMoney = fixture.Player.Money;
 
-        var action = fixture.Actions.HackAsync(fixture.Target.Hostname);
+        var action = fixture.Actions.HackAsync(fixture.Target.Hostname, 1, TestContext.Current.CancellationToken);
         await CompleteHackAsync(fixture, action);
 
         var result = await action;
@@ -140,7 +140,7 @@ public sealed class ServerActionsTests
         var expectedSecurityIncrease = fixture.Formulas.CalculateHackSecurityIncrease();
         var expectedExperience = fixture.Formulas.CalculateHackingExperience(fixture.Target) * fixture.Formulas.GetFailedHackExperienceFactor();
 
-        var action = fixture.Actions.HackAsync(fixture.Target.Hostname);
+        var action = fixture.Actions.HackAsync(fixture.Target.Hostname, 1, TestContext.Current.CancellationToken);
         await CompleteHackAsync(fixture, action);
 
         var result = await action;
@@ -168,12 +168,14 @@ public sealed class ServerActionsTests
         var singleThreadAction =
             singleThreadFixture.Actions.HackAsync(
                 singleThreadFixture.Target.Hostname,
-                threads: 1);
+                threads: 1,
+                TestContext.Current.CancellationToken);
 
         var multiThreadAction =
             multiThreadFixture.Actions.HackAsync(
                 multiThreadFixture.Target.Hostname,
-                threads: 5);
+                threads: 5, 
+                TestContext.Current.CancellationToken);
 
         await CompleteHackAsync(singleThreadFixture, singleThreadAction);
         await CompleteHackAsync(multiThreadFixture, multiThreadAction);
@@ -213,7 +215,7 @@ public sealed class ServerActionsTests
 
         var action = fixture.Actions.HackAsync(fixture.Target.Hostname, cancellationToken: cancellationSource.Token);
         Assert.Equal(1, fixture.Scheduler.PendingCount);
-        
+
         cancellationSource.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await action);
@@ -229,7 +231,7 @@ public sealed class ServerActionsTests
     {
         var fixture = CreateFixture(randomValue: 0, hasRootAccess: false);
 
-        var action = await fixture.Actions.HackAsync(fixture.Target.Hostname);
+        var action = await fixture.Actions.HackAsync(fixture.Target.Hostname, 1, TestContext.Current.CancellationToken);
 
         Assert.False(action.Succeeded);
         Assert.False(string.IsNullOrWhiteSpace(action.FailureMessage));
@@ -244,7 +246,7 @@ public sealed class ServerActionsTests
             playerLevel: 5,
             requiredHackingLevel: 10);
 
-        var action = await fixture.Actions.HackAsync(fixture.Target.Hostname);
+        var action = await fixture.Actions.HackAsync(fixture.Target.Hostname, 1, TestContext.Current.CancellationToken);
 
         Assert.False(action.Succeeded);
         Assert.False(string.IsNullOrWhiteSpace(action.FailureMessage));
@@ -260,7 +262,7 @@ public sealed class ServerActionsTests
         var fixture = CreateFixture(randomValue: 0);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => fixture.Actions.HackAsync(fixture.Target.Hostname, threads));
+            () => fixture.Actions.HackAsync(fixture.Target.Hostname, threads, TestContext.Current.CancellationToken));
 
         Assert.Equal(0, fixture.Scheduler.PendingCount);
     }
@@ -279,7 +281,7 @@ public sealed class ServerActionsTests
         var expectedSecurityIncrease = fixture.Formulas.CalculateGrowSecurityIncrease(threads);
         var expectedExperience = fixture.Formulas.CalculateHackingExperience(fixture.Target, threads);
 
-        var action = fixture.Actions.GrowAsync(fixture.Target.Hostname, threads);
+        var action = fixture.Actions.GrowAsync(fixture.Target.Hostname, threads, TestContext.Current.CancellationToken);
         await CompleteGrowAsync(fixture, action);
 
         var result = await action;
@@ -314,7 +316,7 @@ public sealed class ServerActionsTests
             startingMoney: 99_000,
             growthParameter: 100);
 
-        var action = fixture.Actions.GrowAsync(fixture.Target.Hostname, threads: 100);
+        var action = fixture.Actions.GrowAsync(fixture.Target.Hostname, threads: 100, TestContext.Current.CancellationToken);
         await CompleteGrowAsync(fixture, action);
 
         var result = await action;
@@ -338,8 +340,8 @@ public sealed class ServerActionsTests
             maximumMoney: 100_000,
             startingMoney: 100_000);
 
-        var action = fixture.Actions.GrowAsync(fixture.Target.Hostname);
-        await CompleteGrowAsync(fixture,action);
+        var action = fixture.Actions.GrowAsync(fixture.Target.Hostname, 1, TestContext.Current.CancellationToken);
+        await CompleteGrowAsync(fixture, action);
 
         var result = await action;
 
@@ -360,8 +362,8 @@ public sealed class ServerActionsTests
         var initialExperience = fixture.Player.HackingExperience;
         var expectedExperience = fixture.Formulas.CalculateHackingExperience(fixture.Target, threads);
 
-        var action = fixture.Actions.WeakenAsync(fixture.Target.Hostname, threads);
-        await CompleteWeakenAsync(fixture,action);
+        var action = fixture.Actions.WeakenAsync(fixture.Target.Hostname, threads, TestContext.Current.CancellationToken);
+        await CompleteWeakenAsync(fixture, action);
 
         var result = await action;
 
@@ -389,7 +391,7 @@ public sealed class ServerActionsTests
             minimumSecurity: 1,
             startingSecurity: 1.2);
 
-        var action = fixture.Actions.WeakenAsync(fixture.Target.Hostname, threads: 100);
+        var action = fixture.Actions.WeakenAsync(fixture.Target.Hostname, threads: 100, TestContext.Current.CancellationToken);
         await CompleteWeakenAsync(fixture, action);
 
         var result = await action;
@@ -453,7 +455,7 @@ public sealed class ServerActionsTests
         var fixture = CreateFixture(randomValue: 0);
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => fixture.Actions.HackAsync("unknown-server"));
+            () => fixture.Actions.HackAsync("unknown-server", 1, TestContext.Current.CancellationToken));
 
         Assert.Equal(0, fixture.Scheduler.PendingCount);
     }

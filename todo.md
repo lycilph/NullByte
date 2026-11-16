@@ -1,5 +1,10 @@
 ﻿# Todo
 
+* Update NullByteApiTests
+  * Use mocks
+	
+* Update all test project to xunit v3
+
 * Start M6 milestone
 	* ~~M6.1 — RAM metadata + static RAM analysis~~
 	* ~~M6.2 — Process model and process manager~~

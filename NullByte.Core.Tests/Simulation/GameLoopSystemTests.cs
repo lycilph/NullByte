@@ -23,7 +23,7 @@ public sealed class GameLoopSystemTests
         await using var gameLoop = CreateGameLoop(new RealGameClock());
 
         gameLoop.Start();
-        await gameLoop.Started.WaitAsync(Timeout);
+        await gameLoop.Started.WaitAsync(Timeout, TestContext.Current.CancellationToken);
 
         var exception = Assert.Throws<InvalidOperationException>(
             () => gameLoop.AddSystem(new RecordingSystem(_ => { })));
@@ -58,10 +58,10 @@ public sealed class GameLoopSystemTests
         }));
 
         gameLoop.Start();
-        await done.Task.WaitAsync(Timeout);
+        await done.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
 
         gameLoop.RequestStop();
-        await gameLoop.Completion.WaitAsync(Timeout);
+        await gameLoop.Completion.WaitAsync(Timeout, TestContext.Current.CancellationToken);
 
         Assert.True(allOnGameThread);
         Assert.All(deltas, delta => Assert.True(delta > TimeSpan.Zero));
@@ -85,10 +85,10 @@ public sealed class GameLoopSystemTests
         }));
 
         gameLoop.Start();
-        await done.Task.WaitAsync(Timeout);
+        await done.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
 
         gameLoop.RequestStop();
-        await gameLoop.Completion.WaitAsync(Timeout);
+        await gameLoop.Completion.WaitAsync(Timeout, TestContext.Current.CancellationToken);
 
         // The deltas tile the game clock without gaps, so they cannot add up to more than it shows.
         Assert.True(total <= clock.Elapsed);
@@ -112,10 +112,10 @@ public sealed class GameLoopSystemTests
         }));
 
         gameLoop.Start();
-        await done.Task.WaitAsync(Timeout);
+        await done.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
 
         gameLoop.RequestStop();
-        await gameLoop.Completion.WaitAsync(Timeout);
+        await gameLoop.Completion.WaitAsync(Timeout, TestContext.Current.CancellationToken);
 
         for (var i = 0; i + 1 < order.Count; i += 2)
         {
@@ -144,8 +144,8 @@ public sealed class GameLoopSystemTests
 
         gameLoop.Start();
 
-        var exception = await reported.Task.WaitAsync(Timeout);
-        await healthyUpdates.Task.WaitAsync(Timeout);
+        var exception = await reported.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        await healthyUpdates.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
 
         Assert.Equal("System crashed.", exception.Message);
         Assert.True(gameLoop.IsRunning);
@@ -167,7 +167,7 @@ public sealed class GameLoopSystemTests
 
         gameLoop.AddSystem(new BotnetSystem(gameState, new BotnetFormulas(new BalanceConfig())));
         gameLoop.Start();
-        await gameLoop.Started.WaitAsync(Timeout);
+        await gameLoop.Started.WaitAsync(Timeout, TestContext.Current.CancellationToken);
 
         var deadline = DateTime.UtcNow + Timeout;
         var money = 0.0;
@@ -176,7 +176,7 @@ public sealed class GameLoopSystemTests
         {
             // Game state is only read on the game thread.
             money = await gameLoop.InvokeAsync(() => Task.FromResult(gameState.Player.Money));
-            await Task.Delay(10);
+            await Task.Delay(10, TestContext.Current.CancellationToken);
         }
 
         var earned = await gameLoop.InvokeAsync(() => Task.FromResult(gameState.Botnet.TotalEarned));

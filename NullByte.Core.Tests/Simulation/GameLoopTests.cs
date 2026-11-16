@@ -12,17 +12,17 @@ public sealed class GameLoopTests
         var synchronizationContext = new GameSynchronizationContext();
         var clock = new RealGameClock();
 
-        await using var gameLoop =new GameLoop(clock, synchronizationContext, new GameScheduler(clock));
+        await using var gameLoop = new GameLoop(clock, synchronizationContext, new GameScheduler(clock));
 
         gameLoop.Start();
 
-        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.False(synchronizationContext.IsCompleted);
 
         gameLoop.RequestStop();
 
-        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.True(synchronizationContext.IsCompleted);
         Assert.False(gameLoop.IsRunning);
@@ -37,12 +37,12 @@ public sealed class GameLoopTests
         await using var gameLoop = new GameLoop(clock, synchronizationContext, new GameScheduler(clock));
 
         gameLoop.Start();
-        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.False(synchronizationContext.IsCompleted);
 
         gameLoop.RequestStop();
-        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.True(synchronizationContext.IsCompleted);
         Assert.False(gameLoop.IsRunning);
@@ -63,7 +63,7 @@ public sealed class GameLoopTests
         gameLoop.Start();
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5)));
+            async () => await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
 
         Assert.True(synchronizationContext.IsCompleted);
         Assert.False(gameLoop.IsRunning);
@@ -90,7 +90,7 @@ public sealed class GameLoopTests
         gameLoop.Start();
 
         await gameLoop.Started.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         var gameThreadId =
             await GetGameThreadIdAsync(gameLoop);
@@ -104,7 +104,7 @@ public sealed class GameLoopTests
         gameLoop.RequestStop();
 
         await gameLoop.Completion.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.False(gameLoop.IsRunning);
     }
@@ -117,7 +117,7 @@ public sealed class GameLoopTests
         gameLoop.Start();
 
         await gameLoop.Started.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         var exception =
             Assert.Throws<InvalidOperationException>(
@@ -131,7 +131,7 @@ public sealed class GameLoopTests
         gameLoop.RequestStop();
 
         await gameLoop.Completion.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public sealed class GameLoopTests
         Assert.False(gameLoop.IsRunning);
 
         await gameLoop.Completion.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.True(
             gameLoop.Completion.IsCompletedSuccessfully);
@@ -188,7 +188,7 @@ public sealed class GameLoopTests
         gameLoop.Start();
 
         await gameLoop.Started.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         var gameThreadId =
             await GetGameThreadIdAsync(gameLoop);
@@ -207,7 +207,7 @@ public sealed class GameLoopTests
 
         var callbackThreadId =
             await callbackThreadSource.Task.WaitAsync(
-                TimeSpan.FromSeconds(5));
+                TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.Equal(
             gameThreadId,
@@ -216,7 +216,7 @@ public sealed class GameLoopTests
         gameLoop.RequestStop();
 
         await gameLoop.Completion.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -227,7 +227,7 @@ public sealed class GameLoopTests
         gameLoop.Start();
 
         await gameLoop.Started.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         var callbackSources =
             Enumerable.Range(0, 3)
@@ -252,7 +252,7 @@ public sealed class GameLoopTests
                     callbackSources.Select(
                         source => source.Task))
                 .WaitAsync(
-                    TimeSpan.FromSeconds(5));
+                    TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.Single(
             callbackThreadIds.Distinct());
@@ -260,7 +260,7 @@ public sealed class GameLoopTests
         gameLoop.RequestStop();
 
         await gameLoop.Completion.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -270,7 +270,7 @@ public sealed class GameLoopTests
 
         gameLoop.Start();
 
-        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         var gameThreadId = await GetGameThreadIdAsync(gameLoop);
 
@@ -282,13 +282,13 @@ public sealed class GameLoopTests
                 callbackThreadId = Environment.CurrentManagedThreadId;
 
                 return Task.CompletedTask;
-            }).WaitAsync(TimeSpan.FromSeconds(5));
+            }).WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.Equal(gameThreadId, callbackThreadId);
 
         gameLoop.RequestStop();
 
-        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -298,7 +298,7 @@ public sealed class GameLoopTests
 
         gameLoop.Start();
 
-        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         var callbackStartedSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseCallbackSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -312,19 +312,19 @@ public sealed class GameLoopTests
                     await releaseCallbackSource.Task;
                 });
 
-        await callbackStartedSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await callbackStartedSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.False(invocation.IsCompleted);
 
         releaseCallbackSource.TrySetResult();
 
-        await invocation.WaitAsync(TimeSpan.FromSeconds(5));
+        await invocation.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.True(invocation.IsCompletedSuccessfully);
 
         gameLoop.RequestStop();
 
-        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -334,7 +334,7 @@ public sealed class GameLoopTests
 
         gameLoop.Start();
 
-        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         var exception =
             await Assert.ThrowsAsync<InvalidOperationException>(
@@ -350,7 +350,7 @@ public sealed class GameLoopTests
 
         gameLoop.RequestStop();
 
-        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -360,19 +360,19 @@ public sealed class GameLoopTests
 
         gameLoop.Start();
 
-        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         var result =
             await gameLoop.InvokeAsync(
                 () => Task.FromResult(42))
                 .WaitAsync(
-                    TimeSpan.FromSeconds(5));
+                    TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.Equal(42, result);
 
         gameLoop.RequestStop();
 
-        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -383,12 +383,12 @@ public sealed class GameLoopTests
         gameLoop.Start();
 
         await gameLoop.Started.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         gameLoop.RequestStop();
 
         await gameLoop.Completion.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         var exception =
             await Assert.ThrowsAsync<InvalidOperationException>(
@@ -407,7 +407,7 @@ public sealed class GameLoopTests
 
         gameLoop.Start();
 
-        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         using var cancellationSource = new CancellationTokenSource();
 
@@ -422,19 +422,19 @@ public sealed class GameLoopTests
                     await Task.Delay(Timeout.InfiniteTimeSpan, cancellationSource.Token);
                 });
 
-        await callbackStartedSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await callbackStartedSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         cancellationSource.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            async () => await invocation.WaitAsync(TimeSpan.FromSeconds(5)));
+            async () => await invocation.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
 
         Assert.True(invocation.IsCanceled);
         Assert.True(gameLoop.IsRunning);
 
         gameLoop.RequestStop();
 
-        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -445,7 +445,7 @@ public sealed class GameLoopTests
         gameLoop.Start();
 
         await gameLoop.Started.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         var executionOrder =
             new List<string>();
@@ -469,7 +469,7 @@ public sealed class GameLoopTests
             });
 
         await completedSource.Task.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.Equal(
             ["first", "second", "third"],
@@ -478,7 +478,7 @@ public sealed class GameLoopTests
         gameLoop.RequestStop();
 
         await gameLoop.Completion.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -488,14 +488,14 @@ public sealed class GameLoopTests
 
         gameLoop.Start();
 
-        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         var observationSource = new TaskCompletionSource<ThreadObservation>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         gameLoop.Post(
             _ => { _ = ObserveScheduledContinuationAsync(gameLoop, scheduler, observationSource); });
 
-        var observation = await observationSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var observation = await observationSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.Equal(observation.ThreadBeforeDelay, observation.ThreadAfterDelay);
 
@@ -505,7 +505,7 @@ public sealed class GameLoopTests
 
         gameLoop.RequestStop();
 
-        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -515,13 +515,13 @@ public sealed class GameLoopTests
 
         gameLoop.Start();
 
-        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         var completionSource = new TaskCompletionSource<IReadOnlyList<OperationObservation>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        gameLoop.Post(_ => { _ = ObserveConcurrentOperationsAsync(gameLoop, scheduler, completionSource);});
+        gameLoop.Post(_ => { _ = ObserveConcurrentOperationsAsync(gameLoop, scheduler, completionSource); });
 
-        var observations = await completionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var observations = await completionSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.Equal(2, observations.Count);
 
@@ -538,7 +538,7 @@ public sealed class GameLoopTests
 
         gameLoop.RequestStop();
 
-        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -549,14 +549,14 @@ public sealed class GameLoopTests
         gameLoop.Start();
 
         await gameLoop.Started.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.True(gameLoop.IsRunning);
 
         gameLoop.RequestStop();
 
         await gameLoop.Completion.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.True(
             gameLoop.Completion.IsCompletedSuccessfully);
@@ -572,14 +572,14 @@ public sealed class GameLoopTests
         gameLoop.Start();
 
         await gameLoop.Started.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         gameLoop.RequestStop();
         gameLoop.RequestStop();
         gameLoop.RequestStop();
 
         await gameLoop.Completion.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.True(
             gameLoop.Completion.IsCompletedSuccessfully);
@@ -595,7 +595,7 @@ public sealed class GameLoopTests
         gameLoop.Start();
 
         await gameLoop.Started.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         gameLoop.RequestStop();
 
@@ -610,7 +610,7 @@ public sealed class GameLoopTests
             StringComparison.OrdinalIgnoreCase);
 
         await gameLoop.Completion.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -621,12 +621,12 @@ public sealed class GameLoopTests
         gameLoop.Start();
 
         await gameLoop.Started.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         gameLoop.RequestStop();
 
         await gameLoop.Completion.WaitAsync(
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.False(gameLoop.IsRunning);
 
@@ -641,14 +641,14 @@ public sealed class GameLoopTests
         await using var gameLoop = CreateGameLoop(out _);
 
         gameLoop.Start();
-        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         gameLoop.Post(_ => throw new InvalidOperationException("Expected game-loop failure."));
 
         // Work posted afterwards still runs, so the loop survived.
         var result = await gameLoop
             .InvokeAsync(() => Task.FromResult(42))
-            .WaitAsync(TimeSpan.FromSeconds(5));
+            .WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.Equal(42, result);
         Assert.True(gameLoop.IsRunning);
@@ -664,11 +664,11 @@ public sealed class GameLoopTests
         gameLoop.UnhandledException += exception => reported.TrySetResult(exception);
 
         gameLoop.Start();
-        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         gameLoop.Post(_ => throw new InvalidOperationException("Expected game-loop failure."));
 
-        var exception = await reported.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var exception = await reported.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         // Reported as the original exception, not wrapped in an AggregateException.
         var callbackException = Assert.IsType<InvalidOperationException>(exception);
@@ -689,10 +689,10 @@ public sealed class GameLoopTests
         gameLoop.Start();
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5)));
+            async () => await gameLoop.Started.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5)));
+            async () => await gameLoop.Completion.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
 
         Assert.False(gameLoop.IsRunning);
     }
@@ -709,7 +709,7 @@ public sealed class GameLoopTests
     {
         var threadIdSource = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        gameLoop.Post(_ => { threadIdSource.TrySetResult(Environment.CurrentManagedThreadId);});
+        gameLoop.Post(_ => { threadIdSource.TrySetResult(Environment.CurrentManagedThreadId); });
 
         return await threadIdSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }

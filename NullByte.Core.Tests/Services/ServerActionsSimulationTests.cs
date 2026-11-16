@@ -71,7 +71,7 @@ public sealed class ServerActionsSimulationTests
         {
             var duration = formulas.CalculateHackDuration(player, target);
 
-            var action = actions.HackAsync(target.Hostname);
+            var action = actions.HackAsync(target.Hostname, 1, TestContext.Current.CancellationToken);
 
             Assert.False(action.IsCompleted);
             Assert.Equal(1, scheduler.PendingCount);

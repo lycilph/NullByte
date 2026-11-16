@@ -24,4 +24,7 @@ internal sealed class FakeTerminal : IGameTerminal, IGameOutput
     public void WriteLine() => Lines.Add(string.Empty);
     public void WriteLine(string message) => Lines.Add(message);
     public void Clear() => Lines.Clear();
+
+    public void SuspendProcessing() { }
+    public void ResumeProcessing() { }
 }

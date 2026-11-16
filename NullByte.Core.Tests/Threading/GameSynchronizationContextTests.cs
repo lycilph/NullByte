@@ -313,7 +313,7 @@ public sealed class GameSynchronizationContextTests
         gameThread.Start();
 
         Assert.True(
-            contextReady.Wait(TimeSpan.FromSeconds(5)),
+            contextReady.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken),
             "The game thread did not become ready.");
 
         try
@@ -370,7 +370,7 @@ public sealed class GameSynchronizationContextTests
 
         gameThread.Start();
 
-        Assert.True(contextReady.Wait(TimeSpan.FromSeconds(5)));
+        Assert.True(contextReady.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
 
         try
         {

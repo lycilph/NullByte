@@ -11,7 +11,7 @@ public sealed class GameSchedulerTests
         var clock = new FakeGameClock();
         var scheduler = new GameScheduler(clock);
 
-        var delay = scheduler.DelayAsync(TimeSpan.FromSeconds(10));
+        var delay = scheduler.DelayAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
         Assert.False(delay.IsCompleted);
 
@@ -34,7 +34,7 @@ public sealed class GameSchedulerTests
         var clock = new FakeGameClock();
         var scheduler = new GameScheduler(clock);
 
-        var delay = scheduler.DelayAsync(TimeSpan.FromSeconds(5));
+        var delay = scheduler.DelayAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         clock.Advance(TimeSpan.FromSeconds(5));
 
@@ -51,7 +51,7 @@ public sealed class GameSchedulerTests
         var clock = new FakeGameClock();
         var scheduler = new GameScheduler(clock);
 
-        var delay = scheduler.DelayAsync(TimeSpan.Zero);
+        var delay = scheduler.DelayAsync(TimeSpan.Zero, TestContext.Current.CancellationToken);
 
         // A zero delay is scheduled like any other, not completed on the spot.
         Assert.False(delay.IsCompleted);
@@ -71,7 +71,7 @@ public sealed class GameSchedulerTests
         var scheduler = new GameScheduler(clock);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => scheduler.DelayAsync(TimeSpan.FromSeconds(-1)));
+            () => scheduler.DelayAsync(TimeSpan.FromSeconds(-1), TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -263,7 +263,7 @@ public sealed class GameSchedulerTests
     {
         var clock = new FakeGameClock(TimeSpan.FromSeconds(100));
         var scheduler = new GameScheduler(clock);
-        var delay = scheduler.DelayAsync(TimeSpan.FromSeconds(5));
+        var delay = scheduler.DelayAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         clock.Advance(TimeSpan.FromSeconds(4));
         scheduler.Update();

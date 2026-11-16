@@ -2,7 +2,6 @@
 using NullByte.Core.Formulas;
 using NullByte.Core.Services;
 using NullByte.Core.Time;
-using System.Xml.Linq;
 
 namespace NullByte.Core.Scripting;
 

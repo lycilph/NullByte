@@ -76,7 +76,7 @@ public class NanoEditor
                     if (!isDirty)
                     {
                         CleanupAndExit(prevCursorVisible);
-                        return originalContent;
+                        return string.IsNullOrWhiteSpace(originalContent) ? string.Empty : originalContent;
                     }
 
                     // Prompt to save modified buffer (Nano style)
@@ -91,7 +91,7 @@ public class NanoEditor
                     if (confirm.Key == ConsoleKey.N)
                     {
                         CleanupAndExit(prevCursorVisible);
-                        return originalContent;
+                        return string.IsNullOrWhiteSpace(originalContent) ? string.Empty : originalContent;
                     }
                     statusMessage = "[ Cancelled ]";
                     continue;
