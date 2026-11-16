@@ -36,18 +36,17 @@ public sealed class NetworkService
     /// Discovers and returns all servers directly connected
     /// to the player's current server.
     /// </summary>
-    public IReadOnlyList<Server> Scan(string hostname = "")
+    public IReadOnlyList<Server> Scan(string hostname)
     {
-        if (string.IsNullOrWhiteSpace(hostname))
-            hostname = gameState.Player.CurrentHostname;
+        var server = ResolveTarget(hostname);
 
-        if (!IsServerKnown(hostname))
+        if (!IsServerKnown(server.Hostname))
             return [];
 
-        var neighbors = gameState.Network.GetNeighbors(hostname);
+        var neighbors = gameState.Network.GetNeighbors(server.Hostname);
 
-        foreach (var server in neighbors)
-            gameState.Player.DiscoverServer(server.Hostname);
+        foreach (var neighbor in neighbors)
+            gameState.Player.DiscoverServer(neighbor.Hostname);
 
         return neighbors;
     }
@@ -84,6 +83,14 @@ public sealed class NetworkService
         gameState.Player.CurrentHostname = homeServer.Hostname;
 
         return NetworkConnectionResult.Success(homeServer);
+    }
+
+    private Server ResolveTarget(string hostname)
+    {
+        if (string.IsNullOrWhiteSpace(hostname))
+            throw new ArgumentException("The target hostname cannot be empty.", nameof(hostname));
+
+        return gameState.Network.GetServer(hostname);
     }
 }
 

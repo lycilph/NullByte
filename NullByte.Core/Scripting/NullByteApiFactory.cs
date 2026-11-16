@@ -13,7 +13,7 @@ public sealed class NullByteApiFactory(
     HackingFormulas hackingFormulas,
     IGameOutput output) : INullByteApiFactory
 {
-    public INullByteApi Create(IScriptOperations scriptOperations, int threads, CancellationToken cancellationToken)
+    public INullByteApi Create(IScriptOperations scriptOperations, string processHostname, int threads, CancellationToken cancellationToken)
     {
         return new NullByteApi(
             gameState,
@@ -23,6 +23,7 @@ public sealed class NullByteApiFactory(
             hackingFormulas,
             scriptOperations,
             output,
+            processHostname,
             threads,
             cancellationToken);
     }

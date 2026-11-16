@@ -129,7 +129,7 @@ public sealed class ScriptService : IScriptOperations
             process = processManager.Create(filename, hostname, args.ToArray(), threads, ramCost);
 
             // Create a distinct API instance for this process.
-            var api = apiFactory.Create(this, process.Threads, process.Cancellation.Token);
+            var api = apiFactory.Create(this, process.Hostname, process.Threads, process.Cancellation.Token);
 
             // Start execution without waiting for the script to finish.
             process.Execution = RunAndObserveAsync(process, compiledScript, api);
@@ -169,11 +169,10 @@ public sealed class ScriptService : IScriptOperations
     /// <summary>Returns all process on the given server.</summary>
     public IReadOnlyList<ScriptProcessInfo> ProcessesRunning(string hostname)
     {
-        if (string.IsNullOrWhiteSpace(hostname))
-            hostname = gameState.Player.CurrentHostname;
+        var server = ResolveTarget(hostname);
 
         return processManager
-            .GetForHost(hostname)
+            .GetForHost(server.Hostname)
             .Select(p => new ScriptProcessInfo(
                 p.Pid,
                 p.Filename,
@@ -185,22 +184,23 @@ public sealed class ScriptService : IScriptOperations
 
     public bool ScriptRunning(string filename, string hostname)
     {
-        if (string.IsNullOrWhiteSpace(hostname))
-            hostname = gameState.Player.CurrentHostname;
+        var server = ResolveTarget(hostname);
 
         return processManager
-            .GetForHost(hostname)
+            .GetForHost(server.Hostname)
             .Any(p => string.Equals(filename, p.Filename, StringComparison.OrdinalIgnoreCase));
     }
 
     public double GetScriptRam(string filename, string hostname)
     {
+        var target = ResolveTarget(hostname);
+
         // Resolve the target server.
-        if (!gameState.Network.TryGetServer(hostname, out var server))
+        if (!gameState.Network.TryGetServer(target.Hostname, out var server))
             return 0.0;
 
         // Read the script from the target server.
-        if (!gameState.FileSystem.TryReadFile(hostname, filename, out var source))
+        if (!gameState.FileSystem.TryReadFile(target.Hostname, filename, out var source))
             return 0.0;
 
         // Compile the script.
@@ -210,6 +210,14 @@ public sealed class ScriptService : IScriptOperations
             return 0.0;
 
         return compilation.Script.RamCost;
+    }
+    
+    private Server ResolveTarget(string hostname)
+    {
+        if (string.IsNullOrWhiteSpace(hostname))
+            throw new ArgumentException("The target hostname cannot be empty.", nameof(hostname));
+
+        return gameState.Network.GetServer(hostname);
     }
 
     private async Task RunAndObserveAsync(ScriptProcess process, CompiledScript script, INullByteApi api)

@@ -164,7 +164,7 @@ public sealed class ServerActions
 
     public NukeResult Nuke(string hostname)
     {
-        var server = gameState.Network.GetServer(hostname);
+        var server = ResolveTarget(hostname);
 
         var hackingLevel = formulas.CalculateHackingLevel(gameState.Player.HackingExperience);
 

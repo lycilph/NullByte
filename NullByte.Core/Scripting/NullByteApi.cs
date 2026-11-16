@@ -19,6 +19,7 @@ public sealed class NullByteApi : INullByteApi
     private readonly IScriptOperations scriptOperations;
     private readonly IGameOutput output;
 
+    private readonly string processHostname;
     private readonly int threads;
     private readonly CancellationToken cancellationToken;
 
@@ -30,6 +31,7 @@ public sealed class NullByteApi : INullByteApi
         HackingFormulas hackingFormulas,
         IScriptOperations scriptOperations,
         IGameOutput output,
+        string processHostname,
         int threads = 1,
         CancellationToken cancellationToken = default)
     {
@@ -50,6 +52,7 @@ public sealed class NullByteApi : INullByteApi
         this.hackingFormulas = hackingFormulas;
         this.scriptOperations = scriptOperations;
         this.cancellationToken = cancellationToken;
+        this.processHostname = processHostname;
         this.threads = threads;
     }
 
@@ -69,7 +72,7 @@ public sealed class NullByteApi : INullByteApi
     public NukeResult Nuke(string hostname) => serverActions.Nuke(hostname);
 
     public IReadOnlyList<string> Scan(string hostname = "")
-        => networkService.Scan(hostname).Select(s => s.Hostname).ToList();
+        => networkService.Scan(GetTargetHostname(hostname)).Select(s => s.Hostname).ToList();
 
     public double GetHackingLevel()
         => hackingFormulas.CalculateHackingLevel(gameState.Player.HackingExperience);
@@ -84,11 +87,13 @@ public sealed class NullByteApi : INullByteApi
     public double GetServerUsedRam(string hostname) => GetServer(hostname).UsedRam;
     public bool HasRootAccess(string hostname) => GetServer(hostname).HasRootAccess;
 
-    public IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "") => scriptOperations.ProcessesRunning(hostname);
+    public IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "") => scriptOperations.ProcessesRunning(GetTargetHostname(hostname));
     public bool Kill(int pid) => scriptOperations.Kill(pid);
     public int KillAll() => scriptOperations.KillAll();
-    public bool ScriptRunning(string filename, string hostname = "") => scriptOperations.ScriptRunning(filename, hostname);
-    public double GetScriptRam(string filename, string hostname = "") => scriptOperations.GetScriptRam(filename, hostname);
+    public bool ScriptRunning(string filename, string hostname = "") => scriptOperations.ScriptRunning(filename, GetTargetHostname(hostname));
+    public double GetScriptRam(string filename, string hostname = "") => scriptOperations.GetScriptRam(filename, GetTargetHostname(hostname));
+    
+    private string GetTargetHostname(string hostname) => string.IsNullOrWhiteSpace(hostname) ? processHostname : hostname;
 
     private Server GetServer(string hostname)
     {

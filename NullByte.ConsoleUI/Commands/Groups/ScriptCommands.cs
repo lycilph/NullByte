@@ -32,6 +32,45 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
     {
         var server = networkService.GetCurrentServer();
         var processes = scriptService.ProcessesRunning(server.Hostname);
+
+        if (processes.Count == 0)
+        {
+            output.WriteLine($"No scripts are running on {server.Hostname}.");
+            return;
+        }
+
+        output.WriteLine($"Scripts running on {server.Hostname}:");
+        output.WriteLine(
+            $"{"Filename",-24} {"PID",5} {"Threads",8}  Arguments");
+
+        foreach (var process in processes)
+        {
+            var scriptArguments = FormatArguments(process.Args);
+
+            output.WriteLine(
+                $"{process.Filename,-24} " +
+                $"{process.Pid,5} " +
+                $"{process.Threads,8}  " +
+                $"{scriptArguments}");
+        }
+    }
+
+    private static string FormatArguments(IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count == 0)
+            return "-";
+
+        return string.Join(" ", arguments.Select(QuoteArgumentIfNeeded));
+    }
+
+    private static string QuoteArgumentIfNeeded(string argument)
+    {
+        if (argument.Length == 0)
+            return "\"\"";
+
+        return argument.Any(char.IsWhiteSpace)
+            ? $"\"{argument.Replace("\"", "\\\"")}\""
+            : argument;
     }
 
     private async Task RunScriptAsync(IReadOnlyList<string> arguments)

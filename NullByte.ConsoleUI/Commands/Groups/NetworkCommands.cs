@@ -47,7 +47,7 @@ public sealed class NetworkCommands(NetworkService networkService, IGameOutput o
     private async Task ScanAsync(IReadOnlyList<string> arguments)
     {
         var currentServer = networkService.GetCurrentServer();
-        var servers = networkService.Scan();
+        var servers = networkService.Scan(currentServer.Hostname);
 
         output.WriteLine($"Scanning from {currentServer.Hostname}...");
 
