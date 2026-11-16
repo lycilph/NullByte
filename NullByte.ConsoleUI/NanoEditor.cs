@@ -5,7 +5,7 @@ namespace NullByte.ConsoleUI;
 public class NanoEditor
 {
     private readonly string filename;
-    private readonly List<string> lines;
+    private List<string> lines = [];
     private int cursorX = 0;
     private int cursorY = 0;
     private int scrollOffsetY = 0;
@@ -13,20 +13,18 @@ public class NanoEditor
     private bool isDirty = false;
     private string statusMessage = "";
 
-    public NanoEditor(string filename, string initialContent)
-    {
-        this.filename = filename;
-        // Normalize line endings and split into editable lines
-        var normalized = (initialContent ?? string.Empty).Replace("\r\n", "\n");
-        lines = new List<string>(normalized.Split('\n'));
-        if (lines.Count == 0) lines.Add(string.Empty);
-    }
+    public NanoEditor(string filename) => this.filename = filename;
 
     /// <summary>
     /// Opens the editor loop and returns the final saved content (or original content if discarded).
     /// </summary>
     public string Run(string originalContent)
     {
+        // Normalize line endings and split into editable lines
+        var normalized = (originalContent ?? string.Empty).Replace("\r\n", "\n");
+        lines = [.. normalized.Split('\n')];
+        if (lines.Count == 0) lines.Add(string.Empty);
+
         bool prevCursorVisible = OperatingSystem.IsWindows() ? Console.CursorVisible : true;
         Console.CursorVisible = true;
 

@@ -8,6 +8,8 @@ namespace NullByte.Core.Scripting;
 /// </summary>
 public interface INullByteApi
 {
+    INullByteFilesApi Files { get; }
+
     /// <summary>Writes a line to the script's output.</summary>
     [RamCost(0.1)]
     void Print(object? value);

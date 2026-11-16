@@ -54,7 +54,11 @@ public sealed class NullByteApi : INullByteApi
         this.cancellationToken = cancellationToken;
         this.processHostname = processHostname;
         this.processThreads = processThreads;
+
+        Files = new NullByteFilesApi(gameState.FileSystem, processHostname);
     }
+
+    public INullByteFilesApi Files { get; }
 
     public void Print(object? value) => output.WriteLine(value?.ToString() ?? string.Empty);
 

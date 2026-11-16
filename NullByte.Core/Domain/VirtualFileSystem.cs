@@ -35,6 +35,27 @@ public sealed class VirtualFileSystem
     }
 
     /// <summary>
+    ///  Copies files from source to destination servers
+    /// </summary>
+    /// <returns>True only if all files were copied</returns>
+    public bool CopyFiles(string source, string destination, IReadOnlyList<string> files)
+    {
+        ValidateServer(source);
+        ValidateServer(destination);
+
+        var result = true;
+        foreach (var file in files)
+        {
+            if (TryReadFile(source, file, out string? content) && content != null)
+                WriteFile(destination, file, content);
+            else
+                result = false;
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Attempts to read a file from a server.
     /// </summary>
     public bool TryReadFile(string hostname, string filename, out string? content)

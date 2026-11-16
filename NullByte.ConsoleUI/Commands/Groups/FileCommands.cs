@@ -39,6 +39,14 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
 
         registry.Register(
             new CommandDefinition(
+                "scp",
+                "scp <file...> <hostname>",
+                "Copies files to a destination server.",
+                CopyFilesAsync)
+            { MinArgs = 2, MaxArgs = int.MaxValue });
+
+        registry.Register(
+            new CommandDefinition(
                 "edit",
                 "edit <filename>",
                 "Create or replace a file.",
@@ -48,6 +56,28 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
                 Completions = [new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename}]
             });
     }
+
+    private async Task CopyFilesAsync(IReadOnlyList<string> arguments)
+    {
+        var source = networkService.GetCurrentServer();
+        var destination = networkService.GetServer(arguments.Last());
+        var files = arguments.Take(arguments.Count - 1).ToList();
+
+        foreach (var file in files)
+        {
+            if (!fileSystem.TryReadFile(source.Hostname, file, out string? content) || content == null)
+            {
+                terminal.WriteLine($"File {file} not found on {source.Hostname}");
+                return;
+            }
+        }
+
+        if (fileSystem.CopyFiles(source.Hostname, destination.Hostname, files))
+            terminal.WriteLine($"Files {string.Join(',', files)} copied to {destination.Hostname}");
+        else
+            terminal.WriteLine($"Not all files copied");
+    }
+
     private async Task ListFilesAsync(IReadOnlyList<string> arguments)
     {
         var server = networkService.GetCurrentServer();
@@ -106,8 +136,8 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
         terminal.SuspendProcessing();
         await Task.Delay(50); // We need to make sure the last update cycle of the terminal has finised
 
-        var editor = new NanoEditor(filename, source);
-        var edited_source = await Task.Run(() => editor.Run(""));
+        var editor = new NanoEditor(filename);
+        var edited_source = await Task.Run(() => editor.Run(source));
 
         fileSystem.WriteFile(server.Hostname, filename, edited_source);
         terminal.ResumeProcessing();
