@@ -149,9 +149,7 @@ while (true)
 
         fileName = "api_test.cx";
         source =
-@"var l = nb.Ps();
-foreach (var p in l)
-   nb.Print($""process {p.Pid} - {p.Filename}"");";
+@"nb.Print($""api_test.cx running {nb.ScriptRunning(""api_test.cx"")}"");";
 
         fileSystem.WriteFile(server.Hostname, fileName, source);
         output.WriteLine($"{fileName} created.");

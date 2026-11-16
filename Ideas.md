@@ -1,6 +1,7 @@
 # Future ideas
 
 - Place botnet methods in a separate api (so a script would do api.botnet.buy etc.)
+- Console based editor
 - Later on extra servers would live in api.cloud.* etc.
 - Make botnet and cloud servers unlockable
   - Make a system to unlock features on a trigger

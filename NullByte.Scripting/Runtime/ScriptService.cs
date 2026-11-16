@@ -185,7 +185,12 @@ public sealed class ScriptService : IScriptOperations
 
     public bool ScriptRunning(string filename, string hostname)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrWhiteSpace(hostname))
+            hostname = gameState.Player.CurrentHostname;
+
+        return processManager
+            .GetForHost(hostname)
+            .Any(p => string.Equals(filename, p.Filename, StringComparison.OrdinalIgnoreCase));
     }
 
     public double GetScriptRam(string filename, string hostname)

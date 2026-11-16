@@ -8,8 +8,8 @@
   ~~Fix all commented out tests~~
   ~~Make sure extensions is cx (in all tests)~~
 M6.4 — Expand the nb API to the full M6 API
-  * in scan and ps - an empty hostname should resolve to the hostname of the process
-  * Ps, Kill, ScriptRunning, GetScriptRam
+  * ~~Ps, Kill, ScriptRunning~~, GetScriptRam
+	* in scan and ps - an empty hostname should resolve to the hostname of the process - when called from a script, if manual the current server
   * Run, Exec
   * Scp
   * Make sure that hostnames in the api is:
