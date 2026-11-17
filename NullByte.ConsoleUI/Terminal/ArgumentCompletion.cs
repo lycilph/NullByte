@@ -6,7 +6,7 @@
 public sealed record ArgumentCompletion
 {
     /// <summary>
-    /// Zero-based argument position after the command name.
+    /// Zero-based argument position after the command name (-1 = use for all argument positions).
     /// </summary>
     public required int ArgumentIndex { get; init; }
 

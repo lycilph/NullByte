@@ -99,7 +99,7 @@ public static class CompletionEngine
             return [];
 
         var argumentIndex = typed.Count - best.Words.Count;
-        var completion = best.Completions.FirstOrDefault(c => c.ArgumentIndex == argumentIndex);
+        var completion = best.Completions.FirstOrDefault(c => c.ArgumentIndex == -1 || c.ArgumentIndex == argumentIndex);
 
         return completion is null ? [] : GetCompletionValues(snapshot, completion);
     }

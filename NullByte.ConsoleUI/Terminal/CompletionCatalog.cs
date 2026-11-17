@@ -70,11 +70,14 @@ public sealed class CompletionCatalog : ICompletionProvider
                 .Select(node => node.ToString())
                 .ToArray();
 
+        var filesOrServers = files.Concat(knownServers).ToList();
+
         var values = new Dictionary<CompletionKind, IReadOnlyList<string>>
             {
                 [CompletionKind.ConnectableServer] = connectableServers,
                 [CompletionKind.KnownServer] = knownServers,
                 [CompletionKind.Filename] = files,
+                [CompletionKind.FilenameOrKnownServer] = filesOrServers,
                 [CompletionKind.BotnetNode] = botnetNodes
             };
 

@@ -43,7 +43,12 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
                "mv <source> <destination>",
                "Moves a file on a server.",
                MoveFileAsync)
-           { MinArgs = 2, MaxArgs = 2 });
+           { 
+               MinArgs = 2, MaxArgs = 2,
+               Completions = [
+                   new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename},
+                   new ArgumentCompletion {ArgumentIndex = 1, Kind = CompletionKind.Filename}]
+           });
 
         registry.Register(
             new CommandDefinition(
@@ -51,7 +56,10 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
                 "scp <file...> <hostname>",
                 "Copies files to a destination server.",
                 CopyFilesAsync)
-            { MinArgs = 2, MaxArgs = int.MaxValue });
+            { 
+                MinArgs = 2, MaxArgs = int.MaxValue,
+                Completions = [new ArgumentCompletion { ArgumentIndex = -1, Kind = CompletionKind.FilenameOrKnownServer }]
+            });
 
         registry.Register(
             new CommandDefinition(

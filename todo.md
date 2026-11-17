@@ -1,7 +1,5 @@
 ﻿# Todo
 
-* Analyze should be a timed command
-
 * tab-completion (file or hostname, for 1-x arguments - see scp command for usage)
 
 * Align script method names and console commands
