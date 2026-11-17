@@ -37,4 +37,17 @@ public sealed class Botnet
 
         TotalEarned += amount;
     }
+
+    internal void Restore(IEnumerable<BotnetNode> restoredNodes, double totalEarned)
+    {
+        ArgumentNullException.ThrowIfNull(restoredNodes);
+
+        if (nodes.Count != 0)
+            throw new InvalidOperationException("Only an empty botnet can be restored.");
+        if (!double.IsFinite(totalEarned) || totalEarned < 0)
+            throw new ArgumentOutOfRangeException(nameof(totalEarned), "Total earned must be a finite, non-negative value.");
+
+        nodes.AddRange(restoredNodes);
+        TotalEarned = totalEarned;
+    }
 }

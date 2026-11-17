@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using NullByte.ConsoleUI.Commands;
 using NullByte.ConsoleUI.Terminal;
+using NullByte.Core.Persistence;
 using NullByte.Core.Services;
 using NullByte.Core.Time;
 using NullByte.Shell;

@@ -82,6 +82,7 @@ public sealed class Network
 
         return connections[server.Hostname]
             .Select(neighbor => servers[neighbor])
+            .OrderBy(server => server.Hostname, StringComparer.Ordinal) // Order alphabetically by hostname
             .ToArray();
     }
 
@@ -94,5 +95,18 @@ public sealed class Network
         var second = GetServer(secondHostname);
 
         return connections[first.Hostname].Contains(second.Hostname);
+    }
+
+    public IReadOnlyList<(string First, string Second)> GetConnections()
+    {
+        var result = new List<(string First, string Second)>();
+
+        foreach (var connection in connections)
+        {
+            foreach (var target in connection.Value)
+                result.Add((connection.Key, target));
+        }
+
+        return result;
     }
 }

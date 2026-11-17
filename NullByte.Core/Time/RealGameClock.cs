@@ -13,6 +13,15 @@ public sealed class RealGameClock : IGameClock
 
     private double speedMultiplier = 1.0;
 
+    public RealGameClock() : this(TimeSpan.Zero) { }
+    public RealGameClock(TimeSpan initialGameTime)
+    {
+        if (initialGameTime < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(initialGameTime), "Initial game time cannot be negative.");
+
+        accumulatedGameTime = initialGameTime;
+    }
+
     /// <summary>
     /// Gets the amount of game time that has elapsed.
     /// </summary>
