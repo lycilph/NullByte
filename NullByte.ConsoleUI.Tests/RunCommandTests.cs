@@ -251,6 +251,7 @@ public sealed class RunCommandTests
         private readonly CancellationToken cancellationToken = new();
 
         public INullByteFilesApi Files => throw new NotImplementedException();
+        public INullByteBotnetApi Botnet => throw new NotSupportedException();
 
         public TestNullByteApi(IGameTerminal terminal)
         {

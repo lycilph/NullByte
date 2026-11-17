@@ -18,6 +18,7 @@ public sealed class ScriptAcceptanceTests
     {
         var balance = new BalanceConfig();
         var formulas = new HackingFormulas(balance);
+        var botnetFormulas = new BotnetFormulas(balance);
 
         var player = new Player(
             homeHostname: "home",
@@ -61,6 +62,7 @@ public sealed class ScriptAcceptanceTests
         var randomSource = new FixedRandomSource(0);
 
         var networkServices = new NetworkService(gameState);
+        var botnetService = new BotnetService(gameState, botnetFormulas);
         var actions = new ServerActions(
             gameState,
             scheduler,
@@ -76,8 +78,10 @@ public sealed class ScriptAcceptanceTests
             gameState,
             scheduler,
             networkServices,
+            botnetService,
             actions,
             formulas,
+            botnetFormulas,
             scriptOperations,
             output,
             home.Hostname);

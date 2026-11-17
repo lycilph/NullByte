@@ -27,8 +27,10 @@ public sealed class NullByteApi : INullByteApi
         GameState gameState,
         GameScheduler scheduler,
         NetworkService networkService,
+        BotnetService botnetService,
         ServerActions serverActions,
         HackingFormulas hackingFormulas,
+        BotnetFormulas botnetFormulas,
         IScriptOperations scriptOperations,
         IGameOutput output,
         string processHostname,
@@ -38,8 +40,10 @@ public sealed class NullByteApi : INullByteApi
         ArgumentNullException.ThrowIfNull(gameState);
         ArgumentNullException.ThrowIfNull(scheduler);
         ArgumentNullException.ThrowIfNull(networkService);
+        ArgumentNullException.ThrowIfNull(botnetService);
         ArgumentNullException.ThrowIfNull(serverActions);
         ArgumentNullException.ThrowIfNull(hackingFormulas);
+        ArgumentNullException.ThrowIfNull(botnetFormulas);
         ArgumentNullException.ThrowIfNull(scriptOperations);
         ArgumentNullException.ThrowIfNull(output);
         ArgumentOutOfRangeException.ThrowIfLessThan(processThreads, 1);
@@ -56,9 +60,11 @@ public sealed class NullByteApi : INullByteApi
         this.processThreads = processThreads;
 
         Files = new NullByteFilesApi(gameState.FileSystem, processHostname);
+        Botnet = new NullByteBotnetApi(gameState.Botnet, botnetService, botnetFormulas);
     }
 
     public INullByteFilesApi Files { get; }
+    public INullByteBotnetApi Botnet { get; }
 
     public void Print(object? value) => output.WriteLine(value?.ToString() ?? string.Empty);
 

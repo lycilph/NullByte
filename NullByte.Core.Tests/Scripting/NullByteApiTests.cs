@@ -481,6 +481,7 @@ public sealed class NullByteApiTests
         private readonly GameScheduler scheduler;
         private readonly ServerActions serverActions;
         private readonly NetworkService networkService;
+        private readonly BotnetService botnetService;
 
         public Fixture()
         {
@@ -523,8 +524,10 @@ public sealed class NullByteApiTests
 
             var balance = new BalanceConfig();
             HackingFormulas = new HackingFormulas(balance);
+            BotnetFormulas = new BotnetFormulas(balance);
 
             networkService = new NetworkService(GameState);
+            botnetService = new BotnetService(GameState, BotnetFormulas);
             
             ScriptOperations = Substitute.For<IScriptOperations>();
 
@@ -541,6 +544,7 @@ public sealed class NullByteApiTests
         public Server Target { get; }
         public Server NukeTarget { get; }
         public HackingFormulas HackingFormulas { get; }
+        public BotnetFormulas BotnetFormulas { get; }
         public IScriptOperations ScriptOperations { get; }
         public TestScriptOutput Output { get; }
 
@@ -550,8 +554,10 @@ public sealed class NullByteApiTests
                 GameState,
                 scheduler,
                 networkService,
+                botnetService,
                 serverActions,
                 HackingFormulas,
+                BotnetFormulas,
                 ScriptOperations,
                 Output,
                 hostname,

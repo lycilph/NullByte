@@ -283,6 +283,7 @@ public sealed class ScriptRunnerTests
         }
 
         public INullByteFilesApi Files => throw new NotSupportedException();
+        public INullByteBotnetApi Botnet => throw new NotSupportedException();
         public Task<HackResult> Hack(string hostname)
         {
             throw new NotSupportedException("Hack is not used by these runner tests.");

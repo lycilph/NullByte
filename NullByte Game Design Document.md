@@ -289,7 +289,17 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 - `kill` stops a script at its next `await` and frees its RAM.
 - Multi-thread runs scale effect and RAM cost correctly.
 
-### M7: Sandbox and safety
+### M7: Save and load
+
+**Deliverables**
+
+- Serialization of player, servers, Botnet, files, running processes (restarted on load) and game time.
+- Versioned save format with a migration hook.
+- Autosave and manual `save` and `load`.
+
+**Acceptance**: save, quit, load restores an equivalent state; a golden-file test guards the format.
+
+### M8: Sandbox and safety
 
 **Deliverables**
 
@@ -301,7 +311,7 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 
 - A set of malicious or buggy sample scripts (file access, reflection, `while(true){}`, thrown exceptions) are rejected or contained, and the game continues to run.
 
-### M8: Progression and balance pass
+### M9: Progression and balance pass
 
 **Deliverables**
 
@@ -311,16 +321,6 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 - Short in-game tutorial via `help` and a few sample scripts shipped in the starting file system.
 
 **Acceptance**: a play session of roughly 1 to 2 hours reaches the final in-scope tier of servers, with a script-based economy clearly better than manual play.
-
-### M9: Save and load
-
-**Deliverables**
-
-- Serialization of player, servers, Botnet, files, running processes (restarted on load) and game time.
-- Versioned save format with a migration hook.
-- Autosave and manual `save` and `load`.
-
-**Acceptance**: save, quit, load restores an equivalent state; a golden-file test guards the format.
 
 ### M10: First playable release
 

@@ -9,8 +9,10 @@ public sealed class NullByteApiFactory(
     GameState gameState,
     GameScheduler scheduler,
     NetworkService networkService,
+    BotnetService botnetService,
     ServerActions serverActions,
     HackingFormulas hackingFormulas,
+    BotnetFormulas botnetFormulas,
     IGameOutput output) : INullByteApiFactory
 {
     public INullByteApi Create(IScriptOperations scriptOperations, string processHostname, int threads, CancellationToken cancellationToken)
@@ -19,8 +21,10 @@ public sealed class NullByteApiFactory(
             gameState,
             scheduler,
             networkService,
+            botnetService,
             serverActions,
             hackingFormulas,
+            botnetFormulas,
             scriptOperations,
             output,
             processHostname,

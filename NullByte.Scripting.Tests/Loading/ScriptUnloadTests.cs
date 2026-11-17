@@ -120,6 +120,7 @@ public sealed class ScriptUnloadTests
     private sealed class TestNullByteApi : INullByteApi
     {
         public INullByteFilesApi Files => throw new NotSupportedException();
+        public INullByteBotnetApi Botnet => throw new NotSupportedException();
 
         public void Print(object? value) { }
         public Task Sleep(TimeSpan duration) => Task.CompletedTask;

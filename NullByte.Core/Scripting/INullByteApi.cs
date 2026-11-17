@@ -9,6 +9,7 @@ namespace NullByte.Core.Scripting;
 public interface INullByteApi
 {
     INullByteFilesApi Files { get; }
+    INullByteBotnetApi Botnet { get; }
 
     /// <summary>Writes a line to the script's output.</summary>
     [RamCost(0.1)]

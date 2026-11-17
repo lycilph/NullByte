@@ -377,6 +377,7 @@ public sealed class ScriptServiceTests
         }
 
         public INullByteFilesApi Files => throw new NotSupportedException();
+        public INullByteBotnetApi Botnet => throw new NotSupportedException();
         public Task<HackResult> Hack(string hostname) => throw new NotSupportedException();
         public Task<GrowResult> Grow(string hostname) => throw new NotSupportedException();
         public Task<WeakenResult> Weaken(string hostname) => throw new NotSupportedException();
