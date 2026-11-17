@@ -1,374 +1,411 @@
-﻿//using NullByte.Core.Scripting;
-//using NullByte.Core.Services;
-//using NullByte.Scripting.Compilation;
-//using NullByte.Scripting.Loading;
-//using NullByte.Scripting.Runtime;
+﻿using NullByte.Core.Scripting;
+using NullByte.Core.Services;
+using NullByte.Scripting.Compilation;
+using NullByte.Scripting.Loading;
+using NullByte.Scripting.Runtime;
 
-//namespace NullByte.Scripting.Tests.Runtime;
+namespace NullByte.Scripting.Tests.Runtime;
 
-//public sealed class ScriptRunnerTests
-//{
-//    private readonly ScriptCompiler compiler = new();
-//    private readonly ScriptRunner runner;
+public sealed class ScriptRunnerTests
+{
+    private readonly ScriptCompiler compiler = new();
+    private readonly ScriptRunner runner;
 
-//    public ScriptRunnerTests()
-//    {
-//        runner = new ScriptRunner(new ScriptAssemblyLoader());
-//    }
+    public ScriptRunnerTests()
+    {
+        runner = new ScriptRunner(new ScriptAssemblyLoader());
+    }
 
-//    [Fact]
-//    public async Task RunAsync_WithSynchronousScript_ExecutesScript()
-//    {
-//        var script = Compile(
-//            """
-//            nb.Print("Hello from script");
-//            """);
+    [Fact]
+    public async Task RunAsync_WithSynchronousScript_ExecutesScript()
+    {
+        var script = Compile(
+            """
+            nb.Print("Hello from script");
+            """);
 
-//        var api = new TestNullByteApi();
+        var api = new TestNullByteApi();
 
-//        await runner.RunAsync(script, api, []);
+        await runner.RunAsync(script, api, []);
 
-//        Assert.Equal(["Hello from script"], api.Output);
-//    }
+        Assert.Equal(["Hello from script"], api.Output);
+    }
 
-//    [Fact]
-//    public async Task RunAsync_PassesArgumentsToGeneratedArgs()
-//    {
-//        var script = Compile(
-//            """
-//            nb.Print(args[0]);
-//            nb.Print(args[1]);
-//            """);
+    [Fact]
+    public async Task RunAsync_PassesArgumentsToGeneratedArgs()
+    {
+        var script = Compile(
+            """
+            nb.Print(args[0]);
+            nb.Print(args[1]);
+            """);
 
-//        var api = new TestNullByteApi();
+        var api = new TestNullByteApi();
 
-//        await runner.RunAsync(script, api, ["n00dles", "second"]);
+        await runner.RunAsync(script, api, ["n00dles", "second"]);
 
-//        Assert.Equal(["n00dles", "second"], api.Output);
-//    }
+        Assert.Equal(["n00dles", "second"], api.Output);
+    }
 
-//    [Fact]
-//    public async Task RunAsync_SnapshotsArguments()
-//    {
-//        var script = Compile(
-//            """
-//            await nb.Sleep(TimeSpan.FromSeconds(1));
-//            nb.Print(args[0]);
-//            """);
+    [Fact]
+    public async Task RunAsync_SnapshotsArguments()
+    {
+        var script = Compile(
+            """
+            await nb.Sleep(TimeSpan.FromSeconds(1));
+            nb.Print(args[0]);
+            """);
 
-//        var api = new TestNullByteApi();
-//        var args = new List<string> { "n00dles" };
+        var api = new TestNullByteApi();
+        var args = new List<string> { "n00dles" };
 
-//        var runTask = runner.RunAsync(script, api, args);
+        var runTask = runner.RunAsync(script, api, args);
 
-//        await api.WaitUntilSleepRequestedAsync();
+        await api.WaitUntilSleepRequestedAsync();
 
-//        args[0] = "changed";
+        args[0] = "changed";
 
-//        api.CompleteSleep();
+        api.CompleteSleep();
 
-//        await runTask;
+        await runTask;
 
-//        Assert.Equal(["n00dles"], api.Output);
-//    }
+        Assert.Equal(["n00dles"], api.Output);
+    }
 
-//    [Fact]
-//    public async Task RunAsync_WithTopLevelAwait_DoesNotBlock()
-//    {
-//        var script = Compile(
-//            """
-//            nb.Print("Before");
-//            await nb.Sleep(TimeSpan.FromSeconds(1));
-//            nb.Print("After");
-//            """);
+    [Fact]
+    public async Task RunAsync_WithTopLevelAwait_DoesNotBlock()
+    {
+        var script = Compile(
+            """
+            nb.Print("Before");
+            await nb.Sleep(TimeSpan.FromSeconds(1));
+            nb.Print("After");
+            """);
 
-//        var api = new TestNullByteApi();
-//        var runTask = runner.RunAsync(script, api, []);
+        var api = new TestNullByteApi();
+        var runTask = runner.RunAsync(script, api, []);
 
-//        await api.WaitUntilSleepRequestedAsync();
+        await api.WaitUntilSleepRequestedAsync();
 
-//        Assert.False(runTask.IsCompleted);
-//        Assert.Equal(["Before"], api.Output);
+        Assert.False(runTask.IsCompleted);
+        Assert.Equal(["Before"], api.Output);
 
-//        api.CompleteSleep();
+        api.CompleteSleep();
 
-//        await runTask;
+        await runTask;
 
-//        Assert.Equal(["Before", "After"], api.Output);
-//    }
+        Assert.Equal(["Before", "After"], api.Output);
+    }
 
-//    [Fact]
-//    public async Task RunAsync_PassesDurationToSleep()
-//    {
-//        var script = Compile(
-//            """
-//            await nb.Sleep(TimeSpan.FromSeconds(12));
-//            """);
+    [Fact]
+    public async Task RunAsync_PassesDurationToSleep()
+    {
+        var script = Compile(
+            """
+            await nb.Sleep(TimeSpan.FromSeconds(12));
+            """);
 
-//        var api = new TestNullByteApi();
-//        var runTask = runner.RunAsync(script, api, []);
+        var api = new TestNullByteApi();
+        var runTask = runner.RunAsync(script, api, []);
 
-//        await api.WaitUntilSleepRequestedAsync();
+        await api.WaitUntilSleepRequestedAsync();
 
-//        Assert.Equal(TimeSpan.FromSeconds(12), api.LastSleepDuration);
+        Assert.Equal(TimeSpan.FromSeconds(12), api.LastSleepDuration);
 
-//        api.CompleteSleep();
+        api.CompleteSleep();
 
-//        await runTask;
-//    }
+        await runTask;
+    }
 
-//    [Fact]
-//    public async Task RunAsync_WithSynchronousException_PropagatesException()
-//    {
-//        var script = Compile(
-//            """
-//            throw new InvalidOperationException("Script failed.");
-//            """);
+    [Fact]
+    public async Task RunAsync_WithSynchronousException_PropagatesException()
+    {
+        var script = Compile(
+            """
+            throw new InvalidOperationException("Script failed.");
+            """);
 
-//        var api = new TestNullByteApi();
+        var api = new TestNullByteApi();
 
-//        var exception =
-//            await Assert.ThrowsAsync<InvalidOperationException>(
-//                () => runner.RunAsync(script, api, []));
+        var exception =
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => runner.RunAsync(script, api, []));
 
-//        Assert.Equal("Script failed.", exception.Message);
-//    }
+        Assert.Equal("Script failed.", exception.Message);
+    }
 
-//    [Fact]
-//    public async Task RunAsync_WithAsynchronousException_PropagatesException()
-//    {
-//        var script = Compile(
-//            """
-//            await nb.Sleep(TimeSpan.FromSeconds(1));
-//            throw new InvalidOperationException("Async script failed.");
-//            """);
+    [Fact]
+    public async Task RunAsync_WithAsynchronousException_PropagatesException()
+    {
+        var script = Compile(
+            """
+            await nb.Sleep(TimeSpan.FromSeconds(1));
+            throw new InvalidOperationException("Async script failed.");
+            """);
 
-//        var api = new TestNullByteApi();
+        var api = new TestNullByteApi();
 
-//        var runTask = runner.RunAsync(script, api, []);
+        var runTask = runner.RunAsync(script, api, []);
 
-//        await api.WaitUntilSleepRequestedAsync();
+        await api.WaitUntilSleepRequestedAsync();
 
-//        api.CompleteSleep();
+        api.CompleteSleep();
 
-//        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => runTask);
-
-//        Assert.Equal("Async script failed.", exception.Message);
-//    }
-
-//    [Fact]
-//    public async Task RunAsync_WhenSleepIsCanceled_PropagatesCancellation()
-//    {
-//        var script = Compile(
-//            """
-//            await nb.Sleep(TimeSpan.FromSeconds(1));
-//            """);
-
-//        var api = new TestNullByteApi();
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => runTask);
+
+        Assert.Equal("Async script failed.", exception.Message);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenSleepIsCanceled_PropagatesCancellation()
+    {
+        var script = Compile(
+            """
+            await nb.Sleep(TimeSpan.FromSeconds(1));
+            """);
+
+        var api = new TestNullByteApi();
 
-//        var runTask = runner.RunAsync(script, api, []);
+        var runTask = runner.RunAsync(script, api, []);
 
-//        await api.WaitUntilSleepRequestedAsync();
+        await api.WaitUntilSleepRequestedAsync();
 
-//        api.CancelSleep();
-
-//        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => runTask);
-//    }
+        api.CancelSleep();
 
-//    [Fact]
-//    public async Task RunAsync_AfterCompletedScript_CanRunAnotherScript()
-//    {
-//        var firstScript = Compile(
-//            """
-//            nb.Print("First");
-//            """);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => runTask);
+    }
 
-//        var secondScript = Compile(
-//            """
-//            nb.Print("Second");
-//            """);
+    [Fact]
+    public async Task RunAsync_AfterCompletedScript_CanRunAnotherScript()
+    {
+        var firstScript = Compile(
+            """
+            nb.Print("First");
+            """);
 
-//        var firstApi = new TestNullByteApi();
-//        var secondApi = new TestNullByteApi();
+        var secondScript = Compile(
+            """
+            nb.Print("Second");
+            """);
 
-//        await runner.RunAsync(firstScript, firstApi, []);
-//        await runner.RunAsync(secondScript, secondApi, []);
+        var firstApi = new TestNullByteApi();
+        var secondApi = new TestNullByteApi();
 
-//        Assert.Equal(["First"], firstApi.Output);
-//        Assert.Equal(["Second"], secondApi.Output);
-//    }
+        await runner.RunAsync(firstScript, firstApi, []);
+        await runner.RunAsync(secondScript, secondApi, []);
 
-//    [Fact]
-//    public async Task RunAsync_WithNullScript_Throws()
-//    {
-//        var api = new TestNullByteApi();
+        Assert.Equal(["First"], firstApi.Output);
+        Assert.Equal(["Second"], secondApi.Output);
+    }
 
-//        await Assert.ThrowsAsync<ArgumentNullException>(
-//            () => runner.RunAsync(null!, api, []));
-//    }
+    [Fact]
+    public async Task RunAsync_WithNullScript_Throws()
+    {
+        var api = new TestNullByteApi();
 
-//    [Fact]
-//    public async Task RunAsync_WithNullApi_Throws()
-//    {
-//        var script = Compile(
-//            """
-//            nb.Print("Hello");
-//            """);
-
-//        await Assert.ThrowsAsync<ArgumentNullException>(
-//            () => runner.RunAsync(script, null!, []));
-//    }
-
-//    [Fact]
-//    public async Task RunAsync_WithNullArgs_Throws()
-//    {
-//        var script = Compile(
-//            """
-//            nb.Print("Hello");
-//            """);
-
-//        var api = new TestNullByteApi();
-
-//        await Assert.ThrowsAsync<ArgumentNullException>(
-//            () => runner.RunAsync(script, api, null!));
-//    }
-
-//    private CompiledScript Compile(string source)
-//    {
-//        var result = compiler.Compile(source, "runner-test.cx");
-
-//        AssertCompilationSucceeded(result);
-
-//        return Assert.IsType<CompiledScript>(result.Script);
-//    }
-
-//    private static void AssertCompilationSucceeded(
-//        ScriptCompilationResult result)
-//    {
-//        var diagnostics = string.Join(
-//            Environment.NewLine,
-//            result.Diagnostics.Select(
-//                diagnostic =>
-//                    $"{diagnostic.Id} " +
-//                    $"({diagnostic.Line}," +
-//                    $"{diagnostic.Column}): " +
-//                    diagnostic.Message));
-
-//        Assert.True(result.Succeeded, diagnostics);
-//    }
-
-//    private sealed class TestNullByteApi : INullByteApi
-//    {
-//        private TaskCompletionSource sleepRequested = CreateCompletionSource();
-//        private TaskCompletionSource sleepCompletion = CreateCompletionSource();
-//        private CancellationToken cancellationToken = new CancellationToken();
-
-//        public List<string> Output { get; } = [];
-
-//        public TimeSpan? LastSleepDuration { get; private set; }
-
-//        public void Print(object? value)
-//        {
-//            Output.Add(value?.ToString() ?? string.Empty);
-//        }
-
-//        public Task Sleep(TimeSpan duration)
-//        {
-//            LastSleepDuration = duration;
-
-//            sleepRequested.TrySetResult();
-
-//            return sleepCompletion.Task.WaitAsync(cancellationToken);
-//        }
-
-//        public Task<HackResult> Hack(string hostname)
-//        {
-//            throw new NotSupportedException("Hack is not used by these runner tests.");
-//        }
-
-//        public Task<GrowResult> Grow(string hostname)
-//        {
-//            throw new NotSupportedException("Grow is not used by these runner tests.");
-//        }
-
-//        public Task<WeakenResult> Weaken(string hostname)
-//        {
-//            throw new NotSupportedException("Weaken is not used by these runner tests.");
-//        }
-
-//        public double GetServerMoneyAvailable(string hostname)
-//        {
-//            throw new NotSupportedException("Server state is not used by these runner tests.");
-//        }
-
-//        public double GetServerMaxMoney(string hostname)
-//        {
-//            throw new NotSupportedException("Server state is not used by these runner tests.");
-//        }
-
-//        public double GetServerSecurityLevel(string hostname)
-//        {
-//            throw new NotSupportedException("Server state is not used by these runner tests.");
-//        }
-
-//        public double GetServerMinSecurityLevel(string hostname)
-//        {
-//            throw new NotSupportedException("Server state is not used by these runner tests.");
-//        }
-
-//        public double GetHackingLevel()
-//        {
-//            throw new NotSupportedException("Player state is not used by these runner tests.");
-//        }
-
-//        public double GetServerRequiredHackingLevel(string hostname)
-//        {
-//            throw new NotSupportedException("Server state is not used by these runner tests.");
-//        }
-
-//        public double GetServerMaxRam(string hostname)
-//        {
-//            throw new NotSupportedException("Server state is not used by these runner tests.");
-//        }
-
-//        public double GetServerUsedRam(string hostname)
-//        {
-//            throw new NotSupportedException("Server state is not used by these runner tests.");
-//        }
-
-//        public bool HasRootAccess(string hostname)
-//        {
-//            throw new NotSupportedException("Server state is not used by these runner tests.");
-//        }
-
-//        public NukeResult Nuke(string hostname)
-//        {
-//            throw new NotSupportedException("Server state is not used by these runner tests.");
-//        }
-
-//        public IReadOnlyList<string> Scan(string hostname)
-//        {
-//            throw new NotSupportedException("Server state is not used by these runner tests.");
-//        }
-
-//        public Task WaitUntilSleepRequestedAsync()
-//        {
-//            return sleepRequested.Task.WaitAsync(TimeSpan.FromSeconds(5));
-//        }
-
-//        public void CompleteSleep()
-//        {
-//            sleepCompletion.TrySetResult();
-//        }
-
-//        public void CancelSleep()
-//        {
-//            sleepCompletion.TrySetCanceled();
-//        }
-
-//        private static TaskCompletionSource CreateCompletionSource()
-//        {
-//            return new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-//        }
-//    }
-//}
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => runner.RunAsync(null!, api, []));
+    }
+
+    [Fact]
+    public async Task RunAsync_WithNullApi_Throws()
+    {
+        var script = Compile(
+            """
+            nb.Print("Hello");
+            """);
+
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => runner.RunAsync(script, null!, []));
+    }
+
+    [Fact]
+    public async Task RunAsync_WithNullArgs_Throws()
+    {
+        var script = Compile(
+            """
+            nb.Print("Hello");
+            """);
+
+        var api = new TestNullByteApi();
+
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => runner.RunAsync(script, api, null!));
+    }
+
+    private CompiledScript Compile(string source)
+    {
+        var result = compiler.Compile(source, "runner-test.cx");
+
+        AssertCompilationSucceeded(result);
+
+        return Assert.IsType<CompiledScript>(result.Script);
+    }
+
+    private static void AssertCompilationSucceeded(
+        ScriptCompilationResult result)
+    {
+        var diagnostics = string.Join(
+            Environment.NewLine,
+            result.Diagnostics.Select(
+                diagnostic =>
+                    $"{diagnostic.Id} " +
+                    $"({diagnostic.Line}," +
+                    $"{diagnostic.Column}): " +
+                    diagnostic.Message));
+
+        Assert.True(result.Succeeded, diagnostics);
+    }
+
+    private sealed class TestNullByteApi : INullByteApi
+    {
+        private TaskCompletionSource sleepRequested = CreateCompletionSource();
+        private TaskCompletionSource sleepCompletion = CreateCompletionSource();
+        private CancellationToken cancellationToken = new CancellationToken();
+
+        public List<string> Output { get; } = [];
+
+        public TimeSpan? LastSleepDuration { get; private set; }
+
+
+        public void Print(object? value)
+        {
+            Output.Add(value?.ToString() ?? string.Empty);
+        }
+
+        public Task Sleep(TimeSpan duration)
+        {
+            LastSleepDuration = duration;
+
+            sleepRequested.TrySetResult();
+
+            return sleepCompletion.Task.WaitAsync(cancellationToken);
+        }
+
+        public INullByteFilesApi Files => throw new NotSupportedException();
+        public Task<HackResult> Hack(string hostname)
+        {
+            throw new NotSupportedException("Hack is not used by these runner tests.");
+        }
+
+        public Task<GrowResult> Grow(string hostname)
+        {
+            throw new NotSupportedException("Grow is not used by these runner tests.");
+        }
+
+        public Task<WeakenResult> Weaken(string hostname)
+        {
+            throw new NotSupportedException("Weaken is not used by these runner tests.");
+        }
+
+        public double GetServerMoneyAvailable(string hostname)
+        {
+            throw new NotSupportedException("Server state is not used by these runner tests.");
+        }
+
+        public double GetServerMaxMoney(string hostname)
+        {
+            throw new NotSupportedException("Server state is not used by these runner tests.");
+        }
+
+        public double GetServerSecurityLevel(string hostname)
+        {
+            throw new NotSupportedException("Server state is not used by these runner tests.");
+        }
+
+        public double GetServerMinSecurityLevel(string hostname)
+        {
+            throw new NotSupportedException("Server state is not used by these runner tests.");
+        }
+
+        public double GetHackingLevel()
+        {
+            throw new NotSupportedException("Player state is not used by these runner tests.");
+        }
+
+        public double GetServerRequiredHackingLevel(string hostname)
+        {
+            throw new NotSupportedException("Server state is not used by these runner tests.");
+        }
+
+        public double GetServerMaxRam(string hostname)
+        {
+            throw new NotSupportedException("Server state is not used by these runner tests.");
+        }
+
+        public double GetServerUsedRam(string hostname)
+        {
+            throw new NotSupportedException("Server state is not used by these runner tests.");
+        }
+
+        public bool HasRootAccess(string hostname)
+        {
+            throw new NotSupportedException("Server state is not used by these runner tests.");
+        }
+
+        public NukeResult Nuke(string hostname)
+        {
+            throw new NotSupportedException("Server state is not used by these runner tests.");
+        }
+
+        public IReadOnlyList<string> Scan(string hostname)
+        {
+            throw new NotSupportedException("Server state is not used by these runner tests.");
+        }
+
+        public Task WaitUntilSleepRequestedAsync()
+        {
+            return sleepRequested.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+
+        public void CompleteSleep()
+        {
+            sleepCompletion.TrySetResult();
+        }
+
+        public void CancelSleep()
+        {
+            sleepCompletion.TrySetCanceled();
+        }
+
+        private static TaskCompletionSource CreateCompletionSource()
+        {
+            return new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        public IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "")
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<int> RunAsync(string filename, params string[] args)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<int> ExecAsync(string filename, string hostname, params string[] args)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool Kill(int pid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public int KillAll()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool ScriptRunning(string filename, string hostname = "")
+        {
+            throw new NotImplementedException();
+        }
+
+        public double GetScriptRam(string filename, string hostname = "")
+        {
+            throw new NotImplementedException();
+        }
+    }
+}
