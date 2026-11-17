@@ -1,8 +1,11 @@
-﻿namespace NullByte.Core.Domain;
+﻿using System.Diagnostics;
+
+namespace NullByte.Core.Domain;
 
 /// <summary>
 /// Represents the player's persistent game state.
 /// </summary>
+[DebuggerDisplay("Home: {HomeHostname}, Money: {Money}, Experience: {HackingExperience}")]
 public sealed class Player
 {
     private readonly HashSet<string> discoveredHostnames = new(StringComparer.OrdinalIgnoreCase);

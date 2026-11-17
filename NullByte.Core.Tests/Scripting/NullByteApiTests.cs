@@ -525,8 +525,9 @@ public sealed class NullByteApiTests
             var balance = new BalanceConfig();
             HackingFormulas = new HackingFormulas(balance);
             BotnetFormulas = new BotnetFormulas(balance);
+            var networkFormulas = new NetworkFormulas(balance);
 
-            networkService = new NetworkService(GameState);
+            networkService = new NetworkService(GameState, scheduler, networkFormulas);
             botnetService = new BotnetService(GameState, BotnetFormulas);
             
             ScriptOperations = Substitute.For<IScriptOperations>();

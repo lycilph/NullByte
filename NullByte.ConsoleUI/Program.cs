@@ -19,7 +19,8 @@ public class Program
         var sessionOptions = new GameSessionOptions()
         {
             Output = terminal, 
-            Balance = new Core.Configuration.BalanceConfig() { GameSpeedMultiplier = 5.0 }
+            // TODO: remove this (only for debugging)
+            Balance = new Core.Configuration.BalanceConfig() { GameSpeedMultiplier = 5.0, AnalyzeDuration = 5.0 }
         };
         await using var session = GameSession.Create(sessionOptions);
 

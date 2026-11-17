@@ -1,5 +1,7 @@
 ﻿using NullByte.Core.Domain;
+using NullByte.Core.Formulas;
 using NullByte.Core.Services;
+using NullByte.Core.Time;
 
 namespace NullByte.Core.Tests.Services;
 
@@ -321,9 +323,12 @@ public sealed class NetworkServiceTests
         network.Connect(home.Hostname, foodNStuff.Hostname);
         network.Connect(n00dles.Hostname, sigmaCosmetics.Hostname);
 
+        var scheduler = new GameScheduler(new FakeGameClock());
+        var networkFormulas = new NetworkFormulas(new Configuration.BalanceConfig());
+
         var player = new Player(homeHostname: home.Hostname);
         var gameState = new GameState(player, network);
-        var service = new NetworkService(gameState);
+        var service = new NetworkService(gameState, scheduler, networkFormulas);
 
         return new NetworkFixture(
             Player: player,

@@ -1,4 +1,6 @@
-﻿namespace NullByte.Core.Domain;
+﻿using System.Diagnostics;
+
+namespace NullByte.Core.Domain;
 
 /// <summary>
 /// A single node of the player's botnet.
@@ -8,6 +10,7 @@
 /// decided by <see cref="Formulas.BotnetFormulas"/>, and the caps on its
 /// stats are enforced by <see cref="Services.BotnetService"/>.
 /// </remarks>
+[DebuggerDisplay("Level: {Level}, Ram: {Ram}, Cores: {Cores}")]
 public sealed class BotnetNode
 {
     public BotnetNode(int level = 1, int ram = 1, int cores = 1)

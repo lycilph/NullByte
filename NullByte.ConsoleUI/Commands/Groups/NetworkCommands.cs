@@ -1,9 +1,11 @@
 ﻿using NullByte.ConsoleUI.Terminal;
+using NullByte.Core.Formulas;
 using NullByte.Core.Services;
+using NullByte.Core.Time;
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
-public sealed class NetworkCommands(NetworkService networkService, IGameOutput output) : ICommandGroup
+public sealed class NetworkCommands(IGameClock clock, NetworkService networkService, NetworkFormulas networkFormulas, IGameTerminal terminal) : ICommandGroup
 {
     public void Register(CommandRegistry registry)
     {
@@ -49,16 +51,16 @@ public sealed class NetworkCommands(NetworkService networkService, IGameOutput o
         var currentServer = networkService.GetCurrentServer();
         var servers = networkService.Scan(currentServer.Hostname);
 
-        output.WriteLine($"Scanning from {currentServer.Hostname}...");
+        terminal.WriteLine($"Scanning from {currentServer.Hostname}...");
 
         if (servers.Count == 0)
         {
-            output.WriteLine("No connected servers found.");
+            terminal.WriteLine("No connected servers found.");
             return;
         }
 
         foreach (var server in servers)
-            output.WriteLine($"  {server.Hostname}");
+            terminal.WriteLine($"  {server.Hostname}");
     }
 
     private async Task AnalyzeAsync(IReadOnlyList<string> arguments)
@@ -68,20 +70,31 @@ public sealed class NetworkCommands(NetworkService networkService, IGameOutput o
                 ? networkService.GetServer(arguments[0])
                 : networkService.GetCurrentServer();
 
-        if (networkService.IsServerKnown(server.Hostname))
+        var duration = networkFormulas.CalculateAnalyzeDuration();
+        var startedAt = clock.Elapsed;
+        terminal.StartProgress($"Analyzing {server.Hostname}",
+            () =>
+            {
+                var elapsed = clock.Elapsed - startedAt;
+                return Math.Clamp(elapsed.TotalSeconds / duration.TotalSeconds, 0.0, 1.0);
+            });
+
+        NetworkAnalyzeResult result;
+        try { result = await networkService.AnalyzeAsync(server.Hostname); }
+        finally { terminal.StopProgress(); }
+
+        if (result.Succeeded)
         {
-            output.WriteLine($"Server: {server.Hostname}");
-            output.WriteLine($"Root access: {(server.HasRootAccess ? "Yes" : "No")}");
-            output.WriteLine($"Required hacking level: {server.RequiredHackingLevel}");
-            output.WriteLine($"Money: ${server.Money:N2} / ${server.MaximumMoney:N2}");
-            output.WriteLine($"Security: {server.Security:F2} / {server.MinimumSecurity:F2}");
-            output.WriteLine($"Growth: {server.GrowthParameter:F2}");
-            output.WriteLine($"RAM: {server.UsedRam:F2} GB / {server.MaximumRam:F2} GB");
+            terminal.WriteLine($"Server: {result.Hostname}");
+            terminal.WriteLine($"Root access: {(result.HasRootAccess ? "Yes" : "No")}");
+            terminal.WriteLine($"Required hacking level: {result.RequiredHackingLevel}");
+            terminal.WriteLine($"Money: ${result.Money:N2} / ${result.MaximumMoney:N2}");
+            terminal.WriteLine($"Security: {result.Security:F2} / {result.MinimumSecurity:F2}");
+            terminal.WriteLine($"Growth: {result.Growth:F2}");
+            terminal.WriteLine($"RAM: {result.UsedRam:F2} GB / {result.MaximumRam:F2} GB");
         }
         else
-        {
-            output.WriteLine($"Unknown server {server.Hostname}");
-        }
+            terminal.WriteLine(result.FailureMessage);
     }
 
     private async Task ConnectAsync(IReadOnlyList<string> arguments)
@@ -89,17 +102,17 @@ public sealed class NetworkCommands(NetworkService networkService, IGameOutput o
         var result = networkService.Connect(arguments[0]);
         if (!result.Succeeded)
         {
-            output.WriteLine(result.Error ?? "Connection failed.");
+            terminal.WriteLine(result.Error ?? "Connection failed.");
             return;
         }
 
-        output.WriteLine($"Connected to {result.Server!.Hostname}.");
+        terminal.WriteLine($"Connected to {result.Server!.Hostname}.");
     }
 
     private async Task HomeAsync(IReadOnlyList<string> arguments)
     {
         var result = networkService.GoHome();
 
-        output.WriteLine($"Returned to {result.Server!.Hostname}.");
+        terminal.WriteLine($"Returned to {result.Server!.Hostname}.");
     }
 }

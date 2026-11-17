@@ -1,4 +1,6 @@
 ﻿using NullByte.Core.Domain;
+using NullByte.Core.Formulas;
+using NullByte.Core.Time;
 
 namespace NullByte.Core.Services;
 
@@ -8,11 +10,17 @@ namespace NullByte.Core.Services;
 public sealed class NetworkService
 {
     private readonly GameState gameState;
+    private readonly GameScheduler scheduler;
+    private readonly NetworkFormulas networkFormulas;
 
-    public NetworkService(GameState gameState)
+    public NetworkService(GameState gameState, GameScheduler scheduler, NetworkFormulas networkFormulas)
     {
         this.gameState = gameState
             ?? throw new ArgumentNullException(nameof(gameState));
+        this.scheduler = scheduler
+            ?? throw new ArgumentNullException(nameof(scheduler));
+        this.networkFormulas = networkFormulas
+            ?? throw new ArgumentNullException(nameof(networkFormulas));
     }
 
     /// <summary>
@@ -49,6 +57,34 @@ public sealed class NetworkService
             gameState.Player.DiscoverServer(neighbor.Hostname);
 
         return neighbors;
+    }
+
+    /// <summary>
+    /// Analyze a server and return information about that server.
+    /// </summary>
+    public async Task<NetworkAnalyzeResult> AnalyzeAsync(string hostname, CancellationToken cancellationToken = default)
+    {
+        var server = ResolveTarget(hostname);
+
+        if (!IsServerKnown(server.Hostname))
+            return NetworkAnalyzeResult.Failed($"Unknown server: {server.Hostname}");
+
+        var duration = networkFormulas.CalculateAnalyzeDuration();
+        await scheduler.DelayAsync(duration, cancellationToken);
+
+        return new NetworkAnalyzeResult(
+            true,
+            "",
+            server.Hostname,
+            server.HasRootAccess,
+            server.RequiredHackingLevel,
+            server.Money,
+            server.MaximumMoney,
+            server.Security,
+            server.MinimumSecurity,
+            server.GrowthParameter,
+            server.UsedRam,
+            server.MaximumRam);
     }
 
     /// <summary>

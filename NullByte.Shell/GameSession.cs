@@ -31,7 +31,8 @@ public sealed record GameServices(
     BotnetService Botnet,
     ScriptService Scripts,
     HackingFormulas HackingFormulas,
-    BotnetFormulas BotnetFormulas);
+    BotnetFormulas BotnetFormulas,
+    NetworkFormulas NetworkFormulas);
 
 public sealed class GameSession : IAsyncDisposable
 {
@@ -114,8 +115,9 @@ public sealed class GameSession : IAsyncDisposable
 
         var hackingFormulas = new HackingFormulas(options.Balance);
         var botnetFormulas = new BotnetFormulas(options.Balance);
+        var networkFormulas = new NetworkFormulas(options.Balance);
 
-        var networkService = new NetworkService(state);
+        var networkService = new NetworkService(state, scheduler, networkFormulas);
         var serverActions = new ServerActions(state, scheduler, hackingFormulas, randomSource);
         var botnetService = new BotnetService(state, botnetFormulas);
 
@@ -127,7 +129,7 @@ public sealed class GameSession : IAsyncDisposable
             ?? new NullByteApiFactory(state, scheduler, networkService, botnetService, serverActions, hackingFormulas, botnetFormulas, options.Output);
         var scriptService = new ScriptService(state, scriptCompiler, scriptRunner, apiFactory, scriptProcessManager);
 
-        var services = new GameServices(networkService, serverActions, botnetService, scriptService, hackingFormulas, botnetFormulas);
+        var services = new GameServices(networkService, serverActions, botnetService, scriptService, hackingFormulas, botnetFormulas, networkFormulas);
 
         // Systems are updated by the game loop on the game thread; they must be added before it starts.
         gameLoop.AddSystem(new BotnetSystem(state, botnetFormulas));

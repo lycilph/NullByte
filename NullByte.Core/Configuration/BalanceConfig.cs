@@ -107,6 +107,11 @@ public sealed record BalanceConfig
     /// </summary>
     public double WeakenDurationMultiplier { get; init; } = 4.0;
 
+    /// <summary>
+    /// Analyze duration in seconds.
+    /// </summary>
+    public double AnalyzeDuration { get; init; } = 1.0;
+
 
     // Experience and skill progression
 

@@ -1,8 +1,11 @@
-﻿namespace NullByte.Core.Domain;
+﻿using System.Diagnostics;
+
+namespace NullByte.Core.Domain;
 
 /// <summary>
 /// Represents a server in the game network.
 /// </summary>
+[DebuggerDisplay("Hostname: {Hostname}, Security: {Security}, Max Ram: {MaximumRam}")]
 public sealed class Server
 {
     private double money;

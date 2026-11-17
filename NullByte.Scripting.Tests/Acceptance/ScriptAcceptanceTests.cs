@@ -19,6 +19,7 @@ public sealed class ScriptAcceptanceTests
         var balance = new BalanceConfig();
         var formulas = new HackingFormulas(balance);
         var botnetFormulas = new BotnetFormulas(balance);
+        var networkFormulas = new NetworkFormulas(balance);
 
         var player = new Player(
             homeHostname: "home",
@@ -61,7 +62,7 @@ public sealed class ScriptAcceptanceTests
         // Zero guarantees that the hack succeeds.
         var randomSource = new FixedRandomSource(0);
 
-        var networkServices = new NetworkService(gameState);
+        var networkServices = new NetworkService(gameState, scheduler, networkFormulas);
         var botnetService = new BotnetService(gameState, botnetFormulas);
         var actions = new ServerActions(
             gameState,

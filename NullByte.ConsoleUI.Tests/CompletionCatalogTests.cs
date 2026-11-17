@@ -1,6 +1,8 @@
 ﻿using NullByte.ConsoleUI.Commands;
 using NullByte.ConsoleUI.Terminal;
+using NullByte.Core.Formulas;
 using NullByte.Core.Services;
+using NullByte.Core.Time;
 using NullByte.Core.World;
 using NullByte.Shell;
 
@@ -100,9 +102,11 @@ public sealed class CompletionCatalogTests
         var gameState = InitialGameStateFactory.Create();
         var session = GameSession.Create(new GameSessionOptions() { Output = terminal });
         var registry = CommandSetup.Create(session, terminal);
+        var scheduler = new GameScheduler(new FakeGameClock());
+        var formulas = new NetworkFormulas(new Core.Configuration.BalanceConfig());
 
         return new Fixture(
-            new NetworkService(gameState),
+            new NetworkService(gameState, scheduler, formulas),
             new CompletionCatalog(registry, gameState));
     }
 

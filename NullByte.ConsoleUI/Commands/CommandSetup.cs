@@ -15,7 +15,7 @@ public static class CommandSetup
             new DebugCommands(session.State.Player, session.Services.Network, session.State.FileSystem, session.Clock, registry, terminal),
             new SystemCommands(registry, terminal, shutdownRequest),
             new PlayerCommands(session.State.Player, session.Services.Network, session.Services.HackingFormulas, terminal),
-            new NetworkCommands(session.Services.Network, terminal),
+            new NetworkCommands(session.Clock, session.Services.Network, session.Services.NetworkFormulas, terminal),
             new FileCommands(session.State.FileSystem, session.Services.Network, terminal),
             new ScriptCommands(session.Services.Network, session.Services.Scripts, terminal),
             new ActionCommands(session.State.Player, session.Clock, session.Services.HackingFormulas, session.Services.Actions, session.Services.Network, terminal),
