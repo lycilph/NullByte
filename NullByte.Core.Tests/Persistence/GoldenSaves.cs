@@ -87,7 +87,23 @@ internal static class GoldenSaves
     },
     {
       "from": "home",
+      "to": "foodnstuff"
+    },
+    {
+      "from": "home",
       "to": "n00dles"
+    },
+    {
+      "from": "n00dles",
+      "to": "foodnstuff"
+    },
+    {
+      "from": "n00dles",
+      "to": "home"
+    },
+    {
+      "from": "zero-day",
+      "to": "foodnstuff"
     }
   ],
   "botnet": {

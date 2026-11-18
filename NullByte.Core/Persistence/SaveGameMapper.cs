@@ -56,9 +56,16 @@ public static class SaveGameMapper
             },
             Servers = servers.Select(CaptureServer).ToArray(),
 
-            // Neighbor order depends on the order connections were made, so keep it.
+            // Connections have no semantic order in the game, so serialize them
+            // deterministically. This makes saves independent of construction order.
             Connections = state.Network.GetConnections()
-                .Select(connection => new ConnectionSave { From = connection.First, To = connection.Second })
+                .Select(connection => new ConnectionSave
+                {
+                    From = connection.First,
+                    To = connection.Second
+                })
+                .OrderBy(connection => connection.From, StringComparer.Ordinal)
+                .ThenBy(connection => connection.To, StringComparer.Ordinal)
                 .ToArray(),
 
             Botnet = new BotnetSave

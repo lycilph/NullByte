@@ -168,7 +168,9 @@ public class SaveGameTests
     {
         // If this fails you changed the save format. Bump SaveGame.CurrentVersion, add a migration,
         // and keep the old golden text as a test for that migration. Do not just edit the golden text.
-        Assert.Equal(Normalize(GoldenSaves.V1), Describe(CreateState()));
+        string expected = Normalize(GoldenSaves.V1);
+        string actual = Describe(CreateState());
+        Assert.Equal(expected, actual);
     }
 
     [Fact]

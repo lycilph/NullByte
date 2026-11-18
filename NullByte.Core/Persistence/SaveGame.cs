@@ -58,7 +58,9 @@ public sealed record ServerSave
     public required bool HasRootAccess { get; init; }
 }
 
-/// <summary>A connection between two servers. Listed in the order the connections were made.</summary>
+/// <summary>
+/// A connection between two servers. Connections are serialized in canonical order so that equivalent networks produce identical save files.
+/// </summary>
 public sealed record ConnectionSave
 {
     public required string From { get; init; }
