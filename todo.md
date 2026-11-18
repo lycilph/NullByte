@@ -1,11 +1,25 @@
-﻿# Todo
+﻿# In progress
 
-* Add tab-completion for savegames
+* M8 milestone - Visual Studio Code editor integration
 
-* Check if it is possible to use vs code as an editor for the game
-  * Should have intellisense etc.
-  * Could communicate with game through udp, sockets or something like this
+
+# Todo
+
 * Add options for Ram usage and compilation to the NanoEditor 
 * Align script method names and console commands
 * Add the backdoor command
   * Time = same as hack, level required = same as hack, effect: the player can always connect directly to the server
+
+
+# Future ideas
+
+- Expand the virtual filesystem to also handle folders
+- Later on extra servers would live in api.cloud.* etc.
+- Make botnet and cloud servers unlockable
+  - Make a system to unlock features on a trigger
+- Add debugdisplay to domain classes
+- Use mocks in the tests
+- Add animated startup (see version 0.5)
+- Add a compile script option in the game (when we have a UI)
+- print/tprint destinction (script output versus player terminal output)
+- Move base-cost of scripts (1.6 in ScriptRamAnalyzer) to the balance class
