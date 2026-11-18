@@ -15,6 +15,8 @@ public enum CompletionKind
     Filename,
     /// <summary>Combination of the Filename and KnownServer values.</summary>
     FilenameOrKnownServer,
+    /// <summary>Existing save game.</summary>
+    SaveGame,
     /// <summary>Existing botnet node numbers.</summary>
     BotnetNode
 }

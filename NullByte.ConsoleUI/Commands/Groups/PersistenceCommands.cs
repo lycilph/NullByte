@@ -16,14 +16,20 @@ public sealed class PersistenceCommands(
             "save [name]",
             $"Save the game (default name '{DefaultSlot}').", 
             SaveAsync)
-        { MinArgs = 1, MaxArgs = 1 });
+        { 
+            MinArgs = 1, MaxArgs = 1,
+            Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.SaveGame }]
+        });
 
         registry.Register(new CommandDefinition(
             "load",
             "load [name]",
             $"Load a saved game (default name '{DefaultSlot}'). Unsaved progress is lost.", 
             LoadAsync)
-        { MinArgs = 1, MaxArgs = 1 });
+        {
+            MinArgs = 1, MaxArgs = 1,
+            Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.SaveGame }]
+        });
 
         registry.Register(new CommandDefinition(
             "saves",

@@ -8,7 +8,7 @@ namespace NullByte.ConsoleUI;
 
 public sealed class GameHost(
     ThreadSafeConsoleTerminal terminal,
-    SaveManager saves,
+    SaveManager saveManager,
     ShutdownRequest shutdownRequest,
     GameSessionOptions baseOptions) : IAsyncDisposable
 {
@@ -105,7 +105,7 @@ public sealed class GameHost(
         {
             try
             {
-                await saves.SaveAsync(current.Session, AutosaveService.Slot);
+                await saveManager.SaveAsync(current.Session, AutosaveService.Slot);
             }
             catch (Exception exception)
             {
@@ -149,7 +149,7 @@ public sealed class GameHost(
     {
         try
         {
-            var restored = await saves.LoadAsync(slot);
+            var restored = await saveManager.LoadAsync(slot);
 
             if (restored is null && reportMissing)
                 terminal.WriteLine($"No save named '{slot}'.");
@@ -169,9 +169,9 @@ public sealed class GameHost(
         var session = GameSession.Create(options);
         var loadRequest = new LoadRequest();
 
-        var registry = CommandSetup.Create(session, terminal, shutdownRequest, saves, loadRequest);
+        var registry = CommandSetup.Create(session, terminal, shutdownRequest, saveManager, loadRequest);
         var dispatcher = new CommandDispatcher(registry, terminal);
-        var completion = new CompletionCatalog(registry, session.State);
+        var completion = new CompletionCatalog(registry, session.State, saveManager);
         terminal.SetCompletionProvider(completion);
 
         await session.StartAsync();
@@ -185,7 +185,7 @@ public sealed class GameHost(
 
         terminal.SetPrompt($"root@{session.State.Player.CurrentHostname} $ ");
 
-        var autosave = new AutosaveService(saves, session, terminal, AutosaveInterval);
+        var autosave = new AutosaveService(saveManager, session, terminal, AutosaveInterval);
 
         return new Game(session, dispatcher, completion, loadRequest, autosave);
     }

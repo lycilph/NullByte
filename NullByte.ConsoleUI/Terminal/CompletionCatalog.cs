@@ -1,5 +1,6 @@
 ﻿using NullByte.ConsoleUI.Commands;
 using NullByte.Core.Domain;
+using NullByte.Shell.Persistence;
 
 namespace NullByte.ConsoleUI.Terminal;
 
@@ -15,16 +16,19 @@ public sealed class CompletionCatalog : ICompletionProvider
 {
     private readonly CommandRegistry registry;
     private readonly GameState gameState;
+    private readonly SaveManager saveManager;
 
     private volatile CompletionSnapshot snapshot = CompletionSnapshot.Empty;
 
-    public CompletionCatalog(CommandRegistry registry, GameState gameState)
+    public CompletionCatalog(CommandRegistry registry, GameState gameState, SaveManager saveManager)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(gameState);
+        ArgumentNullException.ThrowIfNull(saveManager);
 
         this.registry = registry;
         this.gameState = gameState;
+        this.saveManager = saveManager;
     }
 
     /// <summary>
@@ -64,6 +68,13 @@ public sealed class CompletionCatalog : ICompletionProvider
                 .ListFiles(player.CurrentHostname)
                 .ToArray();
 
+        var saves =
+            saveManager
+            .ListAsync()
+            .Result
+            .Select(s => s.Name)
+            .ToArray();
+
         var botnetNodes =
             Enumerable
                 .Range(1, gameState.Botnet.NodeCount)
@@ -78,6 +89,7 @@ public sealed class CompletionCatalog : ICompletionProvider
                 [CompletionKind.KnownServer] = knownServers,
                 [CompletionKind.Filename] = files,
                 [CompletionKind.FilenameOrKnownServer] = filesOrServers,
+                [CompletionKind.SaveGame] = saves,
                 [CompletionKind.BotnetNode] = botnetNodes
             };
 

@@ -1,7 +1,6 @@
 ﻿using System.Text.Json.Nodes;
 using NullByte.Core.Domain;
 using NullByte.Core.Persistence;
-using Xunit;
 
 namespace NullByte.Core.Tests.Persistence;
 

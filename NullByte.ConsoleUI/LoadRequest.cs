@@ -2,6 +2,7 @@
 
 public sealed class LoadRequest
 {
+    // Accessed only by the game thread and the host, sequentially.
     private string? slot;
 
     public void Request(string slotName)

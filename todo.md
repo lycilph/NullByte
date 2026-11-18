@@ -1,6 +1,5 @@
 ﻿# Todo
 
-* is this  loadRequest.Request(slot); thread-safe (in persistencecommands)
 * Add tab-completion for savegames
 
 * Check if it is possible to use vs code as an editor for the game
