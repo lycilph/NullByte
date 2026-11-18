@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Nodes;
 using NullByte.Core.Domain;
 using NullByte.Core.Persistence;
+using Xunit;
 
 namespace NullByte.Core.Tests.Persistence;
 
@@ -25,8 +26,9 @@ public class SaveGameTests
         network.AddServer(new Server("foodnstuff", 100_000, 60_000, 5, 2, 5, 5, 25, 8));
         network.AddServer(new Server("zero-day", 1_000_000, 500_000, 40, 7.54, 66.5, 50, 10, 16));
 
-        network.Connect("home", "foodnstuff");
+        // Deliberately not made in alphabetical order.
         network.Connect("home", "n00dles");
+        network.Connect("home", "foodnstuff");
         network.Connect("n00dles", "foodnstuff");
         network.Connect("foodnstuff", "zero-day");
 
@@ -84,16 +86,20 @@ public class SaveGameTests
     }
 
     [Fact]
-    public void Neighbors_keep_the_order_scan_shows_them_in()
+    public void Neighbors_are_alphabetical_before_and_after_a_load()
     {
-        var restored = SaveGameMapper.Restore(Serializer.Deserialize(Describe(CreateState())));
+        var original = CreateState();
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(Describe(original)));
 
-        Assert.Equal(
-            new[] { "foodnstuff", "n00dles" },
-            restored.State.Network.GetNeighbors("home").Select(server => server.Hostname));
-        Assert.Equal(
-            new[] { "foodnstuff", "home" },
-            restored.State.Network.GetNeighbors("n00dles").Select(server => server.Hostname));
+        foreach (var state in new[] { original, restored.State })
+        {
+            Assert.Equal(
+                new[] { "foodnstuff", "n00dles" },
+                state.Network.GetNeighbors("home").Select(server => server.Hostname));
+            Assert.Equal(
+                new[] { "foodnstuff", "home" },
+                state.Network.GetNeighbors("n00dles").Select(server => server.Hostname));
+        }
     }
 
     [Fact]
@@ -105,6 +111,30 @@ public class SaveGameTests
         Assert.Equal("var t = args[0];\nnb.Print(\"héllo \\\"world\\\" ✓\");\n", content);
         Assert.True(restored.State.FileSystem.TryReadFile("home", "empty.cx", out var empty));
         Assert.Equal("", empty);
+    }
+
+    [Fact]
+    public void The_file_does_not_depend_on_the_order_things_were_created_in()
+    {
+        // A restored game is built in a different order than the one that was saved, so the file
+        // must describe the graph, not the history of how it was put together.
+        var hosts = new[] { "home", "n00dles", "foodnstuff", "zero-day" };
+        var edges = new[] { ("home", "n00dles"), ("home", "foodnstuff"), ("n00dles", "foodnstuff"), ("foodnstuff", "zero-day") };
+
+        string Save(IEnumerable<string> hostOrder, IEnumerable<(string, string)> edgeOrder)
+        {
+            var network = new Network();
+            foreach (var host in hostOrder)
+                network.AddServer(new Server(host, 1000, 500, 3, 1, 3, 1, 30, 4, hasRootAccess: host == "home"));
+            foreach (var (a, b) in edgeOrder)
+                network.Connect(a, b);
+
+            return Serializer.Serialize(SaveGameMapper.Capture(new GameState(new Player("home"), network), GameTime, [], SavedAt));
+        }
+
+        var reversedAndFlipped = edges.Reverse().Select(edge => (edge.Item2, edge.Item1));
+
+        Assert.Equal(Save(hosts, edges), Save(hosts.Reverse(), reversedAndFlipped));
     }
 
     [Fact]
@@ -138,9 +168,7 @@ public class SaveGameTests
     {
         // If this fails you changed the save format. Bump SaveGame.CurrentVersion, add a migration,
         // and keep the old golden text as a test for that migration. Do not just edit the golden text.
-        var golden = Normalize(GoldenSaves.V1);
-        var state = Describe(CreateState());
-        Assert.Equal(golden, state);
+        Assert.Equal(Normalize(GoldenSaves.V1), Describe(CreateState()));
     }
 
     [Fact]
