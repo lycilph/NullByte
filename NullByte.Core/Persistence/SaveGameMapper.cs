@@ -19,10 +19,7 @@ public static class SaveGameMapper
     /// Copies the game into a save. Reads game state, so call it on the game thread.
     /// </summary>
     public static SaveGame Capture(
-        GameState state,
-        TimeSpan gameTime,
-        IReadOnlyList<ProcessSave> processes,
-        DateTimeOffset savedAtUtc)
+        GameState state, TimeSpan gameTime, IReadOnlyList<ProcessSave> processes, DateTimeOffset savedAtUtc)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(processes);
@@ -72,7 +69,7 @@ public static class SaveGameMapper
                     .ToArray()
             },
             Files = files,
-            Processes = processes.OrderBy(process => process.Pid).ToArray()
+            Processes = processes.ToArray()          // was: sorted by Pid
         };
     }
 
@@ -103,9 +100,8 @@ public static class SaveGameMapper
         Hostname = server.Hostname,
         MaximumMoney = server.MaximumMoney,
 
-        // Money and security are adjusted by repeated floating-point arithmetic, which can leave
-        // them a few ulps outside the range the Server constructor accepts (for example security
-        // just under its minimum after a full weaken). Clamp, or a perfectly good save would not load.
+        // Clamp: repeated floating-point adds/subtracts can leave these a few ulps outside the range
+        // the Server constructor accepts, which would make a legitimate save unloadable.
         Money = Math.Clamp(server.Money, 0, server.MaximumMoney),
         Security = Math.Max(server.Security, server.MinimumSecurity),
 
@@ -164,20 +160,15 @@ public static class SaveGameMapper
         foreach (var file in save.Files)
             state.FileSystem.WriteFile(file.Hostname, file.Name, file.Content);
 
-        var pids = new HashSet<int>();
         foreach (var process in save.Processes)
         {
-            RequireServer(network, process.Hostname, $"The host of process {process.Pid}");
+            RequireServer(network, process.Hostname, $"The host of '{process.Filename}'");
 
-            if (process.Pid < 1)
-                throw new InvalidDataException($"Process id {process.Pid} is not valid.");
             if (process.Threads < 1)
-                throw new InvalidDataException($"Process {process.Pid} has fewer than one thread.");
-            if (!pids.Add(process.Pid))
-                throw new InvalidDataException($"Process id {process.Pid} appears more than once.");
+                throw new InvalidDataException($"'{process.Filename}' has fewer than one thread.");
         }
 
-        return new RestoredGame(state, save.GameTime, save.Processes.OrderBy(process => process.Pid).ToArray());
+        return new RestoredGame(state, save.GameTime, save.Processes.ToArray());
     }
 
     private static void RequireServer(Network network, string hostname, string what)

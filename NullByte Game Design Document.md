@@ -299,7 +299,18 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 
 **Acceptance**: save, quit, load restores an equivalent state; a golden-file test guards the format.
 
-### M8: Sandbox and safety
+### M8: Visual Studio Code editor integration
+
+**Deliverables**
+
+- Enable the use of visual studio code editor (through sockets?)
+- Exception handling: script crashes are caught, logged and do not take down the game loop.
+
+**Acceptance**
+
+- A script can be edited in vs code and executed in the game
+
+### M9: Sandbox and safety
 
 **Deliverables**
 
@@ -311,7 +322,7 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 
 - A set of malicious or buggy sample scripts (file access, reflection, `while(true){}`, thrown exceptions) are rejected or contained, and the game continues to run.
 
-### M9: Progression and balance pass
+### M10: Progression and balance pass
 
 **Deliverables**
 
@@ -322,7 +333,7 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 
 **Acceptance**: a play session of roughly 1 to 2 hours reaches the final in-scope tier of servers, with a script-based economy clearly better than manual play.
 
-### M10: First playable release
+### M11: First playable release
 
 **Deliverables**: bug fixing, README, sample scripts, a short "how to play" document, a tagged build.
 

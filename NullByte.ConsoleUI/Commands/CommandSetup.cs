@@ -1,16 +1,22 @@
 ﻿using NullByte.ConsoleUI.Commands.Groups;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Shell;
+using NullByte.Shell.Persistence;
 
 namespace NullByte.ConsoleUI.Commands;
 
 public static class CommandSetup
 {
-    public static CommandRegistry Create(GameSession session, IGameTerminal terminal, ShutdownRequest? shutdownRequest = null)
+    public static CommandRegistry Create(
+        GameSession session,
+        IGameTerminal terminal,
+        ShutdownRequest? shutdownRequest = null,
+        SaveManager? saves = null,
+        LoadRequest? loadRequest = null)
     {
         var registry = new CommandRegistry();
 
-        ICommandGroup[] groups =
+        List<ICommandGroup> groups =
         [
             new DebugCommands(session.State.Player, session.Services.Network, session.State.FileSystem, session.Clock, registry, terminal),
             new SystemCommands(registry, terminal, shutdownRequest),
@@ -21,6 +27,10 @@ public static class CommandSetup
             new ActionCommands(session.State.Player, session.Clock, session.Services.HackingFormulas, session.Services.Actions, session.Services.Network, terminal),
             new BotnetCommands(session.State.Botnet, session.Services.Botnet, session.Services.BotnetFormulas, terminal)
         ];
+        
+        // Hosts that cannot save (and tests) simply leave these out.
+        if (saves is not null && loadRequest is not null)   // new
+            groups.Add(new PersistenceCommands(session, saves, loadRequest, terminal));
 
         foreach (var group in groups)
             group.Register(registry);

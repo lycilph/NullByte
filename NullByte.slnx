@@ -7,6 +7,7 @@
     <File Path="NullByte Game Design Document.md" />
     <File Path="README.md" />
     <File Path="todo.md" />
+    <File Path="VisualStudioCode-Integration.md" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="NullByte.ConsoleUI/NullByte.ConsoleUI.csproj" Id="cdcac8a8-11b5-4852-8078-0f43ce7d1fc4" />

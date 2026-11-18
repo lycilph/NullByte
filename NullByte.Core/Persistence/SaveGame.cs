@@ -87,7 +87,6 @@ public sealed record FileSave
 
 public sealed record ProcessSave
 {
-    public required int Pid { get; init; }
     public required string Filename { get; init; }
     public required string Hostname { get; init; }
     public required IReadOnlyList<string> Args { get; init; }

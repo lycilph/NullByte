@@ -1,5 +1,6 @@
 ﻿
 using NullByte.Core.Domain;
+using NullByte.Core.Persistence;
 using NullByte.Core.Scripting;
 using NullByte.Scripting.Compilation;
 
@@ -193,6 +194,38 @@ public sealed class ScriptService : IScriptOperations
                 p.Hostname,
                 p.State))
             .ToList();
+    }
+
+    /// Describes the running processes so they can be started again after a load. A script's own
+    /// state (its local variables, how far through a hack it was) is not saved: it starts from the top.
+    /// Game thread only.
+    public IReadOnlyList<ProcessSave> CaptureRunningProcesses()
+        => processManager.Processes                  // already in PID order, i.e. the order they were started
+            .Where(process => process.State == ScriptProcessState.Running)
+            .Select(process => new ProcessSave
+            {
+                Filename = process.Filename,
+                Hostname = process.Hostname,
+                Args = process.Args.ToArray(),
+                Threads = process.Threads
+            })
+            .ToArray();
+
+    /// Starts saved processes again, one after the other, in the order given. They get new PIDs. A process that
+    /// cannot start (the script no longer compiles, or its RAM no longer fits) is reported in the
+    /// result and does not stop the others.
+    public async Task<IReadOnlyList<ScriptRestoreResult>> RestoreProcessesAsync(IEnumerable<ProcessSave> saved)
+    {
+        ArgumentNullException.ThrowIfNull(saved);
+
+        var results = new List<ScriptRestoreResult>();
+        foreach (var process in saved)
+        {
+            var result = await Start(process.Hostname, process.Filename, process.Args, process.Threads);
+            results.Add(new ScriptRestoreResult(process, result));
+        }
+
+        return results;
     }
 
     public bool ScriptRunning(string filename, string hostname)

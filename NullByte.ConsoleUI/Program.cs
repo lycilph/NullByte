@@ -1,58 +1,43 @@
 ﻿using System.Text;
-using NullByte.ConsoleUI.Commands;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Persistence;
-using NullByte.Core.Services;
-using NullByte.Core.Time;
 using NullByte.Shell;
+using NullByte.Shell.Persistence;
 
 namespace NullByte.ConsoleUI;
 
 public class Program
 {
-    static async Task Main()
+    static async Task Main(string[] args)
     {
         Console.OutputEncoding = Encoding.UTF8;
         Console.TreatControlCAsInput = true; // Ctrl+c no longer exists the application
 
         await using var terminal = new ThreadSafeConsoleTerminal(prompt: "root@home $ ", maximumHistoryLines: 2_000);
 
+        var saves = new SaveManager(new FileSaveStore(GetSaveDirectory()), new SaveGameSerializer());
+        var shutdownRequest = new ShutdownRequest();
+
         var sessionOptions = new GameSessionOptions()
         {
-            Output = terminal, 
+            Output = terminal,
             // TODO: remove this (only for debugging)
             Balance = new Core.Configuration.BalanceConfig() { GameSpeedMultiplier = 5.0, AnalyzeDuration = 5.0 }
         };
-        await using var session = GameSession.Create(sessionOptions);
-
-        var shutdownRequest = new ShutdownRequest();
-
-        var commandRegistry = CommandSetup.Create(session, terminal, shutdownRequest);
-        var commandDispatcher = new CommandDispatcher(commandRegistry, terminal);
-        var completionCatalog = new CompletionCatalog(commandRegistry, session.State);
-        terminal.SetCompletionProvider(completionCatalog);
+        await using var host = new GameHost(terminal, saves, shutdownRequest, sessionOptions);
 
         var terminalTask = terminal.RunAsync();
 
         try
         {
-            await session.StartAsync();
-
-            // Initialize the completion catalog
-            await session.GameThread.InvokeAsync(() =>
-            {
-                completionCatalog.Refresh();
-                return Task.CompletedTask;
-            });
-
-            WriteStartupMessage(terminal, session.Clock);
-
-            await ProcessCommandsAsync(terminal, session, commandDispatcher, completionCatalog, shutdownRequest);
+            await host.StartAsync(resumeAutosave: !args.Contains("--new"));
+            await host.RunAsync();
         }
         finally
         {
+            // Save and stop the game while the terminal is still running, then stop the terminal.
+            await host.DisposeAsync();
             terminal.RequestStop();
-            await session.StopAsync();
             await terminalTask;
         }
 
@@ -60,67 +45,7 @@ public class Program
         await Task.Delay(500);
     }
 
-    private static void WriteStartupMessage(IGameOutput output, IGameClock clock)
-    {
-        output.WriteLine("NullByte");
-        output.WriteLine();
-        output.WriteLine("Single-threaded simulation started.");
-        output.WriteLine($"Game thread ready. Game time: {clock.Elapsed.TotalSeconds:F3}s");
-        output.WriteLine();
-        output.WriteLine("Type 'help' to see available commands ('debug' for other commands).");
-        output.WriteLine("Tab completes commands and server names, Up/Down recalls earlier input.");
-        output.WriteLine();
-    }
-
-    private static async Task ProcessCommandsAsync(
-        IGameTerminal terminal,
-        GameSession session,
-        CommandDispatcher dispatcher,
-        CompletionCatalog completionCatalog,
-        ShutdownRequest shutdownRequest)
-    {
-        await foreach (var commandLine in terminal.ReadCommandsAsync())
-        {
-            if (string.IsNullOrWhiteSpace(commandLine))
-                continue;
-
-            try
-            {
-                await session.GameThread.InvokeAsync(async () =>
-                {
-                    try
-                    {
-                        terminal.SetInputEnabled(false);
-                        await dispatcher.DispatchAsync(commandLine);
-
-                        // Update terminal prompt
-                        terminal.SetPrompt($"root@{session.State.Player.CurrentHostname} $ ");
-                    }
-                    finally
-                    {
-                        terminal.SetInputEnabled(true);
-                        // Commands such as scan and connect change what can be completed.
-                        completionCatalog.Refresh();
-                    }
-                });
-            }
-            catch (OperationCanceledException)
-                when (terminal.StoppingToken.IsCancellationRequested)
-            {
-                return;
-            }
-            catch (InvalidOperationException)
-                when (!session.GameThread.IsRunning)
-            {
-                return;
-            }
-            catch (Exception exception)
-            {
-                terminal.WriteLine($"Command failed: {exception.Message}");
-            }
-
-            if (shutdownRequest.IsRequested)
-                break;
-        }
-    }
+    // TODO: remove this (only for debugging)
+    private static string GetSaveDirectory() => "Saves";
+        //=> Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NullByte", "saves");
 }
