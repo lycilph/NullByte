@@ -1,10 +1,12 @@
 ﻿# In progress
 
+* Signatur help in extension
+
 * M8 milestone - Visual Studio Code editor integration
-* Extensions for the editor integrations
-  * intellisense for the api
-  * Should remove the default objects stuff (like gethashcode etc.)
-* include other files
+	* Extensions for the editor integrations
+	  * intellisense for the api
+	  * Should remove the default objects stuff (like gethashcode etc.)
+	* include other files
 
 
 # Todo

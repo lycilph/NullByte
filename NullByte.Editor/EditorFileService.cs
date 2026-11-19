@@ -41,6 +41,8 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
             return await Task.Run(() => CompleteAsync(request));
         if (op == "hover")
             return await Task.Run(() => HoverAsync(request));
+        if (op == "signatureHelp")
+            return await Task.Run(() => SignatureHelpAsync(request));
 
         var backend = backendProvider();
         if (backend is not { GameThread.IsRunning: true })
@@ -87,6 +89,12 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
     {
         var (content, offset) = Source(request);
         return new HoverResult(await languageService.GetHoverAsync(content, offset));
+    }
+
+    private async Task<object> SignatureHelpAsync(JsonObject request)
+    {
+        var (content, offset) = Source(request);
+        return new SignatureHelpResult(await languageService.GetSignatureHelpAsync(content, offset));
     }
 
     // Runs on the game thread from here down.

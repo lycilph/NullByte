@@ -16,8 +16,13 @@ using NullByte.Scripting.Compilation;
 
 namespace NullByte.Scripting.LanguageService;
 
+public sealed record ScriptParameterHelp(string Label, string? Documentation);
+public sealed record ScriptSignature(string Label, string? Documentation, double? RamCost, int ActiveParameter, IReadOnlyList<ScriptParameterHelp> Parameters);
+public sealed record ScriptSignatureHelp(IReadOnlyList<ScriptSignature> Signatures, int ActiveSignature);
+
 public sealed record ScriptCompletion(string Label, string InsertText, string Kind, string SortText, double? RamCost, string? Documentation);
 public sealed record ScriptHover(string Signature, string? Documentation, double? RamCost);
+
 public sealed record ApiMember(double RamCost, string? Summary);
 
 /// <summary>
@@ -164,35 +169,138 @@ public sealed class ScriptLanguageService : IDisposable
         return members;
     }
 
-    private static string? Summary(ISymbol symbol)
+    public async Task<ScriptSignatureHelp?> GetSignatureHelpAsync(string source, int offset, CancellationToken ct = default)
+    {
+        var (document, position) = Prepare(source, offset, ct);
+
+        var root = await document.GetSyntaxRootAsync(ct);
+        var model = await document.GetSemanticModelAsync(ct);
+        if (root is null || model is null)
+            return null;
+
+        // The innermost call whose parentheses contain the cursor.
+        var arguments = root.FindToken(Math.Max(position - 1, 0)).Parent?.AncestorsAndSelf()
+            .OfType<ArgumentListSyntax>()
+            .FirstOrDefault(a => a.Parent is InvocationExpressionSyntax or ObjectCreationExpressionSyntax
+                && position >= a.OpenParenToken.Span.End
+                && (a.CloseParenToken.IsMissing || position <= a.CloseParenToken.SpanStart));
+
+        if (arguments?.Parent is not { } call)
+            return null;
+
+        var candidates = GetCandidates(model, call, position, ct);
+        if (candidates.Count == 0)
+            return null;
+
+        // Commas before the cursor tell us which argument we are on.
+        var argumentIndex = arguments.Arguments.GetSeparators().Count(s => s.Span.End <= position);
+
+        // Prefer the overload the compiler resolved, else the first one with room for this argument.
+        var resolved = model.GetSymbolInfo(call, ct).Symbol as IMethodSymbol;
+        var active = candidates.FindIndex(c => resolved is not null && SymbolEqualityComparer.Default.Equals(c, resolved));
+        if (active < 0)
+            active = candidates.FindIndex(c => c.Parameters.Length > argumentIndex || HasParams(c));
+        if (active < 0)
+            active = 0;
+
+        return new ScriptSignatureHelp(
+            candidates.Select(c => ToSignature(c, arguments, argumentIndex)).ToArray(), active);
+    }
+
+    private static List<IMethodSymbol> GetCandidates(SemanticModel model, SyntaxNode call, int position, CancellationToken ct)
+    {
+        IEnumerable<IMethodSymbol> methods = call switch
+        {
+            InvocationExpressionSyntax invocation => MethodGroup(model, invocation, ct),
+            ObjectCreationExpressionSyntax creation when model.GetTypeInfo(creation, ct).Type is INamedTypeSymbol type
+                => type.InstanceConstructors,
+            _ => []
+        };
+
+        return methods.Where(m => model.IsAccessible(position, m)).OrderBy(m => m.Parameters.Length).ToList();
+    }
+
+    private static IEnumerable<IMethodSymbol> MethodGroup(SemanticModel model, InvocationExpressionSyntax invocation, CancellationToken ct)
+    {
+        var group = model.GetMemberGroup(invocation.Expression, ct).OfType<IMethodSymbol>().ToList();
+        if (group.Count > 0)
+            return group;
+
+        var info = model.GetSymbolInfo(invocation, ct);   // delegates and local functions
+        return info.Symbol is IMethodSymbol method ? [method] : info.CandidateSymbols.OfType<IMethodSymbol>();
+    }
+
+    private static bool HasParams(IMethodSymbol method)
+        => method.Parameters.Length > 0 && method.Parameters[^1].IsParams;
+
+    private static ScriptSignature ToSignature(IMethodSymbol method, ArgumentListSyntax arguments, int argumentIndex)
+    {
+        var documentation = DocumentationRoot((method.ReducedFrom ?? method).OriginalDefinition);
+
+        var parameters = method.Parameters
+            .Select(p => new ScriptParameterHelp(
+                p.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
+                Flatten(documentation?.Elements("param").FirstOrDefault(e => (string?)e.Attribute("name") == p.Name))))
+            .ToArray();
+
+        var isConstructor = method.MethodKind == MethodKind.Constructor;
+        var name = isConstructor
+            ? method.ContainingType.Name
+            : method.Name + (method.TypeParameters.Length > 0 ? $"<{string.Join(", ", method.TypeParameters.Select(t => t.Name))}>" : "");
+        var returnType = isConstructor ? "" : method.ReturnType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat) + " ";
+
+        return new ScriptSignature(
+            $"{returnType}{name}({string.Join(", ", parameters.Select(p => p.Label))})",
+            Flatten(documentation?.Element("summary")),
+            TryGetRamCost(method, out var cost) ? cost : null,
+            ActiveParameter(method, arguments, argumentIndex),
+            parameters);
+    }
+
+    private static int ActiveParameter(IMethodSymbol method, ArgumentListSyntax arguments, int argumentIndex)
+    {
+        // A named argument ("hostname: ...") points at its own parameter.
+        if (arguments.Arguments.ElementAtOrDefault(argumentIndex)?.NameColon is { } named)
+        {
+            var index = method.Parameters.Select(p => p.Name).ToList().IndexOf(named.Name.Identifier.ValueText);
+            if (index >= 0)
+                return index;
+        }
+
+        // Extra arguments all belong to a params array.
+        return HasParams(method) ? Math.Min(argumentIndex, method.Parameters.Length - 1) : argumentIndex;
+    }
+
+    private static XElement? DocumentationRoot(ISymbol symbol)
     {
         var xml = symbol.GetDocumentationCommentXml();
         if (string.IsNullOrWhiteSpace(xml))
             return null;
 
-        try
-        {
-            var summary = XDocument.Parse(xml).Descendants("summary").FirstOrDefault();
-            if (summary is null)
-                return null;
-
-            foreach (var reference in summary.Descendants().Where(e => e.Name == "see" || e.Name == "paramref").ToList())
-            {
-                var name = reference.Attribute("cref")?.Value.Split('.').Last()
-                    ?? reference.Attribute("name")?.Value
-                    ?? reference.Attribute("langword")?.Value
-                    ?? "";
-                reference.ReplaceWith(name);
-            }
-
-            var text = Regex.Replace(summary.Value, @"\s+", " ").Trim();
-            return text.Length == 0 ? null : text;
-        }
-        catch (XmlException)
-        {
-            return null;
-        }
+        try { return XDocument.Parse(xml).Root; }
+        catch (XmlException) { return null; }
     }
+
+    /// <summary>Plain text of a doc element: whitespace flattened, see/paramref turned into words.</summary>
+    private static string? Flatten(XElement? element)
+    {
+        if (element is null)
+            return null;
+
+        foreach (var reference in element.Descendants().Where(e => e.Name == "see" || e.Name == "paramref").ToList())
+        {
+            var name = reference.Attribute("cref")?.Value.Split('.').Last()
+                ?? reference.Attribute("name")?.Value
+                ?? reference.Attribute("langword")?.Value
+                ?? "";
+            reference.ReplaceWith(name);
+        }
+
+        var text = Regex.Replace(element.Value, @"\s+", " ").Trim();
+        return text.Length == 0 ? null : text;
+    }
+
+    private static string? Summary(ISymbol symbol) => Flatten(DocumentationRoot(symbol)?.Element("summary"));
 
     private static bool TryGetRamCost(IMethodSymbol method, out double cost)
     {

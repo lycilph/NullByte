@@ -6,6 +6,7 @@ import { NullByteFileSystem } from './filesystem';
 import { NullByteDiagnostics } from './diagnostics';
 import { registerCompletion } from './completion';
 import { registerHover } from './hover';
+import { registerSignatureHelp } from './signature';
 
 export function activate(context: vscode.ExtensionContext) {
   const log = vscode.window.createOutputChannel('NullByte', { log: true });
@@ -26,6 +27,7 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   context.subscriptions.push(
+    registerSignatureHelp(client, log),
     registerHover(client, log),
     registerCompletion(client, log),
     diagnostics,

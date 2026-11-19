@@ -17,6 +17,7 @@ internal sealed record DiagnosticInfo(string Id, string Message, string Severity
 internal sealed record DiagnoseResult(IReadOnlyList<DiagnosticInfo> Diagnostics);
 internal sealed record CompleteResult(IReadOnlyList<ScriptCompletion> Items);
 internal sealed record HoverResult(ScriptHover? Hover);
+internal sealed record SignatureHelpResult(ScriptSignatureHelp? Help);
 
 internal sealed class EditorException(string code, string message) : Exception(message)
 {
