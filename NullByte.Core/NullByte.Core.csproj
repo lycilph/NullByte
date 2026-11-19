@@ -4,8 +4,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- existing properties -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- not every public member is documented -->
   </PropertyGroup>
-
+  
   <ItemGroup>
     <None Remove="Data\initial-network.json" />
   </ItemGroup>

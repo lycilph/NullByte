@@ -137,12 +137,12 @@ public class SessionSaveLoadTests
         await using var keepAlive = first;
 
         var manager = new SaveManager(new MemoryStore(), Serializer);
-        await manager.SaveAsync(first, "slot1");
+        await manager.SaveAsync(first, "slot1", TestContext.Current.CancellationToken);
 
-        var restored = await manager.LoadAsync("slot1");
+        var restored = await manager.LoadAsync("slot1", TestContext.Current.CancellationToken);
         Assert.NotNull(restored);
         Assert.Equal(new[] { "loop.cx" }, restored!.State.FileSystem.ListFiles("home"));
-        Assert.Null(await manager.LoadAsync("missing"));
+        Assert.Null(await manager.LoadAsync("missing", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -157,11 +157,11 @@ public class SessionSaveLoadTests
 
         await using (new AutosaveService(manager, first, output, TimeSpan.FromMilliseconds(50)))
         {
-            for (var i = 0; i < 100 && await store.ReadAsync(AutosaveService.Slot) is null; i++)
-                await Task.Delay(50);
+            for (var i = 0; i < 100 && await store.ReadAsync(AutosaveService.Slot, TestContext.Current.CancellationToken) is null; i++)
+                await Task.Delay(50, TestContext.Current.CancellationToken);
         }
 
-        Assert.NotNull(await store.ReadAsync(AutosaveService.Slot));
+        Assert.NotNull(await store.ReadAsync(AutosaveService.Slot, TestContext.Current.CancellationToken));
         Assert.Contains(output.Lines, line => line == "Game autosaved.");
     }
 
@@ -173,19 +173,19 @@ public class SessionSaveLoadTests
         {
             var store = new FileSaveStore(directory);
 
-            Assert.Empty(await store.ListAsync());
-            Assert.Null(await store.ReadAsync("one"));
+            Assert.Empty(await store.ListAsync(TestContext.Current.CancellationToken));
+            Assert.Null(await store.ReadAsync("one", TestContext.Current.CancellationToken));
 
-            await store.WriteAsync("one", "first");
-            await store.WriteAsync("one", "second");
+            await store.WriteAsync("one", "first", TestContext.Current.CancellationToken);
+            await store.WriteAsync("one", "second", TestContext.Current.CancellationToken);
 
-            Assert.Equal("second", await store.ReadAsync("one"));
-            Assert.Equal("first", await File.ReadAllTextAsync(Path.Combine(directory, "one.json.bak")));
-            Assert.Equal(new[] { "one" }, (await store.ListAsync()).Select(slot => slot.Name));
+            Assert.Equal("second", await store.ReadAsync("one", TestContext.Current.CancellationToken));
+            Assert.Equal("first", await File.ReadAllTextAsync(Path.Combine(directory, "one.json.bak"), TestContext.Current.CancellationToken));
+            Assert.Equal(new[] { "one" }, (await store.ListAsync(TestContext.Current.CancellationToken)).Select(slot => slot.Name));
             Assert.Empty(Directory.GetFiles(directory, "*.tmp"));
 
-            await Assert.ThrowsAsync<ArgumentException>(() => store.WriteAsync("../outside", "x"));
-            await Assert.ThrowsAsync<ArgumentException>(() => store.WriteAsync("", "x"));
+            await Assert.ThrowsAsync<ArgumentException>(() => store.WriteAsync("../outside", "x", TestContext.Current.CancellationToken));
+            await Assert.ThrowsAsync<ArgumentException>(() => store.WriteAsync("", "x", TestContext.Current.CancellationToken));
         }
         finally
         {

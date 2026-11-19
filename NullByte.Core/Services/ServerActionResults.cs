@@ -6,6 +6,7 @@
 /// <param name="Succeeded">
 /// Whether the hacking attempt succeeded.
 /// </param>
+/// <param name="FailureMessage"></param>
 /// <param name="MoneyStolen">
 /// The amount of money actually removed from the target server.
 /// </param>
@@ -32,6 +33,8 @@ public sealed record HackResult(
 /// <summary>
 /// Describes the outcome of a completed grow operation.
 /// </summary>
+/// <param name="Succeeded"></param>
+/// <param name="FailureMessage"></param>
 /// <param name="MoneyGrown">
 /// The amount of money actually added to the target server.
 /// </param>
@@ -58,6 +61,8 @@ public sealed record GrowResult(
 /// <summary>
 /// Describes the outcome of a completed weaken operation.
 /// </summary>
+/// <param name="Succeeded"></param>
+/// <param name="FailureMessage"></param>
 /// <param name="SecurityDecrease">
 /// The amount by which the target server's security was actually
 /// reduced.

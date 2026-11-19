@@ -1,10 +1,12 @@
 ﻿using NullByte.ConsoleUI.Commands;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Formulas;
+using NullByte.Core.Persistence;
 using NullByte.Core.Services;
 using NullByte.Core.Time;
 using NullByte.Core.World;
 using NullByte.Shell;
+using NullByte.Shell.Persistence;
 
 namespace NullByte.ConsoleUI.Tests;
 
@@ -105,9 +107,13 @@ public sealed class CompletionCatalogTests
         var scheduler = new GameScheduler(new FakeGameClock());
         var formulas = new NetworkFormulas(new Core.Configuration.BalanceConfig());
 
+        var fileSaveStore = new FileSaveStore("Saves");
+        var saveSerializer = new SaveGameSerializer();
+        var saveManager = new SaveManager(fileSaveStore, saveSerializer);
+
         return new Fixture(
             new NetworkService(gameState, scheduler, formulas),
-            new CompletionCatalog(registry, gameState));
+            new CompletionCatalog(registry, gameState, saveManager));
     }
 
     private sealed record Fixture(NetworkService Network, CompletionCatalog Catalog);

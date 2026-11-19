@@ -37,7 +37,7 @@ public sealed class GameState
     /// <summary>Gets the player's state.</summary>
     public Player Player { get; }
 
-    /// <summary><Gets the game network.</summary>
+    /// <summary>Gets the game network.</summary>
     public Network Network { get; }
 
     /// <summary>Gets the player's botnet.</summary>

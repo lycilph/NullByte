@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Logger, NullByteClient } from './client';
 
 type CompleteResult = {
-  items: { label: string; insertText: string; kind: string; sortText: string; ramCost?: number }[];
+  items: { label: string; insertText: string; kind: string; sortText: string; ramCost?: number; documentation?: string }[];
 };
 
 // Roslyn's WellKnownTags to VS Code's kinds.
@@ -47,6 +47,14 @@ export function registerCompletion(client: NullByteClient, log: Logger): vscode.
             item.insertText = i.insertText;
             item.filterText = i.insertText;   // the label can carry a suffix such as "<>"
             item.sortText = i.sortText;
+            if (i.documentation || (i.ramCost !== undefined && i.ramCost != null)) {
+              const markdown = new vscode.MarkdownString();
+              if (i.documentation) markdown.appendText(i.documentation);
+              if (i.ramCost !== undefined && i.ramCost != null) {
+                markdown.appendMarkdown(`${i.documentation ? '\n\n' : ''}**RAM cost:** ${i.ramCost.toFixed(2)} GB`);
+              }
+              item.documentation = markdown;
+            }
             return item;
           });
         } catch (error) {

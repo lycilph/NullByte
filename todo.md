@@ -4,6 +4,7 @@
 * Extensions for the editor integrations
   * intellisense for the api
   * Should remove the default objects stuff (like gethashcode etc.)
+* include other files
 
 
 # Todo

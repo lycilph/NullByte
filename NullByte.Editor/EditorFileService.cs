@@ -39,6 +39,8 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
             return await Task.Run(() => Diagnose(Required(request, "path"), Required(request, "content")));
         if (op == "complete")
             return await Task.Run(() => CompleteAsync(request));
+        if (op == "hover")
+            return await Task.Run(() => HoverAsync(request));
 
         var backend = backendProvider();
         if (backend is not { GameThread.IsRunning: true })
@@ -71,12 +73,20 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
             .ToArray());
     }
 
+    private static (string Content, int Offset) Source(JsonObject request)
+    => (Required(request, "content"),
+        request["offset"]?.GetValue<int>() ?? throw new EditorException("BadRequest", "Missing 'offset'."));
+
     private async Task<object> CompleteAsync(JsonObject request)
     {
-        var content = Required(request, "content");
-        var offset = request["offset"]?.GetValue<int>() ?? throw new EditorException("BadRequest", "Missing 'offset'.");
-
+        var (content, offset) = Source(request);
         return new CompleteResult(await languageService.GetCompletionsAsync(content, offset));
+    }
+
+    private async Task<object> HoverAsync(JsonObject request)
+    {
+        var (content, offset) = Source(request);
+        return new HoverResult(await languageService.GetHoverAsync(content, offset));
     }
 
     // Runs on the game thread from here down.

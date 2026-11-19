@@ -132,7 +132,11 @@ public sealed class ScriptCompiler : IScriptCompiler
                 AddReference(references, path);
         }
 
-        AddReference(references, typeof(INullByteApi).Assembly.Location);
+        var corePath = typeof(INullByteApi).Assembly.Location;
+        var coreXml = Path.ChangeExtension(corePath, ".xml");
+        references[corePath] = MetadataReference.CreateFromFile(
+            corePath,
+            documentation: File.Exists(coreXml) ? XmlDocumentationProvider.CreateFromFile(coreXml) : null);
 
         return references.Values.ToArray();
     }
