@@ -120,9 +120,14 @@ public sealed class ScriptLanguageService : IDisposable
         if (list is null)
             return [];
 
+        var root = await document.GetSyntaxRootAsync(ct);
+        var model = await document.GetSemanticModelAsync(ct);
+
+        var objectMemberNames = GetSystemObjectMemberNames(root, model, position, ct);
         var members = await GetApiMembersAsync(document, position, ct);
 
         return list.ItemsList
+            .Where(item => !(item.Tags.FirstOrDefault() == "Method" && objectMemberNames.Contains(item.DisplayText)))
             .Select(item =>
             {
                 var kind = item.Tags.FirstOrDefault() ?? "Text";
@@ -132,6 +137,26 @@ public sealed class ScriptLanguageService : IDisposable
                     member?.RamCost, member?.Summary);
             })
             .ToArray();
+    }
+
+    private static HashSet<string> GetSystemObjectMemberNames(SyntaxNode? root, SemanticModel? model, int position, CancellationToken ct)
+    {
+        if (root is null || model is null)
+            return [];
+
+        var access = root.FindToken(Math.Max(position - 1, 0)).Parent?.AncestorsAndSelf()
+            .OfType<MemberAccessExpressionSyntax>()
+            .FirstOrDefault(a => position >= a.OperatorToken.Span.End && position <= a.Name.Span.End);
+
+        if (access is null || model.GetTypeInfo(access.Expression, ct).Type is null)
+            return [];
+
+        var systemObject = model.Compilation.GetSpecialType(SpecialType.System_Object);
+        return systemObject.GetMembers()
+            .OfType<IMethodSymbol>()
+            .Where(m => m.MethodKind == MethodKind.Ordinary && !TryGetRamCost(m, out _))
+            .Select(m => m.Name)
+            .ToHashSet(StringComparer.Ordinal);
     }
 
     /// <summary>For `nb.Files.|`, the RAM cost of each method of the receiver's type, by name.</summary>

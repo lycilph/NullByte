@@ -3,9 +3,9 @@ wscat -c ws://127.0.0.1:8765/ws -H "Authorization: Bearer <contents of the token
 
 
 Where the PoC stands
-
 Known gaps, in roughly the order I’d tackle them if you want to expand:
 
+Add connect/disconnect commands (if connected and the game is restartet, it should reconnect)
 
 Real modification times and conflict detection: mtime is still a constant 0, so VS Code can’t warn when a file changed underneath you.
 
