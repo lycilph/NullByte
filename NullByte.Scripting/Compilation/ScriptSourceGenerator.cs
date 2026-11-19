@@ -18,7 +18,28 @@ internal static class ScriptSourceGenerator
     /// <summary>Name of the generated class; the runner looks it up by this name.</summary>
     public const string TypeName = "__NullByteScript";
 
+    internal readonly record struct SourceSegment(int OriginalStart, int Length, int GeneratedStart);
+
+    /// <summary>The generated source, plus where each part of the player's text ended up in it.</summary>
+    internal sealed record GeneratedScript(string Text, IReadOnlyList<SourceSegment> Segments)
+    {
+        public int ToGenerated(int originalOffset)
+        {
+            foreach (var segment in Segments)
+            {
+                if (originalOffset >= segment.OriginalStart && originalOffset < segment.OriginalStart + segment.Length)
+                    return segment.GeneratedStart + (originalOffset - segment.OriginalStart);
+            }
+
+            var last = Segments[^1];   // the cursor is at the very end
+            return last.GeneratedStart + last.Length;
+        }
+    }
+
     public static string Generate(SourceText source, CompilationUnitSyntax root, string fileName)
+        => GenerateMapped(source, root, fileName).Text;
+
+    public static GeneratedScript GenerateMapped(SourceText source, CompilationUnitSyntax root, string fileName)
     {
         // Everything before the first statement: extern aliases, usings, assembly attributes.
         var headerEnd = new[]
@@ -41,8 +62,11 @@ internal static class ScriptSourceGenerator
         var file = EscapeFileName(fileName);
 
         var builder = new StringBuilder();
+        var segments = new List<SourceSegment>();
 
+        segments.Add(new SourceSegment(0, headerEnd, builder.Length));
         AppendLine(builder, header);
+
         builder.AppendLine("#pragma warning disable CS1998 // scripts do not have to await anything");
         builder.AppendLine("#line hidden");
         builder.AppendLine($"public sealed class {TypeName} : global::NullByte.Core.Scripting.IScript");
@@ -51,7 +75,10 @@ internal static class ScriptSourceGenerator
         builder.AppendLine("        global::NullByte.Core.Scripting.INullByteApi nb, string[] args)");
         builder.AppendLine("    {");
         builder.AppendLine($"#line {bodyLine} \"{file}\"");
+        
+        segments.Add(new SourceSegment(headerEnd, bodyEnd - headerEnd, builder.Length));
         AppendLine(builder, body);
+        
         builder.AppendLine("#line hidden");
         builder.AppendLine("    }");
         builder.AppendLine("}");
@@ -60,10 +87,11 @@ internal static class ScriptSourceGenerator
         if (!string.IsNullOrWhiteSpace(declarations))
         {
             builder.AppendLine($"#line {declarationsLine} \"{file}\"");
+            segments.Add(new SourceSegment(bodyEnd, source.Length - bodyEnd, builder.Length));
             AppendLine(builder, declarations);
         }
 
-        return builder.ToString();
+        return new GeneratedScript(builder.ToString(), segments);
     }
 
     private static int LineOf(SourceText source, int position)

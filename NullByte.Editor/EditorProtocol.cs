@@ -1,5 +1,6 @@
 ﻿using NullByte.Core.Domain;
 using NullByte.Core.Simulation;
+using NullByte.Scripting.LanguageService;
 
 namespace NullByte.Editor;
 
@@ -14,6 +15,7 @@ internal sealed record WriteResult(bool Created);
 
 internal sealed record DiagnosticInfo(string Id, string Message, string Severity, int Line, int Column);
 internal sealed record DiagnoseResult(IReadOnlyList<DiagnosticInfo> Diagnostics);
+internal sealed record CompleteResult(IReadOnlyList<ScriptCompletion> Items);
 
 internal sealed class EditorException(string code, string message) : Exception(message)
 {

@@ -13,7 +13,7 @@ namespace NullByte.Scripting.Compilation;
 /// </summary>
 public sealed class ScriptCompiler : IScriptCompiler
 {
-    private const string DefaultUsingsSource = """
+    internal const string DefaultUsingsSource = """
     global using System;
     global using System.Collections.Generic;
     global using System.Linq;
@@ -29,12 +29,12 @@ public sealed class ScriptCompiler : IScriptCompiler
         "System.Threading.dll",
         "System.Threading.Tasks.dll"]);
 
-    private static readonly CSharpParseOptions ParseOptions = new(
+    internal static readonly CSharpParseOptions ParseOptions = new(
         languageVersion: LanguageVersion.Latest,
         documentationMode: DocumentationMode.Parse,
         kind: SourceCodeKind.Regular);
 
-    private static readonly CSharpCompilationOptions CompilationOptions = new(
+    internal static readonly CSharpCompilationOptions CompilationOptions = new(
         OutputKind.DynamicallyLinkedLibrary,
         optimizationLevel: OptimizationLevel.Release,
         allowUnsafe: false,
@@ -117,7 +117,7 @@ public sealed class ScriptCompiler : IScriptCompiler
             diagnostics);
     }
 
-    private static IReadOnlyList<MetadataReference> CreateScriptReferences()
+    internal static IReadOnlyList<MetadataReference> CreateScriptReferences()
     {
         var references = new Dictionary<string, MetadataReference>(StringComparer.OrdinalIgnoreCase);
         

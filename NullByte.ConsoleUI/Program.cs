@@ -3,6 +3,7 @@ using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Persistence;
 using NullByte.Editor;
 using NullByte.Scripting.Compilation;
+using NullByte.Scripting.LanguageService;
 using NullByte.Shell;
 using NullByte.Shell.Persistence;
 
@@ -62,7 +63,10 @@ public class Program
         {
             var token = EditorToken.LoadOrCreate();
             editor = new EditorServer(
-                () => host.Session is { } s ? new EditorBackend(s.State, s.GameThread) : null, token, new ScriptCompiler());
+                () => host.Session is { } s ? new EditorBackend(s.State, s.GameThread) : null, 
+                token, 
+                new ScriptCompiler(),
+                new ScriptLanguageService());
 
             await editor.StartAsync();
             host.SessionChanged += editor.OnGameChanged;

@@ -8,13 +8,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using NullByte.Core.Domain;
 using NullByte.Scripting.Compilation;
+using NullByte.Scripting.LanguageService;
 
 namespace NullByte.Editor;
 
-public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorToken token, IScriptCompiler compiler, int port = 8765) : IAsyncDisposable
+public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorToken token, IScriptCompiler compiler, ScriptLanguageService languageService, int port = 8765) : IAsyncDisposable
 {
     private readonly ConcurrentDictionary<EditorConnection, byte> connections = new();
-    private readonly EditorFileService files = new(backendProvider, compiler);
+    private readonly EditorFileService files = new(backendProvider, compiler, languageService);
     private WebApplication? app;
     private GameState? watched;
 
@@ -55,6 +56,9 @@ public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorTok
         });
 
         await app.StartAsync();
+
+        _ = Task.Run(() => { try { compiler.Compile("", "warmup"); } catch { /* warm-up only */ } });
+        _ = languageService.WarmUpAsync().ContinueWith(_ => { }, TaskScheduler.Default);   // warm-up only; errors are ignored
 
         OnGameChanged();
     }
@@ -164,6 +168,8 @@ public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorTok
     public async ValueTask DisposeAsync()
     {
         Unwatch();
+
+        languageService.Dispose();
 
         if (app is not null)
             await app.DisposeAsync();

@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { NullByteClient } from './client';
 import { NullByteFileSystem } from './filesystem';
 import { NullByteDiagnostics } from './diagnostics';
+import { registerCompletion } from './completion';
 
 export function activate(context: vscode.ExtensionContext) {
   const log = vscode.window.createOutputChannel('NullByte', { log: true });
@@ -24,6 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   context.subscriptions.push(
+    registerCompletion(client, log),
     diagnostics,
     log,
     vscode.workspace.registerFileSystemProvider('nullbyte', fileSystem, { isCaseSensitive: true }),

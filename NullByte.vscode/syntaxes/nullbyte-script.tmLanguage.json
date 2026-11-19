@@ -1,0 +1,4 @@
+{
+  "scopeName": "source.nullbyte-script",
+  "patterns": [{ "include": "source.cs" }]
+}

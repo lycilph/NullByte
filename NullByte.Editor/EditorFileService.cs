@@ -3,12 +3,13 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using NullByte.Core.Domain;
 using NullByte.Scripting.Compilation;
+using NullByte.Scripting.LanguageService;
 
 using NodePath = (string? Host, string? File);
 
 namespace NullByte.Editor;
 
-internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IScriptCompiler compiler)
+internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IScriptCompiler compiler, ScriptLanguageService languageService)
 {
     private static readonly JsonSerializerOptions json = new(JsonSerializerDefaults.Web);
     private static readonly object empty = new();
@@ -36,6 +37,8 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
     {
         if (op == "diagnose")
             return await Task.Run(() => Diagnose(Required(request, "path"), Required(request, "content")));
+        if (op == "complete")
+            return await Task.Run(() => CompleteAsync(request));
 
         var backend = backendProvider();
         if (backend is not { GameThread.IsRunning: true })
@@ -66,6 +69,14 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
         return new(result.Diagnostics
             .Select(d => new DiagnosticInfo(d.Id, d.Message, d.Severity.ToString().ToLowerInvariant(), d.Line, d.Column))
             .ToArray());
+    }
+
+    private async Task<object> CompleteAsync(JsonObject request)
+    {
+        var content = Required(request, "content");
+        var offset = request["offset"]?.GetValue<int>() ?? throw new EditorException("BadRequest", "Missing 'offset'.");
+
+        return new CompleteResult(await languageService.GetCompletionsAsync(content, offset));
     }
 
     // Runs on the game thread from here down.

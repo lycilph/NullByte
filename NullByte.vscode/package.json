@@ -11,6 +11,19 @@
   "activationEvents": [
     "onFileSystem:nullbyte"
   ],
+  "contributes": {
+    "languages": [{
+      "id": "nullbyte-script",
+      "aliases": ["NullByte Script"],
+      "extensions": [".cx"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "nullbyte-script",
+      "scopeName": "source.nullbyte-script",
+      "path": "./syntaxes/nullbyte-script.tmLanguage.json"
+    }]
+  },
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./"

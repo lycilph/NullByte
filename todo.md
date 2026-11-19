@@ -3,6 +3,7 @@
 * M8 milestone - Visual Studio Code editor integration
 * Extensions for the editor integrations
   * intellisense for the api
+  * Should remove the default objects stuff (like gethashcode etc.)
 
 
 # Todo
