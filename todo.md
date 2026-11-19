@@ -1,6 +1,9 @@
 ﻿# In progress
 
 * M8 milestone - Visual Studio Code editor integration
+* Extensions for the editor integrations
+  * intellisense for the api
+* Make the use of the integration an option (or a setting?)
 
 
 # Todo

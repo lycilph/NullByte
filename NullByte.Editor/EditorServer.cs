@@ -10,7 +10,7 @@ using NullByte.Core.Domain;
 
 namespace NullByte.Editor;
 
-public sealed class EditorServer(Func<EditorBackend?> backendProvider, int port = 8765) : IAsyncDisposable
+public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorToken token, int port = 8765) : IAsyncDisposable
 {
     private readonly ConcurrentDictionary<EditorConnection, byte> connections = new();
     private readonly EditorFileService files = new(backendProvider);
@@ -29,6 +29,20 @@ public sealed class EditorServer(Func<EditorBackend?> backendProvider, int port 
         app.UseWebSockets();
         app.Map("/ws", async context =>
         {
+            // Browsers always send Origin on websocket handshakes. The extension never does.
+            if (context.Request.Headers.ContainsKey("Origin"))
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return;
+            }
+
+            var header = context.Request.Headers.Authorization.ToString();
+            if (!header.StartsWith("Bearer ", StringComparison.Ordinal) || !token.Matches(header["Bearer ".Length..]))
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return;
+            }
+
             if (!context.WebSockets.IsWebSocketRequest)
             {
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;

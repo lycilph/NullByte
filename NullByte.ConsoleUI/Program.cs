@@ -33,12 +33,13 @@ public class Program
         {
             await host.StartAsync(resumeAutosave: !args.Contains("--new"));
 
+            var token = EditorToken.LoadOrCreate();
             await using var editor = new EditorServer(
-                () => host.Session is { } s ? new EditorBackend(s.State, s.GameThread) : null);
+                () => host.Session is { } s ? new EditorBackend(s.State, s.GameThread) : null, token);
             host.SessionChanged += editor.OnGameChanged;
             await editor.StartAsync();
 
-            terminal.WriteLine($"Editor server listening on {editor.Url}");
+            terminal.WriteLine($"Editor server listening on {editor.Url} (token: {token.Path})");
 
             await host.RunAsync();
         }

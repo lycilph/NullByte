@@ -26,7 +26,10 @@ export class NullByteClient {
   private eventHandler?: (event: ServerEvent) => void;
   private connectedHandler?: () => void;
 
-  constructor(private readonly url: string, private readonly log: Logger) {}
+  constructor(
+    private readonly url: string, 
+    private readonly log: Logger,
+    private readonly readToken: () => string) {}
 
   onEvent(handler: (event: ServerEvent) => void) { this.eventHandler = handler; }
   onConnected(handler: () => void) { this.connectedHandler = handler; }
@@ -53,21 +56,34 @@ export class NullByteClient {
   private connect(): Promise<WebSocket> {
     if (this.socket?.readyState === WebSocket.OPEN) return Promise.resolve(this.socket);
 
-    this.connecting ??= new Promise<WebSocket>((resolve, reject) => {
-      this.log.debug(`Connecting to ${this.url}`);
-      const socket = new WebSocket(this.url);
+    this.connecting ??= this.open()
+      .catch(error => { this.scheduleReconnect(); throw error; })
+      .finally(() => { this.connecting = undefined; });
+    return this.connecting;
+  }
+
+  private async open(): Promise<WebSocket> {
+    let token: string;
+    try { token = this.readToken(); }
+    catch (error) {
+      this.log.warn(`Cannot read the token (has the game been started?): ${error instanceof Error ? error.message : error}`);
+      throw error;
+    }
+
+    this.log.debug(`Connecting to ${this.url}`);
+    return new Promise<WebSocket>((resolve, reject) => {
+      const socket = new WebSocket(this.url, { headers: { Authorization: `Bearer ${token}` } });
 
       socket.on('open', () => {
         this.socket = socket;
-        this.connecting = undefined;
         this.log.info('Connected');
         resolve(socket);
         this.connectedHandler?.();
       });
       socket.on('message', data => this.onMessage(data.toString()));
       socket.on('error', error => {
-        this.connecting = undefined;
-        this.log.debug(`Socket error: ${error.message}`);
+        const rejected = / 40[13]$/.test(error.message);   // "Unexpected server response: 401"
+        this.log[rejected ? 'warn' : 'debug'](`Socket error: ${error.message}`);
         reject(error);
       });
       socket.on('close', () => {
@@ -79,7 +95,6 @@ export class NullByteClient {
         this.scheduleReconnect();
       });
     });
-    return this.connecting;
   }
 
   private scheduleReconnect() {
