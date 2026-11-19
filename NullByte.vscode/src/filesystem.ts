@@ -10,6 +10,8 @@ function toFileSystemError(error: unknown, uri: vscode.Uri): Error {
       case 'NotFound': return vscode.FileSystemError.FileNotFound(uri);
       case 'IsADirectory': return vscode.FileSystemError.FileIsADirectory(uri);
       case 'NotADirectory': return vscode.FileSystemError.FileNotADirectory(uri);
+      case 'FileExists': return vscode.FileSystemError.FileExists(uri);
+      case 'NoPermissions': return vscode.FileSystemError.NoPermissions(error.message);
     }
   }
   return vscode.FileSystemError.Unavailable(error instanceof Error ? error.message : String(error));
@@ -38,13 +40,29 @@ export class NullByteFileSystem implements vscode.FileSystemProvider {
     return Buffer.from(r.content, 'utf8');
   }
 
-  writeFile(): never { throw vscode.FileSystemError.NoPermissions('Read-only for now'); }
-  createDirectory(): never { throw vscode.FileSystemError.NoPermissions('Not supported'); }
-  delete(): never { throw vscode.FileSystemError.NoPermissions('Read-only for now'); }
-  rename(): never { throw vscode.FileSystemError.NoPermissions('Read-only for now'); }
+  async writeFile(uri: vscode.Uri, content: Uint8Array,
+                  options: { create: boolean; overwrite: boolean }): Promise<void> {
+    const r = await this.call<{ created: boolean }>('writeFile', uri, {
+      content: new TextDecoder().decode(content), create: options.create, overwrite: options.overwrite });
+    this.emitter.fire([{ type: r.created ? vscode.FileChangeType.Created : vscode.FileChangeType.Changed, uri }]);
+  }
 
-  private async call<T>(op: string, uri: vscode.Uri): Promise<T> {
-    try { return await this.client.request<T>(op, uri.path); }
+  async delete(uri: vscode.Uri): Promise<void> {
+    await this.call('delete', uri);
+    this.emitter.fire([{ type: vscode.FileChangeType.Deleted, uri }]);
+  }
+
+  async rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean }): Promise<void> {
+    await this.call('rename', oldUri, { newPath: newUri.path, overwrite: options.overwrite });
+    this.emitter.fire([
+      { type: vscode.FileChangeType.Deleted, uri: oldUri },
+      { type: vscode.FileChangeType.Created, uri: newUri }]);
+  }
+  
+  createDirectory(): never { throw vscode.FileSystemError.NoPermissions('Not supported'); }
+
+  private async call<T>(op: string, uri: vscode.Uri, extra: object = {}): Promise<T> {
+    try { return await this.client.request<T>(op, uri.path, extra); }
     catch (error) { throw toFileSystemError(error, uri); }
   }
 }

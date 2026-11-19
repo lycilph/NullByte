@@ -3,11 +3,14 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using NullByte.Core.Domain;
 
+using NodePath = (string? Host, string? File);
+
 namespace NullByte.Editor;
 
 internal sealed class EditorFileService(Func<EditorBackend?> backendProvider)
 {
     private static readonly JsonSerializerOptions json = new(JsonSerializerDefaults.Web);
+    private static readonly object empty = new();
 
     public async Task<string> HandleAsync(string message)
     {
@@ -18,9 +21,8 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider)
                 ?? throw new EditorException("BadRequest", "Expected a JSON object.");
             id = request["id"]?.GetValue<int>();
             var op = request["op"]?.GetValue<string>() ?? throw new EditorException("BadRequest", "Missing 'op'.");
-            var path = request["path"]?.GetValue<string>() ?? throw new EditorException("BadRequest", "Missing 'path'.");
-
-            var result = await ExecuteAsync(op, ParsePath(path));
+            
+            var result = await ExecuteAsync(op, request);
             return JsonSerializer.Serialize(new { id, ok = true, result }, json);
         }
         catch (EditorException e) { return Error(id, e.Code, e.Message); }
@@ -29,15 +31,21 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider)
         catch (Exception e) { return Error(id, "Internal", e.Message); }
     }
 
-    private async Task<object> ExecuteAsync(string op, (string? Host, string? File) path)
+    private async Task<object> ExecuteAsync(string op, JsonObject request)
     {
         var backend = backendProvider() ?? throw new EditorException("Unavailable", "No game is running.");
+        var path = ParsePath(Required(request, "path"));
 
         return await backend.GameThread.InvokeAsync(() => Task.FromResult<object>(op switch
         {
             "stat" => Stat(backend.State, path),
             "readDirectory" => ReadDirectory(backend.State, path),
             "readFile" => new FileResult(ReadContent(backend.State, path)),
+            "writeFile" => WriteFile(backend.State, path, Required(request, "content"),
+                                     Flag(request, "create"), Flag(request, "overwrite")),
+            "delete" => Delete(backend.State, path),
+            "rename" => Rename(backend.State, path, ParsePath(Required(request, "newPath")),
+                               Flag(request, "overwrite")),
             _ => throw new EditorException("BadRequest", $"Unknown operation '{op}'.")
         }));
     }
@@ -77,6 +85,57 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider)
             : throw new EditorException("NotFound", $"File '{p.File}' not found on '{p.Host}'.");
     }
 
+    private static WriteResult WriteFile(GameState state, NodePath p, string content, bool create, bool overwrite)
+    {
+        var (host, file) = RequireFile(state, p);
+        var exists = state.FileSystem.TryReadFile(host, file, out _);
+
+        if (!exists && !create)
+            throw new EditorException("NotFound", $"File '{file}' not found on '{host}'.");
+        if (exists && create && !overwrite)
+            throw new EditorException("FileExists", $"File '{file}' already exists.");
+
+        state.FileSystem.WriteFile(host, file, content);
+        return new WriteResult(Created: !exists);
+    }
+
+    private static object Delete(GameState state, NodePath p)
+    {
+        var (host, file) = RequireFile(state, p);
+        if (!state.FileSystem.DeleteFile(host, file))
+            throw new EditorException("NotFound", $"File '{file}' not found on '{host}'.");
+        return empty;
+    }
+
+    private static object Rename(GameState state, NodePath from, NodePath to, bool overwrite)
+    {
+        var (host, file) = RequireFile(state, from);
+        var (newHost, newFile) = RequireFile(state, to);
+
+        if (!string.Equals(host, newHost, StringComparison.OrdinalIgnoreCase))
+            throw new EditorException("NoPermissions", "Files cannot be moved between servers.");
+        if (!state.FileSystem.TryReadFile(host, file, out _))
+            throw new EditorException("NotFound", $"File '{file}' not found on '{host}'.");
+
+        if (file != newFile && state.FileSystem.TryReadFile(host, newFile, out _))
+        {
+            if (!overwrite)
+                throw new EditorException("FileExists", $"File '{newFile}' already exists.");
+            state.FileSystem.DeleteFile(host, newFile);
+        }
+
+        state.FileSystem.MoveFile(host, file, newFile);
+        return empty;
+    }
+
+    private static (string Host, string File) RequireFile(GameState state, NodePath p)
+    {
+        if (p.Host is null || p.File is null)
+            throw new EditorException("NoPermissions", "Only files can be created, changed or removed.");
+        RequireServer(state, p.Host);
+        return (p.Host, p.File);
+    }
+
     private static void RequireServer(GameState state, string host)
     {
         if (!state.Network.TryGetServer(host, out _))
@@ -97,4 +156,10 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider)
 
     private static string Error(int? id, string code, string message)
         => JsonSerializer.Serialize(new { id, ok = false, error = new { code, message } }, json);
+
+    private static string Required(JsonObject request, string name)
+    => request[name]?.GetValue<string>() ?? throw new EditorException("BadRequest", $"Missing '{name}'.");
+
+    private static bool Flag(JsonObject request, string name)
+        => request[name]?.GetValue<bool>() ?? false;
 }

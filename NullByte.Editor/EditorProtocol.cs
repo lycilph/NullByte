@@ -10,6 +10,7 @@ internal sealed record StatResult(string Type, long Size);
 internal sealed record DirectoryEntry(string Name, string Type);
 internal sealed record DirectoryResult(IReadOnlyList<DirectoryEntry> Entries);
 internal sealed record FileResult(string Content);
+internal sealed record WriteResult(bool Created);
 
 internal sealed class EditorException(string code, string message) : Exception(message)
 {

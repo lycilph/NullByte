@@ -7,6 +7,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.workspace.registerFileSystemProvider('nullbyte', new NullByteFileSystem(client),
-      { isCaseSensitive: true, isReadonly: true }),
+      { isCaseSensitive: true }),
     { dispose: () => client.dispose() });
 }

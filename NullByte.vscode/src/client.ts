@@ -14,12 +14,12 @@ export class NullByteClient {
 
   constructor(private readonly url: string) {}
 
-  async request<T>(op: string, path: string): Promise<T> {
+  async request<T>(op: string, path: string, extra: object = {}): Promise<T> {
     const socket = await this.connect();
     const id = this.nextId++;
     return new Promise<T>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      socket.send(JSON.stringify({ id, op, path }));
+        this.pending.set(id, { resolve, reject });
+        socket.send(JSON.stringify({ id, op, path, ...extra }));
     });
   }
 
