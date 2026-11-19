@@ -62,6 +62,9 @@ export class NullByteFileSystem implements vscode.FileSystemProvider {
   createDirectory(): never { throw vscode.FileSystemError.NoPermissions('Not supported'); }
 
   private async call<T>(op: string, uri: vscode.Uri, extra: object = {}): Promise<T> {
+    // VS Code probes workspace folders for .vscode/*.json and the like. Servers never start with a dot.
+    if (uri.path.startsWith('/.')) throw vscode.FileSystemError.FileNotFound(uri);
+
     try { return await this.client.request<T>(op, uri.path, extra); }
     catch (error) { throw toFileSystemError(error, uri); }
   }

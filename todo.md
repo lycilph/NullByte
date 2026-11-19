@@ -1,16 +1,12 @@
 ﻿# In progress
 
-* Signatur help in extension
-
 * M8 milestone - Visual Studio Code editor integration
-	* Extensions for the editor integrations
-	  * intellisense for the api
+	* intellisense for the api
 	  * Should remove the default objects stuff (like gethashcode etc.)
-	* include other files
-
 
 # Todo
 
+* include other files
 * Add options for Ram usage and compilation to the NanoEditor 
 * Align script method names and console commands
 * Add the backdoor command

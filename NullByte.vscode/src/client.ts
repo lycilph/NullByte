@@ -12,7 +12,7 @@ export class NullByteError extends Error {
 }
 
 export type ServerEvent = { event: string; [key: string]: any };
-type Pending = { resolve: (value: any) => void; reject: (error: Error) => void };
+type Pending = { op: string; started: number; resolve: (value: any) => void; reject: (error: Error) => void };
 
 const ReconnectDelayMs = 2000;
 
@@ -42,7 +42,7 @@ export class NullByteClient {
     const id = this.nextId++;
     this.log.debug(`→ #${id} ${op} ${path}`);
     return new Promise<T>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      this.pending.set(id, { op, started: Date.now(), resolve, reject });
       socket.send(JSON.stringify({ id, op, path, ...extra }));
     });
   }
@@ -118,11 +118,14 @@ export class NullByteClient {
     if (!pending) { this.log.warn(`Response for unknown request #${message.id}`); return; }
     this.pending.delete(message.id);
 
+    const ms = Date.now() - pending.started;
+    if (ms > 1000) this.log.warn(`Slow response: ${pending.op} took ${ms} ms`);
+
     if (message.ok) {
-      this.log.debug(`← #${message.id} ok`);
+      this.log.debug(`← #${message.id} ${pending.op} ok (${ms} ms)`);
       pending.resolve(message.result);
     } else {
-      this.log.debug(`← #${message.id} ${message.error.code}: ${message.error.message}`);
+      this.log.debug(`← #${message.id} ${pending.op} ${message.error.code}: ${message.error.message} (${ms} ms)`);
       pending.reject(new NullByteError(message.error.code, message.error.message));
     }
   }
