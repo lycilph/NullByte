@@ -33,7 +33,10 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider)
 
     private async Task<object> ExecuteAsync(string op, JsonObject request)
     {
-        var backend = backendProvider() ?? throw new EditorException("Unavailable", "No game is running.");
+        var backend = backendProvider();
+        if (backend is not { GameThread.IsRunning: true })
+            throw new EditorException("Unavailable", "No game is running.");
+
         var path = ParsePath(Required(request, "path"));
 
         return await backend.GameThread.InvokeAsync(() => Task.FromResult<object>(op switch

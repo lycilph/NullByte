@@ -35,7 +35,9 @@ public class Program
 
             await using var editor = new EditorServer(
                 () => host.Session is { } s ? new EditorBackend(s.State, s.GameThread) : null);
+            host.SessionChanged += editor.OnGameChanged;
             await editor.StartAsync();
+
             terminal.WriteLine($"Editor server listening on {editor.Url}");
 
             await host.RunAsync();

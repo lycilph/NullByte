@@ -1,5 +1,8 @@
 ﻿namespace NullByte.Core.Domain;
 
+public enum FileChangeKind { Created, Changed, Deleted }
+public readonly record struct FileChange(string Hostname, string Filename, FileChangeKind Kind);
+
 /// <summary>
 /// Stores files belonging to the servers in a game network.
 /// This filesystem is entirely in memory and never accesses the host filesystem.
@@ -10,8 +13,10 @@ public sealed class VirtualFileSystem
 
     // The outer dictionary uses case-insensitive server hostnamess, matching the network's existing conventions.
     // File names are case-sensitive.
-    private readonly Dictionary<string, Dictionary<string, string>> filesByServer =
-        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Dictionary<string, string>> filesByServer = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Raised on the game thread after a file changed. Handlers must not throw.</summary>
+    public event Action<FileChange>? Changed;
 
     public VirtualFileSystem(Network network)
     {
@@ -85,7 +90,9 @@ public sealed class VirtualFileSystem
             filesByServer.Add(hostname, files);
         }
 
+        var existed = files.ContainsKey(filename);
         files[filename] = content;
+        Raise(hostname, filename, existed ? FileChangeKind.Changed : FileChangeKind.Created);
     }
 
     /// <summary>
@@ -96,7 +103,11 @@ public sealed class VirtualFileSystem
         ValidateServer(hostname);
         ValidateFileName(filename);
 
-        return filesByServer.TryGetValue(hostname, out var files) && files.Remove(filename);
+        if (!filesByServer.TryGetValue(hostname, out var files) || !files.Remove(filename))
+            return false;
+
+        Raise(hostname, filename, FileChangeKind.Deleted);
+        return true;
     }
 
     /// <summary>
@@ -127,6 +138,9 @@ public sealed class VirtualFileSystem
 
         files.Add(destinationFilename, content);
         files.Remove(sourceFilename);
+        
+        Raise(hostname, sourceFilename, FileChangeKind.Deleted);
+        Raise(hostname, destinationFilename, FileChangeKind.Created);
 
         return true;
     }
@@ -153,4 +167,7 @@ public sealed class VirtualFileSystem
                 nameof(filename));
         }
     }
+
+    private void Raise(string hostname, string filename, FileChangeKind kind)
+        => Changed?.Invoke(new FileChange(network.GetServer(hostname).Hostname, filename, kind));
 }

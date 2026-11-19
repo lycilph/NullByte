@@ -13,8 +13,19 @@ public sealed class GameHost(
     GameSessionOptions baseOptions) : IAsyncDisposable
 {
     private static readonly TimeSpan AutosaveInterval = TimeSpan.FromMinutes(5);
-    private Game? game;
+    public event Action? SessionChanged;
+    
     public GameSession? Session => game?.Session;
+    private Game? currentGame;
+    private Game? game
+    {
+        get => currentGame;
+        set
+        {
+            currentGame = value;
+            if (value is not null) SessionChanged?.Invoke();
+        }
+    }
 
     // Everything that belongs to one session and goes away with it.
     private sealed record Game(
