@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Persistence;
+using NullByte.Editor;
 using NullByte.Shell;
 using NullByte.Shell.Persistence;
 
@@ -31,6 +32,12 @@ public class Program
         try
         {
             await host.StartAsync(resumeAutosave: !args.Contains("--new"));
+
+            await using var editor = new EditorServer(
+                () => host.Session is { } s ? new EditorBackend(s.State, s.GameThread) : null);
+            await editor.StartAsync();
+            terminal.WriteLine($"Editor server listening on {editor.Url}");
+
             await host.RunAsync();
         }
         finally

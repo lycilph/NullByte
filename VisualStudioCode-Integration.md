@@ -1,1084 +1,161 @@
-﻿Yes, this is feasible, and it fits NullByte especially well because you already have a virtual filesystem and C# script compilation.
+﻿I've read the design doc and the repo, and I'm checking whether there's an existing VS Code notes file before I write up the proposed architecture and my questions.
 
-My recommendation is:
+I've read the design doc and the repo. Here is the architecture I'd aim for, followed by the questions I need answered before writing code.
 
-Build a small VS Code extension that exposes the game’s virtual files through a custom FileSystemProvider, backed by a reliable localhost WebSocket connection to NullByte.
+## Proposed target architecture
 
-That would let the player open a workspace such as:
+```
+VS Code                                   NullByte (.NET process)
+┌──────────────────────────┐              ┌─────────────────────────────────────────┐
+│ Extension (TypeScript)   │              │ NullByte.Editor (new project)           │
+│  FileSystemProvider      │   WebSocket  │  WebSocket server (Kestrel, localhost)  │
+│  scheme: nullbyte://     │◄────────────►│  JSON-RPC-style protocol                │
+│  nullbyte://home/foo.cs  │  JSON text   │  EditorFileService                      │
+└──────────────────────────┘              │        │ GameThread.InvokeAsync(...)    │
+                                          │        ▼                                │
+                                          │  VirtualFileSystem (Core, unchanged)    │
+                                          └─────────────────────────────────────────┘
+```
 
-nullbyte://localhost/home/
+- **Extension side:** a small TypeScript extension registers a `FileSystemProvider` for a `nullbyte:` scheme. Each server becomes a top-level folder, so `nullbyte:/home/hack.cs` is `hack.cs` on `home`. VS Code then gives you the file tree, editing, and save with no syncing.
+- **Protocol:** request/response messages with an `id`, plus server-pushed events. The operations are `stat`, `readDirectory`, `readFile`, `writeFile`, `delete`, `rename`, `createDirectory`. Pushed events are `fileChanged`, so `edit` or `scp` in the console shows up in VS Code.
+- **Game side:** a new `NullByte.Editor` project owns the socket server and translates messages into `VirtualFileSystem` calls. **Every call is marshalled through `GameThread.InvokeAsync`.** That keeps the single-threaded rule from section 4.2 of your doc: socket threads never touch game state.
+- **Host wiring:** `GameHost` starts and stops the server alongside the session. Core and Scripting stay unchanged apart from one small addition, a change notification on `VirtualFileSystem`.
+- **Out of scope for the PoC:** compile diagnostics in the Problems panel, running scripts from VS Code, IntelliSense for the `nb` API, and auth.
 
+## Questions
 
-and edit in-game files in normal VS Code tabs. VS Code’s FileSystemProvider API is specifically intended for custom storage backends and virtual workspaces, including files that live on a server rather than the local disk.
+1. **Directories:** `VirtualFileSystem` is flat, and file names can't contain `/`. For VS Code, should the root show one folder per server (my proposal), or only the current server's files? Subfolders inside a server would be a later change to the filesystem.
+2. **Server stack:** Kestrel (`Microsoft.AspNetCore.App`) is the sturdiest choice, but it adds a framework reference. `HttpListener` plus `System.Net.WebSockets` is lighter and fine for localhost. Do you have a preference? Mine is Kestrel, since it's the standard and expands better.
+3. **Extension tooling:** are you OK with a TypeScript extension (Node and npm required), run from VS Code with F5 in the Extension Development Host? There's no .NET alternative for writing a VS Code extension.
+4. **Change events:** should the PoC include game→VS Code push events (edit in the console, see it in VS Code)? Or is the minimum "VS Code reads and writes files, then you `run` them in the console"? I'd include a simple version, since it's what makes `edit` and VS Code coexist safely.
+5. **Port and security:** is a fixed default port (say 8765), bound to `127.0.0.1` only and without auth, acceptable for now? Any website you visit could try to open a localhost websocket, so I'd at least check the `Origin` header.
+6. **Layout and exceptions:** should the extension live in the repo, for example `/vscode-extension/`? And does the "script crashes are caught" deliverable in M8 count as already done? I see `ProcessFailed` and `UnhandledException` handlers in `GameSession`, so I'd only verify it rather than rebuild it.
 
-Recommended architecture
-┌─────────────────────────────────────┐
-│ VS Code                             │
-│                                     │
-│ NullByte extension                  │
-│  ├─ FileSystemProvider              │
-│  ├─ WebSocket client                │
-│  ├─ Connection status               │
-│  └─ Connect/disconnect commands     │
-└──────────────────┬──────────────────┘
-                   │
-                   │ WebSocket over localhost
-                   │ JSON request/response messages
-                   │
-┌──────────────────▼──────────────────┐
-│ NullByte host                       │
-│                                     │
-│ Editor bridge                       │
-│  ├─ WebSocket server                │
-│  ├─ Authentication token            │
-│  ├─ Path validation                 │
-│  └─ Request dispatcher              │
-│             │                       │
-│             ▼                       │
-│ GameThread.InvokeAsync              │
-│             │                       │
-│             ▼                       │
-│ VirtualFileSystem                   │
-└─────────────────────────────────────┘
+If you'd rather skip some of these, I'll go with my defaults: one folder per server, Kestrel, a TypeScript extension in the repo, push events included, `127.0.0.1:8765` with an Origin check, and a quick verification of the crash handling.
 
+## Steps once you confirm
 
-The extension should not hold a second authoritative copy of the files. NullByte remains the source of truth.
+1. Add `NullByte.Editor` with a bare WebSocket echo server, started from `GameHost`.
+2. Define the protocol and the file operations, marshalled onto the game thread.
+3. Build the minimal extension with `stat`, `readDirectory`, `readFile` and `writeFile`.
+4. End-to-end check: edit a script in VS Code and `run` it in the game.
+5. Add change events, then rename and delete.
 
-Why WebSockets rather than UDP
+Good, that settles the architecture. Auth moves to the last step. Here is **Step 1: a bare websocket echo server, started from the console host.**
 
-Do not use UDP for file synchronization.
+The goal is only to prove that Kestrel runs inside your console process and that a client can connect. There is no game logic yet.
 
-UDP has no built-in guarantees for:
+### 1. New project `NullByte.Editor`
 
-Delivery
-Ordering
-Duplicate suppression
-Message size
-Connection state
-Request/response correlation
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+</Project>
+```
 
-Losing one file-write packet could silently leave VS Code and the game with different script contents.
+Add it to `NullByte.slnx` under `/src/`, and add a `ProjectReference` to it from `NullByte.ConsoleUI`.
 
-A localhost WebSocket gives you:
+### 2. `EditorServer.cs`
 
-Reliable ordered transport over TCP
-Bidirectional messages
-Easy JSON messages
-Connection/disconnection detection
-Browser and Node.js ecosystem support
-One long-lived connection
-Server-pushed file-change notifications
+```csharp
+using System.Net.WebSockets;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-The alternatives are:
+namespace NullByte.Editor;
 
-Transport	AssessmentWebSocket	Best fit for an extension and bidirectional events
-Named pipes	Excellent locally, but more platform-specific and awkward from TypeScript
-TCP socket	Viable, but you must implement message framing yourself
-HTTP plus polling	Easy prototype, but weaker change notification behavior
-HTTP plus Server-Sent Events	Good, but split request and notification mechanisms
-UDP	Wrong fit for durable file operations
-Shared host directory	Simplest MVP, but the game loses direct ownership of the filesystem
-
-For your Windows-first hobby project, named pipes would technically work. WebSockets are still preferable because the extension side is simpler and the protocol remains portable.
-
-Two possible integration models
-Model A: Mirror files to a real host directory
-
-The game writes its scripts to a directory such as:
-
-%LOCALAPPDATA%\NullByte\Workspace\home\
-
-
-VS Code opens that normal directory. A watcher sends edits back into the game.
-
-Advantages
-Very fast to prototype.
-All ordinary VS Code extensions work.
-C# tooling can see normal files.
-No custom VS Code filesystem implementation required initially.
-Users can use search, source control, formatting, and standard filesystem tools.
-Disadvantages
-You now have two sources of truth.
-External file changes must be reconciled.
-Saving/loading the game must synchronize the mirror.
-Players could edit files while the game is not running.
-Host files can drift from saved game files.
-It weakens the game fiction of an isolated in-game network.
-Model B: VS Code virtual workspace
-
-The extension implements vscode.FileSystemProvider and maps operations directly to the game. Microsoft’s sample demonstrates a provider implementing file/directory metadata and CRUD operations, with a custom URI scheme registered through workspace.registerFileSystemProvider.
-
-Advantages
-The game remains the authoritative filesystem.
-No host-file synchronization.
-Paths naturally map to in-game servers.
-Saving/loading continues to work normally.
-The extension can receive push notifications.
-Stronger game identity.
-Disadvantages
-More extension work.
-Some third-party extensions do not support virtual workspaces because they assume resources are ordinary disk files. VS Code can deactivate or limit such extensions in a virtual workspace.
-External compilers that require a physical path cannot read the virtual files.
-Roslyn diagnostics need either local extension logic or an explicit diagnostics endpoint.
-
-For NullByte, I would choose Model B, but begin with a narrowly scoped proof of concept.
-
-Protocol design
-
-Use JSON request/response envelopes with unique IDs.
-
-Request
+public sealed class EditorServer(int port = 8765) : IAsyncDisposable
 {
-  "protocolVersion": 1,
-  "id": "78c1a87d-b95c-477e-8f19-b343ad867db8",
-  "method": "file/read",
-  "params": {
-    "hostname": "home",
-    "path": "/scripts/money.cs"
-  }
-}
+    private WebApplication? app;
 
-Successful response
-{
-  "protocolVersion": 1,
-  "id": "78c1a87d-b95c-477e-8f19-b343ad867db8",
-  "ok": true,
-  "result": {
-    "content": "while (true) { await NB.Hack(\"n00dles\"); }",
-    "revision": 17,
-    "modifiedAtUtc": "2026-11-18T06:45:00Z"
-  }
-}
+    public string Url => $"ws://127.0.0.1:{port}/ws";
 
-Error response
-{
-  "protocolVersion": 1,
-  "id": "78c1a87d-b95c-477e-8f19-b343ad867db8",
-  "ok": false,
-  "error": {
-    "code": "file-not-found",
-    "message": "File '/scripts/money.cs' does not exist on 'home'."
-  }
-}
-
-Server-pushed event
-{
-  "protocolVersion": 1,
-  "event": "file/changed",
-  "params": {
-    "hostname": "home",
-    "path": "/scripts/money.cs",
-    "revision": 18,
-    "change": "updated"
-  }
-}
-
-
-Start with these methods:
-
-session/hello
-server/list
-directory/read
-file/stat
-file/read
-file/write
-file/delete
-file/rename
-directory/create
-watch/subscribe
-watch/unsubscribe
-
-
-Eventually add:
-
-script/compile
-script/run
-script/kill
-process/list
-diagnostics/publish
-
-Revision-based write protection
-
-Every file should have a revision number.
-
-When VS Code reads a file:
-
-{
-  "content": "...",
-  "revision": 17
-}
-
-
-When it saves:
-
-{
-  "method": "file/write",
-  "params": {
-    "hostname": "home",
-    "path": "/scripts/money.cs",
-    "content": "...",
-    "expectedRevision": 17
-  }
-}
-
-
-If the file changed inside the game after VS Code read it, reject the write:
-
-{
-  "ok": false,
-  "error": {
-    "code": "revision-conflict",
-    "message": "Expected revision 17, but the current revision is 18."
-  }
-}
-
-
-Do not silently choose “last writer wins.” That risks overwriting edits made through the in-game edit command or a loaded save.
-
-This means VirtualFileSystem needs richer metadata than its current dictionary of path to content.
-
-A suitable internal model would be:
-
-public sealed record VirtualFile(
-    string Content,
-    long Revision,
-    DateTimeOffset ModifiedAtUtc);
-
-
-Or keep metadata separately if changing the current representation would create too much M7 churn.
-
-Game-side bridge
-
-Add a separate project:
-
-NullByte.EditorBridge/
-  EditorBridgeServer.cs
-  EditorBridgeOptions.cs
-  EditorBridgeProtocol.cs
-  EditorBridgeRequestHandler.cs
-  EditorBridgeSession.cs
-
-
-Project references:
-
-NullByte.ConsoleUI
-    ├─ NullByte.Shell
-    └─ NullByte.EditorBridge
-
-NullByte.EditorBridge
-    ├─ NullByte.Shell
-    └─ NullByte.Core
-
-
-Prefer accessing the game through a narrow facade rather than giving the bridge unrestricted access to GameSession.
-
-public interface IEditorBridgeGame
-{
-    Task<IReadOnlyList<string>> ListServersAsync(
-        CancellationToken cancellationToken);
-
-    Task<IReadOnlyList<VirtualDirectoryEntry>> ReadDirectoryAsync(
-        string hostname,
-        string path,
-        CancellationToken cancellationToken);
-
-    Task<VirtualFileSnapshot> ReadFileAsync(
-        string hostname,
-        string path,
-        CancellationToken cancellationToken);
-
-    Task<WriteVirtualFileResult> WriteFileAsync(
-        string hostname,
-        string path,
-        string content,
-        long? expectedRevision,
-        CancellationToken cancellationToken);
-
-    Task DeleteFileAsync(
-        string hostname,
-        string path,
-        CancellationToken cancellationToken);
-}
-
-
-Implementation:
-
-public sealed class EditorBridgeGame : IEditorBridgeGame
-{
-    private readonly Func<GameSession> getSession;
-
-    public EditorBridgeGame(Func<GameSession> getSession)
+    public async Task StartAsync()
     {
-        ArgumentNullException.ThrowIfNull(getSession);
-        this.getSession = getSession;
-    }
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.Logging.ClearProviders();   // Kestrel logging would corrupt the terminal
+        builder.WebHost.UseUrls($"http://127.0.0.1:{port}");
 
-    public Task<VirtualFileSnapshot> ReadFileAsync(
-        string hostname,
-        string path,
-        CancellationToken cancellationToken)
-    {
-        var session = getSession();
-
-        return session.GameThread.InvokeAsync(
-            () =>
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var content = session.State.FileSystem.ReadFile(
-                    hostname,
-                    path);
-
-                var result = new VirtualFileSnapshot(
-                    hostname,
-                    path,
-                    content,
-                    Revision: 0);
-
-                return Task.FromResult(result);
-            });
-    }
-
-    public Task<WriteVirtualFileResult> WriteFileAsync(
-        string hostname,
-        string path,
-        string content,
-        long? expectedRevision,
-        CancellationToken cancellationToken)
-    {
-        var session = getSession();
-
-        return session.GameThread.InvokeAsync(
-            () =>
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                session.State.FileSystem.WriteFile(
-                    hostname,
-                    path,
-                    content);
-
-                return Task.FromResult(
-                    new WriteVirtualFileResult(
-                        Revision: 0));
-            });
-    }
-
-    // Remaining operations...
-}
-
-
-Using Func<GameSession> is significant. The editor bridge must always resolve sessionHost.Session; it cannot retain the original session because M7 loading replaces that object.
-
-Wire it as:
-
-var editorBridgeGame = new EditorBridgeGame(
-    () => sessionHost.Session);
-
-Use ASP.NET Core for the socket server
-
-Although NullByte is a console application, the most straightforward C# implementation is an ASP.NET Core WebSocket endpoint bound only to loopback.
-
-Add a framework reference:
-
-<ItemGroup>
-  <FrameworkReference Include="Microsoft.AspNetCore.App" />
-</ItemGroup>
-
-
-Minimal host setup:
-
-var builder = WebApplication.CreateSlimBuilder();
-
-builder.WebHost.UseUrls("http://127.0.0.1:43821");
-
-var app = builder.Build();
-
-app.UseWebSockets();
-
-app.Map(
-    "/editor",
-    async context =>
-    {
-        if (!context.WebSockets.IsWebSocketRequest)
+        app = builder.Build();
+        app.UseWebSockets();
+        app.Map("/ws", async context =>
         {
-            context.Response.StatusCode =
-                StatusCodes.Status400BadRequest;
-
-            return;
-        }
-
-        using var socket =
-            await context.WebSockets.AcceptWebSocketAsync();
-
-        await editorBridgeServer.HandleConnectionAsync(
-            socket,
-            context.RequestAborted);
-    });
-
-await app.StartAsync(cancellationToken);
-
-
-Use an ephemeral or configurable port later. For the proof of concept, a fixed port such as 43821 is fine.
-
-Security boundary
-
-Even on localhost, treat the bridge as an authenticated service.
-
-At game startup:
-
-Generate 32 random bytes.
-Encode them with Base64Url or hexadecimal.
-Print the connection token.
-Require the extension to send it in session/hello.
-Reject all other operations before authentication.
-var token = Convert.ToHexString(
-    RandomNumberGenerator.GetBytes(32));
-
-
-Bind only to:
-
-127.0.0.1
-
-
-and optionally IPv6 loopback:
-
-[::1]
-
-
-Do not bind to 0.0.0.0.
-
-Also validate every virtual path within the game. The client must not be able to use paths such as:
-
-../../AppData/...
-
-
-In principle, the virtual filesystem cannot reach host files anyway, but canonical path validation should still be part of the protocol boundary.
-
-VS Code extension structure
-
-Create an extension using Microsoft’s extension generator:
-
-npm install --global yo generator-code
-yo code
-
-
-Choose:
-
-New Extension (TypeScript)
-
-
-Suggested structure:
-
-nullbyte-vscode/
-  package.json
-  src/
-    extension.ts
-    nullByteClient.ts
-    nullByteFileSystemProvider.ts
-    protocol.ts
-    connectionManager.ts
-
-package.json
-{
-  "name": "nullbyte",
-  "displayName": "NullByte",
-  "description": "Edit NullByte virtual files from VS Code.",
-  "version": "0.1.0",
-  "engines": {
-    "vscode": "^1.95.0"
-  },
-  "activationEvents": [
-    "onFileSystem:nullbyte",
-    "onCommand:nullbyte.connect"
-  ],
-  "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "nullbyte.connect",
-        "title": "NullByte: Connect"
-      },
-      {
-        "command": "nullbyte.disconnect",
-        "title": "NullByte: Disconnect"
-      },
-      {
-        "command": "nullbyte.openWorkspace",
-        "title": "NullByte: Open Game Workspace"
-      }
-    ],
-    "configuration": {
-      "title": "NullByte",
-      "properties": {
-        "nullbyte.port": {
-          "type": "number",
-          "default": 43821,
-          "minimum": 1,
-          "maximum": 65535,
-          "description": "Local NullByte editor bridge port."
-        }
-      }
-    }
-  },
-  "capabilities": {
-    "virtualWorkspaces": true
-  }
-}
-
-Register the provider
-import * as vscode from "vscode";
-import { NullByteClient } from "./nullByteClient";
-import { NullByteFileSystemProvider } from
-    "./nullByteFileSystemProvider";
-
-export function activate(
-    context: vscode.ExtensionContext
-): void {
-    const client = new NullByteClient();
-    const provider =
-        new NullByteFileSystemProvider(client);
-
-    context.subscriptions.push(
-        vscode.workspace.registerFileSystemProvider(
-            "nullbyte",
-            provider,
+            if (!context.WebSockets.IsWebSocketRequest)
             {
-                isCaseSensitive: true,
-                isReadonly: false
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                return;
             }
-        )
-    );
 
-    context.subscriptions.push(
-        vscode.commands.registerCommand(
-            "nullbyte.connect",
-            async () => {
-                const configuration =
-                    vscode.workspace.getConfiguration(
-                        "nullbyte"
-                    );
-
-                const port =
-                    configuration.get<number>(
-                        "port",
-                        43821
-                    );
-
-                const token =
-                    await vscode.window.showInputBox({
-                        prompt:
-                            "Enter the token shown by NullByte",
-                        password: true,
-                        ignoreFocusOut: true
-                    });
-
-                if (!token)
-                    return;
-
-                await client.connect(port, token);
-
-                vscode.window.showInformationMessage(
-                    "Connected to NullByte."
-                );
-            }
-        )
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand(
-            "nullbyte.openWorkspace",
-            async () => {
-                if (!client.isConnected)
-                    await vscode.commands.executeCommand(
-                        "nullbyte.connect"
-                    );
-
-                if (!client.isConnected)
-                    return;
-
-                const workspaceUri = vscode.Uri.parse(
-                    "nullbyte://game/"
-                );
-
-                await vscode.commands.executeCommand(
-                    "vscode.openFolder",
-                    workspaceUri,
-                    {
-                        forceNewWindow: false
-                    }
-                );
-            }
-        )
-    );
-}
-
-export function deactivate(): void {
-}
-
-
-The VS Code API supports registering commands and invoking them through the command palette or UI contributions.
-
-FileSystemProvider mapping
-
-Your provider needs these operations:
-
-export class NullByteFileSystemProvider
-    implements vscode.FileSystemProvider {
-
-    private readonly changedEmitter =
-        new vscode.EventEmitter<
-            vscode.FileChangeEvent[]
-        >();
-
-    readonly onDidChangeFile =
-        this.changedEmitter.event;
-
-    constructor(
-        private readonly client: NullByteClient
-    ) {
-        client.onFileChanged(change => {
-            this.changedEmitter.fire([
-                {
-                    type: mapChangeType(change.change),
-                    uri: toUri(
-                        change.hostname,
-                        change.path
-                    )
-                }
-            ]);
+            using var socket = await context.WebSockets.AcceptWebSocketAsync();
+            await EchoAsync(socket, context.RequestAborted);
         });
+
+        await app.StartAsync();
     }
 
-    watch(
-        uri: vscode.Uri,
-        options: {
-            readonly recursive: boolean;
-            readonly excludes: readonly string[];
-        }
-    ): vscode.Disposable {
-        return this.client.watch(
-            fromUri(uri),
-            options.recursive
-        );
-    }
-
-    async stat(
-        uri: vscode.Uri
-    ): Promise<vscode.FileStat> {
-        const result =
-            await this.client.stat(fromUri(uri));
-
-        return {
-            type:
-                result.kind === "directory"
-                    ? vscode.FileType.Directory
-                    : vscode.FileType.File,
-            ctime: result.createdAt,
-            mtime: result.modifiedAt,
-            size: result.size
-        };
-    }
-
-    async readDirectory(
-        uri: vscode.Uri
-    ): Promise<
-        [string, vscode.FileType][]
-    > {
-        const entries =
-            await this.client.readDirectory(
-                fromUri(uri)
-            );
-
-        return entries.map(entry => [
-            entry.name,
-            entry.kind === "directory"
-                ? vscode.FileType.Directory
-                : vscode.FileType.File
-        ]);
-    }
-
-    async readFile(
-        uri: vscode.Uri
-    ): Promise<Uint8Array> {
-        const result =
-            await this.client.readFile(
-                fromUri(uri)
-            );
-
-        return new TextEncoder().encode(
-            result.content
-        );
-    }
-
-    async writeFile(
-        uri: vscode.Uri,
-        content: Uint8Array,
-        options: {
-            readonly create: boolean;
-            readonly overwrite: boolean;
-        }
-    ): Promise<void> {
-        await this.client.writeFile({
-            ...fromUri(uri),
-            content:
-                new TextDecoder().decode(content),
-            create: options.create,
-            overwrite: options.overwrite
-        });
-    }
-
-    async delete(
-        uri: vscode.Uri,
-        options: {
-            readonly recursive: boolean;
-        }
-    ): Promise<void> {
-        await this.client.delete(
-            fromUri(uri),
-            options.recursive
-        );
-    }
-
-    async rename(
-        oldUri: vscode.Uri,
-        newUri: vscode.Uri,
-        options: {
-            readonly overwrite: boolean;
-        }
-    ): Promise<void> {
-        await this.client.rename(
-            fromUri(oldUri),
-            fromUri(newUri),
-            options.overwrite
-        );
-    }
-
-    async createDirectory(
-        uri: vscode.Uri
-    ): Promise<void> {
-        await this.client.createDirectory(
-            fromUri(uri)
-        );
-    }
-}
-
-
-This mirrors the responsibilities of Microsoft’s FileSystemProvider sample: metadata, directory enumeration, reads, writes, renames, deletes, directory creation, watches, and file-change events.
-
-Workspace URI design
-
-Use the URI authority for the game connection and the first path segment for the in-game hostname:
-
-nullbyte://game/home/scripts/money.cs
-nullbyte://game/n00dles/scripts/worker.cs
-nullbyte://game/foodnstuff/notes.txt
-
-
-Mapping:
-
-URI scheme     nullbyte
-URI authority  game
-Path segment 1 server hostname
-Remaining path virtual file path
-
-
-For example:
-
-function fromUri(
-    uri: vscode.Uri
-): {
-    hostname: string;
-    path: string;
-} {
-    const segments = uri.path
-        .split("/")
-        .filter(Boolean);
-
-    if (segments.length === 0) {
-        return {
-            hostname: "",
-            path: "/"
-        };
-    }
-
-    const [hostname, ...pathSegments] =
-        segments;
-
-    return {
-        hostname,
-        path:
-            "/" + pathSegments.join("/")
-    };
-}
-
-
-At the workspace root, readDirectory returns the currently accessible in-game servers. Under each server, it lists that server’s files.
-
-You must decide whether “accessible” means:
-
-All discovered servers
-Servers with root access
-Only the player’s current server
-Home plus rooted servers
-
-I would expose home plus servers with root access. That aligns external editing with actual access rights.
-
-C# language support
-
-There is a significant limitation: a VS Code virtual workspace does not automatically make the NullByte API understood by the standard C# extension.
-
-Your scripts appear to use top-level C# and a custom NB API. The standard C# language server will not necessarily understand:
-
-The game-provided script prelude
-Implicit imports
-NB
-The virtual project structure
-Your custom compilation references
-
-There are three levels of improvement.
-
-Level 1: Basic text editing
-
-Associate in-game script files with C#:
-
-await vscode.languages.setTextDocumentLanguage(
-    document,
-    "csharp"
-);
-
-
-You get syntax highlighting and basic editing, but diagnostics may be incomplete or incorrect.
-
-Level 2: Ask the game to compile on save
-
-After file/write, call:
-
-script/compile
-
-
-The game returns Roslyn diagnostics:
-
-{
-  "diagnostics": [
+    private static async Task EchoAsync(WebSocket socket, CancellationToken ct)
     {
-      "path": "/scripts/money.cs",
-      "severity": "error",
-      "code": "CS0103",
-      "message": "The name 'TimeSpan' does not exist in the current context.",
-      "startLine": 3,
-      "startColumn": 15,
-      "endLine": 3,
-      "endColumn": 23
+        var buffer = new byte[4096];
+        try
+        {
+            while (socket.State == WebSocketState.Open)
+            {
+                var result = await socket.ReceiveAsync(buffer, ct);
+                if (result.MessageType == WebSocketMessageType.Close)
+                    break;
+
+                await socket.SendAsync(buffer.AsMemory(0, result.Count),
+                    result.MessageType, result.EndOfMessage, ct);
+            }
+
+            if (socket.State == WebSocketState.CloseReceived)
+                await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
+        }
+        catch (Exception e) when (e is OperationCanceledException or WebSocketException)
+        {
+            // Client vanished or the server is shutting down: nothing to do.
+        }
     }
-  ]
+
+    public async ValueTask DisposeAsync()
+    {
+        if (app is not null)
+            await app.DisposeAsync();
+    }
 }
+```
 
+### 3. Start it from `Program.cs`
 
-The extension turns those into a DiagnosticCollection:
+Inside the `try`, right after `host.StartAsync(...)`:
 
-const diagnostics =
-    vscode.languages.createDiagnosticCollection(
-        "nullbyte"
-    );
+```csharp
+await using var editor = new EditorServer();
+await editor.StartAsync();
+terminal.WriteLine($"Editor server listening on {editor.Url}");
+```
 
-diagnostics.set(
-    document.uri,
-    returnedDiagnostics.map(
-        diagnostic =>
-            new vscode.Diagnostic(
-                new vscode.Range(
-                    diagnostic.startLine,
-                    diagnostic.startColumn,
-                    diagnostic.endLine,
-                    diagnostic.endColumn
-                ),
-                diagnostic.message,
-                mapSeverity(
-                    diagnostic.severity
-                )
-            )
-    )
-);
+I put it in `Program` rather than `GameHost` on purpose. `GameHost` replaces its `Game` on `load`, so in Step 2 the server will receive a *function* that returns the current session's filesystem and game thread, not a fixed reference.
 
+### 4. Check it works
 
-This is the best next feature after basic editing because it reuses your exact Roslyn compiler configuration.
+Start the game, then in another terminal:
 
-Level 3: Custom language server
+```
+npx wscat -c ws://127.0.0.1:8765/ws
+> hello
+< hello
+```
 
-Build a Language Server Protocol server using Roslyn and teach it about:
+Also check that closing the game with the client still connected exits cleanly, and that the terminal prompt isn't disturbed.
 
-NullByte’s references
-Global usings
-NB API surface
-Completion for server names and script paths
-Hover documentation
-Signature help
-Diagnostics
-
-This would be powerful, but it is much larger than the editing bridge. Do not start here.
-
-Integration with save/load
-
-M7 creates two events the editor bridge must understand:
-
-session/replacing
-session/replaced
-
-
-On load:
-
-Broadcast session/replacing.
-Reject or pause writes.
-Replace the session through SessionHost.
-Restart saved processes.
-Broadcast session/replaced.
-Send filesystem change events for the complete workspace.
-The VS Code provider refreshes its tree and open editors.
-
-The bridge must resolve the current session dynamically:
-
-new EditorBridgeGame(
-    () => sessionHost.Session)
-
-
-Do not inject sessionHost.Session directly during startup, or the bridge will continue reading the old session after load.
-
-Before replacing a session, VS Code may contain unsaved editor buffers. The extension should not silently overwrite those. Initially, warn the user:
-
-NullByte loaded a save. Some open in-game files changed.
-Review or revert unsaved editors before saving.
-
-
-Revision checks then prevent accidental overwrites.
-
-Suggested implementation milestones
-E1: Read-only proof of concept
-
-Time estimate: one or two focused evenings.
-
-Game:
-
-Start a loopback WebSocket server.
-Authenticate one client.
-Implement server/list.
-Implement directory/read.
-Implement file/read.
-
-Extension:
-
-Connect command.
-FileSystemProvider.
-stat.
-readDirectory.
-readFile.
-Open nullbyte://game/.
-
-Acceptance:
-
-Browse servers and open a script in VS Code.
-No writes yet.
-E2: Editing
-
-Game:
-
-Implement file/write.
-Implement revision numbers.
-Validate access and paths.
-Fire file-change events.
-
-Extension:
-
-Implement writeFile.
-Handle server notifications.
-Display conflicts.
-
-Acceptance:
-
-Saving in VS Code immediately changes the in-game script.
-Editing in the game updates or invalidates the VS Code document.
-E3: Full filesystem operations
-
-Implement:
-
-Create
-Delete
-Rename
-Directories
-Recursive watches
-
-Acceptance:
-
-Explorer operations work as expected.
-E4: Roslyn diagnostics
-
-Game:
-
-Compile an unscheduled script.
-Return structured diagnostics.
-
-Extension:
-
-Run validation after save.
-Publish VS Code diagnostics.
-
-Acceptance:
-
-Compiler errors appear with correct lines and columns.
-E5: Script control
-
-Add VS Code commands:
-
-NullByte: Run Current Script
-NullByte: Kill Current Script
-NullByte: Show Processes
-NullByte: Connect to Server
-
-
-Acceptance:
-
-A script can be edited, saved, compiled, and started without returning to the game console.
-Where this fits in the game roadmap
-
-I would not combine this with M7’s core persistence work.
-
-Finish M7 first through:
-
-Save/load DTOs
-Session replacement
-Script restart
-Autosave
-Golden-file tests
-
-Then add the editor bridge as either:
-
-M7.5 External editor bridge
-
-
-or a separate infrastructure milestone.
-
-It touches M7 because save/load replaces the session, but it should remain its own subsystem.
-
-Recommended first implementation
-
-Start with this narrow vertical slice:
-
-VS Code extension
-  readFile("nullbyte://game/home/test.cs")
-       ↓
-WebSocket request
-       ↓
-EditorBridgeGame.ReadFileAsync
-       ↓
-sessionHost.Session.GameThread.InvokeAsync
-       ↓
-VirtualFileSystem.ReadFile
-       ↓
-WebSocket response
-       ↓
-VS Code editor tab
-
-
-Once that works, add readDirectory, then writeFile.
-
-That sequence tests the hardest architectural assumption early: whether a VS Code virtual filesystem backed by your game feels natural enough to justify the deeper integration.
+Tell me when the echo works, or paste any errors. **Step 2** is the protocol: JSON request/response messages, plus the `list` and `read` operations marshalled onto the game thread.

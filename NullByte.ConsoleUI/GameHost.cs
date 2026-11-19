@@ -14,6 +14,7 @@ public sealed class GameHost(
 {
     private static readonly TimeSpan AutosaveInterval = TimeSpan.FromMinutes(5);
     private Game? game;
+    public GameSession? Session => game?.Session;
 
     // Everything that belongs to one session and goes away with it.
     private sealed record Game(

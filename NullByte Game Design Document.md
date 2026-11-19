@@ -304,7 +304,6 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 **Deliverables**
 
 - Enable the use of visual studio code editor (through sockets?)
-- Exception handling: script crashes are caught, logged and do not take down the game loop.
 
 **Acceptance**
 

@@ -1,0 +1,27 @@
+{
+  "name": "nullbyte",
+  "displayName": "NullByte",
+  "description": "Browse and edit the NullByte virtual filesystem from Visual Studio Code.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onFileSystem:nullbyte"
+  ],
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "dependencies": {
+    "ws": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/vscode": "1.90",
+    "@types/ws": "^8.18.2",
+    "typescript": "^7.0.2"
+  }
+}
