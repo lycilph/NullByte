@@ -7,13 +7,14 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using NullByte.Core.Domain;
+using NullByte.Scripting.Compilation;
 
 namespace NullByte.Editor;
 
-public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorToken token, int port = 8765) : IAsyncDisposable
+public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorToken token, IScriptCompiler compiler, int port = 8765) : IAsyncDisposable
 {
     private readonly ConcurrentDictionary<EditorConnection, byte> connections = new();
-    private readonly EditorFileService files = new(backendProvider);
+    private readonly EditorFileService files = new(backendProvider, compiler);
     private WebApplication? app;
     private GameState? watched;
 
@@ -70,7 +71,7 @@ public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorTok
             {
                 var message = await ReceiveTextAsync(socket, ct);
                 if (message is null) break;
-                connection.Send(await files.HandleAsync(message));
+                _ = RespondAsync(connection, message);   // concurrent: a slow compile must not block file operations
             }
         }
         catch (Exception e) when (e is OperationCanceledException or WebSocketException) { }
@@ -88,6 +89,9 @@ public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorTok
         }
         catch (Exception e) when (e is OperationCanceledException or WebSocketException) { }
     }
+    
+    private async Task RespondAsync(EditorConnection connection, string message)
+        => connection.Send(await files.HandleAsync(message));   // HandleAsync catches everything itself
 
     private static async Task<string?> ReceiveTextAsync(WebSocket socket, CancellationToken ct)
     {

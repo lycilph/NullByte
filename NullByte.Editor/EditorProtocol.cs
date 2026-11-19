@@ -12,6 +12,9 @@ internal sealed record DirectoryResult(IReadOnlyList<DirectoryEntry> Entries);
 internal sealed record FileResult(string Content);
 internal sealed record WriteResult(bool Created);
 
+internal sealed record DiagnosticInfo(string Id, string Message, string Severity, int Line, int Column);
+internal sealed record DiagnoseResult(IReadOnlyList<DiagnosticInfo> Diagnostics);
+
 internal sealed class EditorException(string code, string message) : Exception(message)
 {
     public string Code { get; } = code;

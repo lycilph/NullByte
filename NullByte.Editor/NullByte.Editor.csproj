@@ -12,6 +12,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\NullByte.Core\NullByte.Core.csproj" />
+    <ProjectReference Include="..\NullByte.Scripting\NullByte.Scripting.csproj" />
   </ItemGroup>
   
 </Project>

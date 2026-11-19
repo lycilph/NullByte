@@ -2,12 +2,13 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using NullByte.Core.Domain;
+using NullByte.Scripting.Compilation;
 
 using NodePath = (string? Host, string? File);
 
 namespace NullByte.Editor;
 
-internal sealed class EditorFileService(Func<EditorBackend?> backendProvider)
+internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IScriptCompiler compiler)
 {
     private static readonly JsonSerializerOptions json = new(JsonSerializerDefaults.Web);
     private static readonly object empty = new();
@@ -33,6 +34,9 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider)
 
     private async Task<object> ExecuteAsync(string op, JsonObject request)
     {
+        if (op == "diagnose")
+            return await Task.Run(() => Diagnose(Required(request, "path"), Required(request, "content")));
+
         var backend = backendProvider();
         if (backend is not { GameThread.IsRunning: true })
             throw new EditorException("Unavailable", "No game is running.");
@@ -51,6 +55,17 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider)
                                Flag(request, "overwrite")),
             _ => throw new EditorException("BadRequest", $"Unknown operation '{op}'.")
         }));
+    }
+
+    private DiagnoseResult Diagnose(string path, string content)
+    {
+        var fileName = ParsePath(path).File
+            ?? throw new EditorException("BadRequest", "Expected the path of a file.");
+
+        var result = compiler.Compile(content, fileName);
+        return new(result.Diagnostics
+            .Select(d => new DiagnosticInfo(d.Id, d.Message, d.Severity.ToString().ToLowerInvariant(), d.Line, d.Column))
+            .ToArray());
     }
 
     // Runs on the game thread from here down.
