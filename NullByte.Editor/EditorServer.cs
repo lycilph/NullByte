@@ -15,7 +15,7 @@ public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorTok
     private readonly ConcurrentDictionary<EditorConnection, byte> connections = new();
     private readonly EditorFileService files = new(backendProvider);
     private WebApplication? app;
-    private VirtualFileSystem? watched;
+    private GameState? watched;
 
     public string Url => $"ws://127.0.0.1:{port}/ws";
 
@@ -107,22 +107,48 @@ public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorTok
     /// Call at startup and whenever the running game is replaced.
     public void OnGameChanged()
     {
-        var fileSystem = backendProvider()?.State.FileSystem;
-        if (ReferenceEquals(fileSystem, watched)) return;
+        var state = backendProvider()?.State;
+        if (ReferenceEquals(state, watched)) return;
 
-        watched?.Changed -= OnFileChanged;
-        watched = fileSystem;
-        watched?.Changed += OnFileChanged;
+        Unwatch();
+        watched = state;
+        if (state is not null)
+        {
+            state.FileSystem.Changed += OnFileChanged;
+            state.Player.ServerDiscovered += OnServerDiscovered;
+        }
 
         Broadcast(new { @event = "reset" });
     }
 
-    private void OnFileChanged(FileChange change) => Broadcast(new
+    private void Unwatch()
     {
-        @event = "fileChanged",
-        type = change.Kind.ToString().ToLowerInvariant(),   // created | changed | deleted
-        path = $"/{change.Hostname}/{change.Filename}"
-    });
+        if (watched is null) return;
+        watched.FileSystem.Changed -= OnFileChanged;
+        watched.Player.ServerDiscovered -= OnServerDiscovered;
+    }
+
+    // Both handlers run on the game thread, so reading game state here is safe.
+    private void OnFileChanged(FileChange change)
+    {
+        if (watched is not { } state || !state.Player.DiscoveredHostnames.Contains(change.Hostname))
+            return;   // changes on hidden servers stay hidden
+
+        Broadcast(new
+        {
+            @event = "fileChanged",
+            type = change.Kind.ToString().ToLowerInvariant(),
+            path = $"/{change.Hostname}/{change.Filename}"
+        });
+    }
+
+    private void OnServerDiscovered(string hostname)
+    {
+        if (watched is not { } state) return;
+
+        var name = state.Network.TryGetServer(hostname, out var server) ? server.Hostname : hostname;
+        Broadcast(new { @event = "fileChanged", type = "created", path = $"/{name}" });
+    }
 
     private void Broadcast(object message)
     {
@@ -133,7 +159,7 @@ public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorTok
 
     public async ValueTask DisposeAsync()
     {
-        watched?.Changed -= OnFileChanged;
+        Unwatch();
 
         if (app is not null)
             await app.DisposeAsync();

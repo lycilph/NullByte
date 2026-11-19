@@ -69,9 +69,12 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider)
             throw new EditorException("NotADirectory", "Not a directory.");
 
         if (p.Host is null)
-            return new(state.Network.Servers
-                .Select(s => new DirectoryEntry(s.Hostname, "directory"))
-                .OrderBy(e => e.Name, StringComparer.Ordinal).ToArray());
+            return new(state.Player.DiscoveredHostnames
+                .Select(h => state.Network.TryGetServer(h, out var server) ? server.Hostname : null)
+                .OfType<string>()
+                .OrderBy(h => h, StringComparer.Ordinal)
+                .Select(h => new DirectoryEntry(h, "directory"))
+                .ToArray());
 
         RequireServer(state, p.Host);
         return new(state.FileSystem.ListFiles(p.Host).Select(f => new DirectoryEntry(f, "file")).ToArray());
@@ -141,7 +144,7 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider)
 
     private static void RequireServer(GameState state, string host)
     {
-        if (!state.Network.TryGetServer(host, out _))
+        if (!state.Network.TryGetServer(host, out _) || !state.Player.DiscoveredHostnames.Contains(host))
             throw new EditorException("NotFound", $"Server '{host}' does not exist.");
     }
 

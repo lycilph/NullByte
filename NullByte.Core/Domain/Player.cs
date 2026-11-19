@@ -9,6 +9,9 @@ namespace NullByte.Core.Domain;
 public sealed class Player
 {
     private readonly HashSet<string> discoveredHostnames = new(StringComparer.OrdinalIgnoreCase);
+    
+    /// <summary>Raised on the game thread when a server is discovered for the first time. Handlers must not throw.</summary>
+    public event Action<string>? ServerDiscovered;
 
     public Player(
         string homeHostname,
@@ -110,6 +113,11 @@ public sealed class Player
     {
         if (string.IsNullOrWhiteSpace(hostname))
             throw new ArgumentException("The hostname cannot be empty.", nameof(hostname));
-        return discoveredHostnames.Add(hostname);
+
+        if (!discoveredHostnames.Add(hostname))
+            return false;
+
+        ServerDiscovered?.Invoke(hostname);
+        return true;
     }
 }

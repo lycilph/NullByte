@@ -29,22 +29,21 @@ public class Program
 
         var terminalTask = terminal.RunAsync();
 
+        EditorServer? editor = null;
         try
         {
             await host.StartAsync(resumeAutosave: !args.Contains("--new"));
 
-            var token = EditorToken.LoadOrCreate();
-            await using var editor = new EditorServer(
-                () => host.Session is { } s ? new EditorBackend(s.State, s.GameThread) : null, token);
-            host.SessionChanged += editor.OnGameChanged;
-            await editor.StartAsync();
-
-            terminal.WriteLine($"Editor server listening on {editor.Url} (token: {token.Path})");
+            if (args.Contains("--vscode"))
+                editor = await StartEditorAsync(host, terminal);
 
             await host.RunAsync();
         }
         finally
         {
+            // Stop the editor first, so no events are raised while the game shuts down.
+            if (editor is not null) await editor.DisposeAsync();
+            
             // Save and stop the game while the terminal is still running, then stop the terminal.
             await host.DisposeAsync();
             terminal.RequestStop();
@@ -53,6 +52,30 @@ public class Program
 
         Console.WriteLine("Everything stopped, bye");
         await Task.Delay(500);
+    }
+
+    private static async Task<EditorServer?> StartEditorAsync(GameHost host, ThreadSafeConsoleTerminal terminal)
+    {
+        EditorServer? editor = null;
+        try
+        {
+            var token = EditorToken.LoadOrCreate();
+            editor = new EditorServer(
+                () => host.Session is { } s ? new EditorBackend(s.State, s.GameThread) : null, token);
+
+            await editor.StartAsync();
+            host.SessionChanged += editor.OnGameChanged;
+            editor.OnGameChanged();   // the first game is already running
+
+            terminal.WriteLine($"VS Code integration listening on {editor.Url} (token: {token.Path})");
+            return editor;
+        }
+        catch (Exception exception)
+        {
+            terminal.WriteLine($"Could not start the VS Code integration: {exception.Message}");
+            if (editor is not null) await editor.DisposeAsync();
+            return null;
+        }
     }
 
     // TODO: remove this (only for debugging)
