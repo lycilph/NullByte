@@ -3,7 +3,7 @@
   "displayName": "NullByte",
   "description": "Browse and edit the NullByte virtual filesystem from Visual Studio Code.",
   "version": "0.0.1",
-  "publisher": "local",
+  "publisher": "LyCilph",
   "engines": {
     "vscode": "^1.90.0"
   },
