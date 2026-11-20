@@ -1,7 +1,7 @@
 ﻿# In progress
 
 * M8 milestone - Visual Studio Code editor integration
-
+  * Debug command to see if any (external) editors is connected
 
 # Todo
 

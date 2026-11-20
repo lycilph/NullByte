@@ -14,6 +14,8 @@ export class NullByteError extends Error {
 export type ServerEvent = { event: string; [key: string]: any };
 type Pending = { op: string; started: number; resolve: (value: any) => void; reject: (error: Error) => void };
 
+export type Connection = { url: string; token: string };
+
 const ReconnectDelayMs = 2000;
 
 export class NullByteClient {
@@ -27,9 +29,8 @@ export class NullByteClient {
   private connectedHandler?: () => void;
 
   constructor(
-    private readonly url: string, 
-    private readonly log: Logger,
-    private readonly readToken: () => string) {}
+    private readonly log: Logger, 
+    private readonly readConnection: () => Connection) {}
 
   onEvent(handler: (event: ServerEvent) => void) { this.eventHandler = handler; }
   onConnected(handler: () => void) { this.connectedHandler = handler; }
@@ -63,16 +64,21 @@ export class NullByteClient {
   }
 
   private async open(): Promise<WebSocket> {
-    let token: string;
-    try { token = this.readToken(); }
-    catch (error) {
-      this.log.warn(`Cannot read the token (has the game been started?): ${error instanceof Error ? error.message : error}`);
+    let connection: Connection;
+    try {
+      connection = this.readConnection();
+    } catch (error) {
+      // A missing file is the normal "game not running with --vscode" state, so it stays quiet.
+      const missing = (error as NodeJS.ErrnoException).code === 'ENOENT';
+      this.log[missing ? 'debug' : 'warn'](missing
+        ? 'No connection file (is the game running with --vscode?)'
+        : `Cannot read the connection file: ${error instanceof Error ? error.message : error}`);
       throw error;
     }
 
-    this.log.debug(`Connecting to ${this.url}`);
+    this.log.debug(`Connecting to ${connection.url}`);
     return new Promise<WebSocket>((resolve, reject) => {
-      const socket = new WebSocket(this.url, { headers: { Authorization: `Bearer ${token}` } });
+      const socket = new WebSocket(connection.url, { headers: { Authorization: `Bearer ${connection.token}` } });
 
       socket.on('open', () => {
         this.socket = socket;

@@ -65,8 +65,13 @@ public sealed class ScriptLanguageService : IDisposable
     }
 
     /// <summary>Pays the one-off start-up cost (MEF composition, JIT) ahead of the first real request.</summary>
-    public Task WarmUpAsync() => GetCompletionsAsync("nb.", 3);
-    
+    public async Task WarmUpAsync()
+    {
+        await GetCompletionsAsync("nb.", 3);
+        await GetHoverAsync("nb.GetHackingLevel();", 5);
+        await GetSignatureHelpAsync("nb.Hack(", 8);
+    }
+
     private (Document Document, int Position) Prepare(string source, int offset, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(source);

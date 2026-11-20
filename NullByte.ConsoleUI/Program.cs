@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Persistence;
 using NullByte.Editor;
@@ -37,7 +38,7 @@ public class Program
             await host.StartAsync(resumeAutosave: !args.Contains("--new"));
 
             if (args.Contains("--vscode"))
-                editor = await StartEditorAsync(host, terminal);
+                editor = await StartEditorAsync(host, terminal, args);
 
             await host.RunAsync();
         }
@@ -56,23 +57,40 @@ public class Program
         await Task.Delay(500);
     }
 
-    private static async Task<EditorServer?> StartEditorAsync(GameHost host, ThreadSafeConsoleTerminal terminal)
+    private static async Task<EditorServer?> StartEditorAsync(GameHost host, ThreadSafeConsoleTerminal terminal, string[] args)
     {
         EditorServer? editor = null;
         try
         {
-            var token = EditorToken.LoadOrCreate();
+            int? requestedPort = null;
+            if (GetOption(args, "--vscode-port") is { } portText)
+            {
+                if (!int.TryParse(portText, out var parsed) || parsed is < 1 or > 65535)
+                    throw new ArgumentException($"'{portText}' is not a valid port.");
+                requestedPort = parsed;
+            }
+
+            var options = new EditorServerOptions(
+                Port: requestedPort ?? EditorServerOptions.DefaultPort,
+                FallbackToFreePort: requestedPort is null,   // an explicit port is used exactly as given
+                ConnectionFilePath: GetOption(args, "--vscode-file"));
+
             editor = new EditorServer(
-                () => host.Session is { } s ? new EditorBackend(s.State, s.GameThread) : null, 
-                token, 
-                new ScriptCompiler(),
-                new ScriptLanguageService());
+                () => host.Session is { } s ? new EditorBackend(s.State, s.GameThread) : null,
+                new ScriptCompiler(), new ScriptLanguageService(), options);
 
             await editor.StartAsync();
             host.SessionChanged += editor.OnGameChanged;
             editor.OnGameChanged();   // the first game is already running
 
-            terminal.WriteLine($"VS Code integration listening on {editor.Url} (token: {token.Path})");
+
+            var warmUpTimer = Stopwatch.StartNew();
+            _ = editor.WarmUp.ContinueWith(task => terminal.WriteLine(task.IsCompletedSuccessfully
+                ? $"VS Code language features ready ({warmUpTimer.Elapsed.TotalSeconds:F1}s)."
+                : $"VS Code language features failed to start: {task.Exception?.GetBaseException().Message}"),
+                TaskScheduler.Default);
+
+            terminal.WriteLine($"VS Code integration listening on {editor.Url} (connection file: {editor.ConnectionFilePath})");
             return editor;
         }
         catch (Exception exception)
@@ -85,5 +103,11 @@ public class Program
 
     // TODO: remove this (only for debugging)
     private static string GetSaveDirectory() => "Saves";
-        //=> Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NullByte", "saves");
+    //=> Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NullByte", "saves");
+
+    private static string? GetOption(string[] args, string name)
+    {
+        var index = Array.IndexOf(args, name);
+        return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
+    }
 }

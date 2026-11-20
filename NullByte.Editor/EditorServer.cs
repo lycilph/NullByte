@@ -12,24 +12,60 @@ using NullByte.Scripting.LanguageService;
 
 namespace NullByte.Editor;
 
-public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorToken token, IScriptCompiler compiler, ScriptLanguageService languageService, int port = 8765) : IAsyncDisposable
+public sealed record EditorServerOptions(
+    int Port = EditorServerOptions.DefaultPort,
+    bool FallbackToFreePort = false,
+    string? ConnectionFilePath = null)
+{
+    public const int DefaultPort = 8765;
+}
+
+public sealed class EditorServer(
+    Func<EditorBackend?> backendProvider,
+    IScriptCompiler compiler,
+    ScriptLanguageService languageService,
+    EditorServerOptions options) : IAsyncDisposable
 {
     private readonly ConcurrentDictionary<EditorConnection, byte> connections = new();
     private readonly EditorFileService files = new(backendProvider, compiler, languageService);
+    private readonly EditorToken token = EditorToken.Create();
     private WebApplication? app;
     private GameState? watched;
 
-    public string Url => $"ws://127.0.0.1:{port}/ws";
+    public Task WarmUp { get; private set; } = Task.CompletedTask;
+    public int Port { get; private set; }
+    public string Url => $"ws://127.0.0.1:{Port}/ws";
+    public string ConnectionFilePath { get; } = options.ConnectionFilePath ?? EditorConnectionFile.DefaultPath;
 
     public async Task StartAsync()
+    {
+        try
+        {
+            await StartListeningAsync(options.Port);
+        }
+        catch (IOException) when (options.FallbackToFreePort)
+        {
+            await StartListeningAsync(0);   // the default port is taken: let the OS pick one
+        }
+
+        EditorConnectionFile.Write(ConnectionFilePath, Url, token.Value);
+
+        WarmUp = Task.Run(async () =>
+        {
+            compiler.Compile("{}", "warmup");
+            await languageService.WarmUpAsync();
+        });
+    }
+
+    private async Task StartListeningAsync(int port)
     {
         var builder = WebApplication.CreateSlimBuilder();
         builder.Logging.ClearProviders();   // Kestrel logging would corrupt the terminal
         builder.WebHost.UseUrls($"http://127.0.0.1:{port}");
 
-        app = builder.Build();
-        app.UseWebSockets();
-        app.Map("/ws", async context =>
+        var application = builder.Build();
+        application.UseWebSockets();
+        application.Map("/ws", async context =>
         {
             // Browsers always send Origin on websocket handshakes. The extension never does.
             if (context.Request.Headers.ContainsKey("Origin"))
@@ -39,7 +75,8 @@ public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorTok
             }
 
             var header = context.Request.Headers.Authorization.ToString();
-            if (!header.StartsWith("Bearer ", StringComparison.Ordinal) || !token.Matches(header["Bearer ".Length..]))
+            if (!header.StartsWith("Bearer ", StringComparison.Ordinal) ||
+                !token.Matches(header["Bearer ".Length..]))
             {
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 return;
@@ -55,12 +92,18 @@ public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorTok
             await HandleConnectionAsync(socket, context.RequestAborted);
         });
 
-        await app.StartAsync();
+        try
+        {
+            await application.StartAsync();
+        }
+        catch
+        {
+            await application.DisposeAsync();   // a failed start leaves nothing behind
+            throw;
+        }
 
-        _ = Task.Run(() => { try { compiler.Compile("", "warmup"); } catch { /* warm-up only */ } });
-        _ = languageService.WarmUpAsync().ContinueWith(_ => { }, TaskScheduler.Default);   // warm-up only; errors are ignored
-
-        OnGameChanged();
+        app = application;
+        Port = new Uri(application.Urls.First()).Port;   // the real port, also when 0 was requested
     }
 
     private async Task HandleConnectionAsync(WebSocket socket, CancellationToken ct)
@@ -167,6 +210,8 @@ public sealed class EditorServer(Func<EditorBackend?> backendProvider, EditorTok
 
     public async ValueTask DisposeAsync()
     {
+        EditorConnectionFile.RemoveIfOwned(ConnectionFilePath, token.Value);
+
         Unwatch();
 
         languageService.Dispose();

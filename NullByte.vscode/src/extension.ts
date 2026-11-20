@@ -1,22 +1,27 @@
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { NullByteClient } from './client';
+import { Connection, NullByteClient } from './client';
 import { NullByteFileSystem } from './filesystem';
 import { NullByteDiagnostics } from './diagnostics';
 import { registerCompletion } from './completion';
 import { registerHover } from './hover';
 import { registerSignatureHelp } from './signature';
 
+const connectionPath = path.join(os.homedir(), '.nullbyte', 'editor.json');
+
+function readConnection(): Connection {
+  const parsed = JSON.parse(fs.readFileSync(connectionPath, 'utf8'));
+  if (typeof parsed.url !== 'string' || typeof parsed.token !== 'string')
+    throw new Error('editor.json must contain "url" and "token"');
+  return { url: parsed.url, token: parsed.token };
+}
+
 export function activate(context: vscode.ExtensionContext) {
   const log = vscode.window.createOutputChannel('NullByte', { log: true });
   
-  const extensionRoot = context.extensionPath;
-  const tokenPath = path.join(extensionRoot, '../NullByte.ConsoleUI/bin/Debug/net10.0/.nullbyte', 'editor-token');
-  log.info('Looking for token at: ' + tokenPath);
-  const readToken = () => fs.readFileSync(tokenPath, 'utf8').trim();
-  
-  const client = new NullByteClient('ws://127.0.0.1:8765/ws', log, readToken);
+  const client = new NullByteClient(log, readConnection);
   const fileSystem = new NullByteFileSystem(client, log);
   const diagnostics = new NullByteDiagnostics(client, log);
 
