@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Logger, NullByteClient } from './client';
+import { toGamePath } from './paths';
 
 const DebounceMs = 400;
 
@@ -52,7 +53,10 @@ export class NullByteDiagnostics implements vscode.Disposable {
   private async check(doc: vscode.TextDocument) {
     const version = doc.version;
     try {
-      const result = await this.client.request<DiagnoseResult>('diagnose', doc.uri.path, { content: doc.getText() });
+      const path = toGamePath(doc.uri);
+      if (path === undefined) return;
+
+      const result = await this.client.request<DiagnoseResult>('diagnose', path, { content: doc.getText() });
       if (doc.isClosed || doc.version !== version) return;   // outdated: a newer check is on its way
 
       this.collection.set(doc.uri, result.diagnostics.map(d => this.toDiagnostic(doc, d)));

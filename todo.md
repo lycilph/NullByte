@@ -1,7 +1,6 @@
 ﻿# In progress
 
 * M8 milestone - Visual Studio Code editor integration
-  * Real modification times and conflict detection: mtime is still a constant 0, so VS Code can’t warn when a file changed underneath you.
   * Subfolders: this needs a change to VirtualFileSystem.
   * Run from VS Code: a command, or a run operation that executes the current file.
   * Debug command to see if any (external) editors is connected

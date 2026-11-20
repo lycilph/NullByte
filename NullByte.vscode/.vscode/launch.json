@@ -4,7 +4,7 @@
     "name": "Run Extension",
     "type": "extensionHost",
     "request": "launch",
-    "args": ["--extensionDevelopmentPath=${workspaceFolder}", "--folder-uri=nullbyte:/"],
+    "args": ["--extensionDevelopmentPath=${workspaceFolder}", "--folder-uri=nullbyte:/NullByte"],
     "outFiles": ["${workspaceFolder}/out/**/*.js"],
     "preLaunchTask": "npm: compile"
   }]

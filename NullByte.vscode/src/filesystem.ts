@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Logger, NullByteClient, NullByteError, ServerEvent } from './client';
+import { RootName, rootUri, toGamePath, toUri } from './paths';
 
 const changeTypes: Record<string, vscode.FileChangeType> = {
   created: vscode.FileChangeType.Created,
@@ -31,11 +32,15 @@ export class NullByteFileSystem implements vscode.FileSystemProvider {
   watch(): vscode.Disposable { return new vscode.Disposable(() => {}); }
 
   async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
+    if (uri.path === '/') return { type: vscode.FileType.Directory, ctime: 0, mtime: 0, size: 0 };
+
     const r = await this.call<{ type: string; size: number; created: number; modified: number }>('stat', uri);
     return { type: toFileType(r.type), ctime: r.created, mtime: r.modified, size: r.size };
   }
 
   async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
+    if (uri.path === '/') return [[RootName, vscode.FileType.Directory]];
+
     const r = await this.call<{ entries: { name: string; type: string }[] }>('readDirectory', uri);
     return r.entries.map(e => [e.name, toFileType(e.type)]);
   }
@@ -56,16 +61,21 @@ export class NullByteFileSystem implements vscode.FileSystemProvider {
   }
 
   async rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean }): Promise<void> {
-    await this.call('rename', oldUri, { newPath: newUri.path, overwrite: options.overwrite });
+    const newPath = toGamePath(newUri);
+    if (newPath === undefined) throw vscode.FileSystemError.NoPermissions('Files cannot be moved out of the game');
+
+    await this.call('rename', oldUri, { newPath, overwrite: options.overwrite });
   }
   
   createDirectory(): never { throw vscode.FileSystemError.NoPermissions('Not supported'); }
 
   private async call<T>(op: string, uri: vscode.Uri, extra: object = {}): Promise<T> {
-    // VS Code probes workspace folders for .vscode/*.json and the like. Servers never start with a dot.
-    if (uri.path.startsWith('/.')) throw vscode.FileSystemError.FileNotFound(uri);
+    const path = toGamePath(uri);
 
-    try { return await this.client.request<T>(op, uri.path, extra); }
+    // Outside the game folder, or the dot-files VS Code probes for (.vscode/settings.json and the like).
+    if (path === undefined || path.startsWith('/.')) throw vscode.FileSystemError.FileNotFound(uri);
+
+    try { return await this.client.request<T>(op, path, extra); }
     catch (error) { throw toFileSystemError(error, uri); }
   }
 
@@ -75,7 +85,7 @@ export class NullByteFileSystem implements vscode.FileSystemProvider {
         const type = changeTypes[e.type];
         if (type === undefined) { this.log.warn(`Unknown change type '${e.type}'`); return; }
         this.log.info(`Event: ${e.type} ${e.path}`);
-        this.fire([{ type, uri: this.uri(e.path) }]);
+        this.fire([{ type, uri: toUri(e.path) }]);
         break;
       }
       case 'reset':
@@ -90,18 +100,19 @@ export class NullByteFileSystem implements vscode.FileSystemProvider {
   /** Fires a change for the root and every server folder, so the explorer re-reads them. */
   async refreshAll() {
     try {
-      const root = this.uri('/');
-      const servers = await this.readDirectory(root);
+      const servers = await this.readDirectory(rootUri);
       const open = vscode.workspace.textDocuments.filter(d => d.uri.scheme === 'nullbyte').map(d => d.uri);
 
-      const uris = [root, ...servers.map(([name]) => this.uri(`/${name}`)), ...open];
+      const uris = [rootUri, ...servers.map(([name]) => toUri(`/${name}`)), ...open];
       this.fire(uris.map(uri => ({ type: vscode.FileChangeType.Changed, uri })));
+
+      // Change events do not make the explorer re-read a folder it failed to load earlier,
+      // so refresh it exactly as the Refresh Explorer button would.
+      await vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
     } catch (error) {
       this.log.warn(`Refresh failed: ${error instanceof Error ? error.message : error}`);
     }
   }
-
-  private uri(path: string) { return vscode.Uri.from({ scheme: 'nullbyte', path }); }
 
   private fire(changes: vscode.FileChangeEvent[]) {
     this.log.debug(`Firing ${changes.map(c => `${vscode.FileChangeType[c.type]} ${c.uri.path}`).join(', ')}`);

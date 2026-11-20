@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { NullByteClient } from './client';
+import { rootUri } from './paths';
 
 export function registerCommands(log: vscode.LogOutputChannel, client: NullByteClient): vscode.Disposable {
   return vscode.Disposable.from(
@@ -17,7 +18,6 @@ export function registerCommands(log: vscode.LogOutputChannel, client: NullByteC
       }
 
       // An empty window is reused. A window with a project in it is left alone.
-      const uri = vscode.Uri.from({ scheme: 'nullbyte', path: '/' });
-      await vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: folders.length > 0 });
+      await vscode.commands.executeCommand('vscode.openFolder', rootUri, { forceNewWindow: folders.length > 0 });
     }));
 }
