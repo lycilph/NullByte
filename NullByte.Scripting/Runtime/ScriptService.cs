@@ -94,11 +94,15 @@ public sealed class ScriptService : IScriptOperations
         if (!gameState.FileSystem.TryReadFile(hostname, filename, out var source))
             return ScriptStartResult.Failure($"File not found: {filename}");
 
+        // Resolve all #includes
+        var resolution = new ScriptIncludeResolver(gameState.FileSystem, hostname).Resolve(filename, source!);
+        if (!resolution.Succeeded)
+            return ScriptStartResult.Failure($"Failed to resolve includes for '{filename}'.", resolution.Diagnostics);
+
         // Compile the script.
-        //var compilation = compiler.Compile(source!, filename);
         // Pure CPU work: source string in, immutable result out. No game state in here.
         // No ConfigureAwait(false): we must resume on the game thread.
-        var compilation = await Task.Run(() => compiler.Compile(source!, filename));
+        var compilation = await Task.Run(() => compiler.Compile(resolution.Units, filename));
 
         if (!compilation.Succeeded)
             return ScriptStartResult.Failure($"Compilation failed for '{filename}'.", compilation.Diagnostics);
@@ -249,8 +253,13 @@ public sealed class ScriptService : IScriptOperations
         if (!gameState.FileSystem.TryReadFile(target.Hostname, filename, out var source))
             return 0.0;
 
+        // Resolve all #includes
+        var resolution = new ScriptIncludeResolver(gameState.FileSystem, target.Hostname).Resolve(filename, source!);
+        if (!resolution.Succeeded)
+            return 0.0;
+
         // Compile the script.
-        var compilation = compiler.Compile(source!, filename);
+        var compilation = compiler.Compile(resolution.Units, filename);
 
         if (!compilation.Succeeded || compilation.Script == null)
             return 0.0;

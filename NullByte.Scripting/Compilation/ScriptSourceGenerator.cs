@@ -41,17 +41,7 @@ internal static class ScriptSourceGenerator
 
     public static GeneratedScript GenerateMapped(SourceText source, CompilationUnitSyntax root, string fileName)
     {
-        // Everything before the first statement: extern aliases, usings, assembly attributes.
-        var headerEnd = new[]
-        {
-            root.Externs.Count > 0 ? root.Externs[^1].FullSpan.End : 0,
-            root.Usings.Count > 0 ? root.Usings[^1].FullSpan.End : 0,
-            root.AttributeLists.Count > 0 ? root.AttributeLists[^1].FullSpan.End : 0
-        }.Max();
-
-        // Top-level rules: statements come first, type declarations after them.
-        var firstDeclaration = root.Members.FirstOrDefault(member => member is not GlobalStatementSyntax);
-        var bodyEnd = firstDeclaration?.FullSpan.Start ?? source.Length;
+        var (headerEnd, bodyEnd) = FindBoundaries(source, root);
 
         var header = source.ToString(TextSpan.FromBounds(0, headerEnd));
         var body = source.ToString(TextSpan.FromBounds(headerEnd, bodyEnd));
@@ -92,6 +82,48 @@ internal static class ScriptSourceGenerator
         }
 
         return new GeneratedScript(builder.ToString(), segments);
+    }
+
+    internal static GeneratedScript GenerateIncluded(SourceText source, CompilationUnitSyntax root, string fileName)
+    {
+        var (headerEnd, bodyEnd) = FindBoundaries(source, root);
+
+        var header = source.ToString(TextSpan.FromBounds(0, headerEnd));
+        var declarations = source.ToString(TextSpan.FromBounds(bodyEnd, source.Length));
+        var declarationsLine = LineOf(source, bodyEnd);
+        var file = EscapeFileName(fileName);
+
+        var builder = new StringBuilder();
+        var segments = new List<SourceSegment>();
+
+        segments.Add(new SourceSegment(0, headerEnd, builder.Length));
+        AppendLine(builder, header);
+
+        if (!string.IsNullOrWhiteSpace(declarations))
+        {
+            builder.AppendLine($"#line {declarationsLine} \"{file}\"");
+            segments.Add(new SourceSegment(bodyEnd, source.Length - bodyEnd, builder.Length));
+            AppendLine(builder, declarations);
+        }
+
+        return new GeneratedScript(builder.ToString(), segments);
+    }
+
+    private static (int HeaderEnd, int BodyEnd) FindBoundaries(SourceText source, CompilationUnitSyntax root)
+    {
+        // Everything before the first statement: extern aliases, usings, assembly attributes.
+        var headerEnd = new[]
+        {
+            root.Externs.Count > 0 ? root.Externs[^1].FullSpan.End : 0,
+            root.Usings.Count > 0 ? root.Usings[^1].FullSpan.End : 0,
+            root.AttributeLists.Count > 0 ? root.AttributeLists[^1].FullSpan.End : 0
+        }.Max();
+        
+        // Top-level rules: statements come first, type declarations after them.
+        var firstDeclaration = root.Members.FirstOrDefault(member => member is not GlobalStatementSyntax);
+        var bodyEnd = firstDeclaration?.FullSpan.Start ?? source.Length;
+
+        return (headerEnd, bodyEnd);
     }
 
     private static int LineOf(SourceText source, int position)

@@ -35,6 +35,37 @@ internal static class ScriptRamAnalyzer
         return 1.6 + methods.Sum(GetRamCost);
     }
 
+    public static double Calculate(IEnumerable<(SemanticModel Model, SyntaxNode Root)> trees)
+    {
+        ArgumentNullException.ThrowIfNull(trees);
+
+        var methods = new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default);
+
+        foreach (var (semanticModel, root) in trees)
+        {
+            foreach (var invocation in root.DescendantNodes().OfType<InvocationExpressionSyntax>())
+            {
+                var symbol = semanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
+                if (symbol is null)
+                    continue;
+
+                var ramCostAttr = symbol
+                    .GetAttributes()
+                    .FirstOrDefault(attribute =>
+                        SymbolEqualityComparer.Default.Equals(
+                            attribute.AttributeClass,
+                            semanticModel.Compilation
+                                .GetTypeByMetadataName(
+                                    typeof(RamCostAttribute).FullName!)));
+
+                if (ramCostAttr is not null)
+                    methods.Add(symbol);
+            }
+        }
+
+        return 1.6 + methods.Sum(GetRamCost);
+    }
+
     private static double GetRamCost(IMethodSymbol method)
     {
         var attribute = method.GetAttributes()
