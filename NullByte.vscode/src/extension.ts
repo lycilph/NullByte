@@ -8,6 +8,8 @@ import { NullByteDiagnostics } from './diagnostics';
 import { registerCompletion } from './completion';
 import { registerHover } from './hover';
 import { registerSignatureHelp } from './signature';
+import { registerCommands } from './commands';
+import { NullByteStatusBar } from './status';
 
 const defaultConnectionPath = path.join(os.homedir(), '.nullbyte', 'editor.json');
 
@@ -35,6 +37,7 @@ export function activate(context: vscode.ExtensionContext) {
   const client = new NullByteClient(log, readConnection);
   const fileSystem = new NullByteFileSystem(client, log);
   const diagnostics = new NullByteDiagnostics(client, log);
+  const statusBar = new NullByteStatusBar(client);
 
   client.onEvent(event => fileSystem.handleEvent(event));
   client.onConnected(() => {
@@ -45,6 +48,8 @@ export function activate(context: vscode.ExtensionContext) {
   log.info(`Connection file: ${connectionPath()}`);
 
   context.subscriptions.push(
+    statusBar,
+    registerCommands(log, client),
     vscode.workspace.onDidChangeConfiguration(e => {
       if (!e.affectsConfiguration('nullbyte.connectionFile')) return;
       log.info(`Connection file is now ${connectionPath()}`);

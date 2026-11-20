@@ -13,6 +13,11 @@
   },
   "activationEvents": [ "onFileSystem:nullbyte" ],
   "contributes": {
+    "commands": [
+      { "command": "nullbyte.openWorkspace", "title": "Open Game Workspace", "category": "NullByte" },
+      { "command": "nullbyte.showLog", "title": "Show Log", "category": "NullByte" },
+      { "command": "nullbyte.reconnect", "title": "Reconnect", "category": "NullByte" }
+    ],
      "configuration": {
       "title": "NullByte",
       "properties": {

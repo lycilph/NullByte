@@ -15,6 +15,7 @@ export type ServerEvent = { event: string; [key: string]: any };
 type Pending = { op: string; started: number; resolve: (value: any) => void; reject: (error: Error) => void };
 
 export type Connection = { url: string; token: string; pid?: number  };
+export type ConnectionState = { status: 'connected' | 'connecting' | 'disconnected'; detail: string };
 
 const ReconnectDelayMs = 2000;
 
@@ -34,6 +35,8 @@ export class NullByteClient {
   private nextId = 1;
   private eventHandler?: (event: ServerEvent) => void;
   private connectedHandler?: () => void;
+  private currentState: ConnectionState = { status: 'connecting', detail: 'Connecting to the game…' };
+  private stateHandler?: (state: ConnectionState) => void;
 
   constructor(
     private readonly log: Logger, 
@@ -41,6 +44,15 @@ export class NullByteClient {
 
   onEvent(handler: (event: ServerEvent) => void) { this.eventHandler = handler; }
   onConnected(handler: () => void) { this.connectedHandler = handler; }
+
+  get state(): ConnectionState { return this.currentState; }
+  onStateChange(handler: (state: ConnectionState) => void) { this.stateHandler = handler; }
+
+  private setState(status: ConnectionState['status'], detail: string) {
+    if (this.currentState.status === status && this.currentState.detail === detail) return;   // retries must not flicker
+    this.currentState = { status, detail };
+    this.stateHandler?.(this.currentState);
+  }
 
   /** Connect now, and keep reconnecting in the background so push events keep flowing. */
   start() { this.connect().catch(() => {}); }
@@ -75,8 +87,14 @@ export class NullByteClient {
     try {
       connection = this.readConnection();
     } catch (error) {
+      const failure = error as NodeJS.ErrnoException;
+      const missing = failure.code === 'ENOENT';
+
+      this.setState('disconnected', missing
+        ? `No connection file${failure.path ? ` at ${failure.path}` : ''}. Start the game with --vscode.`
+        : `Cannot read the connection file: ${failure.message}`);
+
       // A missing file is the normal "game not running with --vscode" state, so it stays quiet.
-      const missing = (error as NodeJS.ErrnoException).code === 'ENOENT';
       this.log[missing ? 'debug' : 'warn'](missing
         ? 'No connection file (is the game running with --vscode?)'
         : `Cannot read the connection file: ${error instanceof Error ? error.message : error}`);
@@ -90,6 +108,7 @@ export class NullByteClient {
       socket.on('open', () => {
         this.socket = socket;
         this.log.info('Connected');
+        this.setState('connected', `Connected to ${connection.url}`);
         resolve(socket);
         this.connectedHandler?.();
       });
@@ -97,6 +116,12 @@ export class NullByteClient {
       socket.on('error', error => {
         const rejected = / 40[13]$/.test(error.message);   // "Unexpected server response: 401"
         const stale = connection.pid !== undefined && !isAlive(connection.pid);
+
+        this.setState('disconnected',
+            rejected ? 'The game rejected the token. It was probably restarted. Reconnecting…'
+            : stale ? `The game (pid ${connection.pid}) is not running, so the connection file is stale. Start the game with --vscode.`
+            : `Cannot reach the game at ${connection.url}: ${error.message}`);
+
         this.log[rejected ? 'warn' : 'debug'](
           `Socket error: ${error.message}` +
           (stale ? ` (the game, pid ${connection.pid}, is not running: stale connection file?)` : ''));
@@ -106,6 +131,8 @@ export class NullByteClient {
         if (this.socket === socket) {
           this.socket = undefined;
           this.log.info('Disconnected');
+          if (!this.immediateReconnect)   // an explicit reconnect() already says "Reconnecting…"
+            this.setState('disconnected', 'The connection to the game was closed. Reconnecting…');
         }
         this.failAll(new Error('Connection to NullByte closed'));
         this.scheduleReconnect();
@@ -114,6 +141,8 @@ export class NullByteClient {
   }
 
   reconnect() {
+    this.setState('connecting', 'Reconnecting…');
+
     clearTimeout(this.reconnectTimer);
     this.reconnectTimer = undefined;
 
