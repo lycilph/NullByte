@@ -353,7 +353,36 @@ Edit scripts in VS Code while the game runs. The game hosts a websocket server a
 - The packaged extension installs in a clean VS Code profile and connects without any configuration.
 - Saving a script in VS Code after it was replaced in the game with content of a different length offers Compare and Overwrite instead of silently overwriting it.
 
-### M9: Sandbox and safety
+### M9: Sub-folders and #includes
+
+**Deliverables**
+
+- Sub-folders on servers.
+- Include other scripts with `#include <file>`.
+
+**Acceptance**
+
+- Real folders in the game. A folder is an entry in its own right and can be empty. VS Code’s “New Folder” always creates an empty folder, so it needs a folder that can exist before any file does.
+- File names become paths. `dir/sub/hack.cx` is a valid file name. Because commands and scripts already pass names around as strings, cat, edit, run, mv, scp and nb.Files would work with paths with very few changes.
+- Rules: `/` is the only separator, and a leading `/` is optional. Segments can’t be empty or . or ... Names stay case-sensitive.
+- New commands: `mkdir <dir>`, `rmdir <dir>`, and `ls [dir]`, which lists the direct entries of a folder with folders shown as name/.
+- Saves: a new save version (2) adds the list of folders per server. Existing version 1 saves load through a migration, so nothing is lost.
+- VS Code: nested paths, create folder, recursive delete, rename and move of folders, and push events when folders appear or disappear in the game. Deleting a folder sends a single event for the folder.
+
+### M10: Visual studio Code editor integration - improvements
+
+**Deliverables**
+
+- Debug command to see if any (external) editors is connected
+- full-range underlines for diagnostics,
+- Run from VS Code: a command, or a run operation that executes the current file.
+- launch vs-code from the game
+   
+**Acceptance**
+
+- Updated vs code extension
+
+### M11: Sandbox and safety
 
 **Deliverables**
 
@@ -364,7 +393,7 @@ Edit scripts in VS Code while the game runs. The game hosts a websocket server a
 
 - A set of malicious or buggy sample scripts (file access, reflection, `while(true){}`, thrown exceptions) are rejected or contained, and the game continues to run.
 
-### M10: Progression and balance pass
+### M12: Progression and balance pass
 
 **Deliverables**
 
@@ -375,7 +404,7 @@ Edit scripts in VS Code while the game runs. The game hosts a websocket server a
 
 **Acceptance**: a play session of roughly 1 to 2 hours reaches the final in-scope tier of servers, with a script-based economy clearly better than manual play.
 
-### M11: First playable release
+### M13: First playable release
 
 **Deliverables**: bug fixing, README, sample scripts, a short "how to play" document, a tagged build.
 
@@ -411,7 +440,3 @@ Edit scripts in VS Code while the game runs. The game hosts a websocket server a
 4. **Real-time versus game-time ratio**: 1 to 1 initially, with a speed multiplier in the config. Decided.
 5. **Target framework**: .NET 10. Decided.
 6. **Network authoring format**: a JSON data file. Decided.
-
-## 9. Suggested next step
-
-M0 and M1 come first: set up the solution, then build the synchronization context, fake clock and timer scheduler with tests, since everything else depends on them. The decisions in section 8 are confirmed.
