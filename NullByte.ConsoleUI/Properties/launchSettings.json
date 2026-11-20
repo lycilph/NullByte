@@ -2,7 +2,7 @@
   "profiles": {
     "NullByte.ConsoleUI": {
       "commandName": "Project",
-      "commandLineArgs": "--vscode --vscode-port 9000"
+      "commandLineArgs": "--vscode"
     }
   }
 }

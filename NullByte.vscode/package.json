@@ -4,14 +4,26 @@
   "description": "Browse and edit the NullByte virtual filesystem from Visual Studio Code.",
   "version": "0.0.1",
   "publisher": "LyCilph",
-  "engines": {
-    "vscode": "^1.90.0"
-  },
+  "engines": { "vscode": "^1.90.0" },
   "main": "./out/extension.js",
-  "activationEvents": [
-    "onFileSystem:nullbyte"
-  ],
+  "extensionKind": ["ui"],
+  "capabilities": {
+    "virtualWorkspaces": true,
+    "untrustedWorkspaces": { "supported": true }
+  },
+  "activationEvents": [ "onFileSystem:nullbyte" ],
   "contributes": {
+     "configuration": {
+      "title": "NullByte",
+      "properties": {
+        "nullbyte.connectionFile": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "markdownDescription": "Path to the connection file the game writes when started with `--vscode`. Leave empty for `~/.nullbyte/editor.json`. Use it together with the game's `--vscode-file` option."
+        }
+      }
+    },
     "languages": [{
       "id": "nullbyte-script",
       "aliases": ["NullByte Script"],

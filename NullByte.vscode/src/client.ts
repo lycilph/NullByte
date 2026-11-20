@@ -14,14 +14,21 @@ export class NullByteError extends Error {
 export type ServerEvent = { event: string; [key: string]: any };
 type Pending = { op: string; started: number; resolve: (value: any) => void; reject: (error: Error) => void };
 
-export type Connection = { url: string; token: string };
+export type Connection = { url: string; token: string; pid?: number  };
 
 const ReconnectDelayMs = 2000;
+
+/** Whether a process with this id exists on this machine. Only used for log hints. */
+function isAlive(pid: number): boolean {
+  try { process.kill(pid, 0); return true; }
+  catch (error) { return (error as NodeJS.ErrnoException).code === 'EPERM'; }
+}
 
 export class NullByteClient {
   private socket?: WebSocket;
   private connecting?: Promise<WebSocket>;
   private reconnectTimer?: NodeJS.Timeout;
+  private immediateReconnect = false;
   private disposed = false;
   private readonly pending = new Map<number, Pending>();
   private nextId = 1;
@@ -89,7 +96,10 @@ export class NullByteClient {
       socket.on('message', data => this.onMessage(data.toString()));
       socket.on('error', error => {
         const rejected = / 40[13]$/.test(error.message);   // "Unexpected server response: 401"
-        this.log[rejected ? 'warn' : 'debug'](`Socket error: ${error.message}`);
+        const stale = connection.pid !== undefined && !isAlive(connection.pid);
+        this.log[rejected ? 'warn' : 'debug'](
+          `Socket error: ${error.message}` +
+          (stale ? ` (the game, pid ${connection.pid}, is not running: stale connection file?)` : ''));
         reject(error);
       });
       socket.on('close', () => {
@@ -103,12 +113,27 @@ export class NullByteClient {
     });
   }
 
+  reconnect() {
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = undefined;
+
+    if (this.socket) {
+      this.immediateReconnect = true;   // the close handler reconnects without the usual delay
+      this.socket.close();
+    } else {
+      this.connect().catch(() => {});
+    }
+  }
+
   private scheduleReconnect() {
     if (this.disposed || this.reconnectTimer) return;
+
+    const delay = this.immediateReconnect ? 0 : ReconnectDelayMs;
+    this.immediateReconnect = false;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = undefined;
       this.connect().catch(() => {});
-    }, ReconnectDelayMs);
+    }, delay);
   }
 
   private onMessage(text: string) {
