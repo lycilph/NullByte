@@ -4,7 +4,7 @@ Version 0.1, first iteration (console), with a later WPF + AvalonEdit front end.
 
 ## 1. Vision
 
-NullByte is a text-driven incremental game where the player grows a passive income stream (botnet) and then automates the rest of the economy by writing C# scripts against a small game API (the `ns` object), compiled at runtime with Roslyn. Manual commands and scripts use the same underlying actions, so everything a script can do the player can also do by hand, only slower.
+NullByte is a text-driven incremental game where the player grows a passive income stream (botnet) and then automates the rest of the economy by writing C# scripts against a small game API (the `nb` object), compiled at runtime with Roslyn. Manual commands and scripts use the same underlying actions, so everything a script can do the player can also do by hand, only slower.
 
 The central fantasy is the same as Bitburner: you start by typing commands, get bored, write a script, then write a better one.
 
@@ -78,14 +78,14 @@ Botnet accrues in game time, on the same simulation clock as everything else.
 
 ### 3.5 Scripts and RAM
 
-- A script is a C# source file stored in the game's virtual file system (kept in memory and saved to JSON; no real disk access for scripts).
+- A script is a C# source file (by convention with the `.cx` extension) stored in the game's virtual file system (kept in memory and saved to JSON; no real disk access for scripts).
 - Each script has a static RAM cost: a base cost plus the sum of costs for each distinct `nb` method it calls, found by analyzing the code with Roslyn's semantic model.
 - Running a script with `t` threads costs `ram * t`. It must fit in the target server's free RAM.
 - Scripts run as processes (PID, name, args, threads, host) and can be listed and killed.
 
 ### 3.5.1 Script shape
 
-Start with the simplest thing that is pleasant to write:
+A script is a sequence of top-level statements. `nb` (the game API) and `args` (the script's arguments) are in scope without being declared:
 
 ```csharp
 var target = args[0];
@@ -100,14 +100,16 @@ while (true)
 }
 ```
 
-Later we can switch to top-level scripts (Roslyn script mode) as a friendlier surface, since the compile pipeline is isolated behind an interface.
+`using` lines go at the top, and type declarations can follow the statements. The compiler wraps the whole file in a generated class that implements `IScript` (`Task Run(INullByteApi nb, string[] args)`), so players never write an entry point. This is regular C# compiled with a wrapper, not Roslyn's script mode. A few default `using`s (`System`, `System.Collections.Generic`, `System.Linq`, `System.Threading`, `System.Threading.Tasks`) are added for the player, and diagnostics are mapped back to the player's own line numbers.
 
 ## 4. Technical architecture
 
 ### 4.1 Solution layout
 
 - `NullByte.Core`: simulation, formulas, model, clock, scheduler, NB API. No console or UI references.
-- `NullByte.Scripting`: Roslyn compile, analysis (RAM, banned APIs), loading and process management.
+- `NullByte.Scripting`: Roslyn compile, analysis (RAM, banned APIs), loading and process management, and the language service (completion, hover, signature help) that editors use.
+- `NullByte.Editor`: optional VS Code integration on the host side: a websocket server, a small protocol and the file service (see 4.8). References Core and Scripting.
+- `NullByte.vscode`: the VS Code extension (TypeScript), built and packaged with npm rather than as part of the .NET solution.
 - `NullByte.ConsoleUI` Host: the first host, with command parser, rendering and input.
 - `NullByte` Host (later): WPF host with AvalonEdit, reusing Core and Scripting unchanged.
 - `NullByte.Tests`: unit tests, with a fake clock and seeded RNG.
@@ -144,12 +146,13 @@ A timer completed in stage 2 posts its continuation to the mailbox, and stage 3 
 
 ### 4.5 Roslyn pipeline
 
-1. Parse source into a `SyntaxTree`.
-2. Create a `CSharpCompilation` with a curated list of metadata references (core runtime assemblies we allow, plus `NullByte.Core` API types).
-3. Run analyzers: banned API usage (file, network, process, reflection, threading, `Environment`, `Assembly` loading), required entry point, and the RAM cost calculation using the semantic model.
-4. Emit to an in-memory assembly and load it into a collectible `AssemblyLoadContext`, so recompiling or killing a script lets it be unloaded.
-5. Instantiate the script class and run `Main` as a process on the game thread.
-6. Report diagnostics (line, column, message) to the host as game output.
+1. Parse the player's source into a `SyntaxTree`. Syntax errors are reported against the player's own text, so line numbers are right.
+2. Wrap the source: a generator splits it into `using` lines, top-level statements and type declarations, and emits a class implementing `IScript` around them. `#line` directives make every later diagnostic point at the player's lines. The default global `using`s go into a second syntax tree.
+3. Create a `CSharpCompilation` with a curated list of metadata references (an allow-list of core runtime assemblies we allow, plus `NullByte.Core` API types).
+4. Run analysis: the RAM cost calculation using the semantic model and the `[RamCost]` attributes. Banned API usage (file, network, process, reflection, threading, `Environment`, `Assembly` loading) and loop checks arrive with M9; the entry point is supplied by the wrapper, so it is not checked.
+5. Emit to an in-memory assembly (with a portable PDB) and load it into a collectible `AssemblyLoadContext`, so recompiling or killing a script lets it be unloaded.
+6. Instantiate the generated class and run `Run(nb, args)` as a process on the game thread.
+7. Report diagnostics (line, column, severity, message) to the host as game output. Editors get the same diagnostics from the same compiler (see 4.8).
 
 Compile results are cached by source hash.
 
@@ -176,6 +179,29 @@ Each method has a RAM cost declared with an attribute (for example `[RamCost(0.1
 | Sandbox escape through reflection or dynamic loading | Allow-list references and ban APIs at the semantic level, not just by string matching. This is hobby-level sandboxing, not a security boundary, and the doc should say so |
 | Floating-point drift and balance bugs | Central `Formulas` class with unit tests; seeded RNG |
 | Console output interleaving with input | Single output writer on the game thread; the prompt is redrawn after other output |
+| A web page connects to the localhost websocket and reads or overwrites scripts | Loopback only, handshakes with an `Origin` header rejected, a fresh per-run token kept in a file only the user can read |
+| Roslyn cold start (several seconds) makes the editor feel stuck or starves file operations | Background warm-up of every language feature at startup, a concurrency gate for language requests, and file operations that never wait on it |
+
+### 4.8 VS Code integration
+
+Optional, started with `--vscode`. It adds one host-side project (`NullByte.Editor`) and a separate TypeScript extension (`NullByte.vscode`). Core and the hosts are otherwise unaffected.
+
+```
+VS Code (extension)                       NullByte process
+  FileSystemProvider (nullbyte:)   <--->  NullByte.Editor (Kestrel, websocket, JSON)
+  language providers                         |  GameThread.InvokeAsync
+  status bar, commands                       v  VirtualFileSystem, Player, Network
+                                          Language service (Roslyn, off the game thread)
+```
+
+- **Protocol**: JSON text frames. Requests carry an `id` and an `op` (`stat`, `readDirectory`, `readFile`, `writeFile`, `delete`, `rename`, `diagnose`, `complete`, `hover`, `signatureHelp`). Responses echo the `id` with `ok` and either a `result` or an `error` code (`NotFound`, `FileExists`, `NoPermissions` and so on). The server also pushes events without an id: `fileChanged` (created, changed or deleted, with a path) and `reset` (the running game was replaced, for example by `load`).
+- **Paths**: `/<server>/<file>`. The root lists the servers the player has discovered; undiscovered servers answer "not found". The file system is flat, so there are no subfolders.
+- **Threading**: file operations are marshalled onto the game thread with `GameThread.InvokeAsync`, which keeps the rule from 4.2. `VirtualFileSystem` and `Player` raise change events on the game thread; each connection has an outbox so only one writer sends at a time. Language requests never touch game state, so they run on the thread pool behind a small concurrency gate and cannot starve file operations.
+- **Language service**: reuses the compiler's source wrapper, default usings and whitelisted references, so suggestions match what actually compiles. Positions are mapped between the player's text and the wrapped source. Documentation comes from the XML docs of `NullByte.Core` and RAM costs from the `[RamCost]` attributes; framework members have signatures only. A background warm-up at startup pays the Roslyn start-up cost before the first request.
+- **Discovery and security**: the server listens on loopback only. At startup it writes a connection file with the `url`, a fresh random `token` and the `pid`, readable only by the user, and removes it on exit if it is still its own. The extension reads the file on every connection attempt. Handshakes with an `Origin` header (browsers) or without the bearer token are rejected. As with the sandbox, this is hobby-level protection for a local tool, not a security boundary.
+- **Arguments**: `--vscode` starts the integration. `--vscode-port <n>` sets the port; without it the game tries 8765 and falls back to a free port. `--vscode-file <path>` sets where the connection file is written (default `~/.nullbyte/editor.json`).
+- **Scripts**: the extension registers `.cx` as a language with C# highlighting. Scripts outside `.cx` files get no language features.
+- **Extension**: Install into your normal VS Code: run code --install-extension nullbyte-x.y.z.vsix. When you update later, bump version, repackage, and install again with --force. To remove it, use code --uninstall-extension lycilph.nullbyte.
 
 ## 5. Milestones
 
@@ -301,13 +327,24 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 
 ### M8: Visual Studio Code editor integration
 
+Edit scripts in VS Code while the game runs. The game hosts a websocket server and a VS Code extension presents the game's servers and files as a virtual file system (design in 4.8). The integration is optional and only starts with `--vscode`.
+
 **Deliverables**
 
-- Enable the use of visual studio code editor (through sockets?)
+- `NullByte.Editor`: a loopback-only, token-authenticated websocket server with a small JSON protocol and pushed events. All access to game state is marshalled onto the game thread.
+- `NullByte.vscode`: a TypeScript extension with a `FileSystemProvider` for the `nullbyte:` scheme (one folder per discovered server), a `.cx` language definition, the commands `Open Game Workspace`, `Reconnect` and `Show Log`, a status bar indicator showing the connection state, and a `.vsix` package.
+- File operations: list, read, write (create and overwrite), delete and rename. Changes made in the game (`edit`, `scp`, `rm`, `mv`) and newly discovered servers are pushed to VS Code as events.
+- Only discovered servers are visible to the editor.
+- Language features for `.cx` scripts, backed by the same Roslyn setup as the compiler: compile errors and warnings in the Problems panel, completion, hover and signature help, with documentation and the RAM cost of each API method. Suggestions follow the compiler's reference whitelist.
+- Startup and discovery: `--vscode`, `--vscode-port <n>` and `--vscode-file <path>` (see 4.8), a connection file instead of fixed ports and tokens, and the extension setting `nullbyte.connectionFile`.
+- Script crashes are caught, logged and do not take down the game loop (already in place).
 
 **Acceptance**
 
-- A script can be edited in vs code and executed in the game
+- A script can be edited in VS Code and executed in the game, and changes made in the game show up in VS Code without a refresh.
+- Without `--vscode` the game opens no port and writes no connection file.
+- A second game started with `--vscode` does not break the first: it falls back to a free port, or reports that it could not start.
+- The packaged extension installs in a clean VS Code profile and connects without any configuration.
 
 ### M9: Sandbox and safety
 
@@ -315,7 +352,6 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 
 - Allow-listed references and banned API analysis.
 - Guard against synchronous infinite loops (analyzer rule plus an investigated runtime guard).
-- Exception handling: script crashes are caught, logged and do not take down the game loop.
 
 **Acceptance**
 
@@ -340,7 +376,13 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 
 ## 6. After the first playable
 
-- **WPF host**: terminal control, script editor with AvalonEdit, Roslyn-powered completion and diagnostics (squiggles), file browser, status panels. Core and Scripting stay untouched; only a new `IGameHost` implementation is needed.
+- **WPF host**: terminal control, script editor with AvalonEdit, Roslyn-powered completion and diagnostics (squiggles, reusing the language service from M8), file browser, status panels. Core and Scripting stay untouched; only a new `IGameHost` implementation is needed.
+- **VS Code integration follow-ups**:
+  - Real modification times on files, so VS Code can warn about conflicts when a script changes in the game while it is open in the editor.
+  - Full-range underlines for diagnostics (needs end positions on `ScriptDiagnostic`).
+  - A `run` command in VS Code that runs the current script and shows its output.
+  - Subfolders in the virtual file system and in the explorer.
+  - Remote setups, where the game and VS Code run on different machines or in WSL.
 - Factions, augmentations, reset loop.
 - Port-opening programs and more servers.
 - Purchased servers, stock market, offline progress.
@@ -357,7 +399,7 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 ## 8. Open questions (resolved)
 
 1. **Money type**: `double`, with formulas isolated so it can change. Decided.
-2. **Script surface**: a class with `Main` first, Roslyn script mode later. Decided.
+2. **Script surface**: top-level statements with implicit `nb` and `args`, wrapped by the compiler into a generated class (changed from the original plan of a class with `Main`). Decided.
 3. **Typing during a blocking command**: the input is discarded, not buffered. Decided.
 4. **Real-time versus game-time ratio**: 1 to 1 initially, with a speed multiplier in the config. Decided.
 5. **Target framework**: .NET 10. Decided.

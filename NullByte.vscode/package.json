@@ -4,21 +4,56 @@
   "description": "Browse and edit the NullByte virtual filesystem from Visual Studio Code.",
   "version": "0.0.1",
   "publisher": "LyCilph",
-  "engines": { "vscode": "^1.90.0" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lycilph/NullByte.git",
+    "directory": "NullByte.vscode"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "nullbyte",
+    "game",
+    "scripting",
+    "csharp"
+  ],
+  "engines": {
+    "vscode": "^1.90.0"
+  },
   "main": "./out/extension.js",
-  "extensionKind": ["ui"],
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onFileSystem:nullbyte"
+  ],
   "capabilities": {
     "virtualWorkspaces": true,
-    "untrustedWorkspaces": { "supported": true }
+    "untrustedWorkspaces": {
+      "supported": true
+    }
   },
-  "activationEvents": [ "onFileSystem:nullbyte" ],
   "contributes": {
     "commands": [
-      { "command": "nullbyte.openWorkspace", "title": "Open Game Workspace", "category": "NullByte" },
-      { "command": "nullbyte.showLog", "title": "Show Log", "category": "NullByte" },
-      { "command": "nullbyte.reconnect", "title": "Reconnect", "category": "NullByte" }
+      {
+        "command": "nullbyte.openWorkspace",
+        "title": "Open Game Workspace",
+        "category": "NullByte"
+      },
+      {
+        "command": "nullbyte.showLog",
+        "title": "Show Log",
+        "category": "NullByte"
+      },
+      {
+        "command": "nullbyte.reconnect",
+        "title": "Reconnect",
+        "category": "NullByte"
+      }
     ],
-     "configuration": {
+    "configuration": {
       "title": "NullByte",
       "properties": {
         "nullbyte.connectionFile": {
@@ -29,21 +64,31 @@
         }
       }
     },
-    "languages": [{
-      "id": "nullbyte-script",
-      "aliases": ["NullByte Script"],
-      "extensions": [".cx"],
-      "configuration": "./language-configuration.json"
-    }],
-    "grammars": [{
-      "language": "nullbyte-script",
-      "scopeName": "source.nullbyte-script",
-      "path": "./syntaxes/nullbyte-script.tmLanguage.json"
-    }]
+    "languages": [
+      {
+        "id": "nullbyte-script",
+        "aliases": [
+          "NullByte Script"
+        ],
+        "extensions": [
+          ".cx"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "nullbyte-script",
+        "scopeName": "source.nullbyte-script",
+        "path": "./syntaxes/nullbyte-script.tmLanguage.json"
+      }
+    ]
   },
   "scripts": {
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package --skip-license"
   },
   "dependencies": {
     "ws": "^8.23.0"
@@ -52,6 +97,10 @@
     "@types/node": "^26.6.6",
     "@types/vscode": "1.90",
     "@types/ws": "^8.18.2",
+    "@vscode/vsce": "^4.1.1",
     "typescript": "^7.0.2"
+  },
+  "allowScripts": {
+    "@vscode/vsce-sign@2.1.1": true
   }
 }
