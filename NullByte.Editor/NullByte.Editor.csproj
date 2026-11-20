@@ -15,4 +15,7 @@
     <ProjectReference Include="..\NullByte.Scripting\NullByte.Scripting.csproj" />
   </ItemGroup>
   
+  <ItemGroup>
+    <InternalsVisibleTo Include="NullByte.Editor.Tests" />
+  </ItemGroup>
 </Project>

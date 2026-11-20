@@ -12,7 +12,7 @@ namespace NullByte.Core.Persistence;
 public sealed record SaveGame
 {
     /// <summary>The format version this build writes, and the newest one it can read.</summary>
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     public required int Version { get; init; }
     public required DateTimeOffset SavedAtUtc { get; init; }
@@ -85,6 +85,8 @@ public sealed record FileSave
     public required string Hostname { get; init; }
     public required string Name { get; init; }
     public required string Content { get; init; }
+    public required DateTimeOffset Created { get; init; }
+    public required DateTimeOffset Modified { get; init; }
 }
 
 public sealed record ProcessSave

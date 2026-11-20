@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using NullByte.Core.Persistence.Migrations;
 
 namespace NullByte.Core.Persistence;
 
@@ -23,12 +24,12 @@ public sealed class SaveMigrator
     private readonly Dictionary<int, ISaveMigration> migrations;
     private readonly int currentVersion;
 
-    /// <param name="migrations">Registered migrations. There are none yet: version 1 is the first format.</param>
+    /// <param name="migrations">Registered migrations. If omitted, the built-in save migrations are used.</param>
     /// <param name="currentVersion">The version to upgrade to. Only tests override it.</param>
     public SaveMigrator(IEnumerable<ISaveMigration>? migrations = null, int currentVersion = SaveGame.CurrentVersion)
     {
         this.currentVersion = currentVersion;
-        this.migrations = (migrations ?? []).ToDictionary(migration => migration.FromVersion);
+        this.migrations = (migrations ?? [new V1ToV2Migration()]).ToDictionary(migration => migration.FromVersion);
     }
 
     public void Upgrade(JsonObject save)

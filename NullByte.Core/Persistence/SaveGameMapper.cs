@@ -18,8 +18,7 @@ public static class SaveGameMapper
     /// <summary>
     /// Copies the game into a save. Reads game state, so call it on the game thread.
     /// </summary>
-    public static SaveGame Capture(
-        GameState state, TimeSpan gameTime, IReadOnlyList<ProcessSave> processes, DateTimeOffset savedAtUtc)
+    public static SaveGame Capture(GameState state, TimeSpan gameTime, IReadOnlyList<ProcessSave> processes, DateTimeOffset savedAtUtc)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(processes);
@@ -36,8 +35,9 @@ public static class SaveGameMapper
         {
             foreach (var name in state.FileSystem.ListFiles(server.Hostname))
             {
-                if (state.FileSystem.TryReadFile(server.Hostname, name, out var content) && content is not null)
-                    files.Add(new FileSave { Hostname = server.Hostname, Name = name, Content = content });
+                if (state.FileSystem.TryReadFile(server.Hostname, name, out var content) && content is not null &&
+                    state.FileSystem.TryGetFileTimes(server.Hostname, name, out var times))
+                    files.Add(new FileSave { Hostname = server.Hostname, Name = name, Content = content, Created = times.Created, Modified = times.Modified });
             }
         }
 
@@ -165,7 +165,7 @@ public static class SaveGameMapper
             save.Botnet.TotalEarned);
 
         foreach (var file in save.Files)
-            state.FileSystem.WriteFile(file.Hostname, file.Name, file.Content);
+            state.FileSystem.RestoreFile(file.Hostname, file.Name, file.Content, file.Created, file.Modified);
 
         foreach (var process in save.Processes)
         {

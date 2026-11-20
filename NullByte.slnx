@@ -16,6 +16,7 @@
   <Folder Name="/test/">
     <Project Path="NullByte.ConsoleUI.Tests/NullByte.ConsoleUI.Tests.csproj" Id="4c10974c-2e82-467e-9f3c-4c9c90807b0d" />
     <Project Path="NullByte.Core.Tests/NullByte.Core.Tests.csproj" Id="3c692650-63b2-4dd8-85c7-47ee14ee95d2" />
+    <Project Path="NullByte.Editor.Tests/NullByte.Editor.Tests.csproj" Id="7c33e0e5-08c0-4eb4-8c71-db4842ced24d" />
     <Project Path="NullByte.Scripting.Tests/NullByte.Scripting.Tests.csproj" Id="93564e8e-454e-4ca2-819a-c65ac0dae67a" />
   </Folder>
 </Solution>

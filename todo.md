@@ -6,6 +6,7 @@
   * Run from VS Code: a command, or a run operation that executes the current file.
   * Debug command to see if any (external) editors is connected
   * (Do we need this?) full-range underlines for diagnostics,
+  * Maybe: launch vs-code from the game?
 
 # Todo
 

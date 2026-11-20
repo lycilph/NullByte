@@ -198,4 +198,33 @@ public sealed class VirtualFileSystem
                 nameof(filename));
         }
     }
+
+    /// <summary>
+    /// Restores a file from persistent state, including its original timestamps.
+    ///
+    /// Unlike <see cref="WriteFile"/>, this does not generate new timestamps or
+    /// raise a file-change event. It is intended for save-game restoration.
+    /// </summary>
+    public void RestoreFile(
+        string hostname,
+        string filename,
+        string content,
+        DateTimeOffset created,
+        DateTimeOffset modified)
+    {
+        ValidateServer(hostname);
+        ValidateFileName(filename);
+        ArgumentNullException.ThrowIfNull(content);
+
+        if (modified < created)
+            throw new ArgumentException("The modification time cannot be earlier than the creation time.", nameof(modified));
+
+        if (!filesByServer.TryGetValue(hostname, out var files))
+        {
+            files = new Dictionary<string, FileEntry>(StringComparer.Ordinal);
+            filesByServer.Add(hostname, files);
+        }
+
+        files[filename] = new FileEntry(content, created, modified);
+    }
 }

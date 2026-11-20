@@ -51,9 +51,9 @@ public class SaveGameTests
         state.Botnet.AddNode();
         state.Botnet.RecordEarnings(12.345);
 
-        state.FileSystem.WriteFile("home", "hack.cx", "var t = args[0];\nnb.Print(\"héllo \\\"world\\\" ✓\");\n");
-        state.FileSystem.WriteFile("home", "empty.cx", "");
-        state.FileSystem.WriteFile("n00dles", "hack.cx", "await nb.Hack();");
+        state.FileSystem.RestoreFile("home", "hack.cx", "var t = args[0];\nnb.Print(\"héllo \\\"world\\\" ✓\");\n", SavedAt, SavedAt);
+        state.FileSystem.RestoreFile("home", "empty.cx", "", SavedAt, SavedAt);
+        state.FileSystem.RestoreFile("n00dles", "hack.cx", "await nb.Hack();", SavedAt, SavedAt);
 
         return state;
     }
@@ -167,19 +167,29 @@ public class SaveGameTests
     {
         // If this fails you changed the save format. Bump SaveGame.CurrentVersion, add a migration,
         // and keep the old golden text as a test for that migration. Do not just edit the golden text.
-        string expected = Normalize(GoldenSaves.V1);
+        string expected = Normalize(GoldenSaves.V2);
         string actual = Describe(CreateState());
         Assert.Equal(expected, actual);
     }
 
     [Fact]
-    public void The_golden_file_loads_and_saves_back_unchanged()
+    public void The_current_golden_file_loads_and_saves_back_unchanged()
+    {
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V2));
+
+        var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
+
+        Assert.Equal(Normalize(GoldenSaves.V2), again);
+    }
+
+    [Fact]
+    public void The_golden_file_is_migrated_correctly()
     {
         var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V1));
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(Normalize(GoldenSaves.V1), again);
+        Assert.Equal(Normalize(GoldenSaves.V2), again);
     }
 
     [Fact]
@@ -198,14 +208,14 @@ public class SaveGameTests
     {
         var steps = new List<int>();
         var migrator = new SaveMigrator(
-            [new AddMoney(1, 100, steps), new AddMoney(2, 20, steps)],
-            currentVersion: 3);
+            [new AddMoney(2, 100, steps), new AddMoney(3, 20, steps)],
+            currentVersion: 4);
         var serializer = new SaveGameSerializer(migrator);
 
-        var loaded = serializer.Deserialize(GoldenSaves.V1);
+        var loaded = serializer.Deserialize(GoldenSaves.V2);
 
-        Assert.Equal(new[] { 1, 2 }, steps);
-        Assert.Equal(3, loaded.Version);
+        Assert.Equal(new[] { 2, 3 }, steps);
+        Assert.Equal(4, loaded.Version);
         Assert.Equal(0.1 + 0.2 + 120, loaded.Player.Money);
     }
 
@@ -249,6 +259,68 @@ public class SaveGameTests
         var save = Serializer.Deserialize(WithValue(path, value));
 
         Assert.Throws<SaveFormatException>(() => SaveGameMapper.Restore(save));
+    }
+
+    [Fact]
+    public void CaptureAndRestore_PreservesFileTimestamps()
+    {
+        var state = CreateState();
+        var created = new DateTimeOffset(
+            2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
+        var modified = new DateTimeOffset(
+            2026, 1, 3, 6, 7, 8, TimeSpan.Zero);
+
+        state.FileSystem.RestoreFile(
+            "home",
+            "script.cx",
+            "print(\"hello\");",
+            created,
+            modified);
+
+        var save = SaveGameMapper.Capture(
+            state,
+            TimeSpan.FromMinutes(5),
+            [],
+            new DateTimeOffset(2026, 1, 4, 0, 0, 0, TimeSpan.Zero));
+
+        //var file = Assert.Single(save.Files);
+        var file = save.Files.First(s => string.Equals(s.Name, "script.cx"));
+
+        Assert.Equal(created, file.Created);
+        Assert.Equal(modified, file.Modified);
+
+        var restored = SaveGameMapper.Restore(save);
+
+        Assert.True(restored.State.FileSystem.TryGetFileTimes("home", "script.cx", out var restoredTimes));
+        Assert.Equal(created, restoredTimes.Created);
+        Assert.Equal(modified, restoredTimes.Modified);
+
+        Assert.True(restored.State.FileSystem.TryReadFile("home", "script.cx", out var content));
+        Assert.Equal("print(\"hello\");", content);
+    }
+
+    [Fact]
+    public void Version_1_save_gets_file_timestamps_from_saved_at()
+    {
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V1));
+
+        var expected = new DateTimeOffset(
+            2026, 11, 17, 10, 30, 0, TimeSpan.Zero);
+
+        var files = new[]
+        {
+            ("home", "empty.cx"),
+            ("home", "hack.cx"),
+            ("n00dles", "hack.cx")
+        };
+
+        foreach (var (hostname, filename) in files)
+        {
+            Assert.True(restored.State.FileSystem.TryGetFileTimes(hostname, filename, out var times));
+            Assert.Equal(expected, times.Created);
+            Assert.Equal(expected, times.Modified);
+        }
     }
 
     private static string WithValue(string path, string jsonValue)
