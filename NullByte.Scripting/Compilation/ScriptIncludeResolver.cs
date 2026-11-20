@@ -2,7 +2,7 @@
 
 namespace NullByte.Scripting.Compilation;
 
-internal sealed record ScriptIncludeResolutionResult(
+public sealed record ScriptIncludeResolutionResult(
     bool Succeeded,
     IReadOnlyList<ScriptCompilationUnit> Units,
     IReadOnlyList<ScriptDiagnostic> Diagnostics)
@@ -14,7 +14,7 @@ internal sealed record ScriptIncludeResolutionResult(
         => new(false, [], diagnostics);
 }
 
-internal sealed class ScriptIncludeResolver
+public sealed class ScriptIncludeResolver
 {
     private const string MissingIncludeDiagnosticId = "NB0003";
     private const string CycleIncludeDiagnosticId = "NB0004";

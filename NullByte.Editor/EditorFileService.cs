@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using NullByte.Core.Domain;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.LanguageService;
+using NullByte.Scripting.Runtime; // [NEW] For ScriptIncludeResolver
 
 using NodePath = (string? Host, string? File);
 
@@ -23,7 +24,7 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
                 ?? throw new EditorException("BadRequest", "Expected a JSON object.");
             id = request["id"]?.GetValue<int>();
             var op = request["op"]?.GetValue<string>() ?? throw new EditorException("BadRequest", "Missing 'op'.");
-            
+
             var result = await ExecuteAsync(op, request);
             return JsonSerializer.Serialize(new { id, ok = true, result }, json);
         }
@@ -33,16 +34,21 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
         catch (Exception e) { return Error(id, "Internal", e.Message); }
     }
 
+    // [CHANGED] Passes path & include provider for language ops and live include resolution for diagnose.
     private async Task<object> ExecuteAsync(string op, JsonObject request)
     {
         if (op == "diagnose")
-            return await Task.Run(() => Diagnose(Required(request, "path"), Required(request, "content")));
+        {
+            var rawPath = Required(request, "path");
+            var content = Required(request, "content");
+            return await DiagnoseAsync(rawPath, content);
+        }
         if (op == "complete")
-            return await Task.Run(() => CompleteAsync(request));
+            return await CompleteAsync(request);
         if (op == "hover")
-            return await Task.Run(() => HoverAsync(request));
+            return await HoverAsync(request);
         if (op == "signatureHelp")
-            return await Task.Run(() => SignatureHelpAsync(request));
+            return await SignatureHelpAsync(request);
 
         var backend = backendProvider();
         if (backend is not { GameThread.IsRunning: true })
@@ -64,37 +70,114 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
         }));
     }
 
-    private DiagnoseResult Diagnose(string path, string content)
+    // [CHANGED] Resolves #include scripts from the live server's VirtualFileSystem when available.
+    private async Task<DiagnoseResult> DiagnoseAsync(string path, string content)
     {
-        var fileName = ParsePath(path).File
+        var parsedPath = ParsePath(path);
+        var fileName = parsedPath.File
             ?? throw new EditorException("BadRequest", "Expected the path of a file.");
 
-        var result = compiler.Compile(content, fileName);
+        var backend = backendProvider();
+        if (backend is { GameThread.IsRunning: true } && parsedPath.Host is { } host)
+        {
+            var resolution = await backend.GameThread.InvokeAsync(() =>
+                Task.FromResult(new ScriptIncludeResolver(backend.State.FileSystem, host).Resolve(fileName, content)));
+
+            if (!resolution.Succeeded)
+            {
+                return new(resolution.Diagnostics
+                    .Select(d => new DiagnosticInfo(d.Id, d.Message, d.Severity.ToString().ToLowerInvariant(), d.Line, d.Column))
+                    .ToArray());
+            }
+
+            var units = resolution.Units
+                .Select(u => new ScriptCompilationUnit(u.FileName, u.Source, u.IsEntryPoint))
+                .ToArray();
+
+            var multiResult = await Task.Run(() => compiler.Compile(units));
+            return new(multiResult.Diagnostics
+                .Select(d => new DiagnosticInfo(d.Id, d.Message, d.Severity.ToString().ToLowerInvariant(), d.Line, d.Column))
+                .ToArray());
+        }
+
+        var result = await Task.Run(() => compiler.Compile(content, fileName));
         return new(result.Diagnostics
             .Select(d => new DiagnosticInfo(d.Id, d.Message, d.Severity.ToString().ToLowerInvariant(), d.Line, d.Column))
             .ToArray());
     }
 
-    private static (string Content, int Offset) Source(JsonObject request)
-    => (Required(request, "content"),
-        request["offset"]?.GetValue<int>() ?? throw new EditorException("BadRequest", "Missing 'offset'."));
+    // [NEW] Builds a ScriptIncludeProvider backed by the game's VirtualFileSystem on the game thread.
+    private ScriptIncludeProvider? CreateIncludeProvider(string? host)
+    {
+        if (string.IsNullOrWhiteSpace(host))
+            return null;
 
+        var backend = backendProvider();
+        if (backend is not { GameThread.IsRunning: true })
+            return null;
+
+        return (currentFile, currentSource) =>
+        {
+            var currentBackend = backendProvider();
+            if (currentBackend is not { GameThread.IsRunning: true })
+                return [];
+
+            ScriptIncludeResolutionResult resolution;
+            if (currentBackend.GameThread.IsGameThread)
+            {
+                resolution = new ScriptIncludeResolver(currentBackend.State.FileSystem, host)
+                    .Resolve(currentFile, currentSource);
+            }
+            else
+            {
+                resolution = currentBackend.GameThread.InvokeAsync(() =>
+                    Task.FromResult(new ScriptIncludeResolver(currentBackend.State.FileSystem, host)
+                        .Resolve(currentFile, currentSource))).GetAwaiter().GetResult();
+            }
+
+            if (!resolution.Succeeded)
+                return [];
+
+            return resolution.Units
+                .Where(u => !u.IsEntryPoint)
+                .Select(u => new ScriptIncludeSource(u.FileName, u.Source))
+                .ToArray();
+        };
+    }
+
+    private static (string Content, int Offset, string? FileName, string? Host) Source(JsonObject request)
+    {
+        var rawPath = request["path"]?.GetValue<string>();
+        var parsed = rawPath is not null ? ParsePath(rawPath) : default;
+        return (
+            Required(request, "content"),
+            request["offset"]?.GetValue<int>() ?? throw new EditorException("BadRequest", "Missing 'offset'."),
+            parsed.File,
+            parsed.Host);
+    }
+
+    // [CHANGED] Passes active fileName and includeProvider to ScriptLanguageService.
     private async Task<object> CompleteAsync(JsonObject request)
     {
-        var (content, offset) = Source(request);
-        return new CompleteResult(await languageService.GetCompletionsAsync(content, offset));
+        var (content, offset, fileName, host) = Source(request);
+        var includeProvider = CreateIncludeProvider(host);
+        return new CompleteResult(await languageService.GetCompletionsAsync(content, offset, fileName: fileName, includeProvider: includeProvider));
     }
 
+    // [CHANGED] Passes active fileName and includeProvider to ScriptLanguageService.
     private async Task<object> HoverAsync(JsonObject request)
     {
-        var (content, offset) = Source(request);
-        return new HoverResult(await languageService.GetHoverAsync(content, offset));
+        var (content, offset, fileName, host) = Source(request);
+        var includeProvider = CreateIncludeProvider(host);
+        return new HoverResult(await languageService.GetHoverAsync(content, offset, fileName: fileName, includeProvider: includeProvider));
     }
 
+    // [CHANGED] Passes active fileName and includeProvider to ScriptLanguageService.
     private async Task<object> SignatureHelpAsync(JsonObject request)
     {
-        var (content, offset) = Source(request);
-        return new SignatureHelpResult(await languageService.GetSignatureHelpAsync(content, offset));
+        var (content, offset, fileName, host) = Source(request);
+        var includeProvider = CreateIncludeProvider(host);
+        return new SignatureHelpResult(await languageService.GetSignatureHelpAsync(content, offset, fileName: fileName, includeProvider: includeProvider));
     }
 
     // Runs on the game thread from here down.
@@ -214,7 +297,7 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
         => JsonSerializer.Serialize(new { id, ok = false, error = new { code, message } }, json);
 
     private static string Required(JsonObject request, string name)
-    => request[name]?.GetValue<string>() ?? throw new EditorException("BadRequest", $"Missing '{name}'.");
+        => request[name]?.GetValue<string>() ?? throw new EditorException("BadRequest", $"Missing '{name}'.");
 
     private static bool Flag(JsonObject request, string name)
         => request[name]?.GetValue<bool>() ?? false;

@@ -25,6 +25,10 @@ public sealed record ScriptHover(string Signature, string? Documentation, double
 
 public sealed record ApiMember(double RamCost, string? Summary);
 
+// [NEW] Include source types for language service queries.
+public sealed record ScriptIncludeSource(string FileName, string Source);
+public delegate IReadOnlyList<ScriptIncludeSource> ScriptIncludeProvider(string currentFileName, string currentSource);
+
 /// <summary>
 /// Completion for player scripts. It uses the compiler's wrapper, usings and references,
 /// so it only suggests what would actually compile.
@@ -41,13 +45,15 @@ public sealed class ScriptLanguageService : IDisposable
         .ToArray();
 
     private readonly AdhocWorkspace workspace;
+    private readonly ProjectId projectId; // [CHANGED] Stored so included documents can be added/updated on the project.
     private readonly DocumentId scriptId;
+    private readonly Dictionary<string, DocumentId> includedDocuments = new(StringComparer.Ordinal); // [NEW]
 
     public ScriptLanguageService()
     {
         workspace = new AdhocWorkspace(MefHostServices.Create(HostAssemblies));
 
-        var projectId = ProjectId.CreateNewId();
+        projectId = ProjectId.CreateNewId(); // [CHANGED]
         var usingsId = DocumentId.CreateNewId(projectId, UsingsFileName);
         scriptId = DocumentId.CreateNewId(projectId, ScriptFileName);
 
@@ -72,22 +78,96 @@ public sealed class ScriptLanguageService : IDisposable
         await GetSignatureHelpAsync("nb.Hack(", 8);
     }
 
-    private (Document Document, int Position) Prepare(string source, int offset, CancellationToken ct)
+    // [CHANGED] Accepts optional fileName and includeProvider; strips #include directives and syncs included docs.
+    private (Document Document, int Position) Prepare(
+        string source,
+        int offset,
+        CancellationToken ct,
+        string? fileName = null,
+        ScriptIncludeProvider? includeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         offset = Math.Clamp(offset, 0, source.Length);
 
-        var text = SourceText.From(source, Encoding.UTF8);
-        var tree = CSharpSyntaxTree.ParseText(text, ScriptCompiler.ParseOptions, cancellationToken: ct);
-        var generated = ScriptSourceGenerator.GenerateMapped(text, tree.GetCompilationUnitRoot(ct), "script.cx");
+        var activeFile = string.IsNullOrWhiteSpace(fileName) ? "script.cx" : fileName;
+        var parsed = ScriptIncludeParser.ParseDirectives(source, activeFile);
 
-        // Solutions are immutable, so concurrent requests do not interfere with each other.
-        var solution = workspace.CurrentSolution.WithDocumentText(scriptId, SourceText.From(generated.Text, Encoding.UTF8));
+        var text = SourceText.From(parsed.Source, Encoding.UTF8);
+        var tree = CSharpSyntaxTree.ParseText(text, ScriptCompiler.ParseOptions, activeFile, cancellationToken: ct);
+        var generated = ScriptSourceGenerator.GenerateMapped(text, tree.GetCompilationUnitRoot(ct), activeFile);
+
+        var solution = workspace.CurrentSolution
+            .WithDocumentText(scriptId, SourceText.From(generated.Text, Encoding.UTF8));
+
+        if (includeProvider is not null)
+            solution = SyncIncludedDocuments(solution, includeProvider(activeFile, source));
+        else
+            solution = ClearIncludedDocuments(solution);
+
         return (solution.GetDocument(scriptId)!, generated.ToGenerated(offset));
     }
-    public async Task<ScriptHover?> GetHoverAsync(string source, int offset, CancellationToken ct = default)
+
+    // [NEW] Keeps included declarations in the workspace project while mapping their lines to their own files.
+    private Solution SyncIncludedDocuments(Solution solution, IReadOnlyList<ScriptIncludeSource> includes)
     {
-        var (document, position) = Prepare(source, offset, ct);
+        var activeNames = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var include in includes)
+        {
+            if (string.IsNullOrWhiteSpace(include.FileName))
+                continue;
+
+            activeNames.Add(include.FileName);
+
+            var incParsed = ScriptIncludeParser.ParseDirectives(include.Source, include.FileName);
+            var incText = SourceText.From(incParsed.Source, Encoding.UTF8);
+            var incTree = CSharpSyntaxTree.ParseText(incText, ScriptCompiler.ParseOptions, include.FileName);
+            var incGenerated = ScriptSourceGenerator.GenerateIncluded(incText, incTree.GetCompilationUnitRoot(), include.FileName);
+
+            if (!includedDocuments.TryGetValue(include.FileName, out var docId))
+            {
+                docId = DocumentId.CreateNewId(projectId, $"{include.FileName}.g.cx");
+                includedDocuments[include.FileName] = docId;
+                solution = solution.AddDocument(
+                    docId,
+                    $"{include.FileName}.g.cx",
+                    SourceText.From(incGenerated.Text, Encoding.UTF8));
+            }
+            else
+            {
+                solution = solution.WithDocumentText(docId, SourceText.From(incGenerated.Text, Encoding.UTF8));
+            }
+        }
+
+        foreach (var staleName in includedDocuments.Keys.Where(name => !activeNames.Contains(name)).ToArray())
+        {
+            var staleId = includedDocuments[staleName];
+            includedDocuments.Remove(staleName);
+            solution = solution.RemoveDocument(staleId);
+        }
+
+        return solution;
+    }
+
+    // [NEW]
+    private Solution ClearIncludedDocuments(Solution solution)
+    {
+        foreach (var staleId in includedDocuments.Values)
+            solution = solution.RemoveDocument(staleId);
+
+        includedDocuments.Clear();
+        return solution;
+    }
+
+    // [CHANGED] Added optional fileName and includeProvider parameters.
+    public async Task<ScriptHover?> GetHoverAsync(
+        string source,
+        int offset,
+        CancellationToken ct = default,
+        string? fileName = null,
+        ScriptIncludeProvider? includeProvider = null)
+    {
+        var (document, position) = Prepare(source, offset, ct, fileName, includeProvider);
 
         var quickInfo = QuickInfoService.GetService(document);
         if (quickInfo is null)
@@ -114,9 +194,15 @@ public sealed class ScriptLanguageService : IDisposable
     private static string SectionText(QuickInfoItem item, string kind)
         => string.Concat(item.Sections.Where(s => s.Kind == kind).SelectMany(s => s.TaggedParts).Select(p => p.Text)).Trim();
 
-    public async Task<IReadOnlyList<ScriptCompletion>> GetCompletionsAsync(string source, int offset, CancellationToken ct = default)
+    // [CHANGED] Added optional fileName and includeProvider parameters.
+    public async Task<IReadOnlyList<ScriptCompletion>> GetCompletionsAsync(
+        string source,
+        int offset,
+        CancellationToken ct = default,
+        string? fileName = null,
+        ScriptIncludeProvider? includeProvider = null)
     {
-        var (document, position) = Prepare(source, offset, ct);
+        var (document, position) = Prepare(source, offset, ct, fileName, includeProvider);
 
         var service = CompletionService.GetService(document)
             ?? throw new InvalidOperationException("Roslyn completion is unavailable (are the Features assemblies present?).");
@@ -199,9 +285,15 @@ public sealed class ScriptLanguageService : IDisposable
         return members;
     }
 
-    public async Task<ScriptSignatureHelp?> GetSignatureHelpAsync(string source, int offset, CancellationToken ct = default)
+    // [CHANGED] Added optional fileName and includeProvider parameters.
+    public async Task<ScriptSignatureHelp?> GetSignatureHelpAsync(
+        string source,
+        int offset,
+        CancellationToken ct = default,
+        string? fileName = null,
+        ScriptIncludeProvider? includeProvider = null)
     {
-        var (document, position) = Prepare(source, offset, ct);
+        var (document, position) = Prepare(source, offset, ct, fileName, includeProvider);
 
         var root = await document.GetSyntaxRootAsync(ct);
         var model = await document.GetSemanticModelAsync(ct);
