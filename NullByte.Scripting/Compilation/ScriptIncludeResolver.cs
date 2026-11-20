@@ -2,14 +2,12 @@
 
 namespace NullByte.Scripting.Compilation;
 
-internal sealed record ResolvedScriptUnit(string FileName, string Source, bool IsEntryPoint);
-
 internal sealed record ScriptIncludeResolutionResult(
     bool Succeeded,
-    IReadOnlyList<ResolvedScriptUnit> Units,
+    IReadOnlyList<ScriptCompilationUnit> Units,
     IReadOnlyList<ScriptDiagnostic> Diagnostics)
 {
-    public static ScriptIncludeResolutionResult Success(IReadOnlyList<ResolvedScriptUnit> units)
+    public static ScriptIncludeResolutionResult Success(IReadOnlyList<ScriptCompilationUnit> units)
         => new(true, units, []);
 
     public static ScriptIncludeResolutionResult Failure(IReadOnlyList<ScriptDiagnostic> diagnostics)
@@ -31,18 +29,18 @@ internal sealed class ScriptIncludeResolver
         this.hostname = hostname;
     }
 
-    public ScriptIncludeResolutionResult Resolve(string entryFileName, string entrySource)
+    public ScriptIncludeResolutionResult Resolve(string entryFilename, string entrySource)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(entryFileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(entryFilename);
         ArgumentNullException.ThrowIfNull(entrySource);
 
-        var units = new List<ResolvedScriptUnit>();
+        var units = new List<ScriptCompilationUnit>();
         var diagnostics = new List<ScriptDiagnostic>();
         var visited = new HashSet<string>(StringComparer.Ordinal);
         var activeStack = new List<string>();
 
         ResolveRecursive(
-            fileName: entryFileName,
+            filename: entryFilename,
             source: entrySource,
             isEntryPoint: true,
             includeLine: 0,
@@ -59,20 +57,20 @@ internal sealed class ScriptIncludeResolver
     }
 
     private void ResolveRecursive(
-        string fileName,
+        string filename,
         string? source,
         bool isEntryPoint,
         int includeLine,
         string? includedFrom,
-        List<ResolvedScriptUnit> units,
+        List<ScriptCompilationUnit> units,
         List<ScriptDiagnostic> diagnostics,
         HashSet<string> visited,
         List<string> activeStack)
     {
-        var activeIndex = FindIndex(activeStack, fileName);
+        var activeIndex = FindIndex(activeStack, filename);
         if (activeIndex >= 0)
         {
-            var chain = string.Join(" -> ", activeStack.Skip(activeIndex).Append(fileName));
+            var chain = string.Join(" -> ", activeStack.Skip(activeIndex).Append(filename));
             diagnostics.Add(new ScriptDiagnostic(
                 CycleIncludeDiagnosticId,
                 $"Circular '#include' detected: {chain}.",
@@ -82,18 +80,18 @@ internal sealed class ScriptIncludeResolver
             return;
         }
 
-        if (visited.Contains(fileName))
+        if (visited.Contains(filename))
             return;
 
         if (source is null)
         {
-            if (!fileSystem.TryReadFile(hostname, fileName, out source) || source is null)
+            if (!fileSystem.TryReadFile(hostname, filename, out source) || source is null)
             {
                 diagnostics.Add(new ScriptDiagnostic(
                     MissingIncludeDiagnosticId,
                     includedFrom is null
-                        ? $"Script file '{fileName}' not found on '{hostname}'."
-                        : $"Included script '{fileName}' (referenced from '{includedFrom}') not found on '{hostname}'.",
+                        ? $"Script file '{filename}' not found on '{hostname}'."
+                        : $"Included script '{filename}' (referenced from '{includedFrom}') not found on '{hostname}'.",
                     ScriptDiagnosticSeverity.Error,
                     Line: includeLine,
                     Column: 1));
@@ -101,20 +99,20 @@ internal sealed class ScriptIncludeResolver
             }
         }
 
-        visited.Add(fileName);
-        activeStack.Add(fileName);
+        visited.Add(filename);
+        activeStack.Add(filename);
 
-        var parsed = ScriptIncludeParser.ParseDirectives(source, fileName);
+        var parsed = ScriptIncludeParser.ParseDirectives(source, filename);
         diagnostics.AddRange(parsed.Diagnostics);
 
         foreach (var childInclude in parsed.Includes)
         {
             ResolveRecursive(
-                fileName: childInclude,
+                filename: childInclude,
                 source: null,
                 isEntryPoint: false,
                 includeLine: 1,
-                includedFrom: fileName,
+                includedFrom: filename,
                 units,
                 diagnostics,
                 visited,
@@ -124,7 +122,7 @@ internal sealed class ScriptIncludeResolver
         activeStack.RemoveAt(activeStack.Count - 1);
 
         // Emit dependencies before dependents so declarations exist when referenced.
-        units.Add(new ResolvedScriptUnit(fileName, parsed.Source, isEntryPoint));
+        units.Add(new ScriptCompilationUnit(filename, parsed.Source, isEntryPoint));
     }
 
     private static int FindIndex(List<string> stack, string fileName)

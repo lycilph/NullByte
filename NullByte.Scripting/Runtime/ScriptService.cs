@@ -102,7 +102,7 @@ public sealed class ScriptService : IScriptOperations
         // Compile the script.
         // Pure CPU work: source string in, immutable result out. No game state in here.
         // No ConfigureAwait(false): we must resume on the game thread.
-        var compilation = await Task.Run(() => compiler.Compile(resolution.Units, filename));
+        var compilation = await Task.Run(() => compiler.Compile(resolution.Units));
 
         if (!compilation.Succeeded)
             return ScriptStartResult.Failure($"Compilation failed for '{filename}'.", compilation.Diagnostics);
@@ -259,7 +259,7 @@ public sealed class ScriptService : IScriptOperations
             return 0.0;
 
         // Compile the script.
-        var compilation = compiler.Compile(resolution.Units, filename);
+        var compilation = compiler.Compile(resolution.Units);
 
         if (!compilation.Succeeded || compilation.Script == null)
             return 0.0;

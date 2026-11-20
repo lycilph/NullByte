@@ -1,9 +1,10 @@
-﻿using System.Text;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
 using NullByte.Core.Scripting;
+using System.Text;
 
 namespace NullByte.Scripting.Compilation;
 
@@ -19,6 +20,7 @@ public sealed class ScriptCompiler : IScriptCompiler
     global using System.Linq;
     global using System.Threading;
     global using System.Threading.Tasks;
+    global using NullByte.Core.Scripting;
     """;
 
     private static readonly List<string> allowedAssemblies = new([
@@ -50,51 +52,84 @@ public sealed class ScriptCompiler : IScriptCompiler
         ArgumentNullException.ThrowIfNull(references);
         this.references = references;
     }
-
-    public ScriptCompilationResult Compile(string source, string fileName)
+    public ScriptCompilationResult Compile(string source, string filename)
     {
         ArgumentNullException.ThrowIfNull(source);
-        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(filename);
 
-        var originalText = SourceText.From(source, Encoding.UTF8);
-        var originalTree = CSharpSyntaxTree.ParseText(originalText, ParseOptions, fileName);
+        var parsed = ScriptIncludeParser.ParseDirectives(source, filename);
+        if (parsed.Diagnostics.Count > 0)
+            return ScriptCompilationResult.Failure(parsed.Diagnostics);
 
-        // Syntax errors are reported against the player's own text, so the
-        // line numbers are right and the generator never sees broken code.
-        var syntaxErrors = originalTree.GetDiagnostics()
-            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
-            .Select(ConvertDiagnostic)
-            .ToArray();
+        return Compile([new ScriptCompilationUnit(filename, parsed.Source, IsEntryPoint: true)]);
+    }
 
-        if (syntaxErrors.Length > 0)
-            return ScriptCompilationResult.Failure(syntaxErrors);
+    public ScriptCompilationResult Compile(IReadOnlyList<ScriptCompilationUnit> units)
+    {
+        ArgumentNullException.ThrowIfNull(units);
 
-        var generatedSource = ScriptSourceGenerator.Generate(
-            originalText,
-            originalTree.GetCompilationUnitRoot(),
-            fileName);
+        if (units.Count == 0)
+            throw new ArgumentException("At least one compilation unit is required.", nameof(units));
+
+        var preDiagnostics = new List<ScriptDiagnostic>();
+        var parsedUnits = new List<(ScriptCompilationUnit Unit, SourceText Text, CompilationUnitSyntax Root)>(units.Count);
+
+        foreach (var unit in units)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(unit.FileName);
+            ArgumentNullException.ThrowIfNull(unit.Source);
+
+            var text = SourceText.From(unit.Source, Encoding.UTF8);
+            var tree = CSharpSyntaxTree.ParseText(text, ParseOptions, unit.FileName);
+            var root = tree.GetCompilationUnitRoot();
+
+            // Syntax errors are reported against each file's own text so line numbers stay accurate.
+            var syntaxErrors = tree.GetDiagnostics()
+                .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+                .Select(ConvertDiagnostic);
+
+            preDiagnostics.AddRange(syntaxErrors);
+
+            if (!unit.IsEntryPoint)
+                preDiagnostics.AddRange(ScriptIncludeParser.ValidateIncludedScript(root, unit.FileName));
+
+            parsedUnits.Add((unit, text, root));
+        }
+
+        if (preDiagnostics.Count > 0)
+            return ScriptCompilationResult.Failure(preDiagnostics);
 
         var usingsTree = CSharpSyntaxTree.ParseText(
             SourceText.From(DefaultUsingsSource, Encoding.UTF8),
             ParseOptions,
             "NullByte.GlobalUsings.g.cx");
 
-        var generatedTree = CSharpSyntaxTree.ParseText(
-            SourceText.From(generatedSource, Encoding.UTF8),
-            ParseOptions,
-            "NullByte.Script.g.cx");
+        var syntaxTrees = new List<SyntaxTree>(parsedUnits.Count + 1) { usingsTree };
+        var generatedTrees = new List<SyntaxTree>(parsedUnits.Count);
+
+        foreach (var (unit, text, root) in parsedUnits)
+        {
+            var generatedSource = unit.IsEntryPoint
+                ? ScriptSourceGenerator.GenerateMapped(text, root, unit.FileName).Text
+                : ScriptSourceGenerator.GenerateIncluded(text, root, unit.FileName).Text;
+
+            var generatedTree = CSharpSyntaxTree.ParseText(
+                SourceText.From(generatedSource, Encoding.UTF8),
+                ParseOptions,
+                $"{Path.GetFileNameWithoutExtension(unit.FileName)}.g.cx");
+
+            syntaxTrees.Add(generatedTree);
+            generatedTrees.Add(generatedTree);
+        }
 
         var compilation = CSharpCompilation.Create(
             $"NullByte.Script.{Guid.NewGuid():N}",
-            [usingsTree, generatedTree],
+            syntaxTrees,
             references,
             CompilationOptions);
 
-        var semanticModel = compilation.GetSemanticModel(generatedTree);
-
         var ramCost = ScriptRamAnalyzer.Calculate(
-            semanticModel,
-            generatedTree.GetRoot());
+            generatedTrees.Select(tree => (compilation.GetSemanticModel(tree), tree.GetRoot())));
 
         using var assemblyStream = new MemoryStream();
         using var symbolsStream = new MemoryStream();
@@ -113,8 +148,7 @@ public sealed class ScriptCompiler : IScriptCompiler
             return ScriptCompilationResult.Failure(diagnostics);
 
         return ScriptCompilationResult.Success(
-            new CompiledScript(assemblyStream.ToArray(), symbolsStream.ToArray(), ramCost),
-            diagnostics);
+            new CompiledScript(assemblyStream.ToArray(), symbolsStream.ToArray(), ramCost), diagnostics);
     }
 
     internal static IReadOnlyList<MetadataReference> CreateScriptReferences()
