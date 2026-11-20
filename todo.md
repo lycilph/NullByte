@@ -10,6 +10,7 @@
 
 # Future ideas
 
+- Add settings (instead of the args to the program.cs)
 - Add options for Ram usage and compilation to the NanoEditor 
 - Align script method names and console commands
 - Add the backdoor command
