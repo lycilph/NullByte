@@ -68,6 +68,11 @@ public sealed class CompletionCatalog : ICompletionProvider
                 .ListFiles(player.CurrentHostname)
                 .ToArray();
 
+        var directories =
+            gameState.FileSystem
+                .ListDirectories(player.CurrentHostname)
+                .ToArray();
+
         var saves =
             saveManager
             .ListAsync()
@@ -81,14 +86,14 @@ public sealed class CompletionCatalog : ICompletionProvider
                 .Select(node => node.ToString())
                 .ToArray();
 
-        var filesOrServers = files.Concat(knownServers).ToList();
-
         var values = new Dictionary<CompletionKind, IReadOnlyList<string>>
             {
                 [CompletionKind.ConnectableServer] = connectableServers,
                 [CompletionKind.KnownServer] = knownServers,
                 [CompletionKind.Filename] = files,
-                [CompletionKind.FilenameOrKnownServer] = filesOrServers,
+                [CompletionKind.Directory] = directories,
+                [CompletionKind.FilenameOrDirectory] = files.Concat(directories).ToArray(),
+                [CompletionKind.FilenameOrKnownServer] = files.Concat(knownServers).ToList(),
                 [CompletionKind.SaveGame] = saves,
                 [CompletionKind.BotnetNode] = botnetNodes
             };

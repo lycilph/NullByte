@@ -13,6 +13,10 @@ public enum CompletionKind
     KnownServer,
     /// <summary>Files on the player's current server.</summary>
     Filename,
+    /// <summary>Directories on the player's current server.</summary>
+    Directory,
+    /// <summary>Combination of the Filename and Directory values.</summary>
+    FilenameOrDirectory,
     /// <summary>Combination of the Filename and KnownServer values.</summary>
     FilenameOrKnownServer,
     /// <summary>Existing save game.</summary>
