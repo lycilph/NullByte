@@ -3,30 +3,34 @@
 public enum FileChangeKind { Created, Changed, Deleted }
 public readonly record struct FileChange(string Hostname, string Filename, FileChangeKind Kind);
 
+/// <summary>When a file was created and last modified. Wall-clock time, not game time.</summary>
+public readonly record struct FileTimes(DateTimeOffset Created, DateTimeOffset Modified);
+
 /// <summary>
 /// Stores files belonging to the servers in a game network.
 /// This filesystem is entirely in memory and never accesses the host filesystem.
 /// </summary>
 public sealed class VirtualFileSystem
 {
-    private readonly Network network;
+    private sealed record FileEntry(string Content, DateTimeOffset Created, DateTimeOffset Modified);
 
-    // The outer dictionary uses case-insensitive server hostnamess, matching the network's existing conventions.
+    private readonly Network network;
+    private readonly TimeProvider timeProvider;
+
+    // The outer dictionary uses case-insensitive server hostnames, matching the network's existing conventions.
     // File names are case-sensitive.
-    private readonly Dictionary<string, Dictionary<string, string>> filesByServer = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Dictionary<string, FileEntry>> filesByServer = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Raised on the game thread after a file changed. Handlers must not throw.</summary>
     public event Action<FileChange>? Changed;
 
-    public VirtualFileSystem(Network network)
+    public VirtualFileSystem(Network network, TimeProvider? timeProvider = null)
     {
-        this.network = network
-            ?? throw new ArgumentNullException(nameof(network));
+        this.network = network ?? throw new ArgumentNullException(nameof(network));
+        this.timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    /// <summary>
-    /// Gets the names of all files on a server, sorted alphabetically.
-    /// </summary>
+    /// <summary>Gets the names of all files on a server, sorted alphabetically.</summary>
     public IReadOnlyList<string> ListFiles(string hostname)
     {
         ValidateServer(hostname);
@@ -39,9 +43,7 @@ public sealed class VirtualFileSystem
             .ToArray();
     }
 
-    /// <summary>
-    ///  Copies files from source to destination servers
-    /// </summary>
+    /// <summary>Copies files from source to destination servers.</summary>
     /// <returns>True only if all files were copied</returns>
     public bool CopyFiles(string source, string destination, IReadOnlyList<string> files)
     {
@@ -60,24 +62,39 @@ public sealed class VirtualFileSystem
         return result;
     }
 
-    /// <summary>
-    /// Attempts to read a file from a server.
-    /// </summary>
+    /// <summary>Attempts to read a file from a server.</summary>
     public bool TryReadFile(string hostname, string filename, out string? content)
     {
         ValidateServer(hostname);
         ValidateFileName(filename);
 
-        if (filesByServer.TryGetValue(hostname, out var files) && files.TryGetValue(filename, out content))
+        if (filesByServer.TryGetValue(hostname, out var files) && files.TryGetValue(filename, out var entry))
+        {
+            content = entry.Content;
             return true;
+        }
 
         content = null;
         return false;
     }
 
-    /// <summary>
-    /// Creates a new file or replaces the contents of an existing file.
-    /// </summary>
+    /// <summary>Attempts to get the creation and modification time of a file.</summary>
+    public bool TryGetFileTimes(string hostname, string filename, out FileTimes times)
+    {
+        ValidateServer(hostname);
+        ValidateFileName(filename);
+
+        if (filesByServer.TryGetValue(hostname, out var files) && files.TryGetValue(filename, out var entry))
+        {
+            times = new FileTimes(entry.Created, entry.Modified);
+            return true;
+        }
+
+        times = default;
+        return false;
+    }
+
+    /// <summary>Creates a new file or replaces the contents of an existing file.</summary>
     public void WriteFile(string hostname, string filename, string content)
     {
         ValidateServer(hostname);
@@ -86,18 +103,26 @@ public sealed class VirtualFileSystem
 
         if (!filesByServer.TryGetValue(hostname, out var files))
         {
-            files = new Dictionary<string, string>(StringComparer.Ordinal);
+            files = new Dictionary<string, FileEntry>(StringComparer.Ordinal);
             filesByServer.Add(hostname, files);
         }
 
-        var existed = files.ContainsKey(filename);
-        files[filename] = content;
-        Raise(hostname, filename, existed ? FileChangeKind.Changed : FileChangeKind.Created);
+        var now = Now();
+        if (files.TryGetValue(filename, out var existing))
+        {
+            // Strictly increasing, so two writes in the same millisecond still look different to an editor.
+            var modified = now > existing.Modified ? now : existing.Modified.AddMilliseconds(1);
+            files[filename] = existing with { Content = content, Modified = modified };
+            Raise(hostname, filename, FileChangeKind.Changed);
+        }
+        else
+        {
+            files[filename] = new FileEntry(content, now, now);
+            Raise(hostname, filename, FileChangeKind.Created);
+        }
     }
 
-    /// <summary>
-    /// Deletes a file. Returns false if the file does not exist.
-    /// </summary>
+    /// <summary>Deletes a file. Returns false if the file does not exist.</summary>
     public bool DeleteFile(string hostname, string filename)
     {
         ValidateServer(hostname);
@@ -125,7 +150,7 @@ public sealed class VirtualFileSystem
         if (!filesByServer.TryGetValue(hostname, out var files))
             return false;
 
-        if (!files.TryGetValue(sourceFilename, out var content))
+        if (!files.TryGetValue(sourceFilename, out var entry))
             return false;
 
         // File names are case-sensitive, so an identical name is the same file.
@@ -136,14 +161,20 @@ public sealed class VirtualFileSystem
         if (files.ContainsKey(destinationFilename))
             return false;
 
-        files.Add(destinationFilename, content);
+        files.Add(destinationFilename, entry);   // keeps its times: a rename is not a modification
         files.Remove(sourceFilename);
-        
+
         Raise(hostname, sourceFilename, FileChangeKind.Deleted);
         Raise(hostname, destinationFilename, FileChangeKind.Created);
-
         return true;
     }
+
+    // Whole milliseconds, because that is what editors compare.
+    private DateTimeOffset Now()
+        => DateTimeOffset.FromUnixTimeMilliseconds(timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
+
+    private void Raise(string hostname, string filename, FileChangeKind kind)
+        => Changed?.Invoke(new FileChange(network.GetServer(hostname).Hostname, filename, kind));
 
     private void ValidateServer(string hostname)
     {
@@ -167,7 +198,4 @@ public sealed class VirtualFileSystem
                 nameof(filename));
         }
     }
-
-    private void Raise(string hostname, string filename, FileChangeKind kind)
-        => Changed?.Invoke(new FileChange(network.GetServer(hostname).Hostname, filename, kind));
 }

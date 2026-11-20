@@ -201,7 +201,11 @@ VS Code (extension)                       NullByte process
 - **Discovery and security**: the server listens on loopback only. At startup it writes a connection file with the `url`, a fresh random `token` and the `pid`, readable only by the user, and removes it on exit if it is still its own. The extension reads the file on every connection attempt. Handshakes with an `Origin` header (browsers) or without the bearer token are rejected. As with the sandbox, this is hobby-level protection for a local tool, not a security boundary.
 - **Arguments**: `--vscode` starts the integration. `--vscode-port <n>` sets the port; without it the game tries 8765 and falls back to a free port. `--vscode-file <path>` sets where the connection file is written (default `~/.nullbyte/editor.json`).
 - **Scripts**: the extension registers `.cx` as a language with C# highlighting. Scripts outside `.cx` files get no language features.
-- **Extension**: Install into your normal VS Code: run code --install-extension nullbyte-x.y.z.vsix. When you update later, bump version, repackage, and install again with --force. To remove it, use code --uninstall-extension lycilph.nullbyte.
+- **Extension**: Install into your normal VS Code: run code --install-extension nullbyte-x.y.z.vsix. When you update later, bump version, repackage, and install again with --force. To remove it, use code --uninstall-extension lycilph.nullbyte. To package the extension use: `npm run package`
+
+#### Testing with wscat
+
+Access: wscat -c ws://127.0.0.1:8765/ws -H "Authorization: Bearer [token]"
 
 ## 5. Milestones
 

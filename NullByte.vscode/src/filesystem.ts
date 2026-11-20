@@ -31,8 +31,8 @@ export class NullByteFileSystem implements vscode.FileSystemProvider {
   watch(): vscode.Disposable { return new vscode.Disposable(() => {}); }
 
   async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
-    const r = await this.call<{ type: string; size: number }>('stat', uri);
-    return { type: toFileType(r.type), ctime: 0, mtime: 0, size: r.size };
+    const r = await this.call<{ type: string; size: number; created: number; modified: number }>('stat', uri);
+    return { type: toFileType(r.type), ctime: r.created, mtime: r.modified, size: r.size };
   }
 
   async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
@@ -92,7 +92,9 @@ export class NullByteFileSystem implements vscode.FileSystemProvider {
     try {
       const root = this.uri('/');
       const servers = await this.readDirectory(root);
-      const uris = [root, ...servers.map(([name]) => this.uri(`/${name}`))];
+      const open = vscode.workspace.textDocuments.filter(d => d.uri.scheme === 'nullbyte').map(d => d.uri);
+
+      const uris = [root, ...servers.map(([name]) => this.uri(`/${name}`)), ...open];
       this.fire(uris.map(uri => ({ type: vscode.FileChangeType.Changed, uri })));
     } catch (error) {
       this.log.warn(`Refresh failed: ${error instanceof Error ? error.message : error}`);

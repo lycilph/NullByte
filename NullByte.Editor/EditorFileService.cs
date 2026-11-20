@@ -99,12 +99,18 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
 
     // Runs on the game thread from here down.
 
-    private static StatResult Stat(GameState state, (string? Host, string? File) p)
+    private static StatResult Stat(GameState state, NodePath p)
     {
         if (p.Host is not null) RequireServer(state, p.Host);
-        return p.File is null
-            ? new StatResult("directory", 0)
-            : new StatResult("file", Encoding.UTF8.GetByteCount(ReadContent(state, p)));
+        if (p.File is null)
+            return new StatResult("directory", 0, 0, 0);
+
+        var content = ReadContent(state, p);   // throws NotFound
+        if (!state.FileSystem.TryGetFileTimes(p.Host!, p.File, out var times))
+            throw new EditorException("NotFound", $"File '{p.File}' not found on '{p.Host}'.");
+
+        return new StatResult("file", Encoding.UTF8.GetByteCount(content),
+            times.Created.ToUnixTimeMilliseconds(), times.Modified.ToUnixTimeMilliseconds());
     }
 
     private static DirectoryResult ReadDirectory(GameState state, (string? Host, string? File) p)

@@ -7,7 +7,7 @@ namespace NullByte.Editor;
 /// What the editor server needs from the running game. Re-evaluated per request, so `load` just works.
 public sealed record EditorBackend(GameState State, IGameThread GameThread);
 
-internal sealed record StatResult(string Type, long Size);
+internal sealed record StatResult(string Type, long Size, long Created, long Modified);
 internal sealed record DirectoryEntry(string Name, string Type);
 internal sealed record DirectoryResult(IReadOnlyList<DirectoryEntry> Entries);
 internal sealed record FileResult(string Content);
