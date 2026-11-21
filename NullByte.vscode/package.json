@@ -1,8 +1,8 @@
 {
   "name": "nullbyte",
   "displayName": "NullByte",
-  "description": "Browse and edit the NullByte virtual filesystem from Visual Studio Code.",
-  "version": "0.0.1",
+  "version": "0.2.0",
+  "description": "Edit NullByte game scripts in VS Code: server folders and files, diagnostics, completion, hover and signature help.",
   "publisher": "LyCilph",
   "repository": {
     "type": "git",

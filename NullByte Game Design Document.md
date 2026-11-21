@@ -79,6 +79,7 @@ Botnet accrues in game time, on the same simulation clock as everything else.
 ### 3.5 Scripts and RAM
 
 - A script is a C# source file (by convention with the `.cx` extension) stored in the game's virtual file system (kept in memory and saved to JSON; no real disk access for scripts).
+- Files live in folders. A file name is a path such as `tools/net/scan.cx`, relative to the server root; `/tools/a.cx` and `tools/a.cx` are the same file. Scripts refer to other scripts and files by such paths. The rules are in 4.9.
 - Each script has a static RAM cost: a base cost plus the sum of costs for each distinct `nb` method it calls, found by analyzing the code with Roslyn's semantic model.
 - Running a script with `t` threads costs `ram * t`. It must fit in the target server's free RAM.
 - Scripts run as processes (PID, name, args, threads, host) and can be listed and killed.
@@ -166,6 +167,7 @@ Each method has a RAM cost declared with an attribute (for example `[RamCost(0.1
 | Info | `GetServerMoneyAvailable`, `GetServerMaxMoney`, `GetServerSecurityLevel`, `GetServerMinSecurityLevel`, `GetServerRequiredHackingLevel`, `GetHackingLevel`, `GetServerMaxRam`, `GetServerUsedRam`, `HasRootAccess` |
 | Network | `Scan`, `Nuke` |
 | Scripts | `Run`, `Exec`, `Kill`, `Ps`, `Scp`, `ScriptRunning`, `GetScriptRam` |
+| Files | `Files.List`, `Files.Delete`, `Files.Move`, `Files.Copy` (paths relative to the server root; `List` returns every file on the server) |
 | Botnet | `Botnet.NumNodes`, `PurchaseNode`, `UpgradeLevel`, `UpgradeRam`, `UpgradeCore`, cost getters |
 | Output | `Print`, `Tprint` |
 | Args | `Args` |
@@ -181,6 +183,7 @@ Each method has a RAM cost declared with an attribute (for example `[RamCost(0.1
 | Console output interleaving with input | Single output writer on the game thread; the prompt is redrawn after other output |
 | A web page connects to the localhost websocket and reads or overwrites scripts | Loopback only, handshakes with an `Origin` header rejected, a fresh per-run token kept in a file only the user can read |
 | Roslyn cold start (several seconds) makes the editor feel stuck or starves file operations | Background warm-up of every language feature at startup, a concurrency gate for language requests, and file operations that never wait on it |
+| A path that is both a file and a folder, or paths that grow without bound | One namespace per server enforced by `VirtualFileSystem` (a path is a file or a folder, never both), with limits of 8 levels and 256 characters |
 
 ### 4.8 VS Code integration
 
@@ -194,19 +197,27 @@ VS Code (extension)                       NullByte process
                                           Language service (Roslyn, off the game thread)
 ```
 
-- **Protocol**: JSON text frames. Requests carry an `id` and an `op` (`stat`, `readDirectory`, `readFile`, `writeFile`, `delete`, `rename`, `diagnose`, `complete`, `hover`, `signatureHelp`). Responses echo the `id` with `ok` and either a `result` or an `error` code (`NotFound`, `FileExists`, `NoPermissions` and so on). The server also pushes events without an id: `fileChanged` (created, changed or deleted, with a path) and `reset` (the running game was replaced, for example by `load`). `stat` returns the type, the size in bytes and, for files, the creation and modification time in milliseconds since the Unix epoch.
-- **Paths**: `/<server>/<file>` on the wire. The root lists the servers the player has discovered; undiscovered servers answer “not found”. The file system is flat, so there are no subfolders. In VS Code the game appears as a single root folder named NullByte; the extension maps `nullbyte:/NullByte/<server>/<file>` to the wire path.
+- **Protocol**: JSON text frames. Requests carry an `id` and an `op` (`stat`, `readDirectory`, `readFile`, `writeFile`, `createDirectory`, `delete`, `rename`, `diagnose`, `complete`, `hover`, `signatureHelp`). `writeFile` and `rename` take `create` and `overwrite` flags, and `delete` takes a `recursive` flag. `stat` returns the type, the size in bytes and, for files, the creation and modification time in milliseconds since the Unix epoch. Responses echo the `id` with `ok` and either a `result` or an `error` code (`NotFound`, `FileExists`, `IsADirectory`, `NotADirectory`, `NoPermissions`, `BadRequest`, `Unavailable`). The server also pushes events without an id: `fileChanged` (created, changed or deleted, with a path and whether it is a folder) and `reset` (the running game was replaced, for example by `load`).
+- **Paths**: `/<server>/<path>` on the wire, where the path inside the server follows the rules in 4.9. The root lists the servers the player has discovered; undiscovered servers answer "not found". Servers cannot be created, renamed or deleted from the editor. In VS Code the game appears as a single root folder named `NullByte`; the extension maps `nullbyte:/NullByte/<server>/<path>` to the wire path. Folders can be created, renamed, dragged and deleted (recursively when VS Code asks for it). Replacing something that exists is only allowed for the same kind (file for file, folder for folder), and nothing can be moved between servers.
 - **Threading**: file operations are marshalled onto the game thread with `GameThread.InvokeAsync`, which keeps the rule from 4.2. `VirtualFileSystem` and `Player` raise change events on the game thread; each connection has an outbox so only one writer sends at a time. Language requests never touch game state, so they run on the thread pool behind a small concurrency gate and cannot starve file operations.
-- **File times and conflicts**: `VirtualFileSystem` keeps a creation and a modification time for every file, taken from an injected TimeProvider (wall-clock time, in whole milliseconds). The modification time is strictly increasing per file, so two quick writes never look identical, and a rename keeps both times. The times are saved with the game (save format 2), so they survive save and load; saves from before that use the save time.. `stat` reports the times, which enables VS Code’s own save check: saving a script that is newer than the version the editor loaded, and has a different size, fails with Compare and Overwrite instead of silently replacing the game’s version. Changes that keep the exact byte length are not detected by that check.
+- **Conflicts**: `stat` reports the file times from 4.9, which enables VS Code's own save check: saving a script that is newer than the version the editor loaded, and has a different size, fails with Compare and Overwrite instead of silently replacing the game's version. Changes that keep the exact byte length are not detected by that check.
 - **Language service**: reuses the compiler's source wrapper, default usings and whitelisted references, so suggestions match what actually compiles. Positions are mapped between the player's text and the wrapped source. Documentation comes from the XML docs of `NullByte.Core` and RAM costs from the `[RamCost]` attributes; framework members have signatures only. A background warm-up at startup pays the Roslyn start-up cost before the first request.
 - **Discovery and security**: the server listens on loopback only. At startup it writes a connection file with the `url`, a fresh random `token` and the `pid`, readable only by the user, and removes it on exit if it is still its own. The extension reads the file on every connection attempt. Handshakes with an `Origin` header (browsers) or without the bearer token are rejected. As with the sandbox, this is hobby-level protection for a local tool, not a security boundary.
 - **Arguments**: `--vscode` starts the integration. `--vscode-port <n>` sets the port; without it the game tries 8765 and falls back to a free port. `--vscode-file <path>` sets where the connection file is written (default `~/.nullbyte/editor.json`).
 - **Scripts**: the extension registers `.cx` as a language with C# highlighting. Scripts outside `.cx` files get no language features.
-- **Extension**: Install into your normal VS Code: run code --install-extension nullbyte-x.y.z.vsix. When you update later, bump version, repackage, and install again with --force. To remove it, use code --uninstall-extension lycilph.nullbyte. To package the extension use: `npm run package`
 
-#### Testing with wscat
+### 4.9 Virtual file system
 
-Access: wscat -c ws://127.0.0.1:8765/ws -H "Authorization: Bearer [token]"
+Each server has its own files and folders, held in memory and saved with the game. `VirtualFileSystem` owns the rules; the console commands, the script API and the editor server all go through it.
+
+- **Paths**: `/`-separated and relative to the server root, for example `tools/net/scan.cx`. A leading `/` is accepted and removed, and so is one trailing `/` on a folder. Names are case-sensitive. A segment cannot be empty, `.` or `..`, or contain a backslash or control characters. A path is at most 8 levels deep and 256 characters long. `VirtualPath` normalizes paths, so `/tools/a.cx` and `tools/a.cx` are the same file everywhere, including process names and `ScriptRunning`.
+- **Model**: a path is a file or a folder, never both. Folders can be empty and survive deleting their last file. Every folder above a file exists. The root always exists.
+- **Operations**: writing, moving and copying create missing parent folders, like `mkdir -p`. Deleting a folder with content needs an explicit recursive flag. Moving a folder moves everything below it and keeps the files' times; a folder cannot be moved into itself, onto something that exists, or below a file. A failed operation changes nothing.
+- **File times**: every file has a creation and a modification time, taken from an injected `TimeProvider` (wall-clock time in whole milliseconds, not game time). The modification time is strictly increasing per file, so two quick writes never look identical, and moving a file keeps both times. The times are saved with the game.
+- **Events**: `VirtualFileSystem.Changed` is raised on the game thread with the kind (created, changed, deleted), the path and whether it is a folder. Folders created implicitly are reported outermost first, before the file. Deleting a folder is one event however much was below it, and moving is a delete plus a create. Restoring from a save raises no events.
+- **Console**: `ls [directory]`, `cat`, `edit`, `rm [-r]`, `mkdir`, `rmdir`, `mv` (files and folders) and `scp` (files only). Tab completion offers folders where they make sense, and a bad path produces a one-line explanation instead of an error.
+- **Scripts**: `nb.Files.List` returns every file on the server as a full path; `Delete`, `Move` and `Copy` take paths.
+- **Saves**: format 3 stores every folder per server (empty ones included) next to the files, whose names are paths. Older saves load through migrations (1 to 2 adds file times, 2 to 3 adds an empty folder list), and a save with an invalid folder entry is refused as damaged data.
 
 ## 5. Milestones
 
@@ -326,6 +337,7 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 
 - Serialization of player, servers, Botnet, files, running processes (restarted on load) and game time.
 - Versioned save format with a migration hook.
+- Save format 2 stores file creation and modification times; format 3 stores folders, including empty ones (see 4.9). Older saves load through migrations.
 - Autosave and manual `save` and `load`.
 
 **Acceptance**: save, quit, load restores an equivalent state; a golden-file test guards the format.
@@ -338,9 +350,10 @@ Edit scripts in VS Code while the game runs. The game hosts a websocket server a
 
 - `NullByte.Editor`: a loopback-only, token-authenticated websocket server with a small JSON protocol and pushed events. All access to game state is marshalled onto the game thread.
 - `NullByte.vscode`: a TypeScript extension with a `FileSystemProvider` for the `nullbyte:` scheme (one folder per discovered server), a `.cx` language definition, the commands `Open Game Workspace`, `Reconnect` and `Show Log`, a status bar indicator showing the connection state, and a `.vsix` package.
-- File operations: list, read, write (create and overwrite), delete and rename. Changes made in the game (`edit`, `scp`, `rm`, `mv`) and newly discovered servers are pushed to VS Code as events.
+- File and folder operations: list, read, write (create and overwrite), create folder, delete and rename. Changes made in the game (`edit`, `scp`, `rm`, `mkdir`, `mv`) and newly discovered servers are pushed to VS Code as events.
 - Only discovered servers are visible to the editor.
 - File creation and modification times, so VS Code can detect that a script changed in the game after it was opened.
+- Folders in the game and in VS Code (see 4.9): `mkdir`, `rmdir`, `rm -r`, `ls [directory]`, moving folders with `mv` and tab completion in the console; New Folder, rename, drag and drop and recursive delete in the explorer, with live updates in both directions.
 - Language features for `.cx` scripts, backed by the same Roslyn setup as the compiler: compile errors and warnings in the Problems panel, completion, hover and signature help, with documentation and the RAM cost of each API method. Suggestions follow the compiler's reference whitelist.
 - Startup and discovery: `--vscode`, `--vscode-port <n>` and `--vscode-file <path>` (see 4.8), a connection file instead of fixed ports and tokens, and the extension setting `nullbyte.connectionFile`.
 - Script crashes are caught, logged and do not take down the game loop (already in place).
@@ -348,26 +361,21 @@ Edit scripts in VS Code while the game runs. The game hosts a websocket server a
 **Acceptance**
 
 - A script can be edited in VS Code and executed in the game, and changes made in the game show up in VS Code without a refresh.
+- Saving a script in VS Code after it was replaced in the game with content of a different length offers Compare and Overwrite instead of silently overwriting it.
+- A folder created, moved or removed in the game shows up in VS Code without a refresh, and the other way around. An empty folder survives save and load.
 - Without `--vscode` the game opens no port and writes no connection file.
 - A second game started with `--vscode` does not break the first: it falls back to a free port, or reports that it could not start.
 - The packaged extension installs in a clean VS Code profile and connects without any configuration.
-- Saving a script in VS Code after it was replaced in the game with content of a different length offers Compare and Overwrite instead of silently overwriting it.
 
-### M9: Sub-folders and #includes
+### M9: #includes
 
 **Deliverables**
 
-- Sub-folders on servers.
-- Include other scripts with `#include <file>`.
+- Include other scripts with `#include "<file>"`.
 
 **Acceptance**
 
-- Real folders in the game. A folder is an entry in its own right and can be empty. VS Code’s “New Folder” always creates an empty folder, so it needs a folder that can exist before any file does.
-- File names become paths. `dir/sub/hack.cx` is a valid file name. Because commands and scripts already pass names around as strings, cat, edit, run, mv, scp and nb.Files would work with paths with very few changes.
-- Rules: `/` is the only separator, and a leading `/` is optional. Segments can’t be empty or . or ... Names stay case-sensitive.
-- New commands: `mkdir <dir>`, `rmdir <dir>`, and `ls [dir]`, which lists the direct entries of a folder with folders shown as name/.
-- Saves: a new save version (2) adds the list of folders per server. Existing version 1 saves load through a migration, so nothing is lost.
-- VS Code: nested paths, create folder, recursive delete, rename and move of folders, and push events when folders appear or disappear in the game. Deleting a folder sends a single event for the folder.
+- scripts can include other scripts with the `#include "<file>"` statement
 
 ### M10: Visual studio Code editor integration - improvements
 
@@ -414,11 +422,11 @@ Edit scripts in VS Code while the game runs. The game hosts a websocket server a
 
 - **WPF host**: terminal control, script editor with AvalonEdit, Roslyn-powered completion and diagnostics (squiggles, reusing the language service from M8), file browser, status panels. Core and Scripting stay untouched; only a new `IGameHost` implementation is needed.
 - **VS Code integration follow-ups**:
-  - Real modification times on files, so VS Code can warn about conflicts when a script changes in the game while it is open in the editor.
   - Full-range underlines for diagnostics (needs end positions on `ScriptDiagnostic`).
   - A `run` command in VS Code that runs the current script and shows its output.
-  - Subfolders in the virtual file system and in the explorer.
+  - Conflict detection for changes that keep the file size (VS Code's own check compares size as well as time, so this needs a stricter check of our own).
   - Remote setups, where the game and VS Code run on different machines or in WSL.
+- **Console follow-ups**: `cd` and `pwd` with a current directory, `scp -r` for copying folders, and a recursive `ls`.
 - Factions, augmentations, reset loop.
 - Port-opening programs and more servers.
 - Purchased servers, stock market, offline progress.
@@ -431,6 +439,10 @@ Edit scripts in VS Code while the game runs. The game hosts a websocket server a
 - Compile pipeline tests with good and bad scripts.
 - Console tests with scripted input and captured output.
 - Thread-affinity assertions: a debug check in game-state setters that the current thread is the game thread.
+- File system tests: path rules, folder operations, change events, file times and restoring, with a manual clock.
+- Save tests: round trips including empty folders, migrations from every older version, damaged saves refused, and a golden file that guards the format.
+- Command tests through the real dispatcher with a recording terminal.
+- Editor protocol tests that send requests through the file service against a real game state.
 
 ## 8. Open questions (resolved)
 
