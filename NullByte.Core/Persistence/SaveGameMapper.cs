@@ -41,6 +41,13 @@ public static class SaveGameMapper
             }
         }
 
+        var directories = new List<DirectorySave>();
+        foreach (var server in servers)
+        {
+            foreach (var path in state.FileSystem.ListDirectories(server.Hostname))
+                directories.Add(new DirectorySave { Hostname = server.Hostname, Path = path });
+        }
+
         return new SaveGame
         {
             Version = SaveGame.CurrentVersion,
@@ -76,9 +83,28 @@ public static class SaveGameMapper
                     .ToArray()
             },
             Files = files,
+            Directories = directories,
             Processes = processes.ToArray()          // was: sorted by Pid
         };
     }
+
+    private static ServerSave CaptureServer(Server server) => new()
+    {
+        Hostname = server.Hostname,
+        MaximumMoney = server.MaximumMoney,
+
+        // Clamp: repeated floating-point adds/subtracts can leave these a few ulps outside the range
+        // the Server constructor accepts, which would make a legitimate save unloadable.
+        Money = Math.Clamp(server.Money, 0, server.MaximumMoney),
+        Security = Math.Max(server.Security, server.MinimumSecurity),
+
+        BaseDifficulty = server.BaseDifficulty,
+        MinimumSecurity = server.MinimumSecurity,
+        RequiredHackingLevel = server.RequiredHackingLevel,
+        GrowthParameter = server.GrowthParameter,
+        MaximumRam = server.MaximumRam,
+        HasRootAccess = server.HasRootAccess
+    };
 
     /// <summary>
     /// Rebuilds a game from a save, validating as it goes. Throws
@@ -101,24 +127,6 @@ public static class SaveGameMapper
             throw new SaveFormatException($"The save contains invalid data: {exception.Message}", exception);
         }
     }
-
-    private static ServerSave CaptureServer(Server server) => new()
-    {
-        Hostname = server.Hostname,
-        MaximumMoney = server.MaximumMoney,
-
-        // Clamp: repeated floating-point adds/subtracts can leave these a few ulps outside the range
-        // the Server constructor accepts, which would make a legitimate save unloadable.
-        Money = Math.Clamp(server.Money, 0, server.MaximumMoney),
-        Security = Math.Max(server.Security, server.MinimumSecurity),
-
-        BaseDifficulty = server.BaseDifficulty,
-        MinimumSecurity = server.MinimumSecurity,
-        RequiredHackingLevel = server.RequiredHackingLevel,
-        GrowthParameter = server.GrowthParameter,
-        MaximumRam = server.MaximumRam,
-        HasRootAccess = server.HasRootAccess
-    };
 
     private static RestoredGame RestoreCore(SaveGame save)
     {
@@ -163,6 +171,9 @@ public static class SaveGameMapper
         state.Botnet.Restore(
             save.Botnet.Nodes.Select(node => new BotnetNode(node.Level, node.Ram, node.Cores)),
             save.Botnet.TotalEarned);
+
+        foreach (var directory in save.Directories)
+            state.FileSystem.RestoreDirectory(directory.Hostname, directory.Path);
 
         foreach (var file in save.Files)
             state.FileSystem.RestoreFile(file.Hostname, file.Name, file.Content, file.Created, file.Modified);

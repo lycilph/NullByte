@@ -1,4 +1,6 @@
-﻿namespace NullByte.ConsoleUI.Terminal;
+﻿using NullByte.Core.Domain;
+
+namespace NullByte.ConsoleUI.Terminal;
 
 /// <summary>
 /// Pure completion logic: given a snapshot, the input and a cursor
@@ -30,7 +32,7 @@ public static class CompletionEngine
         var previousTokens = CommandLineParser.Parse(beforeCursor[..tokenStart]);
 
         var pool = SubcommandWords(snapshot, previousTokens)
-            .Concat(ArgumentValues(snapshot, previousTokens))
+            .Concat(ArgumentValues(snapshot, previousTokens, token))
             .ToArray();
 
         var candidates = pool
@@ -52,7 +54,8 @@ public static class CompletionEngine
                 cursorIndex < input.Length &&
                 char.IsWhiteSpace(input[cursorIndex]);
 
-            if (!spaceAlreadyFollows)
+            // A directory ends in a slash and keeps going, so it gets no space.
+            if (!spaceAlreadyFollows && !replacement.EndsWith('/'))
                 replacement += " ";
         }
         else
@@ -81,7 +84,8 @@ public static class CompletionEngine
     }
 
     // Argument values for the longest registered command that the typed tokens start with.
-    private static IEnumerable<string> ArgumentValues(CompletionSnapshot snapshot, IReadOnlyList<string> typed)
+    private static IEnumerable<string> ArgumentValues(
+        CompletionSnapshot snapshot, IReadOnlyList<string> typed, string token)
     {
         CommandCompletionInfo? best = null;
 
@@ -101,7 +105,7 @@ public static class CompletionEngine
         var argumentIndex = typed.Count - best.Words.Count;
         var completion = best.Completions.FirstOrDefault(c => c.ArgumentIndex == -1 || c.ArgumentIndex == argumentIndex);
 
-        return completion is null ? [] : GetCompletionValues(snapshot, completion);
+        return completion is null ? [] : GetCompletionValues(snapshot, completion, token);
     }
 
     private static bool PrefixMatches(IReadOnlyList<string> words, IReadOnlyList<string> typed, int count)
@@ -114,15 +118,77 @@ public static class CompletionEngine
         return true;
     }
 
-    private static IReadOnlyList<string> GetCompletionValues(CompletionSnapshot snapshot, ArgumentCompletion completion)
+    private static IReadOnlyList<string> GetCompletionValues(
+        CompletionSnapshot snapshot, ArgumentCompletion completion, string token)
     {
         if (completion.Values.Count > 0)
             return completion.Values;
 
-        if (completion.Kind == CompletionKind.None)
+        switch (completion.Kind)
+        {
+            case CompletionKind.None:
+                return [];
+
+            case CompletionKind.Filename:
+            case CompletionKind.FilenameOrDirectory:
+                return PathCandidates(snapshot, token, includeFiles: true);
+
+            case CompletionKind.Directory:
+                return PathCandidates(snapshot, token, includeFiles: false);
+
+            case CompletionKind.FilenameOrKnownServer:
+                // Values given directly for this kind are plain candidates (hosts that do not split them).
+                return PathCandidates(snapshot, token, includeFiles: true)
+                    .Concat(snapshot.GetValues(CompletionKind.KnownServer))
+                    .Concat(snapshot.GetValues(CompletionKind.FilenameOrKnownServer))
+                    .ToArray();
+
+            default:
+                return snapshot.GetValues(completion.Kind);
+        }
+    }
+
+    // Completes one path segment at a time: the typed part up to the last slash names a directory
+    // (relative to the current directory, or absolute), and its children are the candidates.
+    // Directories end in a slash. Every candidate starts with the typed directory part, as typed.
+    private static IReadOnlyList<string> PathCandidates(CompletionSnapshot snapshot, string token, bool includeFiles)
+    {
+        var slash = token.LastIndexOf('/');
+        var typedDirectory = slash >= 0 ? token[..(slash + 1)] : "";
+        var name = token[(slash + 1)..];
+
+        if (!PathResolver.TryResolve(snapshot.CurrentDirectory, typedDirectory, out var directory, out _))
             return [];
 
-        return snapshot.GetValues(completion.Kind);
+        var candidates = new List<string>();
+
+        foreach (var path in snapshot.GetValues(CompletionKind.Directory))
+        {
+            if (VirtualPath.Parent(path) == directory)
+                candidates.Add(typedDirectory + VirtualPath.Name(path) + "/");
+        }
+
+        if (includeFiles)
+        {
+            foreach (var path in snapshot.GetValues(CompletionKind.Filename))
+            {
+                if (VirtualPath.Parent(path) == directory)
+                    candidates.Add(typedDirectory + VirtualPath.Name(path));
+            }
+        }
+
+        // "." and ".." are not in the file system, but they are how players move around.
+        if (name == ".")
+        {
+            candidates.Add(typedDirectory + "./");
+            candidates.Add(typedDirectory + "../");
+        }
+        else if (name == "..")
+        {
+            candidates.Add(typedDirectory + "../");
+        }
+
+        return candidates;
     }
 
     private static int FindTokenStart(string text)

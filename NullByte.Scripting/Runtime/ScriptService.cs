@@ -76,6 +76,12 @@ public sealed class ScriptService : IScriptOperations
         ArgumentException.ThrowIfNullOrWhiteSpace(filename);
         ArgumentNullException.ThrowIfNull(args);
 
+        // "/tools/a.cx" and "tools/a.cx" are the same script. Use one spelling from here on,
+        // so that the process list, ScriptRunning and the saved processes all agree.
+        if (!VirtualPath.TryNormalizeFile(filename, out var path, out var pathError))
+            return ScriptStartResult.Failure($"Invalid file name '{filename}': {pathError}");
+        filename = path;
+
         if (threads < 1)
             return ScriptStartResult.Failure("Thread count must be at least 1.");
 
@@ -92,10 +98,12 @@ public sealed class ScriptService : IScriptOperations
 
         // Read the script from the target server.
         if (!gameState.FileSystem.TryReadFile(hostname, filename, out var source))
-            return ScriptStartResult.Failure($"File not found: {filename}");
+        {
+            return ScriptStartResult.Failure(gameState.FileSystem.DirectoryExists(hostname, filename)
+                ? $"{filename} is a directory."
+                : $"File not found: {filename}");
+        }
 
-        // Compile the script.
-        //var compilation = compiler.Compile(source!, filename);
         // Pure CPU work: source string in, immutable result out. No game state in here.
         // No ConfigureAwait(false): we must resume on the game thread.
         var compilation = await Task.Run(() => compiler.Compile(source!, filename));
@@ -232,14 +240,21 @@ public sealed class ScriptService : IScriptOperations
     {
         var server = ResolveTarget(hostname);
 
+        if (!VirtualPath.TryNormalizeFile(filename, out var path, out _))
+            return false;
+
+        // Paths are case-sensitive, just like the file system.
         return processManager
             .GetForHost(server.Hostname)
-            .Any(p => string.Equals(filename, p.Filename, StringComparison.OrdinalIgnoreCase));
+            .Any(p => string.Equals(path, p.Filename, StringComparison.Ordinal));
     }
 
     public double GetScriptRam(string filename, string hostname)
     {
         var target = ResolveTarget(hostname);
+
+        if (!VirtualPath.TryNormalizeFile(filename, out filename, out _))
+            return 0.0;
 
         // Resolve the target server.
         if (!gameState.Network.TryGetServer(target.Hostname, out var server))

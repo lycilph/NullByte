@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 
 # VS code stuff
+*.vsix

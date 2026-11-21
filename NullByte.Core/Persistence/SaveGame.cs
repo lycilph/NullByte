@@ -12,20 +12,19 @@ namespace NullByte.Core.Persistence;
 public sealed record SaveGame
 {
     /// <summary>The format version this build writes, and the newest one it can read.</summary>
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
 
     public required int Version { get; init; }
     public required DateTimeOffset SavedAtUtc { get; init; }
-
     /// <summary>The game clock when the save was taken.</summary>
     public required TimeSpan GameTime { get; init; }
-
     public required PlayerSave Player { get; init; }
     public required IReadOnlyList<ServerSave> Servers { get; init; }
     public required IReadOnlyList<ConnectionSave> Connections { get; init; }
     public required BotnetSave Botnet { get; init; }
+    /// <summary>Every directory, including empty ones. Files restore the directories above them on their own.</summary>
+    public required IReadOnlyList<DirectorySave> Directories { get; init; }
     public required IReadOnlyList<FileSave> Files { get; init; }
-
     /// <summary>Scripts that were running. They are started again on load.</summary>
     public required IReadOnlyList<ProcessSave> Processes { get; init; }
 }
@@ -80,9 +79,17 @@ public sealed record BotnetNodeSave
     public required int Cores { get; init; }
 }
 
+public sealed record DirectorySave
+{
+    public required string Hostname { get; init; }
+    /// <summary>The path relative to the server root, for example "tools/net".</summary>
+    public required string Path { get; init; }
+}
+
 public sealed record FileSave
 {
     public required string Hostname { get; init; }
+    /// <summary>The path of the file relative to the server root. Before version 3 this was always a plain name.</summary>
     public required string Name { get; init; }
     public required string Content { get; init; }
     public required DateTimeOffset Created { get; init; }

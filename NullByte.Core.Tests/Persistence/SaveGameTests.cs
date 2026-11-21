@@ -167,7 +167,7 @@ public class SaveGameTests
     {
         // If this fails you changed the save format. Bump SaveGame.CurrentVersion, add a migration,
         // and keep the old golden text as a test for that migration. Do not just edit the golden text.
-        string expected = Normalize(GoldenSaves.V2);
+        string expected = Normalize(GoldenSaves.V3);
         string actual = Describe(CreateState());
         Assert.Equal(expected, actual);
     }
@@ -175,11 +175,11 @@ public class SaveGameTests
     [Fact]
     public void The_current_golden_file_loads_and_saves_back_unchanged()
     {
-        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V2));
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V3));
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(Normalize(GoldenSaves.V2), again);
+        Assert.Equal(Normalize(GoldenSaves.V3), again);
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public class SaveGameTests
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(Normalize(GoldenSaves.V2), again);
+        Assert.Equal(Normalize(GoldenSaves.V3), again);
     }
 
     [Fact]
@@ -208,14 +208,14 @@ public class SaveGameTests
     {
         var steps = new List<int>();
         var migrator = new SaveMigrator(
-            [new AddMoney(2, 100, steps), new AddMoney(3, 20, steps)],
-            currentVersion: 4);
+            [new AddMoney(3, 100, steps), new AddMoney(4, 20, steps)],
+            currentVersion: 5);
         var serializer = new SaveGameSerializer(migrator);
 
-        var loaded = serializer.Deserialize(GoldenSaves.V2);
+        var loaded = serializer.Deserialize(GoldenSaves.V3);
 
-        Assert.Equal(new[] { 2, 3 }, steps);
-        Assert.Equal(4, loaded.Version);
+        Assert.Equal(new[] { 3, 4 }, steps);
+        Assert.Equal(5, loaded.Version);
         Assert.Equal(0.1 + 0.2 + 120, loaded.Player.Money);
     }
 

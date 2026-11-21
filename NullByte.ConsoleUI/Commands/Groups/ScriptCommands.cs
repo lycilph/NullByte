@@ -5,7 +5,11 @@ using NullByte.Scripting.Runtime;
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
-public sealed class ScriptCommands(NetworkService networkService, ScriptService scriptService, IGameOutput output) : ICommandGroup
+public sealed class ScriptCommands(
+    NetworkService networkService,
+    ScriptService scriptService,
+    WorkingDirectory workingDirectory,
+    IGameOutput output) : ICommandGroup
 {
     public void Register(CommandRegistry registry)
     {
@@ -85,8 +89,11 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
             return;
         }
 
+        if (!TryResolveFilename(request.Filename, out var filename))
+            return;
+
         var server = networkService.GetCurrentServer();
-        var cost = scriptService.GetScriptRam(request.Filename, server.Hostname) * request.Threads;
+        var cost = scriptService.GetScriptRam(filename, server.Hostname) * request.Threads;
 
         output.WriteLine($"This script requires {cost:N2}GB of RAM to run for {request.Threads} thread(s)");
     }
@@ -120,16 +127,17 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
             return;
         }
 
+        var width = Math.Max(24, processes.Max(process => process.Filename.Length));
+
         output.WriteLine($"Scripts running on {server.Hostname}:");
-        output.WriteLine(
-            $"{"Filename",-24} {"PID",5} {"Threads",8} {"State",12} Arguments");
+        output.WriteLine($"{"Filename".PadRight(width)} {"PID",5} {"Threads",8} {"State",12} Arguments");
 
         foreach (var process in processes)
         {
             var scriptArguments = FormatArguments(process.Args);
 
             output.WriteLine(
-                $"{process.Filename,-24} " +
+                $"{process.Filename.PadRight(width)} " +
                 $"{process.Pid,5} " +
                 $"{process.Threads,8} " +
                 $"{process.State,12} " +
@@ -164,16 +172,19 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
             return;
         }
 
+        if (!TryResolveFilename(request.Filename, out var filename))
+            return;
+
         var server = networkService.GetCurrentServer();
 
         output.WriteLine(request.Threads > 1
-            ? $"Executing {request.Filename} ({request.Threads} threads)..."
-            : $"Executing {request.Filename}...");
+            ? $"Executing {filename} ({request.Threads} threads)..."
+            : $"Executing {filename}...");
 
-        var result = await scriptService.Start(server.Hostname, request.Filename, request.ScriptArguments, request.Threads);
+        var result = await scriptService.Start(server.Hostname, filename, request.ScriptArguments, request.Threads);
 
         foreach (var diagnostic in result.Diagnostics)
-            WriteScriptDiagnostic(output, request.Filename, diagnostic);
+            WriteScriptDiagnostic(output, filename, diagnostic);
 
         if (!result.Succeeded && result.Diagnostics.Count == 0)
             output.WriteLine(result.FailureMessage);
@@ -186,5 +197,14 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
         output.WriteLine(
             $"{fileName}({diagnostic.Line},{diagnostic.Column}): " +
             $"{severity} {diagnostic.Id}: {diagnostic.Message}");
+    }
+
+    private bool TryResolveFilename(string typed, out string path)
+    {
+        if (workingDirectory.TryResolveFile(typed, out path, out var error))
+            return true;
+
+        output.WriteLine($"Invalid file name: {error}");
+        return false;
     }
 }

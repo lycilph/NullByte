@@ -29,7 +29,8 @@ public sealed class SaveMigrator
     public SaveMigrator(IEnumerable<ISaveMigration>? migrations = null, int currentVersion = SaveGame.CurrentVersion)
     {
         this.currentVersion = currentVersion;
-        this.migrations = (migrations ?? [new V1ToV2Migration()]).ToDictionary(migration => migration.FromVersion);
+        this.migrations = (migrations ?? [new V1ToV2Migration(), new V2ToV3Migration()])
+            .ToDictionary(migration => migration.FromVersion);
     }
 
     public void Upgrade(JsonObject save)
