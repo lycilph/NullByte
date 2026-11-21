@@ -56,8 +56,8 @@ export class NullByteFileSystem implements vscode.FileSystemProvider {
       content: new TextDecoder().decode(content), create: options.create, overwrite: options.overwrite });
   }
 
-  async delete(uri: vscode.Uri): Promise<void> {
-    await this.call('delete', uri);
+  async delete(uri: vscode.Uri, options: { recursive: boolean }): Promise<void> {
+    await this.call('delete', uri, { recursive: options.recursive });
   }
 
   async rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean }): Promise<void> {
@@ -67,7 +67,9 @@ export class NullByteFileSystem implements vscode.FileSystemProvider {
     await this.call('rename', oldUri, { newPath, overwrite: options.overwrite });
   }
   
-  createDirectory(): never { throw vscode.FileSystemError.NoPermissions('Not supported'); }
+  async createDirectory(uri: vscode.Uri): Promise<void> {
+    await this.call('createDirectory', uri);
+  }
 
   private async call<T>(op: string, uri: vscode.Uri, extra: object = {}): Promise<T> {
     const path = toGamePath(uri);
@@ -84,7 +86,7 @@ export class NullByteFileSystem implements vscode.FileSystemProvider {
       case 'fileChanged': {
         const type = changeTypes[e.type];
         if (type === undefined) { this.log.warn(`Unknown change type '${e.type}'`); return; }
-        this.log.info(`Event: ${e.type} ${e.path}`);
+        this.log.info(`Event: ${e.type} ${e.isDirectory ? 'directory' : 'file'} ${e.path}`);
         this.fire([{ type, uri: toUri(e.path) }]);
         break;
       }

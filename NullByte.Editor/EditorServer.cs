@@ -189,7 +189,8 @@ public sealed class EditorServer(
         {
             @event = "fileChanged",
             type = change.Kind.ToString().ToLowerInvariant(),
-            path = $"/{change.Hostname}/{change.Filename}"
+            path = $"/{change.Hostname}/{change.Filename}",
+            isDirectory = change.IsDirectory
         });
     }
 
