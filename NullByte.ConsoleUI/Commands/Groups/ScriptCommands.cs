@@ -95,7 +95,10 @@ public sealed class ScriptCommands(
         var server = networkService.GetCurrentServer();
         var cost = scriptService.GetScriptRam(filename, server.Hostname) * request.Threads;
 
-        output.WriteLine($"This script requires {cost:N2}GB of RAM to run for {request.Threads} thread(s)");
+        if (cost == 0.0)
+            output.WriteLine($"Something went wrong...");
+        else
+            output.WriteLine($"This script requires {cost:N2}GB of RAM to run for {request.Threads} thread(s)");
     }
 
     private async Task KillAllScriptAsync(IReadOnlyList<string> arguments)
