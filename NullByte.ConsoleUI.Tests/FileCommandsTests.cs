@@ -47,11 +47,13 @@ internal sealed class FileCommandsFixture
 
         Files = state.FileSystem;
         Registry = new CommandRegistry();
-        new FileCommands(Files, networkService, terminal).Register(Registry);
+        Work = new WorkingDirectory(state);
+        new FileCommands(Files, networkService, Work, terminal).Register(Registry);
         dispatcher = new CommandDispatcher(Registry, terminal);
     }
 
     public VirtualFileSystem Files { get; }
+    public WorkingDirectory Work { get; }
     public CommandRegistry Registry { get; }
 
     /// <summary>Runs a command line and returns what it printed.</summary>
@@ -302,5 +304,80 @@ public class FileCommandsTests
         Assert.Equal(new[] { "tools", "tools/net" }, CompletionEngine.Complete(snapshot, "mkdir to", 8).Candidates);
         Assert.Equal(new[] { "a.cx" }, CompletionEngine.Complete(snapshot, "cat ", 4).Candidates);
         Assert.Equal(new[] { "a.cx", "tools", "tools/net" }, CompletionEngine.Complete(snapshot, "rm -r ", 6).Candidates);
+    }
+}
+
+public class WorkingDirectoryCommandsTests
+{
+    [Fact]
+    public async Task Pwd_and_cd_move_around_the_directory_tree()
+    {
+        var game = new FileCommandsFixture();
+        game.Files.CreateDirectory("home", "tools/net");
+
+        Assert.Equal(new[] { "/" }, await game.RunAsync("pwd"));
+
+        Assert.Empty(await game.RunAsync("cd tools/net"));
+        Assert.Equal(new[] { "/tools/net" }, await game.RunAsync("pwd"));
+
+        await game.RunAsync("cd ..");
+        Assert.Equal(new[] { "/tools" }, await game.RunAsync("pwd"));
+
+        await game.RunAsync("cd net");
+        await game.RunAsync("cd /");
+        Assert.Equal(new[] { "/" }, await game.RunAsync("pwd"));
+
+        await game.RunAsync("cd tools/net");
+        await game.RunAsync("cd");   // no argument: the root
+        Assert.Equal(new[] { "/" }, await game.RunAsync("pwd"));
+
+        await game.RunAsync("cd tools");
+        await game.RunAsync("cd ../../..");   // cannot go above the root
+        Assert.Equal(new[] { "/" }, await game.RunAsync("pwd"));
+    }
+
+    [Fact]
+    public async Task Cd_explains_what_is_wrong_and_stays_where_it_is()
+    {
+        var game = new FileCommandsFixture();
+        game.Files.WriteFile("home", "a.cx", "x");
+
+        Assert.Equal(new[] { "Directory not found: nope" }, await game.RunAsync("cd nope"));
+        Assert.Equal(new[] { "a.cx is a file, not a directory." }, await game.RunAsync("cd a.cx"));
+        Assert.StartsWith("Path segments must be simple names", Assert.Single(await game.RunAsync("cd a//b")));
+
+        Assert.Equal(new[] { "/" }, await game.RunAsync("pwd"));
+    }
+
+    [Fact]
+    public async Task Commands_work_relative_to_the_current_directory()
+    {
+        var game = new FileCommandsFixture();
+        game.Files.WriteFile("home", "tools/a.cx", "hello");
+        game.Files.WriteFile("home", "root.cx", "x");
+        await game.RunAsync("cd tools");
+
+        Assert.Equal(new[] { "a.cx" }, await game.RunAsync("ls"));
+        Assert.Equal(new[] { "tools/", "root.cx" }, await game.RunAsync("ls /"));
+        Assert.Equal(new[] { "tools/", "root.cx" }, await game.RunAsync("ls .."));
+        Assert.Equal(new[] { "hello" }, await game.RunAsync("cat a.cx"));
+        Assert.Equal(new[] { "x" }, await game.RunAsync("cat ../root.cx"));
+
+        Assert.Equal(new[] { "Created tools/sub/ on home." }, await game.RunAsync("mkdir sub"));
+        Assert.Equal(new[] { "Moved tools/a.cx to tools/sub/b.cx on home." }, await game.RunAsync("mv a.cx sub/b.cx"));
+        Assert.Equal(new[] { "Deleted tools/sub/b.cx." }, await game.RunAsync("rm sub/b.cx"));
+        Assert.Equal(new[] { "Deleted tools/sub/." }, await game.RunAsync("rmdir sub"));
+    }
+
+    [Fact]
+    public async Task Scp_keeps_the_full_path_on_the_destination()
+    {
+        var game = new FileCommandsFixture();
+        game.Files.WriteFile("home", "tools/a.cx", "x");
+        await game.RunAsync("cd tools");
+
+        Assert.Equal(new[] { "Files tools/a.cx copied to n00dles" }, await game.RunAsync("scp a.cx n00dles"));
+
+        Assert.True(game.Files.TryReadFile("n00dles", "tools/a.cx", out _));
     }
 }

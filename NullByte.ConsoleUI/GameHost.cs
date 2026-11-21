@@ -1,6 +1,8 @@
 ﻿using NullByte.ConsoleUI.Commands;
 using NullByte.ConsoleUI.Terminal;
+using NullByte.Core.Domain;
 using NullByte.Core.Persistence;
+using NullByte.Core.Services;
 using NullByte.Shell;
 using NullByte.Shell.Persistence;
 
@@ -12,6 +14,8 @@ public sealed class GameHost(
     ShutdownRequest shutdownRequest,
     GameSessionOptions baseOptions) : IAsyncDisposable
 {
+    private const string WorkingDirectoryResetMessage = "The current directory no longer exists. Back at /.";
+
     private static readonly TimeSpan AutosaveInterval = TimeSpan.FromMinutes(5);
     public event Action? SessionChanged;
     
@@ -69,10 +73,20 @@ public sealed class GameHost(
                     try
                     {
                         terminal.SetInputEnabled(false);
+
+                        // A directory deleted since the last command (by a script or the editor) takes the player back to the root.
+                        var workingDirectory = new WorkingDirectory(current.Session.State);
+                        if (workingDirectory.ResetIfMissing())
+                            terminal.WriteLine(WorkingDirectoryResetMessage);
+
                         await current.Dispatcher.DispatchAsync(commandLine);
 
+                        // The command itself may have deleted it.
+                        if (workingDirectory.ResetIfMissing())
+                            terminal.WriteLine(WorkingDirectoryResetMessage);
+
                         // Update terminal prompt
-                        terminal.SetPrompt($"root@{current.Session.State.Player.CurrentHostname} $ ");
+                        terminal.SetPrompt(BuildPrompt(current.Session.State));
                     }
                     finally
                     {
@@ -195,7 +209,7 @@ public sealed class GameHost(
             return Task.CompletedTask;
         });
 
-        terminal.SetPrompt($"root@{session.State.Player.CurrentHostname} $ ");
+        terminal.SetPrompt(BuildPrompt(session.State));
 
         var autosave = new AutosaveService(saveManager, session, terminal, AutosaveInterval);
 
@@ -215,5 +229,13 @@ public sealed class GameHost(
         terminal.WriteLine("Tab completes commands and server names, Up/Down recalls earlier input.");
         terminal.WriteLine("The game autosaves every few minutes; 'save' and 'load' manage your own saves.");
         terminal.WriteLine();
+    }
+
+    private static string BuildPrompt(GameState state)
+    {
+        var player = state.Player;
+        var directory = player.CurrentDirectory.Length > 0 ? ":/" + player.CurrentDirectory : "";
+
+        return $"root@{player.CurrentHostname}{directory} $ ";
     }
 }

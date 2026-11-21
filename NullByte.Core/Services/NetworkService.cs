@@ -27,7 +27,17 @@ public sealed class NetworkService
     /// Gets the server the player is currently connected to.
     /// </summary>
     public Server GetCurrentServer() => gameState.Network.GetServer(gameState.Player.CurrentHostname);
-    
+
+    private void SetCurrentServer(string hostname)
+    {
+        var player = gameState.Player;
+
+        if (!string.Equals(player.CurrentHostname, hostname, StringComparison.OrdinalIgnoreCase))
+            player.CurrentDirectory = "";   // a different server starts at its root
+
+        player.CurrentHostname = hostname;
+    }
+
     public Server GetServer(string hostname)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
@@ -104,7 +114,7 @@ public sealed class NetworkService
         if (!gameState.Network.AreConnected(gameState.Player.CurrentHostname, targetServer.Hostname))
             return NetworkConnectionResult.Failure($"Server '{targetServer.Hostname}' is not directly connected to the current server.");
 
-        gameState.Player.CurrentHostname = targetServer.Hostname;
+        SetCurrentServer(targetServer.Hostname);
 
         return NetworkConnectionResult.Success(targetServer);
     }
@@ -116,7 +126,7 @@ public sealed class NetworkService
     {
         var homeServer = gameState.Network.GetServer(gameState.Player.HomeHostname);
         
-        gameState.Player.CurrentHostname = homeServer.Hostname;
+        SetCurrentServer(homeServer.Hostname);
 
         return NetworkConnectionResult.Success(homeServer);
     }

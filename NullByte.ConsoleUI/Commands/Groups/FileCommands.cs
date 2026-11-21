@@ -4,7 +4,11 @@ using NullByte.Core.Services;
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
-public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService networkService, IGameTerminal terminal) : ICommandGroup
+public sealed class FileCommands(
+    VirtualFileSystem fileSystem,
+    NetworkService networkService,
+    WorkingDirectory workingDirectory,
+    IGameTerminal terminal) : ICommandGroup
 {
     public void Register(CommandRegistry registry)
     {
@@ -18,6 +22,25 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
                 MinArgs = 0, MaxArgs = 1,
                 Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.Directory }]
             });
+
+        registry.Register(
+            new CommandDefinition(
+                "cd",
+                "cd [directory]",
+                "Change the current directory. Without an argument, go to the root.",
+                Guard(ChangeDirectoryAsync))
+            {
+                MinArgs = 0, MaxArgs = 1,
+                Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.Directory }]
+            });
+
+        registry.Register(
+            new CommandDefinition(
+                "pwd",
+                "pwd",
+                "Show the current directory.",
+                Guard(PrintDirectoryAsync))
+            { MinArgs = 0, MaxArgs = 0 });
 
         registry.Register(
             new CommandDefinition(
@@ -99,18 +122,38 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
             });
     }
 
+    // ---- navigating ----
+
+    private Task ChangeDirectoryAsync(IReadOnlyList<string> arguments)
+    {
+        var typed = arguments.Count > 0 ? arguments[0] : "/";
+
+        if (!workingDirectory.TryChange(typed, out var error))
+            terminal.WriteLine(error);
+
+        return Task.CompletedTask;
+    }
+
+    private Task PrintDirectoryAsync(IReadOnlyList<string> arguments)
+    {
+        terminal.WriteLine("/" + workingDirectory.Current);
+        return Task.CompletedTask;
+    }
+
     // ---- listing and reading ----
 
     private Task ListAsync(IReadOnlyList<string> arguments)
     {
         var server = networkService.GetCurrentServer();
-        var directory = VirtualPath.NormalizeDirectory(arguments.Count > 0 ? arguments[0] : "");
+        var typed = arguments.Count > 0 ? arguments[0] : "";
+        if (!TryResolve(typed, out var directory))
+            return Task.CompletedTask;
 
         if (!fileSystem.TryListDirectory(server.Hostname, directory, out var entries))
         {
             terminal.WriteLine(fileSystem.TryReadFile(server.Hostname, directory, out _)
                 ? directory   // a file lists as itself
-                : $"Directory not found: {directory}");
+                : $"Directory not found: {(typed.Length > 0 ? typed : "/" + directory)}");
 
             return Task.CompletedTask;
         }
@@ -130,14 +173,16 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
     private Task CatAsync(IReadOnlyList<string> arguments)
     {
         var server = networkService.GetCurrentServer();
-        var path = arguments[0];
+        var typed = arguments[0];
+        if (!TryResolveFile(typed, out var path))
+            return Task.CompletedTask;
 
         if (fileSystem.TryReadFile(server.Hostname, path, out var content))
             terminal.WriteLine(content!);
         else if (fileSystem.DirectoryExists(server.Hostname, path))
-            terminal.WriteLine($"{path} is a directory.");
+            terminal.WriteLine($"{typed} is a directory.");
         else
-            terminal.WriteLine($"File not found: {path}");
+            terminal.WriteLine($"File not found: {typed}");
 
         return Task.CompletedTask;
     }
@@ -147,7 +192,8 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
     private Task MakeDirectoryAsync(IReadOnlyList<string> arguments)
     {
         var server = networkService.GetCurrentServer();
-        var path = VirtualPath.NormalizeDirectory(arguments[0]);
+        if (!TryResolve(arguments[0], out var path))
+            return Task.CompletedTask;
 
         if (path.Length == 0)
             terminal.WriteLine("The root directory already exists.");
@@ -164,16 +210,18 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
     private Task RemoveDirectoryAsync(IReadOnlyList<string> arguments)
     {
         var server = networkService.GetCurrentServer();
-        var path = VirtualPath.NormalizeDirectory(arguments[0]);
+        var typed = arguments[0];
+        if (!TryResolve(typed, out var path))
+            return Task.CompletedTask;
 
         if (path.Length == 0)
             terminal.WriteLine("The root directory cannot be deleted.");
         else if (fileSystem.TryReadFile(server.Hostname, path, out _))
-            terminal.WriteLine($"{path} is a file. Use 'rm' to delete it.");
+            terminal.WriteLine($"{typed} is a file. Use 'rm' to delete it.");
         else if (!fileSystem.DirectoryExists(server.Hostname, path))
-            terminal.WriteLine($"Directory not found: {path}");
+            terminal.WriteLine($"Directory not found: {typed}");
         else if (!fileSystem.DeleteDirectory(server.Hostname, path))
-            terminal.WriteLine($"Directory not empty: {path}. Use 'rm -r {path}' to delete it and everything in it.");
+            terminal.WriteLine($"Directory not empty: {typed}. Use 'rm -r {typed}' to delete it and everything in it.");
         else
             terminal.WriteLine($"Deleted {path}/.");
 
@@ -192,7 +240,10 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
             return Task.CompletedTask;
         }
 
-        var path = VirtualPath.NormalizeDirectory(targets[0]);
+        var typed = targets[0];
+        if (!TryResolve(typed, out var path))
+            return Task.CompletedTask;
+
         if (path.Length == 0)
         {
             terminal.WriteLine("The root directory cannot be deleted.");
@@ -208,7 +259,7 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
             if (!recursive)
             {
                 terminal.WriteLine(
-                    $"{path} is a directory. Use 'rm -r {path}' to delete it and everything in it, or 'rmdir' if it is empty.");
+                    $"{typed} is a directory. Use 'rm -r {typed}' to delete it and everything in it, or 'rmdir' if it is empty.");
                 return Task.CompletedTask;
             }
 
@@ -220,7 +271,7 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
         }
         else
         {
-            terminal.WriteLine($"File not found: {path}");
+            terminal.WriteLine($"File not found: {typed}");
         }
 
         return Task.CompletedTask;
@@ -231,13 +282,13 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
     private Task MoveAsync(IReadOnlyList<string> arguments)
     {
         var server = networkService.GetCurrentServer();
-        var source = VirtualPath.NormalizeFile(arguments[0]);
-        var destination = VirtualPath.NormalizeFile(arguments[1]);
+        if (!TryResolveFile(arguments[0], out var source) || !TryResolveFile(arguments[1], out var destination))
+            return Task.CompletedTask;
 
         var isFile = fileSystem.TryReadFile(server.Hostname, source, out _);
         if (!isFile && !fileSystem.DirectoryExists(server.Hostname, source))
         {
-            terminal.WriteLine($"File not found: {source}");
+            terminal.WriteLine($"File not found: {arguments[0]}");
             return Task.CompletedTask;
         }
 
@@ -280,20 +331,26 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
     {
         var source = networkService.GetCurrentServer();
         var destination = networkService.GetServer(arguments.Last());
-        var files = arguments.Take(arguments.Count - 1).ToList();
+        var files = new List<string>();
 
-        foreach (var file in files)
+        foreach (var typed in arguments.Take(arguments.Count - 1))
         {
+            if (!TryResolveFile(typed, out var file))
+                return Task.CompletedTask;
+
             if (!fileSystem.TryReadFile(source.Hostname, file, out var content) || content == null)
             {
                 terminal.WriteLine(fileSystem.DirectoryExists(source.Hostname, file)
-                    ? $"{file} is a directory; scp copies files only."
-                    : $"File {file} not found on {source.Hostname}");
+                    ? $"{typed} is a directory; scp copies files only."
+                    : $"File {typed} not found on {source.Hostname}");
 
                 return Task.CompletedTask;
             }
+
+            files.Add(file);
         }
 
+        // The files keep their full path on the destination server.
         terminal.WriteLine(fileSystem.CopyFiles(source.Hostname, destination.Hostname, files)
             ? $"Files {string.Join(',', files)} copied to {destination.Hostname}"
             : "Not all files copied");
@@ -306,12 +363,13 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
     private async Task EditFileAsync(IReadOnlyList<string> arguments)
     {
         var server = networkService.GetCurrentServer();
-        var path = VirtualPath.NormalizeFile(arguments[0]);
+        if (!TryResolveFile(arguments[0], out var path))
+            return;
 
         // Check before the editor opens, so that nothing the player types is lost.
         if (fileSystem.DirectoryExists(server.Hostname, path))
         {
-            terminal.WriteLine($"{path} is a directory.");
+            terminal.WriteLine($"{arguments[0]} is a directory.");
             return;
         }
 
@@ -343,11 +401,30 @@ public sealed class FileCommands(VirtualFileSystem fileSystem, NetworkService ne
 
     private static bool IsRecursiveFlag(string argument) => argument is "-r" or "-R";
 
+    // What the player typed is resolved against the current directory. A bad path is explained, not thrown.
+    private bool TryResolve(string typed, out string path)
+    {
+        if (workingDirectory.TryResolve(typed, out path, out var error))
+            return true;
+
+        terminal.WriteLine(error);
+        return false;
+    }
+
+    private bool TryResolveFile(string typed, out string path)
+    {
+        if (workingDirectory.TryResolveFile(typed, out path, out var error))
+            return true;
+
+        terminal.WriteLine(error);
+        return false;
+    }
+
     // The first directory above the path that is really a file.
     private string? FileInTheWay(string hostname, string path)
         => VirtualPath.Ancestors(path).FirstOrDefault(ancestor => fileSystem.TryReadFile(hostname, ancestor, out _));
 
-    // A bad path is the player's mistake, not a crash: say what is wrong.
+    // Path rules that are broken deeper down are the player's mistake, not a crash: say what is wrong.
     private Func<IReadOnlyList<string>, Task> Guard(Func<IReadOnlyList<string>, Task> handler) => async arguments =>
     {
         try

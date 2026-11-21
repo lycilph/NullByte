@@ -45,6 +45,12 @@ public sealed class Player
     public string CurrentHostname { get; internal set; }
 
     /// <summary>
+    /// Gets the directory the player is in on the current server ("" is the root).
+    /// Not part of the save: a loaded game starts at the root.
+    /// </summary>
+    public string CurrentDirectory { get; internal set; } = "";
+
+    /// <summary>
     /// Gets the player's current money.
     /// </summary>
     public double Money { get; private set; }
