@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Logger, NullByteClient } from './client';
+import { toGamePath } from './paths';
 
 type CompleteResult = {
   items: { label: string; insertText: string; kind: string; sortText: string; ramCost?: number; documentation?: string }[];
@@ -33,7 +34,10 @@ export function registerCompletion(client: NullByteClient, log: Logger): vscode.
     {
       async provideCompletionItems(doc, position, token) {
         try {
-          const result = await client.request<CompleteResult>('complete', doc.uri.path, {
+          const path = toGamePath(doc.uri);
+          if (path === undefined ) throw vscode.FileSystemError.FileNotFound(doc.uri);
+
+          const result = await client.request<CompleteResult>('complete', path, {
             content: doc.getText(),
             offset: doc.offsetAt(position),
           });

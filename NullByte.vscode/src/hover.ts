@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Logger, NullByteClient } from './client';
+import { toGamePath } from './paths';
 
 type HoverResult = {
   hover: { signature: string; documentation?: string; ramCost?: number } | null;
@@ -11,7 +12,10 @@ export function registerHover(client: NullByteClient, log: Logger): vscode.Dispo
     {
       async provideHover(doc, position, token) {
         try {
-          const result = await client.request<HoverResult>('hover', doc.uri.path, {
+          const path = toGamePath(doc.uri);
+          if (path === undefined ) throw vscode.FileSystemError.FileNotFound(doc.uri);
+
+          const result = await client.request<HoverResult>('hover', path, {
             content: doc.getText(),
             offset: doc.offsetAt(position),
           });

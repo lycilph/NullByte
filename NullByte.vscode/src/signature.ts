@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Logger, NullByteClient } from './client';
+import { toGamePath } from './paths';
 
 type SignatureHelpResult = {
   help: {
@@ -20,7 +21,10 @@ export function registerSignatureHelp(client: NullByteClient, log: Logger): vsco
     {
       async provideSignatureHelp(doc, position, token, context) {
         try {
-          const result = await client.request<SignatureHelpResult>('signatureHelp', doc.uri.path, {
+          const path = toGamePath(doc.uri);
+          if (path === undefined ) throw vscode.FileSystemError.FileNotFound(doc.uri);
+
+          const result = await client.request<SignatureHelpResult>('signatureHelp', path, {
             content: doc.getText(),
             offset: doc.offsetAt(position),
           });
