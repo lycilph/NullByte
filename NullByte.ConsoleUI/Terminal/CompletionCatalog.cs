@@ -92,13 +92,11 @@ public sealed class CompletionCatalog : ICompletionProvider
                 [CompletionKind.KnownServer] = knownServers,
                 [CompletionKind.Filename] = files,
                 [CompletionKind.Directory] = directories,
-                [CompletionKind.FilenameOrDirectory] = files.Concat(directories).ToArray(),
-                [CompletionKind.FilenameOrKnownServer] = files.Concat(knownServers).ToList(),
                 [CompletionKind.SaveGame] = saves,
                 [CompletionKind.BotnetNode] = botnetNodes
             };
 
-        snapshot = new CompletionSnapshot(commands, values);
+        snapshot = new CompletionSnapshot(commands, values, player.CurrentDirectory);
     }
 
     private IReadOnlyList<CommandCompletionInfo> BuildCommands()

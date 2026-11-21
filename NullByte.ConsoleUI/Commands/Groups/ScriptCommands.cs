@@ -1,12 +1,15 @@
 ﻿using NullByte.ConsoleUI.Terminal;
-using NullByte.Core.Domain;
 using NullByte.Core.Services;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Runtime;
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
-public sealed class ScriptCommands(NetworkService networkService, ScriptService scriptService, IGameOutput output) : ICommandGroup
+public sealed class ScriptCommands(
+    NetworkService networkService,
+    ScriptService scriptService,
+    WorkingDirectory workingDirectory,
+    IGameOutput output) : ICommandGroup
 {
     public void Register(CommandRegistry registry)
     {
@@ -196,9 +199,9 @@ public sealed class ScriptCommands(NetworkService networkService, ScriptService 
             $"{severity} {diagnostic.Id}: {diagnostic.Message}");
     }
 
-    private bool TryResolveFilename(string filename, out string path)
+    private bool TryResolveFilename(string typed, out string path)
     {
-        if (VirtualPath.TryNormalizeFile(filename, out path, out var error))
+        if (workingDirectory.TryResolveFile(typed, out path, out var error))
             return true;
 
         output.WriteLine($"Invalid file name: {error}");

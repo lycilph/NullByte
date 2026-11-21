@@ -11,13 +11,13 @@ public enum CompletionKind
     ConnectableServer,
     /// <summary>Every server the player has discovered.</summary>
     KnownServer,
-    /// <summary>Files on the player's current server.</summary>
+    /// <summary>Files on the current server, with directories to step through. Completed one path segment at a time.</summary>
     Filename,
-    /// <summary>Directories on the player's current server.</summary>
+    /// <summary>Directories on the current server, completed one path segment at a time.</summary>
     Directory,
-    /// <summary>Combination of the Filename and Directory values.</summary>
+    /// <summary>Same as Filename. Kept so that commands can state their intent.</summary>
     FilenameOrDirectory,
-    /// <summary>Combination of the Filename and KnownServer values.</summary>
+    /// <summary>Combination of the Filename values and the KnownServer values.</summary>
     FilenameOrKnownServer,
     /// <summary>Existing save game.</summary>
     SaveGame,

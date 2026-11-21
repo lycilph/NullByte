@@ -6,7 +6,8 @@
 /// </summary>
 public sealed record CompletionSnapshot(
     IReadOnlyList<CommandCompletionInfo> Commands,
-    IReadOnlyDictionary<CompletionKind, IReadOnlyList<string>> Values)
+    IReadOnlyDictionary<CompletionKind, IReadOnlyList<string>> Values,
+    string CurrentDirectory = "")
 {
     public static CompletionSnapshot Empty { get; } =
         new([], new Dictionary<CompletionKind, IReadOnlyList<string>>());

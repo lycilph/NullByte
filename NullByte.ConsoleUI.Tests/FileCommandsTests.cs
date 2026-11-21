@@ -297,13 +297,13 @@ public class FileCommandsTests
         {
             [CompletionKind.Directory] = new[] { "tools", "tools/net" },
             [CompletionKind.Filename] = new[] { "a.cx" },
-            [CompletionKind.FilenameOrDirectory] = new[] { "a.cx", "tools", "tools/net" },
         };
         var snapshot = new CompletionSnapshot(commands, values);
 
-        Assert.Equal(new[] { "tools", "tools/net" }, CompletionEngine.Complete(snapshot, "mkdir to", 8).Candidates);
-        Assert.Equal(new[] { "a.cx" }, CompletionEngine.Complete(snapshot, "cat ", 4).Candidates);
-        Assert.Equal(new[] { "a.cx", "tools", "tools/net" }, CompletionEngine.Complete(snapshot, "rm -r ", 6).Candidates);
+        Assert.Equal(new[] { "tools/" }, CompletionEngine.Complete(snapshot, "mkdir to", 8).Candidates);
+        Assert.Equal(new[] { "tools/" }, CompletionEngine.Complete(snapshot, "cd ", 3).Candidates);   // directories only
+        Assert.Equal(new[] { "a.cx", "tools/" }, CompletionEngine.Complete(snapshot, "cat ", 4).Candidates);
+        Assert.Equal(new[] { "a.cx", "tools/" }, CompletionEngine.Complete(snapshot, "rm -r ", 6).Candidates);
     }
 }
 

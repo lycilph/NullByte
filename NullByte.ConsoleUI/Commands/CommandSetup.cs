@@ -26,7 +26,7 @@ public static class CommandSetup
             new PlayerCommands(session.State.Player, session.Services.Network, session.Services.HackingFormulas, terminal),
             new NetworkCommands(session.Clock, session.Services.Network, session.Services.NetworkFormulas, terminal),
             new FileCommands(session.State.FileSystem, session.Services.Network, workingDirectory, terminal),
-            new ScriptCommands(session.Services.Network, session.Services.Scripts, terminal),
+            new ScriptCommands(session.Services.Network, session.Services.Scripts, workingDirectory, terminal),
             new ActionCommands(session.State.Player, session.Clock, session.Services.HackingFormulas, session.Services.Actions, session.Services.Network, terminal),
             new BotnetCommands(session.State.Botnet, session.Services.Botnet, session.Services.BotnetFormulas, terminal)
         ];
