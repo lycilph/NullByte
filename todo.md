@@ -1,7 +1,7 @@
 ﻿# In progress
 
 * M9: Sub-folders and #includes
-  * Subfolders: this needs a change to VirtualFileSystem.
+  * Subfolders: this needs a change to VirtualFileSystem.(see `ImplementationNodes.md`)
 
 # Todo
 

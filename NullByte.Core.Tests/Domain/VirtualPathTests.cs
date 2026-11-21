@@ -4,6 +4,25 @@ namespace NullByte.Core.Tests.Domain;
 
 public class VirtualPathTests
 {
+    [Fact]
+    public void TryNormalize_reports_a_plain_message_instead_of_throwing()
+    {
+        Assert.True(VirtualPath.TryNormalizeFile("/tools/a.cx", out var normalized, out var error));
+        Assert.Equal("tools/a.cx", normalized);
+        Assert.Equal("", error);
+
+        Assert.False(VirtualPath.TryNormalizeFile("a//b", out normalized, out error));
+        Assert.Equal("", normalized);
+        Assert.StartsWith("Path segments must be simple names", error);
+        Assert.DoesNotContain("(Parameter", error);
+
+        Assert.False(VirtualPath.TryNormalizeFile("/", out _, out error));
+        Assert.Equal("A file path cannot be empty.", error);
+
+        Assert.True(VirtualPath.TryNormalizeDirectory("/", out normalized, out _));
+        Assert.Equal("", normalized);
+    }
+
     [Theory]
     [InlineData("a.cx", "a.cx")]
     [InlineData("/a.cx", "a.cx")]
