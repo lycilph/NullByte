@@ -12,11 +12,14 @@ namespace NullByte.Core.Formulas;
 public sealed class HackingFormulas
 {
     private readonly BalanceConfig balance;
+    private readonly SkillFormulas skills;
 
     public HackingFormulas(BalanceConfig balance)
     {
         this.balance = balance
             ?? throw new ArgumentNullException(nameof(balance));
+
+        skills = new SkillFormulas(balance);
     }
 
     /// <summary>
@@ -24,50 +27,10 @@ public sealed class HackingFormulas
     /// hacking experience.
     /// </summary>
     public int CalculateHackingLevel(double experience)
-    {
-        if (!double.IsFinite(experience) || experience < 0)
-            throw new ArgumentOutOfRangeException(nameof(experience), "Experience must be finite and non-negative.");
-
-        var baseSkill =
-            balance.SkillLogarithmMultiplier
-            * Math.Log(experience + balance.SkillExperienceOffset)
-            - balance.SkillLevelOffset;
-
-        var modifiedSkill =
-            baseSkill
-            * balance.HackingSkillMultiplier;
-
-        return Math.Max(1, (int)Math.Floor(modifiedSkill));
-    }
+        => skills.CalculateLevel(SkillKind.Hacking, experience);
 
     public double CalculateExperienceForHackingLevel(int level)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThan(level, 1);
-
-        if (!double.IsFinite(balance.HackingSkillMultiplier) || balance.HackingSkillMultiplier <= 0)
-            throw new InvalidOperationException("Hacking skill multiplier must be finite and positive.");
-
-        var requiredBaseSkill = level / balance.HackingSkillMultiplier;
-
-        var experience =
-            Math.Exp((requiredBaseSkill + balance.SkillLevelOffset)
-                / balance.SkillLogarithmMultiplier)
-            - balance.SkillExperienceOffset;
-
-        experience = Math.Max(0.0, experience);
-
-        while (CalculateHackingLevel(experience) < level)
-        {
-            var next = Math.BitIncrement(experience);
-
-            if (!double.IsFinite(next) || next <= experience)
-                throw new OverflowException($"Could not calculate finite experience for level {level}.");
-
-            experience = next;
-        }
-
-        return experience;
-    }
+        => skills.CalculateExperienceForLevel(SkillKind.Hacking, level);
 
     /// <summary>
     /// Calculates the probability that a single hacking attempt

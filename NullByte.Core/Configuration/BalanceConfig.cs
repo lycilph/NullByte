@@ -115,10 +115,23 @@ public sealed record BalanceConfig
 
     // Experience and skill progression
 
-    /// <summary>
-    /// Multiplier applied when deriving hacking skill from experience.
-    /// </summary>
+    /// <summary>Multiplier applied when deriving hacking skill from experience.</summary>
     public double HackingSkillMultiplier { get; init; } = 1.0;
+
+    /// <summary>Multiplier applied when deriving strength skill from experience.</summary>
+    public double StrengthSkillMultiplier { get; init; } = 1.0;
+
+    /// <summary>Multiplier applied when deriving defense skill from experience.</summary>
+    public double DefenseSkillMultiplier { get; init; } = 1.0;
+
+    /// <summary>Multiplier applied when deriving dexterity skill from experience.</summary>
+    public double DexteritySkillMultiplier { get; init; } = 1.0;
+
+    /// <summary>Multiplier applied when deriving agility skill from experience.</summary>
+    public double AgilitySkillMultiplier { get; init; } = 1.0;
+
+    /// <summary>Multiplier applied when deriving charisma skill from experience.</summary>
+    public double CharismaSkillMultiplier { get; init; } = 1.0;
 
     /// <summary>
     /// Logarithmic multiplier in the skill-from-experience formula.

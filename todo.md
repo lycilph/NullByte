@@ -1,11 +1,14 @@
 ﻿# In progress
 
-* M9: Sub-folders and #includes
-  * Include other scripts with `#include <file>`.
+- Milestone M10: Activities (jobs, training, studying etc.)
+- Clean up
+  - Skill formulas
+  - etc?
 	
 # Todo
 
-* Fix the mem command if run against a folder (incl. error message)
+- Make botnet and cloud servers unlockable
+  - Make a system to unlock features on a trigger
 
 # Future ideas
 
@@ -15,8 +18,6 @@
 - Add the backdoor command
 	- Time = same as hack, level required = same as hack, effect: the player can always connect directly to the server
 - Later on extra servers would live in api.cloud.* etc.
-- Make botnet and cloud servers unlockable
-  - Make a system to unlock features on a trigger
 - Add debugdisplay to domain classes
 - Use mocks in the tests
 - Add animated startup (see version 0.5)

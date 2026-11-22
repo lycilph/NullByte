@@ -9,7 +9,7 @@ namespace NullByte.Core.Domain;
 public sealed class Player
 {
     private readonly HashSet<string> discoveredHostnames = new(StringComparer.OrdinalIgnoreCase);
-    
+
     /// <summary>Raised on the game thread when a server is discovered for the first time. Handlers must not throw.</summary>
     public event Action<string>? ServerDiscovered;
 
@@ -28,7 +28,7 @@ public sealed class Player
         HomeHostname = homeHostname;
         CurrentHostname = homeHostname;
         Money = startingMoney;
-        HackingExperience = startingHackingExperience;
+        Skills.AddExperience(SkillKind.Hacking, startingHackingExperience);
 
         DiscoverServer(homeHostname);
     }
@@ -45,6 +45,11 @@ public sealed class Player
     public string CurrentHostname { get; internal set; }
 
     /// <summary>
+    /// Gets the IDs of servers known to the player.
+    /// </summary>
+    public IReadOnlySet<string> DiscoveredHostnames => discoveredHostnames;
+
+    /// <summary>
     /// Gets the directory the player is in on the current server ("" is the root).
     /// Not part of the save: a loaded game starts at the root.
     /// </summary>
@@ -56,28 +61,20 @@ public sealed class Player
     public double Money { get; private set; }
 
     /// <summary>
-    /// Gets the player's accumulated hacking experience.
+    /// Gets the player's experience in every skill.
     /// </summary>
-    public double HackingExperience { get; private set; }
+    public PlayerSkills Skills { get; } = new();
 
     /// <summary>
-    /// Gets the IDs of servers known to the player.
+    /// Gets the player's accumulated hacking experience.
     /// </summary>
-    public IReadOnlySet<string> DiscoveredHostnames => discoveredHostnames;
+    public double HackingExperience => Skills.GetExperience(SkillKind.Hacking);
 
     /// <summary>
     /// Adds hacking experience to the player.
     /// </summary>
     public void AddHackingExperience(double amount)
-    {
-        if (!double.IsFinite(amount) || amount < 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(amount), "Hacking experience must be a finite, non-negative value.");
-        }
-
-        HackingExperience += amount;
-    }
+        => Skills.AddExperience(SkillKind.Hacking, amount);
 
     public void AddMoney(double amount)
     {

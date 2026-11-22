@@ -11,10 +11,14 @@
   </PropertyGroup>
   
   <ItemGroup>
+    <None Remove="Data\activities.json" />
     <None Remove="Data\initial-network.json" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Data\activities.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Data\initial-network.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

@@ -1,0 +1,700 @@
+{
+  "_comment": "All numbers are placeholders to be tuned in milestone 13. Names are lowercase slugs (typed as commands); rates are per second.",
+  "facilities": [
+    {
+      "name": "rothman-university",
+      "kind": "university",
+      "experienceMultiplier": 1.0,
+      "costMultiplier": 1.0
+    },
+    {
+      "name": "summit-university",
+      "kind": "university",
+      "experienceMultiplier": 2.0,
+      "costMultiplier": 3.0
+    },
+    {
+      "name": "iron-gym",
+      "kind": "gym",
+      "experienceMultiplier": 1.0,
+      "costMultiplier": 1.0
+    },
+    {
+      "name": "powerhouse-gym",
+      "kind": "gym",
+      "experienceMultiplier": 2.0,
+      "costMultiplier": 4.0
+    }
+  ],
+  "courses": [
+    {
+      "name": "computer-science",
+      "kind": "university",
+      "costPerSecond": 0,
+      "experiencePerSecond": { "hacking": 0.5 }
+    },
+    {
+      "name": "algorithms",
+      "kind": "university",
+      "costPerSecond": 40,
+      "experiencePerSecond": { "hacking": 2.0 }
+    },
+    {
+      "name": "management",
+      "kind": "university",
+      "costPerSecond": 40,
+      "experiencePerSecond": { "charisma": 1.0 }
+    },
+    {
+      "name": "leadership",
+      "kind": "university",
+      "costPerSecond": 80,
+      "experiencePerSecond": { "charisma": 2.0 }
+    },
+    {
+      "name": "strength",
+      "kind": "gym",
+      "costPerSecond": 30,
+      "experiencePerSecond": { "strength": 1.0 }
+    },
+    {
+      "name": "defense",
+      "kind": "gym",
+      "costPerSecond": 30,
+      "experiencePerSecond": { "defense": 1.0 }
+    },
+    {
+      "name": "dexterity",
+      "kind": "gym",
+      "costPerSecond": 30,
+      "experiencePerSecond": { "dexterity": 1.0 }
+    },
+    {
+      "name": "agility",
+      "kind": "gym",
+      "costPerSecond": 30,
+      "experiencePerSecond": { "agility": 1.0 }
+    }
+  ],
+  "companies": [
+    {
+      "name": "pixelworks",
+      "careers": [
+        {
+          "name": "software",
+          "ranks": [
+            {
+              "title": "Software Intern",
+              "salaryPerSecond": 4.0,
+              "reputationPerSecond": 0.1,
+              "requiredReputation": 0,
+              "requiredLevels": {},
+              "experiencePerSecond": {
+                "hacking": 0.2,
+                "charisma": 0.05
+              }
+            },
+            {
+              "title": "Junior Developer",
+              "salaryPerSecond": 10.0,
+              "reputationPerSecond": 0.2,
+              "requiredReputation": 100,
+              "requiredLevels": { "hacking": 25 },
+              "experiencePerSecond": {
+                "hacking": 0.4,
+                "charisma": 0.1
+              }
+            },
+            {
+              "title": "Software Developer",
+              "salaryPerSecond": 25.0,
+              "reputationPerSecond": 0.4,
+              "requiredReputation": 500,
+              "requiredLevels": {
+                "hacking": 75,
+                "charisma": 10
+              },
+              "experiencePerSecond": {
+                "hacking": 0.8,
+                "charisma": 0.2
+              }
+            },
+            {
+              "title": "Senior Developer",
+              "salaryPerSecond": 60.0,
+              "reputationPerSecond": 0.8,
+              "requiredReputation": 2000,
+              "requiredLevels": {
+                "hacking": 150,
+                "charisma": 25
+              },
+              "experiencePerSecond": {
+                "hacking": 1.5,
+                "charisma": 0.375
+              }
+            },
+            {
+              "title": "Lead Developer",
+              "salaryPerSecond": 140.0,
+              "reputationPerSecond": 1.5,
+              "requiredReputation": 8000,
+              "requiredLevels": {
+                "hacking": 250,
+                "charisma": 50
+              },
+              "experiencePerSecond": {
+                "hacking": 3.0,
+                "charisma": 0.75
+              }
+            }
+          ]
+        },
+        {
+          "name": "security",
+          "ranks": [
+            {
+              "title": "Security Trainee",
+              "salaryPerSecond": 3.0,
+              "reputationPerSecond": 0.1,
+              "requiredReputation": 0,
+              "requiredLevels": {},
+              "experiencePerSecond": {
+                "strength": 0.1,
+                "defense": 0.1,
+                "dexterity": 0.1,
+                "agility": 0.1,
+                "charisma": 0.05
+              }
+            },
+            {
+              "title": "Security Guard",
+              "salaryPerSecond": 8.0,
+              "reputationPerSecond": 0.2,
+              "requiredReputation": 100,
+              "requiredLevels": {
+                "strength": 10,
+                "defense": 10,
+                "dexterity": 10,
+                "agility": 10
+              },
+              "experiencePerSecond": {
+                "strength": 0.2,
+                "defense": 0.2,
+                "dexterity": 0.2,
+                "agility": 0.2,
+                "charisma": 0.1
+              }
+            },
+            {
+              "title": "Security Analyst",
+              "salaryPerSecond": 20.0,
+              "reputationPerSecond": 0.4,
+              "requiredReputation": 500,
+              "requiredLevels": {
+                "strength": 30,
+                "defense": 30,
+                "dexterity": 30,
+                "agility": 30,
+                "charisma": 10
+              },
+              "experiencePerSecond": {
+                "strength": 0.4,
+                "defense": 0.4,
+                "dexterity": 0.4,
+                "agility": 0.4,
+                "charisma": 0.2
+              }
+            },
+            {
+              "title": "Security Engineer",
+              "salaryPerSecond": 48.0,
+              "reputationPerSecond": 0.8,
+              "requiredReputation": 2000,
+              "requiredLevels": {
+                "strength": 60,
+                "defense": 60,
+                "dexterity": 60,
+                "agility": 60,
+                "charisma": 25
+              },
+              "experiencePerSecond": {
+                "strength": 0.8,
+                "defense": 0.8,
+                "dexterity": 0.8,
+                "agility": 0.8,
+                "charisma": 0.4
+              }
+            },
+            {
+              "title": "Head of Security",
+              "salaryPerSecond": 110.0,
+              "reputationPerSecond": 1.5,
+              "requiredReputation": 8000,
+              "requiredLevels": {
+                "strength": 100,
+                "defense": 100,
+                "dexterity": 100,
+                "agility": 100,
+                "charisma": 50
+              },
+              "experiencePerSecond": {
+                "strength": 1.5,
+                "defense": 1.5,
+                "dexterity": 1.5,
+                "agility": 1.5,
+                "charisma": 0.75
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ironclad-systems",
+      "careers": [
+        {
+          "name": "software",
+          "ranks": [
+            {
+              "title": "Software Intern",
+              "salaryPerSecond": 8.0,
+              "reputationPerSecond": 0.1,
+              "requiredReputation": 0,
+              "requiredLevels": {},
+              "experiencePerSecond": {
+                "hacking": 0.4,
+                "charisma": 0.1
+              }
+            },
+            {
+              "title": "Junior Developer",
+              "salaryPerSecond": 20.0,
+              "reputationPerSecond": 0.2,
+              "requiredReputation": 100,
+              "requiredLevels": { "hacking": 50 },
+              "experiencePerSecond": {
+                "hacking": 0.8,
+                "charisma": 0.2
+              }
+            },
+            {
+              "title": "Software Developer",
+              "salaryPerSecond": 50.0,
+              "reputationPerSecond": 0.4,
+              "requiredReputation": 500,
+              "requiredLevels": {
+                "hacking": 150,
+                "charisma": 20
+              },
+              "experiencePerSecond": {
+                "hacking": 1.6,
+                "charisma": 0.4
+              }
+            },
+            {
+              "title": "Senior Developer",
+              "salaryPerSecond": 120.0,
+              "reputationPerSecond": 0.8,
+              "requiredReputation": 2000,
+              "requiredLevels": {
+                "hacking": 300,
+                "charisma": 50
+              },
+              "experiencePerSecond": {
+                "hacking": 3.0,
+                "charisma": 0.75
+              }
+            },
+            {
+              "title": "Lead Developer",
+              "salaryPerSecond": 280.0,
+              "reputationPerSecond": 1.5,
+              "requiredReputation": 8000,
+              "requiredLevels": {
+                "hacking": 500,
+                "charisma": 100
+              },
+              "experiencePerSecond": {
+                "hacking": 6.0,
+                "charisma": 1.5
+              }
+            }
+          ]
+        },
+        {
+          "name": "security",
+          "ranks": [
+            {
+              "title": "Security Trainee",
+              "salaryPerSecond": 6.0,
+              "reputationPerSecond": 0.1,
+              "requiredReputation": 0,
+              "requiredLevels": {},
+              "experiencePerSecond": {
+                "strength": 0.2,
+                "defense": 0.2,
+                "dexterity": 0.2,
+                "agility": 0.2,
+                "charisma": 0.1
+              }
+            },
+            {
+              "title": "Security Guard",
+              "salaryPerSecond": 16.0,
+              "reputationPerSecond": 0.2,
+              "requiredReputation": 100,
+              "requiredLevels": {
+                "strength": 20,
+                "defense": 20,
+                "dexterity": 20,
+                "agility": 20
+              },
+              "experiencePerSecond": {
+                "strength": 0.4,
+                "defense": 0.4,
+                "dexterity": 0.4,
+                "agility": 0.4,
+                "charisma": 0.2
+              }
+            },
+            {
+              "title": "Security Analyst",
+              "salaryPerSecond": 40.0,
+              "reputationPerSecond": 0.4,
+              "requiredReputation": 500,
+              "requiredLevels": {
+                "strength": 60,
+                "defense": 60,
+                "dexterity": 60,
+                "agility": 60,
+                "charisma": 20
+              },
+              "experiencePerSecond": {
+                "strength": 0.8,
+                "defense": 0.8,
+                "dexterity": 0.8,
+                "agility": 0.8,
+                "charisma": 0.4
+              }
+            },
+            {
+              "title": "Security Engineer",
+              "salaryPerSecond": 96.0,
+              "reputationPerSecond": 0.8,
+              "requiredReputation": 2000,
+              "requiredLevels": {
+                "strength": 120,
+                "defense": 120,
+                "dexterity": 120,
+                "agility": 120,
+                "charisma": 50
+              },
+              "experiencePerSecond": {
+                "strength": 1.6,
+                "defense": 1.6,
+                "dexterity": 1.6,
+                "agility": 1.6,
+                "charisma": 0.8
+              }
+            },
+            {
+              "title": "Head of Security",
+              "salaryPerSecond": 220.0,
+              "reputationPerSecond": 1.5,
+              "requiredReputation": 8000,
+              "requiredLevels": {
+                "strength": 200,
+                "defense": 200,
+                "dexterity": 200,
+                "agility": 200,
+                "charisma": 100
+              },
+              "experiencePerSecond": {
+                "strength": 3.0,
+                "defense": 3.0,
+                "dexterity": 3.0,
+                "agility": 3.0,
+                "charisma": 1.5
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "meridian-dynamics",
+      "careers": [
+        {
+          "name": "software",
+          "ranks": [
+            {
+              "title": "Software Intern",
+              "salaryPerSecond": 16.0,
+              "reputationPerSecond": 0.1,
+              "requiredReputation": 0,
+              "requiredLevels": {},
+              "experiencePerSecond": {
+                "hacking": 0.8,
+                "charisma": 0.2
+              }
+            },
+            {
+              "title": "Junior Developer",
+              "salaryPerSecond": 40.0,
+              "reputationPerSecond": 0.2,
+              "requiredReputation": 100,
+              "requiredLevels": { "hacking": 100 },
+              "experiencePerSecond": {
+                "hacking": 1.6,
+                "charisma": 0.4
+              }
+            },
+            {
+              "title": "Software Developer",
+              "salaryPerSecond": 100.0,
+              "reputationPerSecond": 0.4,
+              "requiredReputation": 500,
+              "requiredLevels": {
+                "hacking": 300,
+                "charisma": 40
+              },
+              "experiencePerSecond": {
+                "hacking": 3.2,
+                "charisma": 0.8
+              }
+            },
+            {
+              "title": "Senior Developer",
+              "salaryPerSecond": 240.0,
+              "reputationPerSecond": 0.8,
+              "requiredReputation": 2000,
+              "requiredLevels": {
+                "hacking": 600,
+                "charisma": 100
+              },
+              "experiencePerSecond": {
+                "hacking": 6.0,
+                "charisma": 1.5
+              }
+            },
+            {
+              "title": "Lead Developer",
+              "salaryPerSecond": 560.0,
+              "reputationPerSecond": 1.5,
+              "requiredReputation": 8000,
+              "requiredLevels": {
+                "hacking": 1000,
+                "charisma": 200
+              },
+              "experiencePerSecond": {
+                "hacking": 12.0,
+                "charisma": 3.0
+              }
+            }
+          ]
+        },
+        {
+          "name": "security",
+          "ranks": [
+            {
+              "title": "Security Trainee",
+              "salaryPerSecond": 12.0,
+              "reputationPerSecond": 0.1,
+              "requiredReputation": 0,
+              "requiredLevels": {},
+              "experiencePerSecond": {
+                "strength": 0.4,
+                "defense": 0.4,
+                "dexterity": 0.4,
+                "agility": 0.4,
+                "charisma": 0.2
+              }
+            },
+            {
+              "title": "Security Guard",
+              "salaryPerSecond": 32.0,
+              "reputationPerSecond": 0.2,
+              "requiredReputation": 100,
+              "requiredLevels": {
+                "strength": 40,
+                "defense": 40,
+                "dexterity": 40,
+                "agility": 40
+              },
+              "experiencePerSecond": {
+                "strength": 0.8,
+                "defense": 0.8,
+                "dexterity": 0.8,
+                "agility": 0.8,
+                "charisma": 0.4
+              }
+            },
+            {
+              "title": "Security Analyst",
+              "salaryPerSecond": 80.0,
+              "reputationPerSecond": 0.4,
+              "requiredReputation": 500,
+              "requiredLevels": {
+                "strength": 120,
+                "defense": 120,
+                "dexterity": 120,
+                "agility": 120,
+                "charisma": 40
+              },
+              "experiencePerSecond": {
+                "strength": 1.6,
+                "defense": 1.6,
+                "dexterity": 1.6,
+                "agility": 1.6,
+                "charisma": 0.8
+              }
+            },
+            {
+              "title": "Security Engineer",
+              "salaryPerSecond": 192.0,
+              "reputationPerSecond": 0.8,
+              "requiredReputation": 2000,
+              "requiredLevels": {
+                "strength": 240,
+                "defense": 240,
+                "dexterity": 240,
+                "agility": 240,
+                "charisma": 100
+              },
+              "experiencePerSecond": {
+                "strength": 3.2,
+                "defense": 3.2,
+                "dexterity": 3.2,
+                "agility": 3.2,
+                "charisma": 1.6
+              }
+            },
+            {
+              "title": "Head of Security",
+              "salaryPerSecond": 440.0,
+              "reputationPerSecond": 1.5,
+              "requiredReputation": 8000,
+              "requiredLevels": {
+                "strength": 400,
+                "defense": 400,
+                "dexterity": 400,
+                "agility": 400,
+                "charisma": 200
+              },
+              "experiencePerSecond": {
+                "strength": 6.0,
+                "defense": 6.0,
+                "dexterity": 6.0,
+                "agility": 6.0,
+                "charisma": 3.0
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "crimes": [
+    {
+      "name": "shoplift",
+      "durationSeconds": 2,
+      "money": 300,
+      "difficulty": 0.05,
+      "experience": {
+        "dexterity": 2,
+        "agility": 2
+      },
+      "successWeights": {
+        "dexterity": 1,
+        "agility": 1
+      }
+    },
+    {
+      "name": "mug",
+      "durationSeconds": 4,
+      "money": 720,
+      "difficulty": 0.2,
+      "experience": {
+        "strength": 3,
+        "defense": 3,
+        "dexterity": 3,
+        "agility": 3
+      },
+      "successWeights": {
+        "strength": 1.5,
+        "defense": 0.5,
+        "dexterity": 1.5,
+        "agility": 0.5
+      }
+    },
+    {
+      "name": "deal-drugs",
+      "durationSeconds": 10,
+      "money": 2400,
+      "difficulty": 0.4,
+      "experience": {
+        "dexterity": 5,
+        "agility": 5,
+        "charisma": 10
+      },
+      "successWeights": {
+        "dexterity": 2,
+        "agility": 1,
+        "charisma": 3
+      }
+    },
+    {
+      "name": "rob-store",
+      "durationSeconds": 60,
+      "money": 8000,
+      "difficulty": 0.5,
+      "experience": {
+        "hacking": 30,
+        "dexterity": 45,
+        "agility": 45
+      },
+      "successWeights": {
+        "hacking": 0.5,
+        "dexterity": 2,
+        "agility": 1
+      }
+    },
+    {
+      "name": "larceny",
+      "durationSeconds": 90,
+      "money": 16000,
+      "difficulty": 0.7,
+      "experience": {
+        "hacking": 45,
+        "dexterity": 60,
+        "agility": 60
+      },
+      "successWeights": {
+        "hacking": 1,
+        "dexterity": 1,
+        "agility": 1
+      }
+    },
+    {
+      "name": "grand-theft-auto",
+      "durationSeconds": 80,
+      "money": 32000,
+      "difficulty": 1.0,
+      "experience": {
+        "hacking": 20,
+        "strength": 20,
+        "defense": 20,
+        "dexterity": 20,
+        "agility": 80,
+        "charisma": 40
+      },
+      "successWeights": {
+        "hacking": 1,
+        "strength": 1,
+        "dexterity": 4,
+        "agility": 2,
+        "charisma": 2
+      }
+    }
+  ]
+}
