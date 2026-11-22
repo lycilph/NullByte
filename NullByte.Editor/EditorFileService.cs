@@ -38,15 +38,15 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
     private async Task<object> ExecuteAsync(string op, JsonObject request)
     {
         if (op == "diagnose")
-            return await Task.Run(() => DiagnoseAsync(Required(request, "path"), Required(request, "content")));
+            return await DiagnoseAsync(Required(request, "path"), Required(request, "content"));
         if (op == "complete")
-            return await Task.Run(() => CompleteAsync(request));
+            return await CompleteAsync(request);
         if (op == "hover")
-            return await Task.Run(() => HoverAsync(request));
+            return await HoverAsync(request);
         if (op == "signatureHelp")
-            return await Task.Run(() => SignatureHelpAsync(request));
+            return await SignatureHelpAsync(request);
         if (op == "definition")
-            return await Task.Run(() => DefinitionAsync(request));
+            return await DefinitionAsync(request);
 
         var backend = backendProvider();
         if (backend is not { GameThread.IsRunning: true })

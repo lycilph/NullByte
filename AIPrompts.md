@@ -27,6 +27,11 @@ Help me finish x
 When posting code, don't wrap lines unless they are at least 80 characters long.
 
 
+You are an expert developer and architect.
+Please review this codebase and suggest where I can simplify the code.
+Secondarily review for best practises
+
+
 ---- Repomix ---
 Exclusion parameter:
 *.md, *.git*, NullByte/* 

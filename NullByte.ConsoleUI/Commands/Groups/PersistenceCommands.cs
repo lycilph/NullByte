@@ -17,7 +17,7 @@ public sealed class PersistenceCommands(
             $"Save the game (default name '{DefaultSlot}').", 
             SaveAsync)
         { 
-            MinArgs = 1, MaxArgs = 1,
+            MinArgs = 0, MaxArgs = 1,
             Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.SaveGame }]
         });
 
@@ -27,7 +27,7 @@ public sealed class PersistenceCommands(
             $"Load a saved game (default name '{DefaultSlot}'). Unsaved progress is lost.", 
             LoadAsync)
         {
-            MinArgs = 1, MaxArgs = 1,
+            MinArgs = 0, MaxArgs = 1,
             Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.SaveGame }]
         });
 
