@@ -1,9 +1,11 @@
-﻿using System.Text;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
+using NullByte.Core.Persistence;
 using NullByte.Core.Scripting;
+using System.Text;
 
 namespace NullByte.Scripting.Compilation;
 
@@ -51,28 +53,44 @@ public sealed class ScriptCompiler : IScriptCompiler
         this.references = references;
     }
 
-    public ScriptCompilationResult Compile(string source, string fileName)
+    public ScriptCompilationResult Compile(string source, string filename, IScriptSourceProvider? sources = null)
     {
         ArgumentNullException.ThrowIfNull(source);
-        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(filename);
 
-        var originalText = SourceText.From(source, Encoding.UTF8);
-        var originalTree = CSharpSyntaxTree.ParseText(originalText, ParseOptions, fileName);
+        // Find the includes (missing, cyclic and too-deep ones are reported here).
+        var graph = new IncludeResolver(sources ?? NoSources.Instance).Resolve(filename, source);
+        var diagnostics = new List<ScriptDiagnostic>(graph.Diagnostics);
 
-        // Syntax errors are reported against the player's own text, so the
-        // line numbers are right and the generator never sees broken code.
-        var syntaxErrors = originalTree.GetDiagnostics()
-            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
-            .Select(ConvertDiagnostic)
+        // Parse every file with its #include lines blanked, so line numbers stay the player's own.
+        var originalText = SourceText.From(IncludeScanner.Blank(source, graph.Root.Directives), Encoding.UTF8);
+        var originalTree = CSharpSyntaxTree.ParseText(originalText, ParseOptions, filename);
+
+        var includeTrees = graph.Includes
+            .Select(include => CSharpSyntaxTree.ParseText(
+                SourceText.From(IncludeScanner.Blank(include.Source, include.Directives), Encoding.UTF8),
+                ParseOptions,
+                include.Path))
             .ToArray();
 
-        if (syntaxErrors.Length > 0)
-            return ScriptCompilationResult.Failure(syntaxErrors);
+        // Syntax errors are reported against the player's own text, in the file they are in.
+        foreach (var tree in includeTrees.Prepend(originalTree))
+        {
+            diagnostics.AddRange(tree.GetDiagnostics()
+                .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+                .Select(ConvertDiagnostic));
+        }
+
+        foreach (var tree in includeTrees)
+            diagnostics.AddRange(CheckLibrary(tree));
+
+        if (diagnostics.Any(diagnostic => diagnostic.Severity == ScriptDiagnosticSeverity.Error))
+            return ScriptCompilationResult.Failure(diagnostics);
 
         var generatedSource = ScriptSourceGenerator.Generate(
             originalText,
             originalTree.GetCompilationUnitRoot(),
-            fileName);
+            filename);
 
         var usingsTree = CSharpSyntaxTree.ParseText(
             SourceText.From(DefaultUsingsSource, Encoding.UTF8),
@@ -86,15 +104,11 @@ public sealed class ScriptCompiler : IScriptCompiler
 
         var compilation = CSharpCompilation.Create(
             $"NullByte.Script.{Guid.NewGuid():N}",
-            [usingsTree, generatedTree],
+            [usingsTree, generatedTree, ..includeTrees],
             references,
             CompilationOptions);
 
-        var semanticModel = compilation.GetSemanticModel(generatedTree);
-
-        var ramCost = ScriptRamAnalyzer.Calculate(
-            semanticModel,
-            generatedTree.GetRoot());
+        var ramCost = ScriptRamAnalyzer.Calculate(compilation, [generatedTree, .. includeTrees]);
 
         using var assemblyStream = new MemoryStream();
         using var symbolsStream = new MemoryStream();
@@ -104,10 +118,10 @@ public sealed class ScriptCompiler : IScriptCompiler
             pdbStream: symbolsStream,
             options: new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb));
 
-        var diagnostics = emitResult.Diagnostics
+        diagnostics.AddRange(emitResult.Diagnostics
             .Where(diagnostic => diagnostic.Severity != DiagnosticSeverity.Hidden)
             .Select(ConvertDiagnostic)
-            .ToArray();
+            .ToArray());
 
         if (!emitResult.Success)
             return ScriptCompilationResult.Failure(diagnostics);
@@ -151,12 +165,16 @@ public sealed class ScriptCompiler : IScriptCompiler
     {
         var line = 0;
         var column = 0;
+        string? file = null;
 
         if (diagnostic.Location.IsInSource)
         {
             var span = diagnostic.Location.GetMappedLineSpan();
             line = span.StartLinePosition.Line + 1;
             column = span.StartLinePosition.Character + 1;
+
+            // Our own generated wrapper files are not something the player can open.
+            file = span.Path.EndsWith(".g.cx", StringComparison.Ordinal) ? null : span.Path;
         }
 
         return new ScriptDiagnostic(
@@ -169,6 +187,30 @@ public sealed class ScriptCompiler : IScriptCompiler
                 _ => ScriptDiagnosticSeverity.Info
             },
             line,
-            column);
+            column,
+            file);
+    }
+
+    // A library is usings and type declarations only: no entry point, no nb, nothing that runs.
+    private static IEnumerable<ScriptDiagnostic> CheckLibrary(SyntaxTree tree)
+    {
+        var statement = tree.GetCompilationUnitRoot().Members.OfType<GlobalStatementSyntax>().FirstOrDefault();
+        if (statement is null)
+            yield break;
+
+        var position = tree.GetLineSpan(statement.Span).StartLinePosition;
+        yield return new ScriptDiagnostic(
+            "NB1006",
+            "An included file may only contain usings and type declarations. Put methods inside a static class.",
+            ScriptDiagnosticSeverity.Error,
+            position.Line + 1,
+            position.Character + 1,
+            tree.FilePath);
+    }
+
+    private sealed class NoSources : IScriptSourceProvider
+    {
+        public static readonly NoSources Instance = new();
+        public bool TryReadSource(string path, out string? source) { source = null; return false; }
     }
 }

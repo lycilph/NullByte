@@ -104,9 +104,12 @@ public sealed class ScriptService : IScriptOperations
                 : $"File not found: {filename}");
         }
 
+        // Includes are read here, on the game thread; the compile itself needs no game state.
+        var sources = SourceSnapshot.Capture(new ServerSourceProvider(gameState.FileSystem, hostname), filename, source!);
+
         // Pure CPU work: source string in, immutable result out. No game state in here.
         // No ConfigureAwait(false): we must resume on the game thread.
-        var compilation = await Task.Run(() => compiler.Compile(source!, filename));
+        var compilation = await Task.Run(() => compiler.Compile(source!, filename, sources));
 
         if (!compilation.Succeeded)
             return ScriptStartResult.Failure($"Compilation failed for '{filename}'.", compilation.Diagnostics);
@@ -249,30 +252,30 @@ public sealed class ScriptService : IScriptOperations
             .Any(p => string.Equals(path, p.Filename, StringComparison.Ordinal));
     }
 
-    public double GetScriptRam(string filename, string hostname)
+    public ScriptRamResult MeasureRam(string filename, string hostname)
     {
         var target = ResolveTarget(hostname);
 
-        if (!VirtualPath.TryNormalizeFile(filename, out filename, out _))
-            return 0.0;
+        if (!VirtualPath.TryNormalizeFile(filename, out filename, out var pathError))
+            return ScriptRamResult.Failure($"Invalid file name: {pathError}");
 
-        // Resolve the target server.
-        if (!gameState.Network.TryGetServer(target.Hostname, out var server))
-            return 0.0;
+        if (!gameState.Network.TryGetServer(target.Hostname, out _))
+            return ScriptRamResult.Failure($"Unknown server: {target.Hostname}");
 
-        // Read the script from the target server.
         if (!gameState.FileSystem.TryReadFile(target.Hostname, filename, out var source))
-            return 0.0;
+            return ScriptRamResult.Failure($"File not found: {filename}");
 
-        // Compile the script.
-        var compilation = compiler.Compile(source!, filename);
+        var compilation = compiler.Compile(source!, filename, new ServerSourceProvider(gameState.FileSystem, target.Hostname));
 
-        if (!compilation.Succeeded || compilation.Script == null)
-            return 0.0;
-
-        return compilation.Script.RamCost;
+        return compilation.Succeeded && compilation.Script is not null
+            ? ScriptRamResult.Success(compilation.Script.RamCost)
+            : ScriptRamResult.Failure("The script could not be compiled.", compilation.Diagnostics);
     }
-    
+
+    // Same behavior as before for the in-game API: 0 means "could not be measured".
+    public double GetScriptRam(string filename, string hostname)
+        => MeasureRam(filename, hostname) is { Succeeded: true } result ? result.Ram : 0.0;
+
     private Server ResolveTarget(string hostname)
     {
         if (string.IsNullOrWhiteSpace(hostname))

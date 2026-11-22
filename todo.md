@@ -1,12 +1,11 @@
 ﻿# In progress
 
 * M9: Sub-folders and #includes
-  * Subfolders: this needs a change to VirtualFileSystem.(see `ImplementationNodes.md`)
-
+  * Include other scripts with `#include <file>`.
+	
 # Todo
 
-* M9: Sub-folders and #includes
-  * Include other scripts with `#include <file>`.
+* Fix the mem command if run against a folder (incl. error message)
 
 # Future ideas
 

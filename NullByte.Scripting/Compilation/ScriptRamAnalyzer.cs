@@ -1,4 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NullByte.Core.Scripting;
 
@@ -6,33 +7,34 @@ namespace NullByte.Scripting.Compilation;
 
 internal static class ScriptRamAnalyzer
 {
-    public static double Calculate(SemanticModel semanticModel, SyntaxNode root)
+    private const double BaseCost = 1.6;
+
+    /// <summary>
+    /// Base cost plus the cost of every distinct API method called anywhere in the given trees
+    /// (the generated script and all included files). Included files count in full, whether or
+    /// not the script calls the functions in them.
+    /// </summary>
+    public static double Calculate(CSharpCompilation compilation, IEnumerable<SyntaxTree> trees)
     {
+        var ramCostAttribute = compilation.GetTypeByMetadataName(typeof(RamCostAttribute).FullName!);
         var methods = new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default);
 
-        foreach (var invocation in root.DescendantNodes().OfType<InvocationExpressionSyntax>())
+        foreach (var tree in trees)
         {
-            var symbol = semanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
+            var semanticModel = compilation.GetSemanticModel(tree);
 
-            if (symbol is null)
-                continue;
+            foreach (var invocation in tree.GetRoot().DescendantNodes().OfType<InvocationExpressionSyntax>())
+            {
+                if (semanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol symbol)
+                    continue;
 
-            var ramCost = symbol
-                .GetAttributes()
-                .FirstOrDefault(attribute =>
-                    SymbolEqualityComparer.Default.Equals(
-                        attribute.AttributeClass,
-                        semanticModel.Compilation
-                            .GetTypeByMetadataName(
-                                typeof(RamCostAttribute).FullName!)));
-
-            if (ramCost is null)
-                continue;
-
-            methods.Add(symbol);
+                if (symbol.GetAttributes().Any(attribute =>
+                        SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, ramCostAttribute)))
+                    methods.Add(symbol);
+            }
         }
 
-        return 1.6 + methods.Sum(GetRamCost);
+        return BaseCost + methods.Sum(GetRamCost);
     }
 
     private static double GetRamCost(IMethodSymbol method)

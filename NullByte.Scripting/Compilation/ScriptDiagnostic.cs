@@ -8,4 +8,5 @@ public sealed record ScriptDiagnostic(
     string Message,
     ScriptDiagnosticSeverity Severity,
     int Line,
-    int Column);
+    int Column,
+    string? File = null);

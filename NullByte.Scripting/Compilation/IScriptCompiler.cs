@@ -5,5 +5,5 @@
 /// </summary>
 public interface IScriptCompiler
 {
-    ScriptCompilationResult Compile(string source, string fileName);
+    ScriptCompilationResult Compile(string source, string filename, IScriptSourceProvider? sources = null);
 }

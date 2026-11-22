@@ -1,9 +1,10 @@
-﻿using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using NullByte.Core.Domain;
+﻿using NullByte.Core.Domain;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.LanguageService;
+using NullByte.Scripting.Runtime;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace NullByte.Editor;
 
@@ -37,7 +38,7 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
     private async Task<object> ExecuteAsync(string op, JsonObject request)
     {
         if (op == "diagnose")
-            return await Task.Run(() => Diagnose(Required(request, "path"), Required(request, "content")));
+            return await Task.Run(() => DiagnoseAsync(Required(request, "path"), Required(request, "content")));
         if (op == "complete")
             return await Task.Run(() => CompleteAsync(request));
         if (op == "hover")
@@ -66,15 +67,32 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
         }));
     }
 
-    private DiagnoseResult Diagnose(string path, string content)
+    private async Task<object> DiagnoseAsync(string path, string content)
     {
         var node = ParsePath(path);
         if (node.Host is null || node.Path.Length == 0)
             throw new EditorException("BadRequest", "Expected the path of a file.");
 
-        var result = compiler.Compile(content, node.Path);
-        return new(result.Diagnostics
-            .Select(d => new DiagnosticInfo(d.Id, d.Message, d.Severity.ToString().ToLowerInvariant(), d.Line, d.Column))
+        // The compiler compares file names, so use the same normalized form as everywhere else.
+        if (!VirtualPath.TryNormalizeFile(node.Path, out var file, out var pathError))
+            throw new EditorException("BadRequest", $"Invalid file name: {pathError}");
+
+        IScriptSourceProvider? sources = null;
+
+        if (SourceSnapshot.UsesIncludes(content))
+        {
+            var backend = backendProvider();
+            if (backend is not { GameThread.IsRunning: true })
+                return new DiagnoseResult([]);   // the libraries live in the game: nothing sensible to say yet
+
+            // The buffer stands in for the open file; the game's files supply the includes.
+            sources = await backend.GameThread.InvokeAsync(() => Task.FromResult(
+                SourceSnapshot.Capture(new ServerSourceProvider(backend.State.FileSystem, node.Host), file, content)));
+        }
+
+        var result = compiler.Compile(content, file, sources);
+        return new DiagnoseResult(result.Diagnostics
+            .Select(d => new DiagnosticInfo(d.Id, d.Message, d.Severity.ToString().ToLowerInvariant(), d.Line, d.Column, d.File))
             .ToArray());
     }
 

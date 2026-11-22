@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Logger, NullByteClient } from './client';
-import { toGamePath } from './paths';
+import { toGamePath, toUri } from './paths';
 
 const DebounceMs = 400;
 
@@ -10,9 +10,11 @@ const severities: Record<string, vscode.DiagnosticSeverity> = {
   info: vscode.DiagnosticSeverity.Information,
 };
 
-type DiagnoseResult = {
-  diagnostics: { id: string; message: string; severity: string; line: number; column: number }[];
+type DiagnosticItem = {
+  id: string; message: string; severity: string; line: number; column: number; file?: string | null;
 };
+type DiagnoseResult = { diagnostics: DiagnosticItem[] };
+type Reported = { uri: vscode.Uri; diagnostic: vscode.Diagnostic };
 
 const isScript = (doc: vscode.TextDocument) =>
   doc.uri.scheme === 'nullbyte' && doc.uri.path.endsWith('.cx');
@@ -20,6 +22,8 @@ const isScript = (doc: vscode.TextDocument) =>
 export class NullByteDiagnostics implements vscode.Disposable {
   private readonly collection = vscode.languages.createDiagnosticCollection('nullbyte');
   private readonly timers = new Map<string, NodeJS.Timeout>();
+    /** What each checked document reported, and for which file. Merged per file when published. */
+  private readonly reported = new Map<string, Reported[]>();
   private readonly subscriptions: vscode.Disposable[];
 
   constructor(private readonly client: NullByteClient, private readonly log: Logger) {
@@ -59,7 +63,13 @@ export class NullByteDiagnostics implements vscode.Disposable {
       const result = await this.client.request<DiagnoseResult>('diagnose', path, { content: doc.getText() });
       if (doc.isClosed || doc.version !== version) return;   // outdated: a newer check is on its way
 
-      this.collection.set(doc.uri, result.diagnostics.map(d => this.toDiagnostic(doc, d)));
+      const host = path.split('/')[1];   // '/home/a.cx' -> 'home'
+      const key = doc.uri.toString();
+      const previous = this.reported.get(key) ?? [];
+      const next = result.diagnostics.map(d => this.toReported(doc, host, d));
+
+      this.reported.set(key, next);
+      this.publish([doc.uri, ...previous.map(r => r.uri), ...next.map(r => r.uri)]);
       this.log.debug(`Diagnostics for ${doc.uri.path}: ${result.diagnostics.length}`);
     } catch (error) {
       // Keep whatever is shown if the game is unavailable.
@@ -67,22 +77,53 @@ export class NullByteDiagnostics implements vscode.Disposable {
     }
   }
 
-  private toDiagnostic(doc: vscode.TextDocument, d: DiagnoseResult['diagnostics'][number]): vscode.Diagnostic {
+  private toReported(doc: vscode.TextDocument, host: string, d: DiagnosticItem): Reported {
+    // A diagnostic belongs to the file the compiler named: an include, or the checked file itself.
+    const uri = d.file ? toUri(`/${host}/${d.file.replace(/^\/+/, '')}`) : doc.uri;
+
     // Lines and columns are 1-based. 0 means the compiler gave no location.
-    const position = doc.validatePosition(new vscode.Position(Math.max(d.line, 1) - 1, Math.max(d.column, 1) - 1));
+    let position = new vscode.Position(Math.max(d.line, 1) - 1, Math.max(d.column, 1) - 1);
+    if (uri.toString() === doc.uri.toString()) position = doc.validatePosition(position);
 
     // The compiler reports a start position only. An empty range makes VS Code underline the word there.
     const diagnostic = new vscode.Diagnostic(
       new vscode.Range(position, position), d.message, severities[d.severity] ?? vscode.DiagnosticSeverity.Error);
     diagnostic.code = d.id;
     diagnostic.source = 'NullByte';
-    return diagnostic;
+    return { uri, diagnostic };
+  }
+
+  /** Rebuild what is shown for the given files from everything the checked documents reported. */
+  private publish(uris: vscode.Uri[]) {
+    const unique = new Map(uris.map(uri => [uri.toString(), uri]));
+
+    for (const [key, uri] of unique) {
+      const seen = new Set<string>();
+      const merged: vscode.Diagnostic[] = [];
+
+      for (const list of this.reported.values()) {
+        for (const { uri: target, diagnostic } of list) {
+          if (target.toString() !== key) continue;
+          const start = diagnostic.range.start;
+          const identity = `${diagnostic.code}|${start.line}|${start.character}|${diagnostic.message}`;
+          if (seen.has(identity)) continue;   // the same error reported from two documents
+          seen.add(identity);
+          merged.push(diagnostic);
+        }
+      }
+
+      if (merged.length === 0) this.collection.delete(uri);
+      else this.collection.set(uri, merged);
+    }
   }
 
   private clear(doc: vscode.TextDocument) {
     const key = doc.uri.toString();
     clearTimeout(this.timers.get(key));
     this.timers.delete(key);
-    this.collection.delete(doc.uri);
+
+    const previous = this.reported.get(key) ?? [];
+    this.reported.delete(key);
+    this.publish([doc.uri, ...previous.map(r => r.uri)]);
   }
 }

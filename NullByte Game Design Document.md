@@ -375,6 +375,7 @@ Edit scripts in VS Code while the game runs. The game hosts a websocket server a
 **Deliverables**
 
 - Include other scripts with `#include "<file>"`.
+- Full vs code support for included scripts
 
 **Acceptance**
 

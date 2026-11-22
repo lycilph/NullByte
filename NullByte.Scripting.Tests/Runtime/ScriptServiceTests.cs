@@ -4,12 +4,19 @@ using NullByte.Core.Services;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Loading;
 using NullByte.Scripting.Runtime;
-using System.Reflection;
 
 namespace NullByte.Scripting.Tests.Runtime;
 
 public sealed class ScriptServiceTests
 {
+    [Fact]
+    public void UsesIncludes_OnlyForWellFormedDirectives()
+    {
+        Assert.True(SourceSnapshot.UsesIncludes("#include \"lib.cx\"\nvar x = 1;"));
+        Assert.False(SourceSnapshot.UsesIncludes("var x = 1;"));
+        Assert.False(SourceSnapshot.UsesIncludes("// #include \"lib.cx\""));
+    }
+
     [Fact]
     public async Task Start_WithExistingScript_ExecutesScript()
     {

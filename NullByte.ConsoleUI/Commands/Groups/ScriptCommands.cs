@@ -93,12 +93,18 @@ public sealed class ScriptCommands(
             return;
 
         var server = networkService.GetCurrentServer();
-        var cost = scriptService.GetScriptRam(filename, server.Hostname) * request.Threads;
+        var measured = scriptService.MeasureRam(filename, server.Hostname);
 
-        if (cost == 0.0)
-            output.WriteLine($"Something went wrong...");
-        else
-            output.WriteLine($"This script requires {cost:N2}GB of RAM to run for {request.Threads} thread(s)");
+        if (!measured.Succeeded)
+        {
+            output.WriteLine(measured.FailureMessage);
+            foreach (var diagnostic in measured.Diagnostics)
+                WriteScriptDiagnostic(output, filename, diagnostic);
+            return;
+        }
+
+        output.WriteLine(
+            $"This script requires {measured.Ram * request.Threads:N2}GB of RAM to run for {request.Threads} thread(s)");
     }
 
     private async Task KillAllScriptAsync(IReadOnlyList<string> arguments)
@@ -198,7 +204,7 @@ public sealed class ScriptCommands(
         var severity = diagnostic.Severity.ToString().ToLowerInvariant();
 
         output.WriteLine(
-            $"{fileName}({diagnostic.Line},{diagnostic.Column}): " +
+            $"{diagnostic.File ?? fileName}({diagnostic.Line},{diagnostic.Column}): " +
             $"{severity} {diagnostic.Id}: {diagnostic.Message}");
     }
 
