@@ -110,3 +110,8 @@ so that the include rules are written down in one place. That covers syntax, roo
 resolution on the running server, scp not copying dependencies, include-once, the depth limit, library shape, 
 RAM accounting, the NB10xx diagnostics, and the editor behavior. I'd also fold in the M8/M9 numbering note. 
 Run the tests and the editor check first, and tell me when to start step 7.
+
+
+**Step 7**
+I've updated the design doc and kept its CRLF line endings. Includes are now M9, which matches the doc's M9 entry; 
+M8 stays the VS Code integration.

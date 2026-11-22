@@ -23,7 +23,7 @@ The central fantasy is the same as Bitburner: you start by typing commands, get 
 - Botnet: buy nodes, upgrade level, RAM and cores, generate passive income.
 - A small hand-authored network of servers (home plus roughly 10 to 15), each with hacking requirement, security, money and growth.
 - Server actions: `scan`, `connect`, `nuke` (gain root), `hack`, `grow`, `weaken`, with variable duration and thread count.
-- Scripts: write, compile, run, kill and list scripts, with RAM cost, threads and arguments.
+- Scripts: write, compile, run, kill and list scripts, with RAM cost, threads and arguments, and reusable libraries through `#include`.
 - Home RAM as the limiting resource for scripts.
 - A console that blocks input while a manual hack/grow/weaken runs.
 - Save and load (late milestone).
@@ -84,6 +84,7 @@ Botnet accrues in game time, on the same simulation clock as everything else.
 - Each script has a static RAM cost: a base cost plus the sum of costs for each distinct `nb` method it calls, found by analyzing the code with Roslyn's semantic model.
 - Running a script with `t` threads costs `ram * t`. It must fit in the target server's free RAM.
 - Scripts run as processes (PID, name, args, threads, host) and can be listed and killed.
+- A script can include other scripts as libraries with `#include "<file>"`, so the player can build reusable code over time (3.5.2).
 
 ### 3.5.1 Script shape
 
@@ -104,12 +105,51 @@ while (true)
 
 `using` lines go at the top, and type declarations can follow the statements. The compiler wraps the whole file in a generated class that implements `IScript` (`Task Run(INullByteApi nb, string[] args)`), so players never write an entry point. This is regular C# compiled with a wrapper, not Roslyn's script mode. A few default `using`s (`System`, `System.Collections.Generic`, `System.Linq`, `System.Threading`, `System.Threading.Tasks`) are added for the player, and diagnostics are mapped back to the player's own line numbers.
 
+### 3.5.2 Includes and libraries
+
+A script can pull in other scripts with an `#include` line. The included file is a library:
+
+```csharp
+// main.cx
+#include "lib/net.cx"
+
+var target = args[0];
+await Net.WeakenTo(nb, target, 5);
+```
+
+```csharp
+// lib/net.cx
+using NullByte.Core.Scripting;
+
+public static class Net
+{
+    public static async Task WeakenTo(INullByteApi nb, string target, double margin)
+    {
+        while (nb.GetServerSecurityLevel(target) > nb.GetServerMinSecurityLevel(target) + margin)
+            await nb.Weaken(target);
+    }
+}
+```
+
+The rules:
+
+- A library holds `using` lines and type declarations only, with no top-level statements. `nb` and `args` are not in scope there, so library methods take `nb` as a parameter, as above.
+- The path is relative to the server root, like every script path (4.9). `#include "/lib/net.cx"` and `#include "lib/net.cx"` name the same file.
+- Includes are read from the server the script runs on, when the script is compiled. `scp` does not copy a script's libraries: the player copies them too, or the script fails to compile with an "Include not found" error that names the file.
+- A file is included once, however many files ask for it. Include cycles are errors, and includes can be nested up to 8 levels deep.
+- Every included file counts in full towards the script's RAM: each distinct `nb` method called anywhere in the script or its libraries is counted once, whether or not the script calls the library function that uses it. Small, focused libraries therefore cost less.
+- Types in libraries share one namespace with the script, so two files declaring the same type name conflict, which is a compile error.
+- Errors name the file they are in, for example `lib/net.cx(7,12): error CS1061: ...`.
+- Libraries are read when a script starts. Editing a library does not change processes that are already running.
+
+The details are in 4.10.
+
 ## 4. Technical architecture
 
 ### 4.1 Solution layout
 
 - `NullByte.Core`: simulation, formulas, model, clock, scheduler, NB API. No console or UI references.
-- `NullByte.Scripting`: Roslyn compile, analysis (RAM, banned APIs), loading and process management, and the language service (completion, hover, signature help) that editors use.
+- `NullByte.Scripting`: Roslyn compile, include resolution, analysis (RAM, banned APIs), loading and process management, and the language service (completion, hover, signature help) that editors use.
 - `NullByte.Editor`: optional VS Code integration on the host side: a websocket server, a small protocol and the file service (see 4.8). References Core and Scripting.
 - `NullByte.vscode`: the VS Code extension (TypeScript), built and packaged with npm rather than as part of the .NET solution.
 - `NullByte.ConsoleUI` Host: the first host, with command parser, rendering and input.
@@ -129,8 +169,6 @@ All game state is read and written only on the game thread.
 - `SynchronizationContext.SetSynchronizationContext` is set on that thread, so `await` in scripts and in console commands resumes on the game thread.
 - Other threads (console `ReadLine`, Roslyn compilation if we want it off-thread) never touch game state; they `Post` results back.
 
-&#91;embedded content: one tick of the game loop · 3 stages, 4 components\]
-
 A timer completed in stage 2 posts its continuation to the mailbox, and stage 3 of the same tick runs it. Other threads can only add to the mailbox, never run game code themselves.
 
 ### 4.3 Game time and timers
@@ -148,15 +186,17 @@ A timer completed in stage 2 posts its continuation to the mailbox, and stage 3 
 
 ### 4.5 Roslyn pipeline
 
-1. Parse the player's source into a `SyntaxTree`. Syntax errors are reported against the player's own text, so line numbers are right.
-2. Wrap the source: a generator splits it into `using` lines, top-level statements and type declarations, and emits a class implementing `IScript` around them. `#line` directives make every later diagnostic point at the player's lines. The default global `using`s go into a second syntax tree.
-3. Create a `CSharpCompilation` with a curated list of metadata references (an allow-list of core runtime assemblies we allow, plus `NullByte.Core` API types).
-4. Run analysis: the RAM cost calculation using the semantic model and the `[RamCost]` attributes. Banned API usage (file, network, process, reflection, threading, `Environment`, `Assembly` loading) and loop checks arrive with M9; the entry point is supplied by the wrapper, so it is not checked.
-5. Emit to an in-memory assembly (with a portable PDB) and load it into a collectible `AssemblyLoadContext`, so recompiling or killing a script lets it be unloaded.
-6. Instantiate the generated class and run `Run(nb, args)` as a process on the game thread.
-7. Report diagnostics (line, column, severity, message) to the host as game output. Editors get the same diagnostics from the same compiler (see 4.8).
+1. Resolve includes: find the `#include` directives in the player's source, read the files they name from the server the script runs on, and build the include graph (see 4.10). Missing, cyclic and too deeply nested includes are reported as errors.
+2. Parse the player's source and every included file into their own `SyntaxTree`, with the `#include` lines blanked so positions do not move. Syntax errors are reported against the player's own text, each in the file it is in, so line numbers are right. An included file may only contain `using` lines and type declarations.
+3. Wrap the source: a generator splits the script into `using` lines, top-level statements and type declarations, and emits a class implementing `IScript` around them. `#line` directives make every later diagnostic point at the player's lines. The default global `using`s go into a separate syntax tree.
+4. Create a `CSharpCompilation` from the generated wrapper, the default usings and the included files, with a curated list of metadata references (an allow-list of core runtime assemblies we allow, plus `NullByte.Core` API types).
+5. Run analysis: the RAM cost calculation using the semantic model and the `[RamCost]` attributes, over every tree of the compilation. Banned API usage (file, network, process, reflection, threading, `Environment`, `Assembly` loading) and loop checks arrive with M11; the entry point is supplied by the wrapper, so it is not checked.
+6. Emit to an in-memory assembly (with a portable PDB) and load it into a collectible `AssemblyLoadContext`, so recompiling or killing a script lets it be unloaded.
+7. Instantiate the generated class and run `Run(nb, args)` as a process on the game thread.
+8. Report diagnostics (file, line, column, severity, message) to the host as game output. Editors get the same diagnostics from the same compiler (see 4.8).
 
-Compile results are cached by source hash.
+Not done yet:
+* Compile results are cached by source hash. The key also covers every included file, so changing a library invalidates every script that includes it.
 
 ### 4.6 NB API (first set)
 
@@ -177,7 +217,7 @@ Each method has a RAM cost declared with an attribute (for example `[RamCost(0.1
 
 | Risk | Mitigation |
 | --- | --- |
-| A script with a tight synchronous loop (no `await`) freezes the single game thread | Analyzer error for loops without an `await` in the body; ban `Thread.Sleep`, `Task.Wait`, `.Result`; consider an instruction-count or time-budget guard via injected checks (investigate in M7) |
+| A script with a tight synchronous loop (no `await`) freezes the single game thread | Analyzer error for loops without an `await` in the body; ban `Thread.Sleep`, `Task.Wait`, `.Result`; consider an instruction-count or time-budget guard via injected checks (investigate in M11) |
 | Roslyn startup and compile latency | Warm up the compiler at launch; cache results; show "compiling" status |
 | Sandbox escape through reflection or dynamic loading | Allow-list references and ban APIs at the semantic level, not just by string matching. This is hobby-level sandboxing, not a security boundary, and the doc should say so |
 | Floating-point drift and balance bugs | Central `Formulas` class with unit tests; seeded RNG |
@@ -185,6 +225,7 @@ Each method has a RAM cost declared with an attribute (for example `[RamCost(0.1
 | A web page connects to the localhost websocket and reads or overwrites scripts | Loopback only, handshakes with an `Origin` header rejected, a fresh per-run token kept in a file only the user can read |
 | Roslyn cold start (several seconds) makes the editor feel stuck or starves file operations | Background warm-up of every language feature at startup, a concurrency gate for language requests, and file operations that never wait on it |
 | A path that is both a file and a folder, or paths that grow without bound | One namespace per server enforced by `VirtualFileSystem` (a path is a file or a folder, never both), with limits of 8 levels and 256 characters |
+| Includes that loop, repeat or nest without bound | Cycle detection, each file included once, a nesting limit of 8 levels, and RAM counted for every included file in full |
 
 ### 4.8 VS Code integration
 
@@ -198,11 +239,12 @@ VS Code (extension)                       NullByte process
                                           Language service (Roslyn, off the game thread)
 ```
 
-- **Protocol**: JSON text frames. Requests carry an `id` and an `op` (`stat`, `readDirectory`, `readFile`, `writeFile`, `createDirectory`, `delete`, `rename`, `diagnose`, `complete`, `hover`, `signatureHelp`). `writeFile` and `rename` take `create` and `overwrite` flags, and `delete` takes a `recursive` flag. `stat` returns the type, the size in bytes and, for files, the creation and modification time in milliseconds since the Unix epoch. Responses echo the `id` with `ok` and either a `result` or an `error` code (`NotFound`, `FileExists`, `IsADirectory`, `NotADirectory`, `NoPermissions`, `BadRequest`, `Unavailable`). The server also pushes events without an id: `fileChanged` (created, changed or deleted, with a path and whether it is a folder) and `reset` (the running game was replaced, for example by `load`).
+- **Protocol**: JSON text frames. Requests carry an `id` and an `op` (`stat`, `readDirectory`, `readFile`, `writeFile`, `createDirectory`, `delete`, `rename`, `diagnose`, `complete`, `hover`, `signatureHelp`, `definition`). `writeFile` and `rename` take `create` and `overwrite` flags, and `delete` takes a `recursive` flag. `stat` returns the type, the size in bytes and, for files, the creation and modification time in milliseconds since the Unix epoch. Responses echo the `id` with `ok` and either a `result` or an `error` code (`NotFound`, `FileExists`, `IsADirectory`, `NotADirectory`, `NoPermissions`, `BadRequest`, `Unavailable`). The server also pushes events without an id: `fileChanged` (created, changed or deleted, with a path and whether it is a folder) and `reset` (the running game was replaced, for example by `load`).
 - **Paths**: `/<server>/<path>` on the wire, where the path inside the server follows the rules in 4.9. The root lists the servers the player has discovered; undiscovered servers answer "not found". Servers cannot be created, renamed or deleted from the editor. In VS Code the game appears as a single root folder named `NullByte`; the extension maps `nullbyte:/NullByte/<server>/<path>` to the wire path. Folders can be created, renamed, dragged and deleted (recursively when VS Code asks for it). Replacing something that exists is only allowed for the same kind (file for file, folder for folder), and nothing can be moved between servers.
-- **Threading**: file operations are marshalled onto the game thread with `GameThread.InvokeAsync`, which keeps the rule from 4.2. `VirtualFileSystem` and `Player` raise change events on the game thread; each connection has an outbox so only one writer sends at a time. Language requests never touch game state, so they run on the thread pool behind a small concurrency gate and cannot starve file operations.
+- **Threading**: file operations are marshalled onto the game thread with `GameThread.InvokeAsync`, which keeps the rule from 4.2. `VirtualFileSystem` and `Player` raise change events on the game thread; each connection has an outbox so only one writer sends at a time. Language requests run on the thread pool behind a small concurrency gate and cannot starve file operations. The one thing they need from the game is a script's included files, which are copied out in a short step on the game thread (see Includes in the editor).
 - **Conflicts**: `stat` reports the file times from 4.9, which enables VS Code's own save check: saving a script that is newer than the version the editor loaded, and has a different size, fails with Compare and Overwrite instead of silently replacing the game's version. Changes that keep the exact byte length are not detected by that check.
 - **Language service**: reuses the compiler's source wrapper, default usings and whitelisted references, so suggestions match what actually compiles. Positions are mapped between the player's text and the wrapped source. Documentation comes from the XML docs of `NullByte.Core` and RAM costs from the `[RamCost]` attributes; framework members have signatures only. A background warm-up at startup pays the Roslyn start-up cost before the first request.
+- **Includes in the editor**: `diagnose`, `complete`, `hover`, `signatureHelp` and `definition` all carry the file's wire path, so the service knows which server the includes are read from. For a script with includes, the open file's text comes from the editor's buffer and the included files from the game's saved files, copied out on the game thread. The language service adds the included files to its Roslyn project as extra documents, so completion, hover and signature help see the library's types, and `definition` returns the declaration's file, line and column (the game's API and the framework have no source, so they have no definition). `diagnose` returns a file with each diagnostic. The extension shows every diagnostic in the file it belongs to: it remembers what each checked document reported, merges per file and removes duplicates, so a library error reported both by the library and by a script that includes it appears once. A library opened on its own needs no special mode: a file without top-level statements is a valid script with an empty body, so it is checked, completed and hovered like any other file. While no game is running the libraries cannot be read, so scripts with includes get no diagnostics (instead of false errors) and no library suggestions, and everything else keeps working.
 - **Discovery and security**: the server listens on loopback only. At startup it writes a connection file with the `url`, a fresh random `token` and the `pid`, readable only by the user, and removes it on exit if it is still its own. The extension reads the file on every connection attempt. Handshakes with an `Origin` header (browsers) or without the bearer token are rejected. As with the sandbox, this is hobby-level protection for a local tool, not a security boundary.
 - **Arguments**: `--vscode` starts the integration. `--vscode-port <n>` sets the port; without it the game tries 8765 and falls back to a free port. `--vscode-file <path>` sets where the connection file is written (default `~/.nullbyte/editor.json`).
 - **Scripts**: the extension registers `.cx` as a language with C# highlighting. Scripts outside `.cx` files get no language features.
@@ -216,11 +258,36 @@ Each server has its own files and folders, held in memory and saved with the gam
 - **Operations**: writing, moving and copying create missing parent folders, like `mkdir -p`. Deleting a folder with content needs an explicit recursive flag. Moving a folder moves everything below it and keeps the files' times; a folder cannot be moved into itself, onto something that exists, or below a file. A failed operation changes nothing.
 - **File times**: every file has a creation and a modification time, taken from an injected `TimeProvider` (wall-clock time in whole milliseconds, not game time). The modification time is strictly increasing per file, so two quick writes never look identical, and moving a file keeps both times. The times are saved with the game.
 - **Events**: `VirtualFileSystem.Changed` is raised on the game thread with the kind (created, changed, deleted), the path and whether it is a folder. Folders created implicitly are reported outermost first, before the file. Deleting a folder is one event however much was below it, and moving is a delete plus a create. Restoring from a save raises no events.
-- **Console**: `ls [directory]`, `cat`, `edit`, `rm [-r]`, `mkdir`, `rmdir`, `mv` (files and folders), `scp` (files only), `cd` and `pwd`. A bad path produces a one-line explanation instead of an error.
+- **Console**: `ls [directory]`, `cat`, `edit`, `rm [-r]`, `mkdir`, `rmdir`, `mv` (files and folders), `scp` (files only; it does not copy the libraries a script includes, see 4.10), `cd` and `pwd`. A bad path produces a one-line explanation instead of an error.
 - **Current directory**: the player has a current directory on the current server, shown in the prompt (`root@home:/tools $`) and by `pwd`. Console commands resolve the paths they are given against it: a path starting with `/` is absolute from the server root, anything else is relative, and `.` and `..` are understood there (the file system itself never sees them, and `..` at the root stays at the root). This covers the file commands, `run` and `mem`; `scp` keeps a file's full path on the destination server. Error messages echo what was typed, results show the full path, and `ps` always shows full paths. The current directory goes back to the root when the player connects to another server, and it is not saved. If the directory is deleted (by a command, a script or the editor), the next command says so and puts the player back at the root. The editor and scripts never use the current directory: `nb.Files`, `nb.Run` and `nb.Exec` take paths from the server root.
 - **Tab completion**: completes one path segment at a time, relative to the current directory (from the root after a leading `/`, and through `.` and `..`). Directories end in a slash and add no space, so a path can be built up in steps. `cd`, `ls`, `mkdir` and `rmdir` offer only directories, commands that take files offer files and directories, and `scp` also offers known servers. The completion data is refreshed after each command.
 - **Scripts**: `nb.Files.List` returns every file on the server as a full path; `Delete`, `Move` and `Copy` take paths from the server root, and so do `nb.Run` and `nb.Exec`.
 - **Saves**: format 3 stores every folder per server (empty ones included) next to the files, whose names are paths. Older saves load through migrations (1 to 2 adds file times, 2 to 3 adds an empty folder list), and a save with an invalid folder entry is refused as damaged data. The player's current directory is not saved: a loaded game starts at the root of the current server.
+
+### 4.10 Script includes
+
+Includes let a script use code from other files on the same server. The work happens in `NullByte.Scripting`; Core and the hosts are unchanged, and so is the save format, because includes are resolved from source whenever a script compiles. The player's view of the feature is in 3.5.2.
+
+- **Syntax**: `#include "path"` on a line of its own, optionally followed by a `//` comment. Roslyn does not know the directive and parses it as a bad directive, so `IncludeScanner` asks the syntax tree for those and reads the ones that start with `#include`. Text that merely looks like a directive inside a string or a comment is therefore ignored, and a malformed one such as `#include lib.cx` is reported as NB1005. Before a file is parsed for real, the characters of its directives are replaced by spaces (line breaks are kept), so line numbers and offsets stay exactly the player's own.
+- **Resolution**: `IncludeResolver` walks the files depth-first from the script. Paths are normalized by `VirtualPath` (4.9) and read through an `IScriptSourceProvider`, which maps a path to its source on one server. The result is an `IncludeGraph`: the script, the included files with dependencies first and each file once, and the diagnostics. A file already on the current include chain is a cycle (NB1002, reported with the chain, for example `a.cx -> b.cx -> a.cx`); a file seen before elsewhere is skipped; nesting deeper than 8 levels is NB1003; an invalid path is NB1004; a missing file is NB1001, reported at the directive that names it.
+- **Reading files and the game thread**: the game's files may only be read on the game thread (4.2), but compiling happens off it. Callers on the game thread (`ScriptService.Start`, and the editor through `GameThread.InvokeAsync`) first copy the needed sources into a `SourceSnapshot`, and the compiler reads only from that snapshot. `ServerSourceProvider` is the live provider for one server's files and is used only on the game thread, for example by `mem`.
+- **Compilation**: every included file becomes its own syntax tree in the same compilation, next to the generated wrapper and the default usings. A library is therefore ordinary C# with its own `using` lines, its own file name and its own line numbers, and its diagnostics need no `#line` mapping. Libraries must not contain top-level statements (NB1006): the wrapper's `Run(nb, args)` belongs to the script alone, which is also why library methods take `nb` as a parameter.
+- **RAM**: the analyzer runs over every tree of the compilation. The base cost is counted once and each distinct `[RamCost]` method once across all files, whether or not the script calls the library function that uses it. Counting whole files keeps the cost predictable and nudges players towards small libraries. A reachability analysis could replace it later without touching anything else.
+- **Diagnostics**: `ScriptDiagnostic` carries the file it belongs to. The console prints `file(line,col): severity ID: message` using the diagnostic's own file, and the editor protocol returns the same file. The include diagnostics are:
+
+| Id | Meaning |
+| --- | --- |
+| NB1001 | Include not found, on the server the script runs on |
+| NB1002 | Include cycle |
+| NB1003 | Includes nested deeper than 8 levels |
+| NB1004 | Invalid include path |
+| NB1005 | Malformed `#include` |
+| NB1006 | Top-level statements in an included file |
+
+- **Commands**: `run` and `exec` compile on the server the script runs on, so its libraries must be there. `scp` copies the files it is given and does not follow includes. `mem` reports the RAM of the script and its libraries and, when the script does not compile, prints the reason and the diagnostics instead of a bare failure (`ScriptService.MeasureRam`; `GetScriptRam` for the script API keeps returning 0 for "cannot be measured").
+- **Processes**: a running process is compiled code, so editing a library only affects scripts started afterwards. After `load`, processes are recompiled from the current files like any other script.
+- **Editor**: see Includes in the editor in 4.8.
+- **Known limits**: scripts are not re-checked automatically when a library they include changes, so after fixing a library its dependents update the next time they are edited. Included files are read from the game's saved files, so unsaved edits to a library open in the editor are not seen by other files until it is saved.
 
 ## 5. Milestones
 
@@ -372,14 +439,27 @@ Edit scripts in VS Code while the game runs. The game hosts a websocket server a
 
 ### M9: #includes
 
+Reusable libraries: a script can include other scripts with `#include "<file>"`, so players can build up a collection of helpers over time. Design in 3.5.2 and 4.10.
+
 **Deliverables**
 
-- Include other scripts with `#include "<file>"`.
-- Full vs code support for included scripts
+- The `#include "<file>"` directive: root-relative paths (4.9), resolved on the server the script runs on. A missing include is a plain compile error, and `scp` does not copy a script's libraries.
+- Include resolution: a graph with dependencies first and each file included once, cycles and nesting deeper than 8 levels reported as errors, and the diagnostics NB1001 to NB1006 with file, line and column.
+- Compiler: every included file is its own syntax tree in the same compilation. Libraries contain usings and type declarations only and receive `nb` as a parameter. `#include` lines are blanked, so line numbers stay the player's own.
+- RAM: every `[RamCost]` method called anywhere in the script or its libraries counts once, and every included file counts in full. `run`, `exec`, `mem` and `nb.GetScriptRam` all use it.
+- Console: diagnostics name the file they are in, and `mem` explains why a script cannot be measured instead of printing a bare failure.
+- Editor (see 4.8): diagnostics, completion, hover and signature help across includes, diagnostics shown in the file they belong to, go to definition into a library, and libraries checked on their own while they are edited.
+- Tests for the resolver, compilation, RAM and the language service (see 7).
 
 **Acceptance**
 
-- scripts can include other scripts with the `#include "<file>"` statement
+- A script that includes a library can call the library's types and runs; an example like the one in 3.5.2 works.
+- Calling an `nb` method through a library costs the same RAM as calling it directly, and the same method used in several files is counted once.
+- An error in an included file is reported with that file's name and line. `#include` lines never shift the line numbers of the script.
+- A missing, cyclic, too deeply nested or malformed include gives a clear error naming the file and the line of the directive, and never crashes the game.
+- A script copied to another server without its libraries fails with "Include not found" naming the missing file.
+- In VS Code, typing a library's type name completes its members, hover and signature help show their signatures and documentation, F12 opens the declaration in the library file, and an error in a library shows up in that library's file in the Problems panel.
+- With no game running, scripts that include libraries show no false errors in VS Code.
 
 ### M10: Visual studio Code editor integration - improvements
 
@@ -431,6 +511,7 @@ Edit scripts in VS Code while the game runs. The game hosts a websocket server a
   - A `run` command in VS Code that runs the current script and shows its output.
   - A `ram` command in VS Code that checks the ram cost for the current script.
   - Opening vs code from within the game
+- **Includes follow-ups**: re-check scripts when a library they include changes, let the editor supply the unsaved text of an open library, and count RAM only for the library code a script can reach if whole-file costs turn out too coarse.
 - **Console follow-ups**: `scp -r` for copying folders, a recursive `ls`, and refreshing tab completion when files change outside the console (scripts, the editor).
 - Factions, augmentations, reset loop.
 - Port-opening programs and more servers.
@@ -449,6 +530,7 @@ Edit scripts in VS Code while the game runs. The game hosts a websocket server a
 - Command tests through the real dispatcher with a recording terminal, including relative paths and the current directory.
 - Path resolution and tab completion tests: the resolver, the current directory state (including its resets), and the completion engine against hand-made snapshots.
 - Editor protocol tests that send requests through the file service against a real game state.
+- Include tests: the resolver (order, include once, cycles, depth, missing and malformed includes, directives inside strings and comments), compilation with includes (file and line of errors in libraries, unchanged line numbers, library shape, a library compiled on its own), RAM across files (counted once, whole-file cost, nested includes), and the language service with includes (completion, hover, signature help, definition).
 
 ## 8. Open questions (resolved)
 
@@ -458,3 +540,4 @@ Edit scripts in VS Code while the game runs. The game hosts a websocket server a
 4. **Real-time versus game-time ratio**: 1 to 1 initially, with a speed multiplier in the config. Decided.
 5. **Target framework**: .NET 10. Decided.
 6. **Network authoring format**: a JSON data file. Decided.
+7. **Includes**: `#include "path"` with root-relative paths, resolved on the server the script runs on; a missing include is a plain error and `scp` does not copy libraries; libraries hold usings and type declarations only and take `nb` as a parameter (no ambient `nb`); each file is included once, cycles are errors, nesting is limited to 8 levels; RAM counts every included file in full. Decided.
