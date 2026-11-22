@@ -69,3 +69,12 @@ No automatic dependent re-check: after you fix a library, the script that includ
 That's the "no dependent re-check" decision from earlier. If it annoys you in practice, it's cheap to add later.
 Unsaved library edits: includes come from the saved files, so an unsaved library edit isn't seen by the script that 
 includes it until you save.
+
+**Step 5 makes completion, hover and signature help work in a script that includes libraries.**
+
+One bug to fix on the way
+
+The extension sends two different path formats. diagnose sends the game path (/home/a.cx), but complete, 
+hover and signatureHelp send doc.uri.path (/NullByte/home/a.cx). The server never used that path for those ops, 
+so it didn't matter. Now it does, because it tells us which server's files to read the includes from.
+So the three providers switch to toGamePath.

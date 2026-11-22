@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Logger, NullByteClient } from './client';
+import { toGamePath } from './paths';
 
 type SignatureHelpResult = {
   help: {
@@ -20,7 +21,9 @@ export function registerSignatureHelp(client: NullByteClient, log: Logger): vsco
     {
       async provideSignatureHelp(doc, position, token, context) {
         try {
-          const result = await client.request<SignatureHelpResult>('signatureHelp', doc.uri.path, {
+          const path = toGamePath(doc.uri);
+          if (path === undefined) return undefined;
+          const result = await client.request<SignatureHelpResult>('signatureHelp', path, {   // 'hover' / 'signatureHelp' in the others
             content: doc.getText(),
             offset: doc.offsetAt(position),
           });
@@ -30,7 +33,7 @@ export function registerSignatureHelp(client: NullByteClient, log: Logger): vsco
           help.signatures = result.help.signatures.map(s => {
             const markdown = new vscode.MarkdownString();
             if (s.documentation) markdown.appendText(s.documentation);
-            if (s.ramCost !== undefined) {
+            if (s.ramCost !== undefined && s.ramCost !== null) {
               markdown.appendMarkdown(`${s.documentation ? '\n\n' : ''}**RAM cost:** ${s.ramCost.toFixed(2)} GB`);
             }
 

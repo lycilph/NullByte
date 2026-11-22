@@ -22,6 +22,8 @@ public sealed record ScriptSignatureHelp(IReadOnlyList<ScriptSignature> Signatur
 
 public sealed record ScriptCompletion(string Label, string InsertText, string Kind, string SortText, double? RamCost, string? Documentation);
 public sealed record ScriptHover(string Signature, string? Documentation, double? RamCost);
+/// <summary>Where a script lives and how to read the files it includes.</summary>
+public sealed record IncludeContext(string FileName, IScriptSourceProvider Sources);
 
 public sealed record ApiMember(double RamCost, string? Summary);
 
@@ -72,22 +74,48 @@ public sealed class ScriptLanguageService : IDisposable
         await GetSignatureHelpAsync("nb.Hack(", 8);
     }
 
-    private (Document Document, int Position) Prepare(string source, int offset, CancellationToken ct)
+    private (Document Document, int Position) Prepare(string source, int offset, IncludeContext? context, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(source);
         offset = Math.Clamp(offset, 0, source.Length);
 
-        var text = SourceText.From(source, Encoding.UTF8);
+        // Problems with the includes themselves (missing, cyclic) are the diagnostics' business;
+        // completion just uses whatever resolved.
+        IReadOnlyList<IncludeDirective> directives;
+        IReadOnlyList<ResolvedSource> includes = [];
+
+        if (context is null)
+            directives = IncludeScanner.Scan(source, string.Empty, []);
+        else
+        {
+            var graph = new IncludeResolver(context.Sources).Resolve(context.FileName, source);
+            directives = graph.Root.Directives;
+            includes = graph.Includes;
+        }
+
+        // Blanking keeps every offset the editor sent valid.
+        var text = SourceText.From(IncludeScanner.Blank(source, directives), Encoding.UTF8);
         var tree = CSharpSyntaxTree.ParseText(text, ScriptCompiler.ParseOptions, cancellationToken: ct);
         var generated = ScriptSourceGenerator.GenerateMapped(text, tree.GetCompilationUnitRoot(ct), "script.cx");
 
         // Solutions are immutable, so concurrent requests do not interfere with each other.
         var solution = workspace.CurrentSolution.WithDocumentText(scriptId, SourceText.From(generated.Text, Encoding.UTF8));
+
+        foreach (var include in includes)
+        {
+            solution = solution.AddDocument(
+                DocumentId.CreateNewId(scriptId.ProjectId, include.Path),
+                include.Path,
+                SourceText.From(IncludeScanner.Blank(include.Source, include.Directives), Encoding.UTF8),
+                filePath: include.Path);
+        }
+
         return (solution.GetDocument(scriptId)!, generated.ToGenerated(offset));
     }
-    public async Task<ScriptHover?> GetHoverAsync(string source, int offset, CancellationToken ct = default)
+
+    public async Task<ScriptHover?> GetHoverAsync(string source, int offset, CancellationToken ct = default, IncludeContext? context = null)
     {
-        var (document, position) = Prepare(source, offset, ct);
+        var (document, position) = Prepare(source, offset, context, ct);
 
         var quickInfo = QuickInfoService.GetService(document);
         if (quickInfo is null)
@@ -114,9 +142,9 @@ public sealed class ScriptLanguageService : IDisposable
     private static string SectionText(QuickInfoItem item, string kind)
         => string.Concat(item.Sections.Where(s => s.Kind == kind).SelectMany(s => s.TaggedParts).Select(p => p.Text)).Trim();
 
-    public async Task<IReadOnlyList<ScriptCompletion>> GetCompletionsAsync(string source, int offset, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ScriptCompletion>> GetCompletionsAsync(string source, int offset, CancellationToken ct = default, IncludeContext? context = null)
     {
-        var (document, position) = Prepare(source, offset, ct);
+        var (document, position) = Prepare(source, offset, context, ct);
 
         var service = CompletionService.GetService(document)
             ?? throw new InvalidOperationException("Roslyn completion is unavailable (are the Features assemblies present?).");
@@ -199,9 +227,9 @@ public sealed class ScriptLanguageService : IDisposable
         return members;
     }
 
-    public async Task<ScriptSignatureHelp?> GetSignatureHelpAsync(string source, int offset, CancellationToken ct = default)
+    public async Task<ScriptSignatureHelp?> GetSignatureHelpAsync(string source, int offset, CancellationToken ct = default, IncludeContext? context = null)
     {
-        var (document, position) = Prepare(source, offset, ct);
+        var (document, position) = Prepare(source, offset, context, ct);
 
         var root = await document.GetSyntaxRootAsync(ct);
         var model = await document.GetSemanticModelAsync(ct);

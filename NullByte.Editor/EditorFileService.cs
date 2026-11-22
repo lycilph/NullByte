@@ -67,27 +67,49 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
         }));
     }
 
-    private async Task<object> DiagnoseAsync(string path, string content)
+    private (NodePath Node, string File) ScriptPath(string path)
     {
         var node = ParsePath(path);
         if (node.Host is null || node.Path.Length == 0)
             throw new EditorException("BadRequest", "Expected the path of a file.");
 
-        // The compiler compares file names, so use the same normalized form as everywhere else.
         if (!VirtualPath.TryNormalizeFile(node.Path, out var file, out var pathError))
             throw new EditorException("BadRequest", $"Invalid file name: {pathError}");
 
-        IScriptSourceProvider? sources = null;
+        return (node, file);
+    }
 
+    /// <summary>Reads the script's includes on the game thread. Null while no game is running.</summary>
+    private async Task<SourceSnapshot?> CaptureIncludesAsync(NodePath node, string file, string content)
+    {
+        var backend = backendProvider();
+        if (backend is not { GameThread.IsRunning: true })
+            return null;
+
+        return await backend.GameThread.InvokeAsync(() => Task.FromResult(
+            SourceSnapshot.Capture(new ServerSourceProvider(backend.State.FileSystem, node.Host!), file, content)));
+    }
+
+    private async Task<IncludeContext?> IncludeContextAsync(JsonObject request, string content)
+    {
+        if (!SourceSnapshot.UsesIncludes(content))
+            return null;
+
+        var (node, file) = ScriptPath(Required(request, "path"));
+        var snapshot = await CaptureIncludesAsync(node, file, content);
+        return snapshot is null ? null : new IncludeContext(file, snapshot);
+    }
+
+    private async Task<object> DiagnoseAsync(string path, string content)
+    {
+        var (node, file) = ScriptPath(path);
+
+        IScriptSourceProvider? sources = null;
         if (SourceSnapshot.UsesIncludes(content))
         {
-            var backend = backendProvider();
-            if (backend is not { GameThread.IsRunning: true })
+            sources = await CaptureIncludesAsync(node, file, content);
+            if (sources is null)
                 return new DiagnoseResult([]);   // the libraries live in the game: nothing sensible to say yet
-
-            // The buffer stands in for the open file; the game's files supply the includes.
-            sources = await backend.GameThread.InvokeAsync(() => Task.FromResult(
-                SourceSnapshot.Capture(new ServerSourceProvider(backend.State.FileSystem, node.Host), file, content)));
         }
 
         var result = compiler.Compile(content, file, sources);
@@ -103,19 +125,22 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
     private async Task<object> CompleteAsync(JsonObject request)
     {
         var (content, offset) = Source(request);
-        return new CompleteResult(await languageService.GetCompletionsAsync(content, offset));
+        var context = await IncludeContextAsync(request, content);
+        return new CompleteResult(await languageService.GetCompletionsAsync(content, offset, context: context));
     }
 
     private async Task<object> HoverAsync(JsonObject request)
     {
         var (content, offset) = Source(request);
-        return new HoverResult(await languageService.GetHoverAsync(content, offset));
+        var context = await IncludeContextAsync(request, content);
+        return new HoverResult(await languageService.GetHoverAsync(content, offset, context: context));
     }
 
     private async Task<object> SignatureHelpAsync(JsonObject request)
     {
         var (content, offset) = Source(request);
-        return new SignatureHelpResult(await languageService.GetSignatureHelpAsync(content, offset));
+        var context = await IncludeContextAsync(request, content);
+        return new SignatureHelpResult(await languageService.GetSignatureHelpAsync(content, offset, context: context));
     }
 
     // Runs on the game thread from here down.
