@@ -190,7 +190,7 @@ A timer completed in stage 2 posts its continuation to the mailbox, and stage 3 
 2. Parse the player's source and every included file into their own `SyntaxTree`, with the `#include` lines blanked so positions do not move. Syntax errors are reported against the player's own text, each in the file it is in, so line numbers are right. An included file may only contain `using` lines and type declarations.
 3. Wrap the source: a generator splits the script into `using` lines, top-level statements and type declarations, and emits a class implementing `IScript` around them. `#line` directives make every later diagnostic point at the player's lines. The default global `using`s go into a separate syntax tree.
 4. Create a `CSharpCompilation` from the generated wrapper, the default usings and the included files, with a curated list of metadata references (an allow-list of core runtime assemblies we allow, plus `NullByte.Core` API types).
-5. Run analysis: the RAM cost calculation using the semantic model and the `[RamCost]` attributes, over every tree of the compilation. Banned API usage (file, network, process, reflection, threading, `Environment`, `Assembly` loading) and loop checks arrive with M11; the entry point is supplied by the wrapper, so it is not checked.
+5. Run analysis: the RAM cost calculation using the semantic model and the `[RamCost]` attributes, over every tree of the compilation. Banned API usage (file, network, process, reflection, threading, `Environment`, `Assembly` loading) and loop checks arrive with M12; the entry point is supplied by the wrapper, so it is not checked.
 6. Emit to an in-memory assembly (with a portable PDB) and load it into a collectible `AssemblyLoadContext`, so recompiling or killing a script lets it be unloaded.
 7. Instantiate the generated class and run `Run(nb, args)` as a process on the game thread.
 8. Report diagnostics (file, line, column, severity, message) to the host as game output. Editors get the same diagnostics from the same compiler (see 4.8).
@@ -217,7 +217,7 @@ Each method has a RAM cost declared with an attribute (for example `[RamCost(0.1
 
 | Risk | Mitigation |
 | --- | --- |
-| A script with a tight synchronous loop (no `await`) freezes the single game thread | Analyzer error for loops without an `await` in the body; ban `Thread.Sleep`, `Task.Wait`, `.Result`; consider an instruction-count or time-budget guard via injected checks (investigate in M11) |
+| A script with a tight synchronous loop (no `await`) freezes the single game thread | Analyzer error for loops without an `await` in the body; ban `Thread.Sleep`, `Task.Wait`, `.Result`; consider an instruction-count or time-budget guard via injected checks (investigate in M12) |
 | Roslyn startup and compile latency | Warm up the compiler at launch; cache results; show "compiling" status |
 | Sandbox escape through reflection or dynamic loading | Allow-list references and ban APIs at the semantic level, not just by string matching. This is hobby-level sandboxing, not a security boundary, and the doc should say so |
 | Floating-point drift and balance bugs | Central `Formulas` class with unit tests; seeded RNG |
@@ -461,7 +461,17 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
 - In VS Code, typing a library's type name completes its members, hover and signature help show their signatures and documentation, F12 opens the declaration in the library file, and an error in a library shows up in that library's file in the Problems panel.
 - With no game running, scripts that include libraries show no false errors in VS Code.
 
-### M10: Visual studio Code editor integration - improvements
+### M10: Activities (jobs, training, studying etc.)
+
+**Deliverables**
+
+- Jobs, training study etc.
+   
+**Acceptance**
+
+- Ability to work on a job (earning money), studying (earning exp)
+
+### M11: Visual studio Code editor integration - improvements
 
 **Deliverables**
 
@@ -475,7 +485,7 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
 
 - Updated vs code extension
 
-### M11: Sandbox and safety
+### M12: Sandbox and safety
 
 **Deliverables**
 
@@ -486,7 +496,7 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
 
 - A set of malicious or buggy sample scripts (file access, reflection, `while(true){}`, thrown exceptions) are rejected or contained, and the game continues to run.
 
-### M12: Progression and balance pass
+### M13: Progression and balance pass
 
 **Deliverables**
 
@@ -497,7 +507,7 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
 
 **Acceptance**: a play session of roughly 1 to 2 hours reaches the final in-scope tier of servers, with a script-based economy clearly better than manual play.
 
-### M13: First playable release
+### M14: First playable release
 
 **Deliverables**: bug fixing, README, sample scripts, a short "how to play" document, a tagged build.
 
