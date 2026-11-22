@@ -1,4 +1,6 @@
-﻿namespace NullByte.Core.Domain;
+﻿using NullByte.Core.Domain.Activities;
+
+namespace NullByte.Core.Domain;
 
 /// <summary>
 /// Represents the complete mutable state of a running game.
@@ -31,6 +33,7 @@ public sealed class GameState
         Player = player;
         Network = network;
         Botnet = new Botnet();
+        Activity = new ActivityState();
         FileSystem = new VirtualFileSystem(network);
     }
 
@@ -42,6 +45,9 @@ public sealed class GameState
 
     /// <summary>Gets the player's botnet.</summary>
     public Botnet Botnet { get; }
+
+    /// <summary>Gets what the player is busy with right now.</summary>
+    public ActivityState Activity { get; }
 
     /// <summary>Gets the virtual filesystem containing files stored on game servers.</summary>
     public VirtualFileSystem FileSystem { get; }

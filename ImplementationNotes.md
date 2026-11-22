@@ -39,3 +39,20 @@ Next: step 3
 
 I'll build ActivityService and ActivitySystem, covering the focus flag with its 0.8 reward factor, the cycle model, 
 and study/train first, and wire them into GameSession. Say "continue" and I'll start.
+
+## Step 3
+I verified it with a compile of Core on a tree that mirrors your Domain.Activities namespace move,
+and a run of all 74 tests (steps 1 to 3) through a stand-in test runner. I could not compile NullByte.Shell 
+(it needs the Roslyn packages), so the GameSession.cs edits at the end are the one part I checked only by reading them.
+
+What this step does
+**Activity is state only.** ClassActivity is the first subclass, and jobs and crimes will add siblings. It remembers its mode, elapsed time, net money and experience gained. GameState.Activity.Current holds the one running activity.
+**ActivityFormulas.CalculateRates(activity)** returns money per second (signed: negative means it costs) plus experience per second. The 0.8 factor reduces rewards only, never tuition. Jobs in step 5 reuse the same method.
+**ActivityService** is the single entry point: StartCourse, Stop, SetMode, and an ActivityEnded event raised on the game thread. Only one activity runs at a time.
+**ActivitySystem** applies the rates each tick. It pays first, and if the player can't afford that slice, the activity ends with CannotAfford and gives nothing for that slice.
+
+### Decisions to be aware of
+With no facility named, the course goes to the first facility of that kind in the catalog (the catalog lists the cheapest first).
+Starting a course needs enough money for one second of tuition.
+GameServices gains a trailing ActivityService Activities parameter. Only GameSession.Create builds it in the pack, but any test that builds it by hand needs the extra argument.
+Nothing is saved yet. A loaded game starts idle until step 7.

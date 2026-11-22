@@ -171,6 +171,27 @@ public sealed record BalanceConfig
     public double HackingExperienceMultiplier { get; init; } = 1.0;
 
 
+    // Activities
+
+    /// <summary>
+    /// The share of its rewards an activity gives while the player is not
+    /// focused on it. Costs are not reduced.
+    /// </summary>
+    public double UnfocusedRewardFactor { get; init; } = 0.8;
+
+    /// <summary>
+    /// Global multiplier applied to the experience courses give.
+    /// Reserved for later progression systems.
+    /// </summary>
+    public double ClassExperienceMultiplier { get; init; } = 1.0;
+
+    /// <summary>
+    /// Global multiplier applied to the cost of courses.
+    /// Reserved for later progression systems.
+    /// </summary>
+    public double ClassCostMultiplier { get; init; } = 1.0;
+
+
     // Growth
 
     /// <summary>

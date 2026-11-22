@@ -18,14 +18,15 @@ namespace NullByte.Shell;
 
 public sealed record GameSessionOptions
 {
-    public required IGameOutput Output { get; init; }       // the host provides this
+    public required IGameOutput Output { get; init; }                           // the host provides this
     public BalanceConfig Balance { get; init; } = new();
-    public TimeSpan InitialGameTime { get; init; } = TimeSpan.Zero;           // Used when loading a saved game
-    public IReadOnlyList<ProcessSave> ProcessesToRestart { get; init; } = []; // Used when loading a saved game
-    public GameState? State { get; init; }                  // null = new game; a loaded game passes its restored state
-    public IGameClock? Clock { get; init; }                 // tests pass FakeGameClock
-    public IRandomSource? Random { get; init; }             // tests pass a fixed source
-    public INullByteApiFactory? ApiFactory { get; init; }   // tests pass a fake api factory
+    public TimeSpan InitialGameTime { get; init; } = TimeSpan.Zero;             // Used when loading a saved game
+    public IReadOnlyList<ProcessSave> ProcessesToRestart { get; init; } = [];   // Used when loading a saved game
+    public GameState? State { get; init; }                                      // null = new game; a loaded game passes its restored state
+    public IGameClock? Clock { get; init; }                                     // tests pass FakeGameClock
+    public IRandomSource? Random { get; init; }                                 // tests pass a fixed source
+    public INullByteApiFactory? ApiFactory { get; init; }                       // tests pass a fake api factory
+    public ActivityCatalog? ActivityCatalog { get; init; }                      // tests pass a small catalog; null = the one that ships with the game
 
     public GameSessionOptions WithSave(RestoredGame restored)
     {
@@ -45,6 +46,7 @@ public sealed record GameServices(
     ServerActions Actions,
     BotnetService Botnet,
     ScriptService Scripts,
+    ActivityService Activities,
     HackingFormulas HackingFormulas,
     BotnetFormulas BotnetFormulas,
     NetworkFormulas NetworkFormulas);
@@ -182,6 +184,10 @@ public sealed class GameSession : IAsyncDisposable
         var networkService = new NetworkService(state, scheduler, networkFormulas);
         var serverActions = new ServerActions(state, scheduler, hackingFormulas, randomSource);
         var botnetService = new BotnetService(state, botnetFormulas);
+        
+        var activityFormulas = new ActivityFormulas(options.Balance);
+        var activityCatalog = options.ActivityCatalog ?? ActivityCatalogFactory.CreateDefault();
+        var activityService = new ActivityService(state, activityCatalog, activityFormulas);
 
         var scriptCompiler = new ScriptCompiler();
         var scriptLoader = new ScriptAssemblyLoader();
@@ -191,10 +197,11 @@ public sealed class GameSession : IAsyncDisposable
             ?? new NullByteApiFactory(state, scheduler, networkService, botnetService, serverActions, hackingFormulas, botnetFormulas, options.Output);
         var scriptService = new ScriptService(state, scriptCompiler, scriptRunner, apiFactory, scriptProcessManager);
 
-        var services = new GameServices(networkService, serverActions, botnetService, scriptService, hackingFormulas, botnetFormulas, networkFormulas);
+        var services = new GameServices(networkService, serverActions, botnetService, scriptService, activityService, hackingFormulas, botnetFormulas, networkFormulas);
 
         // Systems are updated by the game loop on the game thread; they must be added before it starts.
         gameLoop.AddSystem(new BotnetSystem(state, botnetFormulas));
+        gameLoop.AddSystem(new ActivitySystem(state, activityFormulas, activityService));
 
         scriptService.ProcessFailed += (proc, exception) => options.Output.WriteLine($"Process {proc.Pid} failed: {exception.Message}");
         gameLoop.UnhandledException += exception => options.Output.WriteLine($"Unhandled error on the game thread: {exception.Message}");

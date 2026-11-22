@@ -2,8 +2,9 @@
 
 - Milestone M10: Activities (jobs, training, studying etc.)
 - Clean up
-  - Skill formulas
+  - Skill/Hacking formulas
   - etc?
+- Remove/delete the ActivityState class? 
 	
 # Todo
 
