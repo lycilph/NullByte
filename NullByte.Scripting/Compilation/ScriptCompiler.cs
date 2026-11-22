@@ -21,6 +21,7 @@ public sealed class ScriptCompiler : IScriptCompiler
     global using System.Linq;
     global using System.Threading;
     global using System.Threading.Tasks;
+    global using NullByte.Core.Scripting;
     """;
 
     private static readonly List<string> allowedAssemblies = new([

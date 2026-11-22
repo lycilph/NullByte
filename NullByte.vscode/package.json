@@ -1,7 +1,7 @@
 {
   "name": "nullbyte",
   "displayName": "NullByte",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Edit NullByte game scripts in VS Code: server folders and files, diagnostics, completion, hover and signature help.",
   "publisher": "LyCilph",
   "repository": {
