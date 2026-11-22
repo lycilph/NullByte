@@ -21,6 +21,37 @@ public sealed class IncludeLanguageServiceTests : IDisposable
 
     public void Dispose() => service.Dispose();
 
+    private static int LineOf(string text, string fragment)
+        => text.Split('\n').ToList().FindIndex(l => l.Contains(fragment)) + 1;
+
+    [Fact]
+    public async Task DefinitionOfAnIncludedMethodIsInTheLibrary()
+    {
+        const string source = "#include \"lib/util.cx\"\nUtil.Greet(nb, \"x\");";
+        var definition = await service.GetDefinitionAsync(
+            source, source.IndexOf("Greet", StringComparison.Ordinal) + 1, TestContext.Current.CancellationToken, context: Context);
+
+        Assert.Equal(new ScriptDefinition("lib/util.cx", LineOf(Util, "void Greet"), 24), definition);
+    }
+
+    [Fact]
+    public async Task DefinitionInTheScriptItselfHasNoFile()
+    {
+        const string source = "var p = new Point();\nclass Point {}";
+        var definition = await service.GetDefinitionAsync(source, source.IndexOf("Point", StringComparison.Ordinal) + 1, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, definition!.Line);
+        Assert.Null(definition.File);
+    }
+
+    [Fact]
+    public async Task ApiMembersAndTheGeneratedWrapperHaveNoDefinition()
+    {
+        const string source = "nb.GetHackingLevel();";
+        Assert.Null(await service.GetDefinitionAsync(source, source.IndexOf("GetHacking", StringComparison.Ordinal) + 1, TestContext.Current.CancellationToken));
+        Assert.Null(await service.GetDefinitionAsync(source, 1, TestContext.Current.CancellationToken));   // 'nb' is declared in the generated wrapper
+    }
+
     [Fact]
     public async Task CompletesMembersOfAnIncludedType()
     {

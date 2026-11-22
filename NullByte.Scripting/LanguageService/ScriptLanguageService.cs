@@ -19,7 +19,8 @@ namespace NullByte.Scripting.LanguageService;
 public sealed record ScriptParameterHelp(string Label, string? Documentation);
 public sealed record ScriptSignature(string Label, string? Documentation, double? RamCost, int ActiveParameter, IReadOnlyList<ScriptParameterHelp> Parameters);
 public sealed record ScriptSignatureHelp(IReadOnlyList<ScriptSignature> Signatures, int ActiveSignature);
-
+/// <summary>Where something is declared. A null File means the script that was asked about.</summary>
+public sealed record ScriptDefinition(string? File, int Line, int Column);
 public sealed record ScriptCompletion(string Label, string InsertText, string Kind, string SortText, double? RamCost, string? Documentation);
 public sealed record ScriptHover(string Signature, string? Documentation, double? RamCost);
 /// <summary>Where a script lives and how to read the files it includes.</summary>
@@ -72,6 +73,26 @@ public sealed class ScriptLanguageService : IDisposable
         await GetCompletionsAsync("nb.", 3);
         await GetHoverAsync("nb.GetHackingLevel();", 5);
         await GetSignatureHelpAsync("nb.Hack(", 8);
+    }
+
+    public async Task<ScriptDefinition?> GetDefinitionAsync(
+        string source, int offset, CancellationToken ct = default, IncludeContext? context = null)
+    {
+        var (document, position) = Prepare(source, offset, context, ct);
+
+        var symbol = await SymbolFinder.FindSymbolAtPositionAsync(document, position, ct);
+        var location = symbol?.Locations.FirstOrDefault(l => l.IsInSource);
+        if (location?.SourceTree is not { } tree)
+            return null;   // the game's API and the framework have no source to jump to
+
+        var span = location.GetMappedLineSpan();
+        var line = span.StartLinePosition.Line + 1;
+        var column = span.StartLinePosition.Character + 1;
+
+        if (tree == await document.GetSyntaxTreeAsync(ct))
+            return span.HasMappedPath ? new ScriptDefinition(null, line, column) : null;   // null: generated wrapper (nb, args)
+
+        return string.IsNullOrEmpty(tree.FilePath) ? null : new ScriptDefinition(tree.FilePath, line, column);
     }
 
     private (Document Document, int Position) Prepare(string source, int offset, IncludeContext? context, CancellationToken ct)

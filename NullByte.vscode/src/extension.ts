@@ -10,6 +10,7 @@ import { registerHover } from './hover';
 import { registerSignatureHelp } from './signature';
 import { registerCommands } from './commands';
 import { NullByteStatusBar } from './status';
+import { registerDefinition } from './definition';
 
 const defaultConnectionPath = path.join(os.homedir(), '.nullbyte', 'editor.json');
 
@@ -58,6 +59,7 @@ export function activate(context: vscode.ExtensionContext) {
     registerSignatureHelp(client, log),
     registerHover(client, log),
     registerCompletion(client, log),
+    registerDefinition(client, log),
     diagnostics,
     log,
     vscode.workspace.registerFileSystemProvider('nullbyte', fileSystem, { isCaseSensitive: true }),

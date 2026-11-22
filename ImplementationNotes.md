@@ -78,3 +78,35 @@ The extension sends two different path formats. diagnose sends the game path (/h
 hover and signatureHelp send doc.uri.path (/NullByte/home/a.cx). The server never used that path for those ops, 
 so it didn't matter. Now it does, because it tells us which server's files to read the includes from.
 So the three providers switch to toGamePath.
+
+**Step 6 is mostly good news, and I need to correct something I said earlier.**
+
+Part A: checking a library on its own needs no new code
+
+When I answered question 8 ("compile it as a library-only unit"), I assumed this would need a special mode.
+After reading the generator again, it doesn't. A file with no top-level statements already compiles as a 
+valid script with an empty Run. CS1998 is suppressed in the wrapper, and the type declarations sit after it. 
+So opening lib/util.cx in VS Code already:
+
+reports its own errors, in itself, with correct lines and the file name from step 2;
+resolves its own #includes through the same snapshot;
+gives completion, hover and signature help, because nb is a typed parameter in your library methods.
+
+A stray top-level statement in a library is deliberately not an error when you open the library itself, 
+because it's a perfectly valid script. It becomes NB1006 in whichever file includes it, shown in the 
+library's own Problems entry.
+
+Part B: go-to-definition
+
+This was optional, but it turned out cheap. Roslyn already knows where every symbol is declared. 
+The include documents have the same offsets as the player's files, so a declaration's line and column 
+can be read straight from its location. For symbols in the main script, the #line mapping in the 
+wrapper gives the original lines.
+
+What's next
+
+Step 7 is the documentation: updating the design doc (section 4 plus the M9 milestone entry) 
+so that the include rules are written down in one place. That covers syntax, root-relative paths, 
+resolution on the running server, scp not copying dependencies, include-once, the depth limit, library shape, 
+RAM accounting, the NB10xx diagnostics, and the editor behavior. I'd also fold in the M8/M9 numbering note. 
+Run the tests and the editor check first, and tell me when to start step 7.
