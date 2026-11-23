@@ -54,19 +54,23 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
 
         var path = ParsePath(Required(request, "path"));
 
-        return await backend.GameThread.InvokeAsync(() => Task.FromResult<object>(op switch
+        return await backend.GameThread.InvokeAsync(() => ExecuteGameOperationAsync(backend, op, path, request));
+    }
+
+    private async Task<object> ExecuteGameOperationAsync(EditorBackend backend, string op, NodePath path, JsonObject request)
+    {
+        return op switch
         {
             "stat" => Stat(backend.State, path),
             "readDirectory" => ReadDirectory(backend.State, path),
             "readFile" => new FileResult(ReadContent(backend.State, path)),
-            "writeFile" => WriteFile(backend.State, path, Required(request, "content"),
-                                     Flag(request, "create"), Flag(request, "overwrite")),
+            "writeFile" => WriteFile(backend.State, path, Required(request, "content"), Flag(request, "create"), Flag(request, "overwrite")),
             "createDirectory" => CreateDirectory(backend.State, path),
             "delete" => Delete(backend.State, path, Flag(request, "recursive")),
-            "rename" => Rename(backend.State, path, ParsePath(Required(request, "newPath")),
-                               Flag(request, "overwrite")),
+            "rename" => Rename(backend.State, path, ParsePath(Required(request, "newPath")), Flag(request, "overwrite")),
+            "run" => await Run(backend, path, request),
             _ => throw new EditorException("BadRequest", $"Unknown operation '{op}'.")
-        }));
+        };
     }
 
     private (NodePath Node, string File) ScriptPath(string path)
@@ -320,6 +324,53 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
 
         return empty;
     }
+
+    private static async Task<RunResult> Run(EditorBackend backend, NodePath node, JsonObject request)
+    {
+        if (node.Host is null || node.Path.Length == 0)
+            throw new EditorException("BadRequest", "Expected the path of a script file.");
+
+        if (!VirtualPath.TryNormalizeFile(node.Path, out var file, out var pathError))
+            throw new EditorException("BadRequest", $"Invalid file name: {pathError}");
+
+        var args = Arguments(request);
+        var result = await backend.Scripts.Start(node.Host, file, args, threads: 1);
+
+        return new RunResult(
+            result.Succeeded,
+            result.Pid,
+            result.Succeeded ? null : result.FailureMessage,
+            result.Diagnostics.Select(ToDiagnosticInfo).ToArray());
+    }
+
+    private static IReadOnlyList<string> Arguments(JsonObject request)
+    {
+        if (request["args"] is null)
+            return [];
+
+        try
+        {
+            return request["args"].Deserialize<string[]>() ?? [];
+        }
+        catch (JsonException)
+        {
+            throw new EditorException("BadRequest", "'args' must be an array of strings.");
+        }
+    }
+
+    private static DiagnosticInfo ToDiagnosticInfo(ScriptDiagnostic diagnostic)
+    => new(
+        diagnostic.Id,
+        diagnostic.Message,
+        diagnostic.Severity switch
+        {
+            ScriptDiagnosticSeverity.Error => "Error",
+            ScriptDiagnosticSeverity.Warning => "Warning",
+            _ => "info"
+        },
+        diagnostic.Line,
+        diagnostic.Column,
+        diagnostic.File);
 
     private static (string Host, string Path) RequireInsideServer(GameState state, NodePath p)
     {

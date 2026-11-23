@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Logger, NullByteClient } from './client';
+import { Logger, NullByteClient, RunDiagnostic  } from './client';
 import { toGamePath, toUri } from './paths';
 
 const DebounceMs = 400;
@@ -77,6 +77,22 @@ export class NullByteDiagnostics implements vscode.Disposable {
     }
   }
 
+  /** Publish diagnostics returned when attempting to run a script. */
+  reportRunDiagnostics(doc: vscode.TextDocument, diagnostics: RunDiagnostic[]) {
+    const path = toGamePath(doc.uri);
+    if (path === undefined) return;
+
+    const host = path.split('/')[1];
+    const key = doc.uri.toString();
+    const previous = this.reported.get(key) ?? [];
+    const next = diagnostics.map(d => this.toReported(doc, host, d));
+
+    this.reported.set(key, next);
+    this.publish([doc.uri, ...previous.map(r => r.uri), ...next.map(r => r.uri)]);
+
+    this.log.debug(`Run diagnostics for ${doc.uri.path}: ${diagnostics.length}`);
+  }
+
   private toReported(doc: vscode.TextDocument, host: string, d: DiagnosticItem): Reported {
     // A diagnostic belongs to the file the compiler named: an include, or the checked file itself.
     const uri = d.file ? toUri(`/${host}/${d.file.replace(/^\/+/, '')}`) : doc.uri;
@@ -87,7 +103,7 @@ export class NullByteDiagnostics implements vscode.Disposable {
 
     // The compiler reports a start position only. An empty range makes VS Code underline the word there.
     const diagnostic = new vscode.Diagnostic(
-      new vscode.Range(position, position), d.message, severities[d.severity] ?? vscode.DiagnosticSeverity.Error);
+      new vscode.Range(position, position), d.message, severities[d.severity.toLowerCase()] ?? vscode.DiagnosticSeverity.Error);
     diagnostic.code = d.id;
     diagnostic.source = 'NullByte';
     return { uri, diagnostic };

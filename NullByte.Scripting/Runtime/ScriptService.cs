@@ -11,7 +11,7 @@ namespace NullByte.Scripting.Runtime;
 /// Each running script is represented by a ScriptProcess and receives
 /// its own NullByte API instance.
 /// </summary>
-public sealed class ScriptService : IScriptOperations
+public sealed class ScriptService : IScriptOperations, IScriptService
 {
     private readonly GameState gameState;
     private readonly IScriptCompiler compiler;

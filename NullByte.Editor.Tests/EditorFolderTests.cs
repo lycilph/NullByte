@@ -1,54 +1,6 @@
-﻿using System.Text.Json;
-using System.Text.Json.Nodes;
-using NullByte.Core.Domain;
-using NullByte.Core.Simulation;
-using NullByte.Scripting.Compilation;
-using NullByte.Scripting.LanguageService;
+﻿using System.Text.Json.Nodes;
 
 namespace NullByte.Editor.Tests;
-
-internal sealed class InlineGameThread : IGameThread
-{
-    public bool IsGameThread => true;
-    public bool IsRunning => true;
-
-    public Task InvokeAsync(Func<Task> callback) => callback();
-    public Task<T> InvokeAsync<T>(Func<Task<T>> callback) => callback();
-}
-
-internal sealed class EditorFixture
-{
-    private readonly EditorFileService service;
-
-    public EditorFixture()
-    {
-        var network = new Network();
-        network.AddServer(NewServer("home"));
-        network.AddServer(NewServer("n00dles"));
-
-        State = new GameState(new Player("home", 0, 0), network);
-
-        var backend = new EditorBackend(State, new InlineGameThread());
-        service = new EditorFileService(() => backend, new ScriptCompiler(), new ScriptLanguageService());
-    }
-
-    public GameState State { get; }
-    public VirtualFileSystem Files => State.FileSystem;
-
-    /// <summary>Sends one request and returns the whole response object.</summary>
-    public async Task<JsonObject> SendAsync(string op, string path, params (string Name, object Value)[] extra)
-    {
-        var request = new JsonObject { ["id"] = 1, ["op"] = op, ["path"] = path };
-        foreach (var (name, value) in extra)
-            request[name] = JsonSerializer.SerializeToNode(value);
-
-        return JsonNode.Parse(await service.HandleAsync(request.ToJsonString()))!.AsObject();
-    }
-
-    private static Server NewServer(string hostname) => new(
-        hostname, maximumMoney: 0, startingMoney: 0, baseDifficulty: 1, minimumSecurity: 1,
-        startingSecurity: 1, requiredHackingLevel: 1, growthParameter: 0, maximumRam: 8);
-}
 
 public class EditorFolderTests
 {

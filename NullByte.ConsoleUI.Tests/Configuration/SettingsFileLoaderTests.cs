@@ -9,15 +9,13 @@ public sealed class SettingsFileLoaderTests
     {
         using var directory = new TemporaryDirectory();
 
-        var settings = SettingsFileLoader.Load(
-            directory.GetPath("settings.json"));
+        var settings = SettingsFileLoader.Load(directory.GetPath("settings.json"));
 
-        Assert.Equal("Saves", settings.SaveDirectory);
+        var expected = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NullByte", "saves");
+        Assert.Equal(expected, settings.SaveDirectory);
         Assert.False(settings.Editor.Enabled);
         Assert.Null(settings.Editor.Port);
-        Assert.Equal(
-            1.0,
-            settings.Development.GameSpeedMultiplier);
+        Assert.Equal(1.0, settings.Development.GameSpeedMultiplier);
     }
 
     [Fact]
@@ -131,11 +129,10 @@ public sealed class SettingsFileLoaderTests
 
         var settings = SettingsFileLoader.Load(path);
 
-        Assert.Equal("Saves", settings.SaveDirectory);
+        var expected = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NullByte", "saves");
+        Assert.Equal(expected, settings.SaveDirectory);
         Assert.False(settings.Editor.Enabled);
-        Assert.Equal(
-            1.0,
-            settings.Development.GameSpeedMultiplier);
+        Assert.Equal(1.0, settings.Development.GameSpeedMultiplier);
     }
 
     [Fact]

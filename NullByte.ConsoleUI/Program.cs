@@ -152,7 +152,7 @@ public class Program
             editor = new EditorServer(
                 () =>
                     host.Session is { } session
-                        ? new EditorBackend(session.State, session.GameThread)
+                        ? new EditorBackend(session.State, session.GameThread, session.Services.Scripts)
                         : null,
                 new ScriptCompiler(),
                 new ScriptLanguageService(),

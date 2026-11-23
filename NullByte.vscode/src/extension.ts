@@ -11,6 +11,7 @@ import { registerSignatureHelp } from './signature';
 import { registerCommands } from './commands';
 import { NullByteStatusBar } from './status';
 import { registerDefinition } from './definition';
+import { NullByteRunCodeLensProvider } from './runCodeLens';
 
 const defaultConnectionPath = path.join(os.homedir(), '.nullbyte', 'editor.json');
 
@@ -50,12 +51,16 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     statusBar,
-    registerCommands(log, client),
+    vscode.languages.registerCodeLensProvider(
+      { scheme: 'nullbyte', pattern: '**/*.cx' },
+      new NullByteRunCodeLensProvider()
+    ),
     vscode.workspace.onDidChangeConfiguration(e => {
       if (!e.affectsConfiguration('nullbyte.connectionFile')) return;
       log.info(`Connection file is now ${connectionPath()}`);
       client.reconnect();
     }),
+    registerCommands(log, client, diagnostics),
     registerSignatureHelp(client, log),
     registerHover(client, log),
     registerCompletion(client, log),

@@ -51,6 +51,18 @@
         "command": "nullbyte.reconnect",
         "title": "Reconnect",
         "category": "NullByte"
+      },
+      {
+        "command": "nullbyte.runCurrentFile",
+        "title": "NullByte: Run Current File"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "nullbyte.runCurrentFile",
+        "key": "ctrl+f5",
+        "mac": "cmd+f5",
+        "when": "editorTextFocus && editorLangId == 'nullbyte-script'"
       }
     ],
     "configuration": {

@@ -17,6 +17,9 @@ type Pending = { op: string; started: number; resolve: (value: any) => void; rej
 export type Connection = { url: string; token: string; pid?: number  };
 export type ConnectionState = { status: 'connected' | 'connecting' | 'disconnected'; detail: string };
 
+export type RunDiagnostic = { id: string; message: string; severity: string; line: number; column: number; file?: string | null; };
+export type RunResult = { started: boolean; pid: number; failureMessage: string; diagnostics: RunDiagnostic[]; };
+
 const ReconnectDelayMs = 2000;
 
 /** Whether a process with this id exists on this machine. Only used for log hints. */
@@ -65,6 +68,10 @@ export class NullByteClient {
       this.pending.set(id, { op, started: Date.now(), resolve, reject });
       socket.send(JSON.stringify({ id, op, path, ...extra }));
     });
+  }
+  
+  async runScript(path: string, args: string[] = []): Promise<RunResult> {
+    return this.request<RunResult>('run', path, { args });
   }
 
   dispose() {
