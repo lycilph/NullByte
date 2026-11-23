@@ -27,4 +27,6 @@ internal sealed class FakeTerminal : IGameTerminal, IGameOutput
 
     public void SuspendProcessing() { }
     public void ResumeProcessing() { }
+
+    public IDisposable ShowLivePanel(LivePanel panel) => throw new NotSupportedException();
 }

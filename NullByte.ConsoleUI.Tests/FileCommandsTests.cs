@@ -28,6 +28,8 @@ internal sealed class RecordingTerminal : IGameTerminal
 
     public IAsyncEnumerable<string> ReadCommandsAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException();
+
+    public IDisposable ShowLivePanel(LivePanel panel) => throw new NotSupportedException();
 }
 
 internal sealed class FileCommandsFixture

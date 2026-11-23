@@ -11,6 +11,12 @@ public interface IGameTerminal : IGameOutput
 
     void StartProgress(string msg, Func<double> progress);
     void StopProgress();
+    
+    /// <summary>
+    /// Shows a live panel (progress, details and active hotkeys) until the returned scope is disposed.
+    /// Hotkeys only work while input is disabled, which is while a command owns the console.
+    /// </summary>
+    IDisposable ShowLivePanel(LivePanel panel);
 
     void SetPrompt(string prompt);
     void SetInputEnabled(bool enabled);

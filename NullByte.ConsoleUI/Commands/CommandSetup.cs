@@ -28,7 +28,8 @@ public static class CommandSetup
             new FileCommands(session.State.FileSystem, session.Services.Network, workingDirectory, terminal),
             new ScriptCommands(session.Services.Network, session.Services.Scripts, workingDirectory, terminal),
             new ActionCommands(session.State.Player, session.Clock, session.Services.HackingFormulas, session.Services.Actions, session.Services.Network, terminal),
-            new BotnetCommands(session.State.Botnet, session.Services.Botnet, session.Services.BotnetFormulas, terminal)
+            new BotnetCommands(session.State.Botnet, session.Services.Botnet, session.Services.BotnetFormulas, terminal),
+            new ActivityCommands(session.Services.Activities, session.State.Player, session.Services.Skills, terminal)
         ];
         
         // Hosts that cannot save (and tests) simply leave these out.

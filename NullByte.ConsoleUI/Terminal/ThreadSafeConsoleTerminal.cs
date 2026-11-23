@@ -50,6 +50,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
     private bool progressRunning = false;
     private string progressLabel = string.Empty;
     private Func<double> progressFunc = () => 1;
+    private LivePanel? livePanel;
 
     private int cursorIndex;
     private int lastWindowWidth = -1;
@@ -111,6 +112,26 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
             return;
 
         requests.Writer.TryWrite(StopProgressRequest.Instance);
+    }
+
+    public IDisposable ShowLivePanel(LivePanel panel)
+    {
+        ArgumentNullException.ThrowIfNull(panel);
+
+        if (hasDisposed || stopSource.IsCancellationRequested)
+            return NoScope.Instance;
+
+        requests.Writer.TryWrite(new ShowLivePanelRequest(panel));
+
+        return new LivePanelScope(this, panel);
+    }
+
+    private void HideLivePanel(LivePanel panel)
+    {
+        if (hasDisposed || stopSource.IsCancellationRequested)
+            return;
+
+        requests.Writer.TryWrite(new HideLivePanelRequest(panel));
     }
 
     public void SetInputEnabled(bool enabled)
@@ -197,7 +218,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
                     changed = true;
                 }
 
-                if (changed || screenInvalidated || progressRunning)
+                if (changed || screenInvalidated || progressRunning || livePanel is not null)
                 {
                     Render();
                     screenInvalidated = false;
@@ -311,6 +332,20 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
                     changed = true;
                     break;
 
+                case ShowLivePanelRequest show:
+                    livePanel = show.Panel;
+                    changed = true;
+                    break;
+
+                case HideLivePanelRequest hide:
+                    // Only the panel that is showing can be hidden: a late hide never removes a newer panel.
+                    if (ReferenceEquals(livePanel, hide.Panel))
+                    {
+                        livePanel = null;
+                        changed = true;
+                    }
+                    break;
+
                 case SuspendRequest:
                     suspended = true;
                     break;
@@ -332,9 +367,13 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
         while (Console.KeyAvailable)
         {
             var key = Console.ReadKey(intercept: true);
-            
+
+            // While a command owns the console, keys are hotkeys instead of text.
             if (!isInputEnabled)
+            {
+                HandleHotkey(key);
                 continue;
+            }
 
             switch (key.Key)
             {
@@ -438,6 +477,31 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
         return changed;
     }
 
+    private void HandleHotkey(ConsoleKeyInfo key)
+    {
+        if (livePanel is null)
+            return;
+
+        foreach (var hotkey in livePanel.Hotkeys)
+        {
+            if (!hotkey.Matches(key))
+                continue;
+
+            try
+            {
+                hotkey.Pressed();
+            }
+            catch (Exception exception)
+            {
+                // A failing hotkey must not take down the UI loop.
+                history.Add($"Hotkey failed: {exception.Message}");
+                TrimHistory();
+            }
+
+            return;
+        }
+    }
+
     private void SubmitCurrentInput()
     {
         var command = input.ToString();
@@ -536,8 +600,9 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
         // The final row is reserved for input.
         var outputHeight = Math.Max(0, height - 1);
 
-        // While progress is running, the last output row belongs to the bar.
-        var historyHeight = Math.Max(0, outputHeight - (progressRunning ? 1 : 0));
+        // While progress or a live panel is showing, the last output rows belong to it.
+        var panelRows = livePanel is not null ? Math.Min(2, outputHeight) : 0;
+        var historyHeight = Math.Max(0, outputHeight - (panelRows > 0 ? panelRows : progressRunning ? 1 : 0));
 
         Console.CursorVisible = false;
 
@@ -550,12 +615,14 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
             WriteRow(historyHeight - row - 1, text, usableWidth);
         }
 
-        if (progressRunning && outputHeight > 0)
+        if (panelRows > 0)
+            WritePanelRows(outputHeight - panelRows, panelRows, usableWidth);
+        else if (progressRunning && outputHeight > 0)
             WriteProgressRow(outputHeight - 1, usableWidth);
 
         RenderInputLine(row: height - 1, usableWidth);
 
-        if (!progressRunning)
+        if (!progressRunning && livePanel is null)
             Console.CursorVisible = true;
     }
 
@@ -653,6 +720,33 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
     private void WriteProgressRow(int row, int usableWidth)
         => WriteRow(row, FormatProgress(progressLabel, progressFunc()), usableWidth);
 
+    private void WritePanelRows(int firstRow, int rows, int usableWidth)
+    {
+        var panel = livePanel!;
+
+        var progress = SafeCall(panel.Progress, null);
+        WriteRow(firstRow, PanelFormatter.FormatBar(panel.Title, progress, Environment.TickCount64 / 80), usableWidth);
+
+        if (rows > 1)
+        {
+            var detail = SafeCall(panel.Detail, string.Empty);
+            WriteRow(firstRow + 1, PanelFormatter.FormatDetail(detail, panel.Hotkeys, usableWidth), usableWidth);
+        }
+    }
+
+    // The panel's functions belong to the caller: a bug in one must not take down the UI loop.
+    private static T SafeCall<T>(Func<T> function, T fallback)
+    {
+        try
+        {
+            return function();
+        }
+        catch
+        {
+            return fallback;
+        }
+    }
+
     private static string FormatProgress(string label, double progress)
     {
         const int width = 24;
@@ -724,6 +818,28 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
     private sealed record StopProgressRequest() : TerminalRequest
     {
         public static StopProgressRequest Instance { get; } = new();
+    }
+
+    private sealed record ShowLivePanelRequest(LivePanel Panel) : TerminalRequest;
+
+    private sealed record HideLivePanelRequest(LivePanel Panel) : TerminalRequest;
+
+    private sealed class LivePanelScope(ThreadSafeConsoleTerminal terminal, LivePanel panel) : IDisposable
+    {
+        private int disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref disposed, 1) == 0)
+                terminal.HideLivePanel(panel);
+        }
+    }
+
+    private sealed class NoScope : IDisposable
+    {
+        public static NoScope Instance { get; } = new();
+
+        public void Dispose() { }
     }
 
     private sealed record SuspendRequest() : TerminalRequest

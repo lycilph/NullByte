@@ -211,6 +211,9 @@ public sealed class GameHost(
 
         terminal.SetPrompt(BuildPrompt(session.State));
 
+        // An activity that ends by itself (the player ran out of money) changes the prompt too.
+        session.Services.Activities.ActivityEnded += _ => terminal.SetPrompt(BuildPrompt(session.State));
+
         var autosave = new AutosaveService(saveManager, session, terminal, AutosaveInterval);
 
         return new Game(session, dispatcher, completion, loadRequest, autosave);
@@ -236,6 +239,8 @@ public sealed class GameHost(
         var player = state.Player;
         var directory = player.CurrentDirectory.Length > 0 ? ":/" + player.CurrentDirectory : "";
 
-        return $"root@{player.CurrentHostname}{directory} $ ";
+        var activity = state.Activity.Current is { } current ? $"[{ActivityFormatter.PromptTag(current)}] " : "";
+
+        return $"{activity}root@{player.CurrentHostname}{directory} $ ";
     }
 }

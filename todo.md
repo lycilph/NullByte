@@ -4,6 +4,8 @@
 - Clean up
   - Skill/Hacking formulas
   - etc?
+  - session.Services.Activities.ActivityEnded += _ => terminal.SetPrompt(BuildPrompt(session.State)); (in gamehost)
+	- What about loading/saving in this case???
 - Remove/delete the ActivityState class? 
 	
 # Todo

@@ -56,3 +56,29 @@ With no facility named, the course goes to the first facility of that kind in th
 Starting a course needs enough money for one second of tuition.
 GameServices gains a trailing ActivityService Activities parameter. Only GameSession.Create builds it in the pack, but any test that builds it by hand needs the extra argument.
 Nothing is saved yet. A loaded game starts idle until step 7.
+
+## Step 4: Console commands
+
+Step 4 is done: study, train, stop, focus, activity and skills, with the focused screen and its hotkeys. My stand-in runner passes all 129
+tests for steps 1 to 4, and still passes with Danish as the default culture, which I confirmed is actually in effect. 
+I have not run the new terminal rendering or hotkey reading in a real console. It compiles, and its formatting logic is tested, but please 
+try it by hand (checklist at the end). I also couldn't compile NullByte.Shell or NullByte.ConsoleUI as whole projects. The edits to GameSession.cs, 
+CommandSetup.cs and GameHost.cs are checked by diff only.
+
+What changed
+Focused mode shows a two-line live panel above the prompt. The first line is a bouncing bar with the activity name, and the second is 
+live totals (1m 23s | -$830.00 | +166.00 hacking xp) with the hotkeys at the right edge: [S] stop [B] background. Ctrl+C also stops and 
+Esc also backgrounds (both hidden hints). A hotkey only signals. The command does the work when it resumes on the game thread, so the 
+service is never touched from the UI thread.
+Background mode (-b, or B from the panel) leaves the console free. The prompt shows [studying] or [training]. focus takes it back, and stop ends it.
+study and train with no arguments list the courses (with rates) and the facilities. The -b flag can go anywhere.
+Auto-end. If you can't pay tuition any more, the activity ends with a message and a summary, whichever mode it was in, and the prompt updates.
+Thread safety. The UI thread reads the activity to draw the panel, so Activity now publishes an immutable ActivityProgress snapshot and a 
+volatile Mode. Before, the UI could have read a dictionary the game thread was changing.
+Dropped the background command I proposed earlier. While focused you can't type, and when already in the background it would do nothing,
+so the hotkey covers it.
+Culture bug caught. {x:P0} prints 50 % in da-DK, so my first tests would have failed on your machine. The new code builds percentages by hand, 
+and the tests that check money pin the invariant culture. Your existing {...:N2} output follows your culture, and I left that alone.
+What you'll need to adjust
+Any test class that implements IGameTerminal needs the new member public IDisposable ShowLivePanel(LivePanel panel) => ...;.
+GameServices gained ActivityService Activities in step 3 and now also SkillFormulas Skills. Anything that builds it by hand needs both.

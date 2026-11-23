@@ -11,6 +11,21 @@ public sealed class ActivitySystemTests
     private readonly ActivityTestWorld world = new();
 
     private static readonly TimeSpan TenSeconds = TimeSpan.FromSeconds(10);
+    
+    [Fact]
+    public void A_progress_snapshot_does_not_change_when_the_activity_moves_on()
+    {
+        var activity = world.Service.StartCourse(FacilityKind.University, "algorithms").Activity!;
+        world.System.Update(TenSeconds);
+
+        var snapshot = activity.Progress;
+        world.System.Update(TenSeconds);
+
+        Assert.Equal(TenSeconds, snapshot.Elapsed);
+        Assert.Equal(20, snapshot.ExperienceGained[SkillKind.Hacking], precision: 6);
+        Assert.Equal(TimeSpan.FromSeconds(20), activity.Progress.Elapsed);
+        Assert.Equal(40, activity.Progress.ExperienceGained[SkillKind.Hacking], precision: 6);
+    }
 
     [Fact]
     public void Nothing_happens_when_the_player_is_idle()

@@ -47,6 +47,7 @@ public sealed record GameServices(
     BotnetService Botnet,
     ScriptService Scripts,
     ActivityService Activities,
+    SkillFormulas Skills,
     HackingFormulas HackingFormulas,
     BotnetFormulas BotnetFormulas,
     NetworkFormulas NetworkFormulas);
@@ -177,6 +178,7 @@ public sealed class GameSession : IAsyncDisposable
         var state = options.State ?? InitialGameStateFactory.Create();
         var randomSource = options.Random ?? new SeededRandomSource(Random.Shared.Next());
 
+        var skillFormulas = new SkillFormulas(options.Balance);
         var hackingFormulas = new HackingFormulas(options.Balance);
         var botnetFormulas = new BotnetFormulas(options.Balance);
         var networkFormulas = new NetworkFormulas(options.Balance);
@@ -184,7 +186,7 @@ public sealed class GameSession : IAsyncDisposable
         var networkService = new NetworkService(state, scheduler, networkFormulas);
         var serverActions = new ServerActions(state, scheduler, hackingFormulas, randomSource);
         var botnetService = new BotnetService(state, botnetFormulas);
-        
+
         var activityFormulas = new ActivityFormulas(options.Balance);
         var activityCatalog = options.ActivityCatalog ?? ActivityCatalogFactory.CreateDefault();
         var activityService = new ActivityService(state, activityCatalog, activityFormulas);
@@ -197,7 +199,7 @@ public sealed class GameSession : IAsyncDisposable
             ?? new NullByteApiFactory(state, scheduler, networkService, botnetService, serverActions, hackingFormulas, botnetFormulas, options.Output);
         var scriptService = new ScriptService(state, scriptCompiler, scriptRunner, apiFactory, scriptProcessManager);
 
-        var services = new GameServices(networkService, serverActions, botnetService, scriptService, activityService, hackingFormulas, botnetFormulas, networkFormulas);
+        var services = new GameServices(networkService, serverActions, botnetService, scriptService, activityService, skillFormulas, hackingFormulas, botnetFormulas, networkFormulas);
 
         // Systems are updated by the game loop on the game thread; they must be added before it starts.
         gameLoop.AddSystem(new BotnetSystem(state, botnetFormulas));

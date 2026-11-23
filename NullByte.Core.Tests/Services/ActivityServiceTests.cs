@@ -7,6 +7,15 @@ namespace NullByte.Core.Tests.Services;
 public sealed class ActivityServiceTests
 {
     private readonly ActivityTestWorld world = new();
+    
+    [Fact]
+    public void Rates_and_the_reward_factor_come_from_the_formulas()
+    {
+        var activity = world.Service.StartCourse(FacilityKind.University, "algorithms").Activity!;
+
+        Assert.Equal(-10, world.Service.GetRates(activity).MoneyPerSecond);
+        Assert.Equal(0.8, world.Service.GetRewardFactor(ActivityMode.Background));
+    }
 
     [Fact]
     public void Starting_a_course_makes_it_the_current_activity()

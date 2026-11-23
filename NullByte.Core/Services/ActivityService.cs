@@ -41,6 +41,12 @@ public sealed class ActivityService
 
     /// <summary>Gets the current activity, or null if the player is idle.</summary>
     public Activity? Current => gameState.Activity.Current;
+    
+    /// <summary>Gets what an activity gives and costs every second, as it stands right now.</summary>
+    public ActivityRates GetRates(Activity activity) => formulas.CalculateRates(activity);
+
+    /// <summary>Gets the share of its rewards an activity gives in a mode.</summary>
+    public double GetRewardFactor(ActivityMode mode) => formulas.CalculateRewardFactor(mode);
 
     /// <summary>
     /// Starts a course.
