@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using NullByte.ConsoleUI.Configuration;
 using NullByte.ConsoleUI.Terminal;
+using NullByte.Core.Configuration;
 using NullByte.Core.Persistence;
 using NullByte.Editor;
 using NullByte.Scripting.Compilation;
@@ -14,40 +16,62 @@ public class Program
 {
     static async Task Main(string[] args)
     {
+        var applicationOptions = LoadApplicationOptions(args);
+        if (applicationOptions is null)
+        {
+            return;
+        }
+        if (applicationOptions.WriteDefaultSettings)
+        {
+            WriteDefaultSettings();
+            return;
+        }
+
+        var settings = applicationOptions.Settings;
+
         Console.OutputEncoding = Encoding.UTF8;
-        Console.TreatControlCAsInput = true; // Ctrl+c no longer exists the application
+        Console.TreatControlCAsInput = true; // Ctrl+C is handled as terminal input rather than terminating the process immediately.
 
-        await using var terminal = new ThreadSafeConsoleTerminal(prompt: "root@home $ ", maximumHistoryLines: 2_000);
+        await using var terminal = new ThreadSafeConsoleTerminal(
+            prompt: "root@home $ ",
+            maximumHistoryLines: 2_000);
 
-        var saves = new SaveManager(new FileSaveStore(GetSaveDirectory()), new SaveGameSerializer());
+        var saves = new SaveManager(
+            new FileSaveStore(settings.SaveDirectory),
+            new SaveGameSerializer());
 
-        var sessionOptions = new GameSessionOptions()
+        var sessionOptions = new GameSessionOptions
         {
             Output = terminal,
-            // TODO: remove this (only for debugging)
-            Balance = new Core.Configuration.BalanceConfig() { GameSpeedMultiplier = 5.0, AnalyzeDuration = 5.0 }
+            Balance = new BalanceConfig { GameSpeedMultiplier = settings.Development.GameSpeedMultiplier }
         };
-        await using var host = new GameHost(terminal, saves, sessionOptions);
+
+        await using var host = new GameHost(
+            terminal,
+            saves,
+            sessionOptions);
 
         var terminalTask = terminal.RunAsync();
-
         EditorServer? editor = null;
+
         try
         {
-            await host.StartAsync(resumeAutosave: !args.Contains("--new"));
+            await host.StartAsync(resumeAutosave: !applicationOptions.StartNewGame);
 
-            if (args.Contains("--vscode"))
-                editor = await StartEditorAsync(host, terminal, args);
+            if (settings.Editor.Enabled)
+                editor = await StartEditorAsync(host, terminal, settings.Editor);
 
             await host.RunAsync();
         }
         finally
         {
             // Stop the editor first, so no events are raised while the game shuts down.
-            if (editor is not null) await editor.DisposeAsync();
-            
+            if (editor is not null)
+                await editor.DisposeAsync();
+
             // Save and stop the game while the terminal is still running, then stop the terminal.
             await host.DisposeAsync();
+
             terminal.RequestStop();
             await terminalTask;
         }
@@ -56,57 +80,113 @@ public class Program
         await Task.Delay(500);
     }
 
-    private static async Task<EditorServer?> StartEditorAsync(GameHost host, ThreadSafeConsoleTerminal terminal, string[] args)
+    private static ApplicationOptions? LoadApplicationOptions(string[] args)
     {
-        EditorServer? editor = null;
         try
         {
-            int? requestedPort = null;
-            if (GetOption(args, "--vscode-port") is { } portText)
-            {
-                if (!int.TryParse(portText, out var parsed) || parsed is < 1 or > 65535)
-                    throw new ArgumentException($"'{portText}' is not a valid port.");
-                requestedPort = parsed;
-            }
-
-            var options = new EditorServerOptions(
-                Port: requestedPort ?? EditorServerOptions.DefaultPort,
-                FallbackToFreePort: requestedPort is null,   // an explicit port is used exactly as given
-                ConnectionFilePath: GetOption(args, "--vscode-file"));
-
-            editor = new EditorServer(
-                () => host.Session is { } s ? new EditorBackend(s.State, s.GameThread) : null,
-                new ScriptCompiler(), new ScriptLanguageService(), options);
-
-            await editor.StartAsync();
-            host.SessionChanged += editor.OnGameChanged;
-            editor.OnGameChanged();   // the first game is already running
-
-
-            var warmUpTimer = Stopwatch.StartNew();
-            _ = editor.WarmUp.ContinueWith(task => terminal.WriteLine(task.IsCompletedSuccessfully
-                ? $"VS Code language features ready ({warmUpTimer.Elapsed.TotalSeconds:F1}s)."
-                : $"VS Code language features failed to start: {task.Exception?.GetBaseException().Message}"),
-                TaskScheduler.Default);
-
-            terminal.WriteLine($"VS Code integration listening on {editor.Url} (connection file: {editor.ConnectionFilePath})");
-            return editor;
+            return SettingsLoader.Load(args);
         }
-        catch (Exception exception)
+        catch (SettingsValidationException exception)
         {
-            terminal.WriteLine($"Could not start the VS Code integration: {exception.Message}");
-            if (editor is not null) await editor.DisposeAsync();
+            Console.Error.WriteLine(exception.Message);
+            return null;
+        }
+        catch (ArgumentException exception)
+        {
+            Console.Error.WriteLine($"Invalid command line: {exception.Message}");
+            return null;
+        }
+        catch (InvalidOperationException exception)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return null;
+        }
+        catch (IOException exception)
+        {
+            Console.Error.WriteLine($"Could not read application settings: " + exception.Message);
+            return null;
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            Console.Error.WriteLine($"Could not read application settings: " + exception.Message);
             return null;
         }
     }
 
-    // TODO: remove this (only for debugging)
-    private static string GetSaveDirectory() => "Saves";
-    //=> Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NullByte", "saves");
-
-    private static string? GetOption(string[] args, string name)
+    private static void WriteDefaultSettings()
     {
-        var index = Array.IndexOf(args, name);
-        return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
+        try
+        {
+            var path = SettingsFileLoader.WriteDefault();
+
+            Console.WriteLine($"Default settings written to '{path}'.");
+        }
+        catch (InvalidOperationException exception)
+        {
+            Console.Error.WriteLine(exception.Message);
+        }
+        catch (IOException exception)
+        {
+            Console.Error.WriteLine("Could not write application settings: " + exception.Message);
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            Console.Error.WriteLine("Could not write application settings: " + exception.Message);
+        }
+    }
+
+    private static async Task<EditorServer?> StartEditorAsync(GameHost host, ThreadSafeConsoleTerminal terminal, EditorSettings settings)
+    {
+        EditorServer? editor = null;
+
+        try
+        {
+            var requestedPort = settings.Port;
+
+            var options = new EditorServerOptions(
+                Port: requestedPort ?? EditorServerOptions.DefaultPort,
+                // If no port was explicitly configured, try the
+                // default first and then let the OS choose one.
+                FallbackToFreePort: requestedPort is null,
+                ConnectionFilePath: settings.ConnectionFilePath);
+
+            editor = new EditorServer(
+                () =>
+                    host.Session is { } session
+                        ? new EditorBackend(session.State, session.GameThread)
+                        : null,
+                new ScriptCompiler(),
+                new ScriptLanguageService(),
+                options);
+
+            await editor.StartAsync();
+
+            host.SessionChanged += editor.OnGameChanged;
+            editor.OnGameChanged();
+
+            var warmUpTimer = Stopwatch.StartNew();
+
+            _ = editor.WarmUp.ContinueWith(
+                task => terminal.WriteLine(task.IsCompletedSuccessfully
+                    ? "VS Code language features ready ({warmUpTimer.Elapsed.TotalSeconds:F1}s)."
+                    : "VS Code language features failed to start: " + task.Exception?.GetBaseException().Message),
+                TaskScheduler.Default);
+
+            terminal.WriteLine(
+                $"VS Code integration listening on {editor.Url} "
+                + $"(connection file: "
+                + $"{editor.ConnectionFilePath})");
+
+            return editor;
+        }
+        catch (Exception exception)
+        {
+            terminal.WriteLine("Could not start the VS Code integration: " + exception.Message);
+
+            if (editor is not null)
+                await editor.DisposeAsync();
+
+            return null;
+        }
     }
 }

@@ -1,6 +1,6 @@
 ﻿# In progress
 
-- Consolidating the request classes (in gamehost)
+- Add settings (instead of the args to the program.cs)
 
 - Milestone M10: Activities (jobs, training, studying etc.)
 - Clean up
@@ -18,7 +18,7 @@
 # Future ideas
 
 - Do another cleanup round (see `AIPrompts.md`)
-- Add settings (instead of the args to the program.cs)
+- Change the editor integration to something that can be enabled/disabled while the game is running
 - Add options for Ram usage and compilation to the NanoEditor 
 - Align script method names and console commands
 - Add the backdoor command
