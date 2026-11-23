@@ -12,6 +12,12 @@ export class NullByteRunCodeLensProvider implements vscode.CodeLensProvider {
       tooltip: 'Save and run this NullByte script'
     });
 
-    return [lens];
+    const ram = new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), {
+      title: '$(play) Ram Cost',
+      command: 'nullbyte.getRamCost',
+      tooltip: 'Get ram cost of this NullByte script'
+    });
+
+    return [lens, ram];
   }
 }

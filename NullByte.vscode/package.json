@@ -1,7 +1,7 @@
 {
   "name": "nullbyte",
   "displayName": "NullByte",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Edit NullByte game scripts in VS Code: server folders and files, diagnostics, completion, hover and signature help.",
   "publisher": "LyCilph",
   "repository": {
@@ -55,6 +55,10 @@
       {
         "command": "nullbyte.runCurrentFile",
         "title": "NullByte: Run Current File"
+      },
+      {
+        "command": "nullbyte.getRamCost",
+        "title": "NullByte: Get Ram Cost Of Current File"
       }
     ],
     "keybindings": [

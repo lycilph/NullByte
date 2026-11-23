@@ -13,7 +13,7 @@ const severities: Record<string, vscode.DiagnosticSeverity> = {
 type DiagnosticItem = {
   id: string; message: string; severity: string; line: number; column: number; file?: string | null;
 };
-type DiagnoseResult = { diagnostics: DiagnosticItem[] };
+export type DiagnoseResult = { diagnostics: DiagnosticItem[]; ramCost: number | null; };
 type Reported = { uri: vscode.Uri; diagnostic: vscode.Diagnostic };
 
 const isScript = (doc: vscode.TextDocument) =>

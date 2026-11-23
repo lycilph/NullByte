@@ -1,7 +1,7 @@
 
 import * as vscode from 'vscode';
 import { NullByteClient } from './client';
-import { NullByteDiagnostics } from './diagnostics';
+import { NullByteDiagnostics, DiagnoseResult } from './diagnostics';
 import { rootUri, toGamePath } from './paths';
 
 
@@ -152,6 +152,56 @@ export function registerCommands(
         const message = error instanceof Error ? error.message : String(error);
         log.error(`Failed to run ${path}: ${message}`);
         void vscode.window.showErrorMessage(`Failed to run ${path}: ${message}`);
+      }
+    }),
+
+    vscode.commands.registerCommand('nullbyte.getRamCost', async () => {
+      const editor = vscode.window.activeTextEditor;
+
+      if (!editor) {
+        vscode.window.showErrorMessage('No active editor.');
+        return;
+      }
+
+      const doc = editor.document;
+
+      if (doc.uri.scheme !== 'nullbyte' || !doc.fileName.endsWith('.cx')) {
+        vscode.window.showErrorMessage('The active file is not a NullByte script.');
+        return;
+      }
+
+      const path = toGamePath(doc.uri);
+      if (path === undefined) {
+        vscode.window.showErrorMessage('Unable to resolve the script path.');
+        return;
+      }
+
+      try {
+        const result = await client.request<DiagnoseResult>('diagnose', path, { content: doc.getText() });
+        if (doc.isClosed) return;   // outdated: a newer check is on its way
+
+        // Update the Problems collection with the latest compiler diagnostics.
+        diagnostics.reportRunDiagnostics(doc, result.diagnostics);
+
+        if (result.diagnostics.some(d => d.severity.toLowerCase() === 'error')) {
+          vscode.window.showErrorMessage(
+            'Unable to calculate RAM cost. Check the Problems panel for compilation errors.',
+          );
+          return;
+        }
+
+        if (result.ramCost === null) {
+          vscode.window.showWarningMessage('RAM cost is not available.');
+          return;
+        }
+
+        vscode.window.showInformationMessage(
+          `RAM cost: ${result.ramCost.toFixed(2)} GB`,
+        );
+      } catch (error) {
+        vscode.window.showErrorMessage(
+          `Failed to calculate RAM cost: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     })
   );

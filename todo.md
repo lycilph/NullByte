@@ -1,5 +1,6 @@
 ﻿# In progress
 
+* Launch vs code with: `code -n --folder-uri "nullbyte:/NullByte/"`
 
 - Milestone M10: Activities (jobs, training, studying etc.)
 - Clean up

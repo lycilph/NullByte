@@ -115,13 +115,14 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
         {
             sources = await CaptureIncludesAsync(node, file, content);
             if (sources is null)
-                return new DiagnoseResult([]);   // the libraries live in the game: nothing sensible to say yet
+                return new DiagnoseResult([], 0.0);   // the libraries live in the game: nothing sensible to say yet
         }
 
         var result = compiler.Compile(content, file, sources);
         return new DiagnoseResult(result.Diagnostics
             .Select(d => new DiagnosticInfo(d.Id, d.Message, d.Severity.ToString().ToLowerInvariant(), d.Line, d.Column, d.File))
-            .ToArray());
+            .ToArray(),
+            result.Script?.RamCost ?? 0.0);
     }
 
     private static (string Content, int Offset) Source(JsonObject request)
