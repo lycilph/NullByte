@@ -16,7 +16,8 @@ public sealed class RunCommandTests
     {
         var terminal = new FakeTerminal();
         var session = GameSession.Create(new GameSessionOptions() { Output = terminal });
-        var registry = CommandSetup.Create(session, terminal);
+        var hostRequests = new HostRequestMailbox();
+        var registry = CommandSetup.Create(session, terminal, hostRequests);
 
         Assert.True(registry.TryGet("run", out var command));
         Assert.NotNull(command);
@@ -211,7 +212,8 @@ public sealed class RunCommandTests
             var apiFactory = new TestNullByteApiFactory(ScriptApi);
 
             var session = GameSession.Create(new GameSessionOptions() { Balance = balance, State = GameState, ApiFactory = apiFactory, Output = terminal });
-            var registry = CommandSetup.Create(session, terminal);
+            var hostRequests = new HostRequestMailbox();
+            var registry = CommandSetup.Create(session, terminal, hostRequests);
             dispatcher = new CommandDispatcher(registry, terminal);
 
             ScriptService = session.Services.Scripts;

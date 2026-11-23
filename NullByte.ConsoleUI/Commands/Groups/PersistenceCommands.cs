@@ -7,8 +7,7 @@ namespace NullByte.ConsoleUI.Commands.Groups;
 public sealed class PersistenceCommands(
     GameSession session,
     SaveManager saves,
-    LoadRequest loadRequest,
-    ResetRequest resetRequest,
+    HostRequestMailbox hostRequests,
     IGameTerminal terminal) : ICommandGroup
 {
     private const string DefaultSlot = "quicksave";
@@ -78,7 +77,7 @@ public sealed class PersistenceCommands(
         // This command runs on the game thread of the session it would replace,
         // so it only asks. The host swaps the session when the command returns.
         terminal.WriteLine($"Loading '{slot}'...");
-        loadRequest.Request(slot);
+        hostRequests?.Request(new HostRequest.Load(slot));
 
         return Task.CompletedTask;
     }
@@ -117,7 +116,7 @@ public sealed class PersistenceCommands(
         }
 
         terminal.WriteLine("Resetting game...");
-        resetRequest.Request();
+        hostRequests.Request(new HostRequest.Reset());
 
         return Task.CompletedTask;
     }

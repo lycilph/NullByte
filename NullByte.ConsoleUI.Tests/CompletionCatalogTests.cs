@@ -103,7 +103,8 @@ public sealed class CompletionCatalogTests
         var terminal = new FakeTerminal();
         var gameState = InitialGameStateFactory.Create();
         var session = GameSession.Create(new GameSessionOptions() { Output = terminal });
-        var registry = CommandSetup.Create(session, terminal);
+        var hostRequests = new HostRequestMailbox();
+        var registry = CommandSetup.Create(session, terminal, hostRequests);
         var scheduler = new GameScheduler(new FakeGameClock());
         var formulas = new NetworkFormulas(new Core.Configuration.BalanceConfig());
 

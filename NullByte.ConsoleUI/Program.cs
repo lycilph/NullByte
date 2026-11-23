@@ -20,7 +20,6 @@ public class Program
         await using var terminal = new ThreadSafeConsoleTerminal(prompt: "root@home $ ", maximumHistoryLines: 2_000);
 
         var saves = new SaveManager(new FileSaveStore(GetSaveDirectory()), new SaveGameSerializer());
-        var shutdownRequest = new ShutdownRequest();
 
         var sessionOptions = new GameSessionOptions()
         {
@@ -28,7 +27,7 @@ public class Program
             // TODO: remove this (only for debugging)
             Balance = new Core.Configuration.BalanceConfig() { GameSpeedMultiplier = 5.0, AnalyzeDuration = 5.0 }
         };
-        await using var host = new GameHost(terminal, saves, shutdownRequest, sessionOptions);
+        await using var host = new GameHost(terminal, saves, sessionOptions);
 
         var terminalTask = terminal.RunAsync();
 

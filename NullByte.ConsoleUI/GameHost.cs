@@ -11,14 +11,15 @@ namespace NullByte.ConsoleUI;
 public sealed class GameHost(
     ThreadSafeConsoleTerminal terminal,
     SaveManager saveManager,
-    ShutdownRequest shutdownRequest,
     GameSessionOptions baseOptions) : IAsyncDisposable
 {
-    private const string WorkingDirectoryResetMessage = "The current directory no longer exists. Back at /.";
+    private const string workingDirectoryResetMessage = "The current directory no longer exists. Back at /.";
 
-    private static readonly TimeSpan AutosaveInterval = TimeSpan.FromMinutes(5);
+    private readonly TimeSpan autosaveInterval = TimeSpan.FromMinutes(5);
+    private readonly HostRequestMailbox hostRequests = new();
     public event Action? SessionChanged;
-    
+
+    private bool shutdownRequested;
     public GameSession? Session => game?.Session;
     private Game? currentGame;
     private Game? game
@@ -36,8 +37,6 @@ public sealed class GameHost(
         GameSession Session,
         CommandDispatcher Dispatcher,
         CompletionCatalog Completion,
-        LoadRequest LoadRequest,
-        ResetRequest ResetRequest,
         AutosaveService Autosave);
 
     public async Task StartAsync(bool resumeAutosave)
@@ -78,13 +77,13 @@ public sealed class GameHost(
                         // A directory deleted since the last command (by a script or the editor) takes the player back to the root.
                         var workingDirectory = new WorkingDirectory(current.Session.State);
                         if (workingDirectory.ResetIfMissing())
-                            terminal.WriteLine(WorkingDirectoryResetMessage);
+                            terminal.WriteLine(workingDirectoryResetMessage);
 
                         await current.Dispatcher.DispatchAsync(commandLine);
 
                         // The command itself may have deleted it.
                         if (workingDirectory.ResetIfMissing())
-                            terminal.WriteLine(WorkingDirectoryResetMessage);
+                            terminal.WriteLine(workingDirectoryResetMessage);
 
                         // Update terminal prompt
                         terminal.SetPrompt(BuildPrompt(current.Session.State));
@@ -110,17 +109,26 @@ public sealed class GameHost(
                 terminal.WriteLine($"Command failed: {exception.Message}");
             }
 
-            if (shutdownRequest.IsRequested)
-                break;
-
-            if (current.ResetRequest.Take())
-            {
-                await ResetAsync();
+            if (hostRequests.Take() is not { } request)
                 continue;
-            }
 
-            if (current.LoadRequest.Take() is { } slot)
-                await LoadAsync(slot);
+            switch (request)
+            {
+                case HostRequest.Shutdown:
+                    shutdownRequested = true;
+                    return;
+
+                case HostRequest.Reset:
+                    await ResetAsync();
+                    break;
+
+                case HostRequest.Load load:
+                    await LoadAsync(load.Slot);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unknown host request: {request.GetType().Name}");
+            }
         }
     }
 
@@ -134,7 +142,7 @@ public sealed class GameHost(
 
         await current.Autosave.DisposeAsync();
 
-        if (shutdownRequest.IsRequested && current.Session.GameThread.IsRunning)
+        if (shutdownRequested && current.Session.GameThread.IsRunning)
         {
             try
             {
@@ -177,7 +185,7 @@ public sealed class GameHost(
                     saveManager,
                     old.Session,
                     terminal,
-                    AutosaveInterval);
+                    autosaveInterval);
 
                 currentGame = old with { Autosave = autosave };
                 return;
@@ -246,10 +254,8 @@ public sealed class GameHost(
     {
         var options = restored is null ? baseOptions : baseOptions.WithSave(restored);
         var session = GameSession.Create(options);
-        var loadRequest = new LoadRequest();
-        var resetRequest = new ResetRequest();
 
-        var registry = CommandSetup.Create(session, terminal, shutdownRequest, saveManager, loadRequest, resetRequest);
+        var registry = CommandSetup.Create(session, terminal, hostRequests, saveManager);
         var dispatcher = new CommandDispatcher(registry, terminal);
         var completion = new CompletionCatalog(registry, session.State, saveManager);
         terminal.SetCompletionProvider(completion);
@@ -268,9 +274,9 @@ public sealed class GameHost(
         // An activity that ends by itself (the player ran out of money) changes the prompt too.
         session.Services.Activities.ActivityEnded += _ => terminal.SetPrompt(BuildPrompt(session.State));
 
-        var autosave = new AutosaveService(saveManager, session, terminal, AutosaveInterval);
+        var autosave = new AutosaveService(saveManager, session, terminal, autosaveInterval);
 
-        return new Game(session, dispatcher, completion, loadRequest, resetRequest, autosave);
+        return new Game(session, dispatcher, completion, autosave);
     }
 
     private void WriteStartupMessage()

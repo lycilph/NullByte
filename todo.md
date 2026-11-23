@@ -1,6 +1,6 @@
 ﻿# In progress
 
-- Add a command to reset the game
+- Consolidating the request classes (in gamehost)
 
 - Milestone M10: Activities (jobs, training, studying etc.)
 - Clean up

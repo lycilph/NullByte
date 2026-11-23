@@ -289,20 +289,24 @@ Includes let a script use code from other files on the same server. The work hap
 - **Editor**: see Includes in the editor in 4.8.
 - **Known limits**: scripts are not re-checked automatically when a library they include changes, so after fixing a library its dependents update the next time they are edited. Included files are read from the game's saved files, so unsaved edits to a library open in the editor are not seen by other files until it is saved.
 
-#### 4.11 Session lifecycle and game reset
+### 4.11 Host requests and session lifecycle
 
-`GameHost` owns the active `GameSession` and is the only component allowed to replace it. Commands running inside a session may request a host-level operation, but they do not dispose, replace or directly reset the session themselves.
+`GameHost` owns application-level lifecycle transitions and is the only component allowed to replace or shut down the active `GameSession`. Commands running inside a session may request a host operation, but they never dispose, replace or directly reset the session themselves.
 
-- **Session replacement**: loading a save and starting a new game both replace the entire active session. The host stops the old autosave service, disposes the old session and creates a new `GameSession` with a new command registry, dispatcher, completion catalog and autosave service.
-- **Requests**: `LoadRequest` and `ResetRequest` carry intent from commands running on the game thread to `GameHost`. The host consumes these requests after command dispatch has returned, so a session never attempts to dispose itself from its own game thread.
-- **Reset command**: `reset` prints a warning without changing the game. `reset --confirm` requests a complete new game. An explicit confirmation flag is required because the operation is destructive.
-- **True reset**: reset removes all current progression, money, hacking experience, discovered servers, botnet nodes, running processes, activities, files and folders. The new session uses the same initial-state path as an ordinary new game.
-- **Save behavior**: named saves are preserved. The autosave and its backup are deleted before the old session is discarded, preventing the previous game from returning when the application restarts.
-- **Failure behavior**: if the autosave cannot be deleted, reset is aborted. The existing session remains active and autosaving is restarted. The game must not report a successful reset while recoverable autosave state remains.
-- **Activities**: reset is a normal console command and cannot be entered while a focused activity owns the console. The player must stop or background the activity first.
-- **Input**: terminal input is disabled during session replacement, so commands typed during the transition cannot run against the new session.
-- **Editor integration**: successful session replacement raises `GameHost.SessionChanged`. The editor integration sends its existing `reset` event so connected editors refresh their view of the virtual file system.
-- **Future progression resets**: this command starts a completely new game and grants no permanent bonuses. A later Bitburner-style augmentation or progression-reset loop is a separate feature, although it may reuse the same host-level session replacement mechanism.
+- **Request model**: host operations are represented by a closed `HostRequest` hierarchy. The initial variants are `Shutdown`, `Load(slot)` and `Reset`. Requests carry intent and the data required by that operation; execution remains in `GameHost`.
+- **Mailbox**: commands submit requests through one host-owned `HostRequestMailbox`. The mailbox has a single pending slot rather than a queue, because lifecycle transitions are mutually exclusive and are handled immediately after the current command returns. A second pending request is rejected instead of introducing implicit priority or executing contradictory transitions in sequence.
+- **Thread safety**: `HostRequestMailbox.TryRequest` uses `Interlocked.CompareExchange` and `Take` uses `Interlocked.Exchange`. Exactly one concurrent producer can fill an empty mailbox, and the host atomically removes at most one request. `Request` wraps `TryRequest` and throws `InvalidOperationException` when another request is already pending. No `volatile`, lock, `SemaphoreSlim` or `Channel<HostRequest>` is needed for this single-slot contract.
+- **Processing boundary**: commands execute on the game thread. After command dispatch completes, `GameHost` takes one request and handles it outside the session command. This prevents a session from disposing itself from its own game thread.
+- **Ownership**: the mailbox belongs to `GameHost` and survives session replacement. The per-session `Game` record contains only session-scoped runtime objects such as the session, dispatcher, completion catalog and autosave service. A request is removed before it is handled, so a failed operation is not retried automatically and a new session starts with an empty mailbox.
+- **Shutdown**: `Shutdown` replaces the former sticky shutdown request. After consuming it, `GameHost` records that the player requested shutdown and exits the command loop. That state controls whether disposal performs the final autosave. Cancellation remains a separate concern and uses the terminal or operation-specific cancellation tokens.
+- **Load**: `Load(slot)` reads and validates the save before replacing the active session. A missing or damaged save leaves the current session unchanged. The request is consumed even when loading fails; the player may explicitly retry.
+- **Reset command**: `reset` prints a warning without changing the game. `reset --confirm` requests a complete new game. Explicit confirmation is required because the operation is destructive.
+- **True reset**: reset removes all current progression, money, hacking experience, discovered servers, Botnet nodes, running processes, activities, files and folders. The replacement session uses the same initial-state path as an ordinary new game and starts immediately without restarting the application.
+- **Save behavior**: named saves are preserved. Before discarding the old session, reset stops its autosave service and deletes the autosave and its backup through `SaveManager`; save and delete share the same persistence gate so deletion cannot race an autosave write.
+- **Failure behavior**: if autosave deletion fails, reset is aborted. The existing session remains active, autosaving is restarted and no session-change notification is raised. The game must not report a successful reset while recoverable autosave state remains.
+- **Activities and input**: reset is a normal console command and cannot be entered while a focused activity owns the console. The player must stop or background the activity first. Terminal input is disabled during session replacement so queued input cannot run against the replacement session.
+- **Editor integration**: successful load and reset raise `GameHost.SessionChanged`. The editor integration sends its existing `reset` event so connected editors refresh their view of the virtual file system.
+- **Future operations**: a new host transition adds one `HostRequest` variant and one `GameHost` handler instead of another mutable request carrier threaded through setup and session objects. A future Bitburner-style augmentation reset may reuse this mechanism, but it is distinct from the clean `reset --confirm` command.
 
 ## 5. Milestones
 
@@ -416,23 +420,25 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 - `kill` stops a script at its next `await` and frees its RAM.
 - Multi-thread runs scale effect and RAM cost correctly.
 
-#### M7: Save, load and new game reset
+### M7: Save, load and new game reset
 
 **Deliverables**
+
 - Serialization of player, servers, Botnet, files, running processes (restarted on load) and game time.
 - Versioned save format with a migration hook.
 - Save format 2 stores file creation and modification times; format 3 stores folders, including empty ones (see 4.9). Older saves load through migrations.
-- Autosave and manual save and load.
+- Autosave and manual `save` and `load`.
 - A `reset` command that explains the consequences without changing the game.
 - A confirmed `reset --confirm` command that replaces the current session with a completely new game.
 - Reset deletes the autosave and its backup while preserving named saves.
-- Load and reset use the host-level session replacement lifecycle described in 4.11.
+- Shutdown, load and reset use the unified host-request and session-lifecycle architecture described in 4.11.
 
 **Acceptance**
+
 - Save, quit and load restores an equivalent state; a golden-file test guards the format.
 - Running `reset` without `--confirm` leaves the current game unchanged and explains how to confirm the operation.
 - Running `reset --confirm` starts a fresh session without restarting the application.
-- A reset removes progression, botnet nodes, processes, activities, files and folders.
+- A reset removes progression, Botnet nodes, processes, activities, files and folders.
 - Reset removes the previous autosave and its backup but leaves named saves available.
 - Restarting the application after reset cannot restore the pre-reset game through autosave.
 - If autosave deletion fails, the existing session remains active and autosaving is restored.
@@ -549,7 +555,7 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
   - Opening vs code from within the game
 - **Includes follow-ups**: re-check scripts when a library they include changes, let the editor supply the unsaved text of an open library, and count RAM only for the library code a script can reach if whole-file costs turn out too coarse.
 - **Console follow-ups**: `scp -r` for copying folders, a recursive `ls`, and refreshing tab completion when files change outside the console (scripts, the editor).
-- Factions, augmentations and a progression-reset loop that grants persistent bonuses. This is distinct from the M7 reset --confirm command, which starts a completely clean new game, but it may reuse the host-level session replacement architecture from 4.11.
+- Factions, augmentations and a progression-reset loop that grants persistent bonuses. This is distinct from the M7 `reset --confirm` command, which starts a completely clean new game, but it may reuse the host-request and session-replacement architecture from 4.11.
 - Port-opening programs and more servers.
 - Purchased servers, stock market, offline progress.
 - Script API versioning.
@@ -563,6 +569,13 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
 - Thread-affinity assertions: a debug check in game-state setters that the current thread is the game thread.
 - File system tests: path rules, folder operations, change events, file times and restoring, with a manual clock.
 - Save tests: round trips including empty folders, migrations from every older version, damaged saves refused, and a golden file that guards the format.
+- Reset request model tests: each `HostRequest` variant carries only its required data, and invalid load slots are rejected.
+- Host request mailbox tests: an empty take returns null; request then take returns the same instance exactly once; a second pending request is rejected; take frees the slot for reuse; and two concurrent producers result in exactly one accepted request.
+- Reset command tests through the real dispatcher: `reset` warns without submitting a request, `reset --confirm` submits `HostRequest.Reset`, and invalid arguments do not submit a request.
+- Save deletion tests: deleting a slot removes its primary file and backup, is idempotent when the slot does not exist, honors cancellation and does not affect other slots.
+- Persistence concurrency tests: save and delete operations use the same `SaveManager` gate, so deletion cannot race an autosave write.
+- Game host reset tests: successful reset replaces the session with fresh state, removes autosave, preserves named saves, raises `SessionChanged` and leaves the new game running.
+- Reset failure tests: if autosave deletion fails, the original session and its state remain active, no session-change notification is raised, terminal input is restored and autosaving resumes.
 - Command tests through the real dispatcher with a recording terminal, including relative paths and the current directory.
 - Path resolution and tab completion tests: the resolver, the current directory state (including its resets), and the completion engine against hand-made snapshots.
 - Editor protocol tests that send requests through the file service against a real game state.
@@ -577,3 +590,4 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
 5. **Target framework**: .NET 10. Decided.
 6. **Network authoring format**: a JSON data file. Decided.
 7. **Includes**: `#include "path"` with root-relative paths, resolved on the server the script runs on; a missing include is a plain error and `scp` does not copy libraries; libraries hold usings and type declarations only and take `nb` as a parameter (no ambient `nb`); each file is included once, cycles are errors, nesting is limited to 8 levels; RAM counts every included file in full. Decided.
+- **Host lifecycle requests**: shutdown, load and reset use a closed `HostRequest` hierarchy and one host-owned, atomic, single-slot `HostRequestMailbox`. Concurrent requests do not queue; exactly one is accepted and a second pending request is rejected. Decided.

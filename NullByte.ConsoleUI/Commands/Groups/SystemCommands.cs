@@ -2,7 +2,7 @@
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
-public sealed class SystemCommands(CommandRegistry registry, IGameTerminal terminal, ShutdownRequest? shutdownRequest) : ICommandGroup
+public sealed class SystemCommands(CommandRegistry registry, IGameTerminal terminal, HostRequestMailbox hostRequests) : ICommandGroup
 {
     public void Register(CommandRegistry registry)
     {
@@ -45,6 +45,6 @@ public sealed class SystemCommands(CommandRegistry registry, IGameTerminal termi
     private async Task RequestShutdownAsync(IReadOnlyList<string> arguments)
     {
         terminal.WriteLine("Shutting down...");
-        shutdownRequest?.Request();
+        hostRequests.Request(new HostRequest.Shutdown());
     }
 }
