@@ -27,6 +27,7 @@ Process.Start(new ProcessStartInfo
 # Future ideas
 
 - Do another cleanup round (see `AIPrompts.md`)
+	- Both game and vscode extension 
 - Change the editor integration to something that can be enabled/disabled while the game is running
 - Add options for Ram usage and compilation to the NanoEditor 
 - Align script method names and console commands
