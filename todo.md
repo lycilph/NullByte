@@ -1,6 +1,5 @@
 ﻿# In progress
 
-- Add settings (instead of the args to the program.cs)
 
 - Milestone M10: Activities (jobs, training, studying etc.)
 - Clean up

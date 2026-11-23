@@ -1,6 +1,7 @@
 ﻿using NullByte.ConsoleUI.Commands.Groups;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Services;
+using NullByte.Editor;
 using NullByte.Shell;
 using NullByte.Shell.Persistence;
 
@@ -12,7 +13,8 @@ public static class CommandSetup
         GameSession session,
         IGameTerminal terminal,
         HostRequestMailbox hostRequests,
-        SaveManager? saves = null)
+        SaveManager? saves = null,
+        IExternalEditorStatus? externalEditorStatus = null)
     {
         var registry = new CommandRegistry();
 
@@ -20,7 +22,7 @@ public static class CommandSetup
 
         List<ICommandGroup> groups =
         [
-            new DebugCommands(session.State.Player, session.Services.Network, session.State.FileSystem, session.Clock, registry, terminal),
+            new DebugCommands(session.State.Player, session.Clock, registry, terminal, externalEditorStatus),
             new SystemCommands(registry, terminal, hostRequests),
             new PlayerCommands(session.State.Player, session.Services.Network, session.Services.HackingFormulas, terminal),
             new NetworkCommands(session.Clock, session.Services.Network, session.Services.NetworkFormulas, terminal),

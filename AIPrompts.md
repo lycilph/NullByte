@@ -31,7 +31,8 @@ You are an expert developer and architect.
 Please review this codebase and suggest where I can simplify the code.
 Secondarily review for best practises
 
-You are an expert developer and architect.
+
+You are an expert developer and architect, so with the current codebase and design doc here,
 <request here>
 We should settle on a target architecture, and then work towards that.
 Before we start the implementation, ask any clarifying questions. 

@@ -56,11 +56,10 @@ public class Program
 
         try
         {
-            await host.StartAsync(resumeAutosave: !applicationOptions.StartNewGame);
-
             if (settings.Editor.Enabled)
                 editor = await StartEditorAsync(host, terminal, settings.Editor);
 
+            await host.StartAsync(resumeAutosave: !applicationOptions.StartNewGame);
             await host.RunAsync();
         }
         finally
@@ -161,14 +160,16 @@ public class Program
 
             await editor.StartAsync();
 
+            host.ExternalEditorStatus = editor;
             host.SessionChanged += editor.OnGameChanged;
+
             editor.OnGameChanged();
 
             var warmUpTimer = Stopwatch.StartNew();
 
             _ = editor.WarmUp.ContinueWith(
                 task => terminal.WriteLine(task.IsCompletedSuccessfully
-                    ? "VS Code language features ready ({warmUpTimer.Elapsed.TotalSeconds:F1}s)."
+                    ? $"VS Code language features ready ({warmUpTimer.Elapsed.TotalSeconds:F1}s)."
                     : "VS Code language features failed to start: " + task.Exception?.GetBaseException().Message),
                 TaskScheduler.Default);
 

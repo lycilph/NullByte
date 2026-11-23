@@ -3,6 +3,7 @@ using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Domain;
 using NullByte.Core.Persistence;
 using NullByte.Core.Services;
+using NullByte.Editor;
 using NullByte.Shell;
 using NullByte.Shell.Persistence;
 
@@ -20,6 +21,7 @@ public sealed class GameHost(
     public event Action? SessionChanged;
 
     private bool shutdownRequested;
+    public IExternalEditorStatus? ExternalEditorStatus { get; set; }
     public GameSession? Session => game?.Session;
     private Game? currentGame;
     private Game? game
@@ -255,7 +257,7 @@ public sealed class GameHost(
         var options = restored is null ? baseOptions : baseOptions.WithSave(restored);
         var session = GameSession.Create(options);
 
-        var registry = CommandSetup.Create(session, terminal, hostRequests, saveManager);
+        var registry = CommandSetup.Create(session, terminal, hostRequests, saveManager, ExternalEditorStatus);
         var dispatcher = new CommandDispatcher(registry, terminal);
         var completion = new CompletionCatalog(registry, session.State, saveManager);
         terminal.SetCompletionProvider(completion);

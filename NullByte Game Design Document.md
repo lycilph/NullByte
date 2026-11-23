@@ -599,7 +599,7 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
 
 **Deliverables**
 
-- Debug command to see if any (external) editors is connected
+- *Done* ~~Debug command to see if any (external) editors is connected~~
 - full-range underlines for diagnostics,
 - Run from VS Code: a command, or a run operation that executes the current file.
 - Get ram from VS Code: a command, or a ram operation that gets the ram cost of the current file.
