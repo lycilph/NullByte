@@ -31,6 +31,12 @@ You are an expert developer and architect.
 Please review this codebase and suggest where I can simplify the code.
 Secondarily review for best practises
 
+You are an expert developer and architect.
+<request here>
+We should settle on a target architecture, and then work towards that.
+Before we start the implementation, ask any clarifying questions. 
+When ready, go one step at a time and explain the steps in a concise manner.
+
 
 ---- Repomix ---
 Exclusion parameter:

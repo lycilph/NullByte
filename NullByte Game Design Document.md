@@ -26,7 +26,7 @@ The central fantasy is the same as Bitburner: you start by typing commands, get 
 - Scripts: write, compile, run, kill and list scripts, with RAM cost, threads and arguments, and reusable libraries through `#include`.
 - Home RAM as the limiting resource for scripts.
 - A console that blocks input while a manual hack/grow/weaken runs.
-- Save and load (late milestone).
+- Save, load and starting a completely new game through a confirmed reset command (late milestone).
 
 ### Out of scope (for now)
 
@@ -289,6 +289,21 @@ Includes let a script use code from other files on the same server. The work hap
 - **Editor**: see Includes in the editor in 4.8.
 - **Known limits**: scripts are not re-checked automatically when a library they include changes, so after fixing a library its dependents update the next time they are edited. Included files are read from the game's saved files, so unsaved edits to a library open in the editor are not seen by other files until it is saved.
 
+#### 4.11 Session lifecycle and game reset
+
+`GameHost` owns the active `GameSession` and is the only component allowed to replace it. Commands running inside a session may request a host-level operation, but they do not dispose, replace or directly reset the session themselves.
+
+- **Session replacement**: loading a save and starting a new game both replace the entire active session. The host stops the old autosave service, disposes the old session and creates a new `GameSession` with a new command registry, dispatcher, completion catalog and autosave service.
+- **Requests**: `LoadRequest` and `ResetRequest` carry intent from commands running on the game thread to `GameHost`. The host consumes these requests after command dispatch has returned, so a session never attempts to dispose itself from its own game thread.
+- **Reset command**: `reset` prints a warning without changing the game. `reset --confirm` requests a complete new game. An explicit confirmation flag is required because the operation is destructive.
+- **True reset**: reset removes all current progression, money, hacking experience, discovered servers, botnet nodes, running processes, activities, files and folders. The new session uses the same initial-state path as an ordinary new game.
+- **Save behavior**: named saves are preserved. The autosave and its backup are deleted before the old session is discarded, preventing the previous game from returning when the application restarts.
+- **Failure behavior**: if the autosave cannot be deleted, reset is aborted. The existing session remains active and autosaving is restarted. The game must not report a successful reset while recoverable autosave state remains.
+- **Activities**: reset is a normal console command and cannot be entered while a focused activity owns the console. The player must stop or background the activity first.
+- **Input**: terminal input is disabled during session replacement, so commands typed during the transition cannot run against the new session.
+- **Editor integration**: successful session replacement raises `GameHost.SessionChanged`. The editor integration sends its existing `reset` event so connected editors refresh their view of the virtual file system.
+- **Future progression resets**: this command starts a completely new game and grants no permanent bonuses. A later Bitburner-style augmentation or progression-reset loop is a separate feature, although it may reuse the same host-level session replacement mechanism.
+
 ## 5. Milestones
 
 Each milestone ends with something runnable and tested. Acceptance criteria are what "done" means.
@@ -401,16 +416,27 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 - `kill` stops a script at its next `await` and frees its RAM.
 - Multi-thread runs scale effect and RAM cost correctly.
 
-### M7: Save and load
+#### M7: Save, load and new game reset
 
 **Deliverables**
-
 - Serialization of player, servers, Botnet, files, running processes (restarted on load) and game time.
 - Versioned save format with a migration hook.
 - Save format 2 stores file creation and modification times; format 3 stores folders, including empty ones (see 4.9). Older saves load through migrations.
-- Autosave and manual `save` and `load`.
+- Autosave and manual save and load.
+- A `reset` command that explains the consequences without changing the game.
+- A confirmed `reset --confirm` command that replaces the current session with a completely new game.
+- Reset deletes the autosave and its backup while preserving named saves.
+- Load and reset use the host-level session replacement lifecycle described in 4.11.
 
-**Acceptance**: save, quit, load restores an equivalent state; a golden-file test guards the format.
+**Acceptance**
+- Save, quit and load restores an equivalent state; a golden-file test guards the format.
+- Running `reset` without `--confirm` leaves the current game unchanged and explains how to confirm the operation.
+- Running `reset --confirm` starts a fresh session without restarting the application.
+- A reset removes progression, botnet nodes, processes, activities, files and folders.
+- Reset removes the previous autosave and its backup but leaves named saves available.
+- Restarting the application after reset cannot restore the pre-reset game through autosave.
+- If autosave deletion fails, the existing session remains active and autosaving is restored.
+- Successful load and reset notify connected editor integrations that the active session was replaced.
 
 ### M8: Visual Studio Code editor integration
 
@@ -523,7 +549,7 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
   - Opening vs code from within the game
 - **Includes follow-ups**: re-check scripts when a library they include changes, let the editor supply the unsaved text of an open library, and count RAM only for the library code a script can reach if whole-file costs turn out too coarse.
 - **Console follow-ups**: `scp -r` for copying folders, a recursive `ls`, and refreshing tab completion when files change outside the console (scripts, the editor).
-- Factions, augmentations, reset loop.
+- Factions, augmentations and a progression-reset loop that grants persistent bonuses. This is distinct from the M7 reset --confirm command, which starts a completely clean new game, but it may reuse the host-level session replacement architecture from 4.11.
 - Port-opening programs and more servers.
 - Purchased servers, stock market, offline progress.
 - Script API versioning.

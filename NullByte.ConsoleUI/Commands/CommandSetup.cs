@@ -13,7 +13,8 @@ public static class CommandSetup
         IGameTerminal terminal,
         ShutdownRequest? shutdownRequest = null,
         SaveManager? saves = null,
-        LoadRequest? loadRequest = null)
+        LoadRequest? loadRequest = null,
+        ResetRequest? resetRequest = null)
     {
         var registry = new CommandRegistry();
 
@@ -33,8 +34,8 @@ public static class CommandSetup
         ];
         
         // Hosts that cannot save (and tests) simply leave these out.
-        if (saves is not null && loadRequest is not null)   // new
-            groups.Add(new PersistenceCommands(session, saves, loadRequest, terminal));
+        if (saves is not null && loadRequest is not null && resetRequest is not null)
+            groups.Add(new PersistenceCommands(session, saves, loadRequest, resetRequest, terminal));
 
         foreach (var group in groups)
             group.Register(registry);
