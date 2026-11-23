@@ -7,6 +7,7 @@
   - session.Services.Activities.ActivityEnded += _ => terminal.SetPrompt(BuildPrompt(session.State)); (in gamehost)
 	- What about loading/saving in this case???
   - Fix tab-completion for the work command (see registration for the work command in ActivityCommands.cs)
+  - study: the free tier should NOT get the x3 multiplier, or should only be available at the x1 university
 - Remove/delete the ActivityState class? 
 	
 # Todo
