@@ -49,7 +49,8 @@ public class Program
         await using var host = new GameHost(
             terminal,
             saves,
-            sessionOptions);
+            sessionOptions,
+            settings);
 
         var terminalTask = terminal.RunAsync();
         EditorServer? editor = null;

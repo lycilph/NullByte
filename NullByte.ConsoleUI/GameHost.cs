@@ -1,4 +1,5 @@
 ﻿using NullByte.ConsoleUI.Commands;
+using NullByte.ConsoleUI.Configuration;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Domain;
 using NullByte.Core.Persistence;
@@ -12,7 +13,8 @@ namespace NullByte.ConsoleUI;
 public sealed class GameHost(
     ThreadSafeConsoleTerminal terminal,
     SaveManager saveManager,
-    GameSessionOptions baseOptions) : IAsyncDisposable
+    GameSessionOptions baseOptions,
+    AppSettings settings) : IAsyncDisposable
 {
     private const string workingDirectoryResetMessage = "The current directory no longer exists. Back at /.";
 
@@ -257,7 +259,7 @@ public sealed class GameHost(
         var options = restored is null ? baseOptions : baseOptions.WithSave(restored);
         var session = GameSession.Create(options);
 
-        var registry = CommandSetup.Create(session, terminal, hostRequests, saveManager, ExternalEditorStatus);
+        var registry = CommandSetup.Create(session, terminal, hostRequests, saveManager, ExternalEditorStatus, settings);
         var dispatcher = new CommandDispatcher(registry, terminal);
         var completion = new CompletionCatalog(registry, session.State, saveManager);
         terminal.SetCompletionProvider(completion);

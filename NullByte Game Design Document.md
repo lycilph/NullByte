@@ -601,9 +601,9 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
 
 - *Done* ~~Debug command to see if any (external) editors is connected~~
 - *Done* ~~Run from VS Code: a command, or a run operation that executes the current file.~~
-- Get ram from VS Code: a command, or a ram operation that gets the ram cost of the current file.
-- full-range underlines for diagnostics,
+- *Done* ~~Get ram from VS Code: a command, or a ram operation that gets the ram cost of the current file.~~
 - launch vs-code from the game
+- full-range underlines for diagnostics,
    
 **Acceptance**
 

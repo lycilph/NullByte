@@ -1,8 +1,13 @@
-﻿using NullByte.ConsoleUI.Terminal;
+﻿using NullByte.ConsoleUI.Configuration;
+using NullByte.ConsoleUI.Terminal;
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
-public sealed class SystemCommands(CommandRegistry registry, IGameTerminal terminal, HostRequestMailbox hostRequests) : ICommandGroup
+public sealed class SystemCommands(
+    CommandRegistry registry,
+    IGameTerminal terminal,
+    HostRequestMailbox hostRequests,
+    AppSettings? settings) : ICommandGroup
 {
     public void Register(CommandRegistry registry)
     {
@@ -28,6 +33,21 @@ public sealed class SystemCommands(CommandRegistry registry, IGameTerminal termi
                 "Clear the terminal.",
                 ClearAsync)
             { Aliases = ["cls"] });
+
+        if (settings != null && settings.Editor.Enabled)
+        {
+            registry.Register(
+                new CommandDefinition(
+                    "vscode",
+                    "vscode",
+                    "Opens the VS Code editor.",
+                    VSCodeAsync));
+        }
+    }
+
+    private async Task VSCodeAsync(IReadOnlyList<string> arguments)
+    {
+        terminal.WriteLine("Launching VS Code...");
     }
 
     private async Task HelpAsync(IReadOnlyList<string> arguments)
