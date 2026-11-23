@@ -33,9 +33,39 @@ public sealed class ActivityCommandsTests : IDisposable
             new Course("free-course", FacilityKind.University, 0, new Dictionary<SkillKind, double> { [SkillKind.Charisma] = 1 }),
             new Course("strength", FacilityKind.Gym, 5, new Dictionary<SkillKind, double> { [SkillKind.Strength] = 1 })
         ],
-        companies: [],
+        companies:
+        [
+            // testcorp: software has three ranks (Intern, Developer needs reputation 10 and hacking level 3,
+            // Lead needs reputation 100 and hacking level 10); security has one. hardcorp's only rank needs hacking level 5.
+            new Company("testcorp",
+            [
+                new CareerPath("software",
+                [
+                    Rank("Intern", salary: 4, reputation: 1, requiredReputation: 0, hackingLevel: 0, hackingXp: 0.5),
+                    Rank("Developer", salary: 10, reputation: 2, requiredReputation: 10, hackingLevel: 3, hackingXp: 1),
+                    Rank("Lead", salary: 30, reputation: 5, requiredReputation: 100, hackingLevel: 10, hackingXp: 2)
+                ]),
+                new CareerPath("security",
+                [
+                    new JobRank("Trainee", 3, 1, 0, new Dictionary<SkillKind, int>(), new Dictionary<SkillKind, double> { [SkillKind.Strength] = 0.5 })
+                ])
+            ]),
+            new Company("hardcorp",
+            [
+                new CareerPath("software",
+                [
+                    Rank("Hard Intern", salary: 8, reputation: 1, requiredReputation: 0, hackingLevel: 5, hackingXp: 1)
+                ])
+            ])
+        ],
         crimes: []);
 
+    private static JobRank Rank(string title, double salary, double reputation, double requiredReputation, int hackingLevel, double hackingXp)
+        => new(title, salary, reputation, requiredReputation,
+        hackingLevel > 0 ? new Dictionary<SkillKind, int> { [SkillKind.Hacking] = hackingLevel } : new Dictionary<SkillKind, int>(),
+        new Dictionary<SkillKind, double> { [SkillKind.Hacking] = hackingXp });
+
+    private readonly BalanceConfig balance = new();
     private readonly GameState state = InitialGameStateFactory.Create();
     private readonly ActivityTestTerminal terminal = new();
     private readonly ActivityService service;
@@ -56,6 +86,135 @@ public sealed class ActivityCommandsTests : IDisposable
     }
 
     private Task<bool> Run(string commandLine) => dispatcher.DispatchAsync(commandLine);
+    private void GiveHackingLevel(int level)
+    => state.Player.Skills.AddExperience(SkillKind.Hacking, new SkillFormulas(balance).CalculateExperienceForLevel(SkillKind.Hacking, level));
+
+    [Fact]
+    public async Task Work_without_arguments_lists_the_companies_with_their_entry_requirements()
+    {
+        await Run("work");
+
+        Assert.Contains("testcorp (reputation 0.00)", terminal.Text);
+        Assert.Contains("software   entry: Intern (no requirements)", terminal.Text);
+        Assert.Contains("hardcorp", terminal.Text);
+        Assert.Contains("entry: Hard Intern (hacking level 5)", terminal.Text);
+        Assert.Contains("Usage: work <company> [career] [-b]", terminal.Text);
+        Assert.Null(service.Current);
+    }
+
+    [Fact]
+    public async Task The_listing_shows_where_the_player_stands()
+    {
+        await Run("work testcorp software -b");
+        system.Update(TenSeconds);
+        terminal.WriteLine("-----");
+
+        await Run("work");
+
+        var listing = terminal.Text[terminal.Text.IndexOf("-----", StringComparison.Ordinal)..];
+        Assert.Contains("testcorp (reputation 8.00)", listing);
+        Assert.Contains("you are Intern; next: Developer (hacking level 3, reputation 10)", listing);
+    }
+
+    [Fact]
+    public async Task Working_in_the_background_hires_the_player_and_returns_at_once()
+    {
+        await Run("work testcorp software -b");
+
+        Assert.Contains("Hired as Intern.", terminal.Text);
+        Assert.Contains("Working at testcorp (software) (pays $3.20/s, +0.40 hacking xp/s, +0.80 reputation/s)", terminal.Text);
+        Assert.Equal(ActivityMode.Background, service.Current!.Mode);
+        Assert.Null(terminal.Panel);
+
+        var money = state.Player.Money;
+        system.Update(TenSeconds);
+
+        Assert.Equal(money + 32, state.Player.Money, precision: 6);
+    }
+
+    [Fact]
+    public async Task Focused_work_holds_the_console_and_the_summary_includes_reputation()
+    {
+        var command = Run("work testcorp software");
+
+        Assert.False(command.IsCompleted);
+        Assert.Equal("Working at testcorp (software)", terminal.Panel!.Title);
+
+        system.Update(TenSeconds);
+
+        Assert.Contains("+$40.00", terminal.Panel.Detail());
+        Assert.Contains("+10.00 reputation", terminal.Panel.Detail());
+
+        terminal.Press(ConsoleKey.S);
+        await command.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+
+        Assert.Contains("Stopped. Working at testcorp (software): 10s, +$40.00, +5.00 hacking xp, +10.00 reputation.", terminal.Text);
+    }
+
+    [Theory]
+    [InlineData("work nope", "Unknown company 'nope'")]
+    [InlineData("work testcorp", "several careers: software, security")]
+    [InlineData("work testcorp nope", "Unknown career 'nope' at testcorp")]
+    [InlineData("work hardcorp", "you need hacking level 5 (you have 1)")]
+    public async Task Problems_with_a_job_are_explained_and_nothing_starts(string commandLine, string expected)
+    {
+        await Run(commandLine);
+
+        Assert.Contains(expected, terminal.Text);
+        Assert.Null(service.Current);
+    }
+
+    [Fact]
+    public async Task A_promotion_is_announced_while_the_player_is_working()
+    {
+        GiveHackingLevel(3);
+        var command = Run("work testcorp software");
+
+        system.Update(TenSeconds);
+
+        Assert.Contains("Promoted! You are now Developer at testcorp (software): pays $10.00/s", terminal.Text);
+
+        terminal.Press(ConsoleKey.S);
+        await command.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task Stopping_and_coming_back_resumes_the_held_rank()
+    {
+        await Run("work testcorp software -b");
+        await Run("stop");
+
+        await Run("work testcorp -b");                     // the career is remembered
+
+        Assert.Contains("Back at work as Intern.", terminal.Text);
+    }
+
+    [Fact]
+    public async Task Activity_shows_the_position_the_reputation_and_the_next_rank()
+    {
+        await Run("work testcorp software -b");
+        system.Update(TenSeconds);
+
+        await Run("activity");
+
+        Assert.Contains("Position: Intern (rank 1 of 3)", terminal.Text);
+        Assert.Contains("Reputation at testcorp: 8.00", terminal.Text);
+        Assert.Contains("Next rank: Developer, needs hacking level 3, reputation 10", terminal.Text);
+    }
+
+    [Fact]
+    public async Task Activity_at_the_top_rank_says_so()
+    {
+        GiveHackingLevel(10);
+        await Run("work testcorp software -b");
+        system.Update(TimeSpan.FromSeconds(200));          // 160 reputation in the background
+
+        terminal.WriteLine("-----");
+        await Run("activity");
+
+        Assert.Contains("Position: Lead (rank 3 of 3)", terminal.Text);
+        Assert.Contains("Next rank: you are at the top.", terminal.Text);
+    }
 
     [Fact]
     public async Task Study_without_arguments_lists_the_courses_and_universities()

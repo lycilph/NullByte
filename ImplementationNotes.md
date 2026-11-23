@@ -82,3 +82,15 @@ and the tests that check money pin the invariant culture. Your existing {...:N2}
 What you'll need to adjust
 Any test class that implements IGameTerminal needs the new member public IDisposable ShowLivePanel(LivePanel panel) => ...;.
 GameServices gained ActivityService Activities in step 3 and now also SkillFormulas Skills. Anything that builds it by hand needs both.
+
+## Step 5 is jobs. 
+Before writing code, here is the design, grounded in the catalog and activity plumbing you already have:
+
+State. A new Employment on GameState holds reputation per company and one job per company, as Job(career, rankIndex). 
+Reputation is kept even if you move to another career.
+Activity. A JobActivity is a new subclass of Activity. ActivityRates gains reputation, so the 0.8 factor covers salary, 
+XP and reputation, and still never costs.
+Starting work. ActivityService.StartWork hires you at the highest rank you qualify for (never lower than your current rank).
+Promotions. ActivitySystem promotes you automatically while you work, and the service raises a JobPromoted event that the console prints.
+Commands. work [company] [career] [-b] starts work or, with no arguments, lists the companies with your standing. quit is dropped: 
+with automatic promotion and a persistent rank it would do nothing, and switching career at the same company already replaces the job.

@@ -191,6 +191,23 @@ public sealed record BalanceConfig
     /// </summary>
     public double ClassCostMultiplier { get; init; } = 1.0;
 
+    /// <summary>
+    /// Global multiplier applied to salaries.
+    /// Reserved for later progression systems.
+    /// </summary>
+    public double JobSalaryMultiplier { get; init; } = 1.0;
+
+    /// <summary>
+    /// Global multiplier applied to the experience jobs give.
+    /// Reserved for later progression systems.
+    /// </summary>
+    public double JobExperienceMultiplier { get; init; } = 1.0;
+
+    /// <summary>
+    /// Global multiplier applied to the reputation jobs give.
+    /// Reserved for later progression systems.
+    /// </summary>
+    public double JobReputationMultiplier { get; init; } = 1.0;
 
     // Growth
 

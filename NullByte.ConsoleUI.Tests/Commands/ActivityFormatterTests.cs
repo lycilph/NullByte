@@ -2,7 +2,6 @@
 using NullByte.Core.Domain;
 using NullByte.Core.Domain.Activities;
 using NullByte.Core.Formulas;
-using Xunit;
 
 namespace NullByte.ConsoleUI.Tests.Commands;
 
@@ -11,6 +10,41 @@ public sealed class ActivityFormatterTests : IDisposable
     private readonly InvariantCulture culture = new();
 
     public void Dispose() => culture.Dispose();
+
+    [Fact]
+    public void Reputation_is_shown_where_there_is_any()
+    {
+        var xp = new Dictionary<SkillKind, double> { [SkillKind.Hacking] = 0.5 };
+
+        Assert.Equal("+31.00 reputation", ActivityFormatter.FormatReputation(31));
+        Assert.Equal("+0.10 reputation/s", ActivityFormatter.FormatReputation(0.1, perSecond: true));
+        Assert.Equal("pays $4.00/s, +0.50 hacking xp/s, +1.00 reputation/s", ActivityFormatter.FormatRates(new ActivityRates(4, xp, 1)));
+        Assert.Equal("1m 05s | +$40.00 | +5.00 hacking xp | +10.00 reputation",
+            ActivityFormatter.FormatProgress(new ActivityProgress(TimeSpan.FromSeconds(65), 40, xp.ToDictionary(e => e.Key, _ => 5.0), 10)));
+    }
+
+    [Fact]
+    public void Requirements_list_the_levels_then_the_reputation()
+    {
+        var rank = new JobRank("Developer", 10, 2, 100,
+            new Dictionary<SkillKind, int> { [SkillKind.Charisma] = 10, [SkillKind.Hacking] = 25 },
+            new Dictionary<SkillKind, double>());
+
+        Assert.Equal("hacking level 25, charisma level 10, reputation 100", ActivityFormatter.FormatRequirements(rank));
+        Assert.Equal("no requirements",
+            ActivityFormatter.FormatRequirements(new JobRank("Intern", 4, 1, 0, new Dictionary<SkillKind, int>(), new Dictionary<SkillKind, double>())));
+    }
+
+    [Fact]
+    public void A_job_is_tagged_working_and_summarised_with_its_reputation()
+    {
+        var career = new CareerPath("software", [new JobRank("Intern", 4, 1, 0, new Dictionary<SkillKind, int>(), new Dictionary<SkillKind, double>())]);
+        var job = new JobActivity(new Company("testcorp", [career]), career, 0, ActivityMode.Focused);
+        job.RecordProgress(TimeSpan.FromSeconds(10), 40, new Dictionary<SkillKind, double> { [SkillKind.Hacking] = 5 }, 10);
+
+        Assert.Equal("working", ActivityFormatter.PromptTag(job));
+        Assert.Equal("Working at testcorp (software): 10s, +$40.00, +5.00 hacking xp, +10.00 reputation.", ActivityFormatter.FormatSummary(job));
+    }
 
     [Theory]
     [InlineData(0, "0s")]

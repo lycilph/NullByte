@@ -34,6 +34,7 @@ public sealed class GameState
         Network = network;
         Botnet = new Botnet();
         Activity = new ActivityState();
+        Employment = new Employment();
         FileSystem = new VirtualFileSystem(network);
     }
 
@@ -48,6 +49,9 @@ public sealed class GameState
 
     /// <summary>Gets what the player is busy with right now.</summary>
     public ActivityState Activity { get; }
+
+    /// <summary>Gets the player's jobs and reputation with companies.</summary>
+    public Employment Employment { get; }
 
     /// <summary>Gets the virtual filesystem containing files stored on game servers.</summary>
     public VirtualFileSystem FileSystem { get; }

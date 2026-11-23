@@ -26,7 +26,7 @@ public class Program
         {
             Output = terminal,
             // TODO: remove this (only for debugging)
-            Balance = new Core.Configuration.BalanceConfig() { GameSpeedMultiplier = 5.0, AnalyzeDuration = 5.0 }
+            Balance = new Core.Configuration.BalanceConfig() { GameSpeedMultiplier = 50.0, AnalyzeDuration = 5.0 }
         };
         await using var host = new GameHost(terminal, saves, shutdownRequest, sessionOptions);
 

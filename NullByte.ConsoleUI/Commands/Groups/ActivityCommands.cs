@@ -8,7 +8,7 @@ namespace NullByte.ConsoleUI.Commands.Groups;
 
 /// <summary>
 /// The commands for what the player does besides hacking: <c>study</c>, <c>train</c>,
-/// <c>stop</c>, <c>focus</c>, <c>activity</c> and <c>skills</c>.
+/// <c>work</c>, <c>stop</c>, <c>focus</c>, <c>activity</c> and <c>skills</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -38,6 +38,7 @@ public sealed class ActivityCommands : ICommandGroup
         this.terminal = terminal ?? throw new ArgumentNullException(nameof(terminal));
 
         service.ActivityEnded += OnActivityEnded;
+        service.JobPromoted += OnJobPromoted;
     }
 
     public void Register(CommandRegistry registry)
@@ -60,6 +61,20 @@ public sealed class ActivityCommands : ICommandGroup
         {
             MinArgs = 0, MaxArgs = 3,
             Completions = CompletionsFor(FacilityKind.Gym)
+        });
+
+        registry.Register(new CommandDefinition(
+            "work",
+            "work [company] [career] [-b]",
+            "Work for a company (no arguments: list them).",
+            WorkAsync)
+        {
+            MinArgs = 0, MaxArgs = 3,
+            Completions =
+            [
+                new ArgumentCompletion { ArgumentIndex = 0, Values = service.Catalog.Companies.Select(c => c.Name).ToList() },
+                new ArgumentCompletion { ArgumentIndex = 1, Values = service.Catalog.Companies.SelectMany(c => c.Careers).Select(c => c.Name).Distinct().ToList() }
+            ]
         });
 
         registry.Register(new CommandDefinition(
@@ -95,15 +110,39 @@ public sealed class ActivityCommands : ICommandGroup
             return;
         }
 
-        if (request.Course is null)
+        if (request.Target is null)
         {
             ListCourses(kind);
             return;
         }
 
         var mode = request.Background ? ActivityMode.Background : ActivityMode.Focused;
-        var result = service.StartCourse(kind, request.Course, request.Facility, mode);
 
+        await BeginAsync(service.StartCourse(kind, request.Target, request.Detail, mode), mode);
+    }
+
+    private async Task WorkAsync(IReadOnlyList<string> arguments)
+    {
+        if (!ActivityArguments.TryParse(arguments, out var request, out var error))
+        {
+            terminal.WriteLine(error);
+            return;
+        }
+
+        if (request.Target is null)
+        {
+            ListCompanies();
+            return;
+        }
+
+        var mode = request.Background ? ActivityMode.Background : ActivityMode.Focused;
+
+        await BeginAsync(service.StartWork(request.Target, request.Detail, mode), mode);
+    }
+
+    // What happens after any activity was started: say so, then hold the console or let it run on the side.
+    private async Task BeginAsync(ActivityStartResult result, ActivityMode mode)
+    {
         if (!result.Succeeded)
         {
             terminal.WriteLine(result.FailureMessage);
@@ -111,6 +150,10 @@ public sealed class ActivityCommands : ICommandGroup
         }
 
         var activity = result.Activity!;
+
+        if (result.Notice.Length > 0)
+            terminal.WriteLine(result.Notice);
+
         terminal.WriteLine($"{activity.Description} ({ActivityFormatter.FormatRates(service.GetRates(activity))}).");
 
         if (mode == ActivityMode.Background)
@@ -151,6 +194,10 @@ public sealed class ActivityCommands : ICommandGroup
         var progress = activity.Progress;
 
         terminal.WriteLine(activity.Description);
+
+        if (activity is JobActivity job)
+            WriteJobDetails(job);
+
         terminal.WriteLine(activity.Mode == ActivityMode.Focused
             ? "Mode: focused"
             : $"Mode: in the background (rewards reduced by {RewardReductionText()})");
@@ -158,6 +205,16 @@ public sealed class ActivityCommands : ICommandGroup
         terminal.WriteLine($"So far: {ActivityFormatter.FormatProgress(progress)}");
 
         return Task.CompletedTask;
+    }
+    
+    private void WriteJobDetails(JobActivity job)
+    {
+        terminal.WriteLine($"Position: {job.Rank.Title} (rank {job.RankIndex + 1} of {job.Career.Ranks.Count})");
+        terminal.WriteLine($"Reputation at {job.Company.Name}: {service.Employment.GetReputation(job.Company.Name):N2}");
+
+        terminal.WriteLine(job.IsTopRank
+            ? "Next rank: you are at the top."
+            : $"Next rank: {job.Career.Ranks[job.RankIndex + 1].Title}, needs {ActivityFormatter.FormatRequirements(job.Career.Ranks[job.RankIndex + 1])}");
     }
 
     private Task ShowSkillsAsync(IReadOnlyList<string> arguments)
@@ -237,6 +294,51 @@ public sealed class ActivityCommands : ICommandGroup
 
         terminal.WriteLine($"You can no longer afford it: {info.Activity.Description} has ended.");
         terminal.WriteLine(ActivityFormatter.FormatSummary(info.Activity));
+    }
+
+    // Raised on the game thread, so it can arrive while the focused panel is showing.
+    private void OnJobPromoted(JobPromotion promotion)
+    {
+        var job = promotion.Job;
+
+        terminal.WriteLine($"Promoted! You are now {job.Rank.Title} at {job.Company.Name} ({job.Career.Name}): " +
+                           $"{ActivityFormatter.FormatRates(service.GetRates(job))}.");
+    }
+
+    private void ListCompanies()
+    {
+        var employment = service.Employment;
+
+        terminal.WriteLine("Companies:");
+
+        foreach (var company in service.Catalog.Companies)
+        {
+            terminal.WriteLine($"  {company.Name} (reputation {employment.GetReputation(company.Name):N2})");
+
+            var held = employment.GetJob(company.Name);
+
+            foreach (var career in company.Careers)
+            {
+                var isHeld = held is not null && string.Equals(held.Career, career.Name, StringComparison.OrdinalIgnoreCase);
+
+                if (!isHeld)
+                {
+                    terminal.WriteLine($"    {career.Name,-10} entry: {career.Ranks[0].Title} ({ActivityFormatter.FormatRequirements(career.Ranks[0])})");
+                }
+                else if (held!.RankIndex + 1 < career.Ranks.Count)
+                {
+                    var next = career.Ranks[held.RankIndex + 1];
+                    terminal.WriteLine($"    {career.Name,-10} you are {career.Ranks[held.RankIndex].Title}; next: {next.Title} ({ActivityFormatter.FormatRequirements(next)})");
+                }
+                else
+                {
+                    terminal.WriteLine($"    {career.Name,-10} you are {career.Ranks[held.RankIndex].Title} (top rank)");
+                }
+            }
+        }
+
+        terminal.WriteLine();
+        terminal.WriteLine("Usage: work <company> [career] [-b]");
     }
 
     private void ListCourses(FacilityKind kind)

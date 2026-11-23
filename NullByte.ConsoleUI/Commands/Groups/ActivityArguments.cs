@@ -1,13 +1,13 @@
 ﻿namespace NullByte.ConsoleUI.Commands.Groups;
 
-/// <summary>What the player asked for with <c>study</c> or <c>train</c>.</summary>
-/// <param name="Course">The course, or null to list the courses.</param>
-/// <param name="Facility">The university or gym, or null for the default one.</param>
+/// <summary>What the player asked for with <c>study</c>, <c>train</c> or <c>work</c>.</summary>
+/// <param name="Target">The course or company, or null to list the choices.</param>
+/// <param name="Detail">The university or gym, or the career. Null for the default one.</param>
 /// <param name="Background">Whether to start in the background.</param>
-public readonly record struct CourseRequest(string? Course, string? Facility, bool Background);
+public readonly record struct ActivityRequest(string? Target, string? Detail, bool Background);
 
 /// <summary>
-/// Parses the arguments of <c>study</c> and <c>train</c>: up to two names and a
+/// Parses the arguments of the activity commands: up to two names and a
 /// <c>-b</c> flag that may be anywhere.
 /// </summary>
 public static class ActivityArguments
@@ -15,7 +15,7 @@ public static class ActivityArguments
     public const string BackgroundFlag = "-b";
     public const string BackgroundFlagLong = "--background";
 
-    public static bool TryParse(IReadOnlyList<string> arguments, out CourseRequest request, out string error)
+    public static bool TryParse(IReadOnlyList<string> arguments, out ActivityRequest request, out string error)
     {
         request = default;
         error = string.Empty;
@@ -46,7 +46,7 @@ public static class ActivityArguments
             return false;
         }
 
-        request = new CourseRequest(names.ElementAtOrDefault(0), names.ElementAtOrDefault(1), background);
+        request = new ActivityRequest(names.ElementAtOrDefault(0), names.ElementAtOrDefault(1), background);
         return true;
     }
 }

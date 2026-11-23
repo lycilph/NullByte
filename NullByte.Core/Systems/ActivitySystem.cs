@@ -67,6 +67,16 @@ public sealed class ActivitySystem : ISimulationSystem
         foreach (var (skill, amount) in experience)
             player.Skills.AddExperience(skill, amount);
 
-        activity.RecordProgress(delta, money, experience);
+        // Reputation is earned with the company the player works for.
+        var reputation = rates.ReputationPerSecond * seconds;
+
+        if (reputation > 0 && activity is JobActivity working)
+            gameState.Employment.AddReputation(working.Company.Name, reputation);
+
+        activity.RecordProgress(delta, money, experience, reputation);
+
+        // The new experience and reputation may be enough for the next rank.
+        if (activity is JobActivity job)
+            service.PromoteIfQualified(job);
     }
 }

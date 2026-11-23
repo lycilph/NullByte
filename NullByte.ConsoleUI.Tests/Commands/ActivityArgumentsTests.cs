@@ -12,13 +12,13 @@ public sealed class ActivityArgumentsTests
     [InlineData("-b algorithms summit-university", "algorithms", "summit-university", true)]
     [InlineData("algorithms --background summit-university", "algorithms", "summit-university", true)]
     [InlineData("-b", null, null, true)]
-    public void Names_and_the_background_flag_are_found_anywhere(string line, string? course, string? facility, bool background)
+    public void Names_and_the_background_flag_are_found_anywhere(string line, string? target, string? detail, bool background)
     {
         var arguments = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         Assert.True(ActivityArguments.TryParse(arguments, out var request, out _));
-        Assert.Equal(course, request.Course);
-        Assert.Equal(facility, request.Facility);
+        Assert.Equal(target, request.Target);
+        Assert.Equal(detail, request.Detail);
         Assert.Equal(background, request.Background);
     }
 

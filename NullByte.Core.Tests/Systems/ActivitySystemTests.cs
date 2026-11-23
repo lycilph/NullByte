@@ -11,7 +11,147 @@ public sealed class ActivitySystemTests
     private readonly ActivityTestWorld world = new();
 
     private static readonly TimeSpan TenSeconds = TimeSpan.FromSeconds(10);
-    
+
+    [Fact]
+    public void A_job_pays_a_salary_and_gives_experience_and_reputation_to_the_company()
+    {
+        var money = world.Player.Money;
+        world.Service.StartWork("testcorp", "software");
+
+        world.System.Update(TenSeconds);
+
+        Assert.Equal(money + 40, world.Player.Money, precision: 6);
+        Assert.Equal(5, world.Player.Skills.GetExperience(SkillKind.Hacking), precision: 6);
+        Assert.Equal(10, world.State.Employment.GetReputation("testcorp"), precision: 6);
+        Assert.Equal(0, world.State.Employment.GetReputation("hardcorp"));
+    }
+
+    [Fact]
+    public void A_background_job_gives_eighty_percent_of_every_reward()
+    {
+        var money = world.Player.Money;
+        world.Service.StartWork("testcorp", "software", ActivityMode.Background);
+
+        world.System.Update(TenSeconds);
+
+        Assert.Equal(money + 32, world.Player.Money, precision: 6);
+        Assert.Equal(4, world.Player.Skills.GetExperience(SkillKind.Hacking), precision: 6);
+        Assert.Equal(8, world.State.Employment.GetReputation("testcorp"), precision: 6);
+    }
+
+    [Fact]
+    public void The_job_remembers_the_reputation_it_has_earned()
+    {
+        var job = world.Service.StartWork("testcorp", "software").Activity!;
+
+        world.System.Update(TenSeconds);
+
+        Assert.Equal(10, job.ReputationGained, precision: 6);
+        Assert.Equal(10, job.Progress.ReputationGained, precision: 6);
+        Assert.Equal(40, job.NetMoney, precision: 6);
+    }
+
+    [Fact]
+    public void A_job_never_ends_for_lack_of_money()
+    {
+        world.Player.TrySpendMoney(world.Player.Money);
+        world.Service.StartWork("testcorp", "software");
+
+        world.System.Update(TimeSpan.FromHours(1));
+
+        Assert.NotNull(world.Service.Current);
+    }
+
+    [Fact]
+    public void The_player_is_promoted_when_skill_and_reputation_are_both_enough()
+    {
+        world.GiveHackingLevel(3);
+        var job = (JobActivity)world.Service.StartWork("testcorp", "software").Activity!;
+        JobPromotion? promotion = null;
+        world.Service.JobPromoted += p => promotion = p;
+
+        world.System.Update(TenSeconds);                       // reputation 10: enough for Developer
+
+        Assert.Equal(1, job.RankIndex);
+        Assert.Equal("Developer", job.Rank.Title);
+        Assert.Equal(new Job("software", 1), world.State.Employment.GetJob("testcorp"));
+        Assert.NotNull(promotion);
+        Assert.Same(job, promotion!.Job);
+
+        var money = world.Player.Money;
+        world.System.Update(TimeSpan.FromSeconds(1));          // the new salary is $10/s
+
+        Assert.Equal(money + 10, world.Player.Money, precision: 6);
+    }
+
+    [Fact]
+    public void Reputation_alone_does_not_promote()
+    {
+        var job = (JobActivity)world.Service.StartWork("testcorp", "software").Activity!;
+        var promoted = false;
+        world.Service.JobPromoted += _ => promoted = true;
+
+        world.System.Update(TimeSpan.FromSeconds(50));          // plenty of reputation, hacking level still 1
+
+        Assert.Equal(0, job.RankIndex);
+        Assert.False(promoted);
+    }
+
+    [Fact]
+    public void Skill_alone_does_not_promote()
+    {
+        world.GiveHackingLevel(10);
+        var job = (JobActivity)world.Service.StartWork("testcorp", "software").Activity!;
+
+        world.System.Update(TimeSpan.FromSeconds(5));          // reputation 5, needs 10
+
+        Assert.Equal(0, job.RankIndex);
+    }
+
+    [Fact]
+    public void Several_ranks_can_be_earned_at_once_and_are_announced_once()
+    {
+        world.GiveHackingLevel(10);
+        var job = (JobActivity)world.Service.StartWork("testcorp", "software").Activity!;
+        var promotions = 0;
+        world.Service.JobPromoted += _ => promotions++;
+
+        world.System.Update(TimeSpan.FromSeconds(100));        // reputation 100 in one update
+
+        Assert.Equal(2, job.RankIndex);
+        Assert.True(job.IsTopRank);
+        Assert.Equal(1, promotions);
+
+        world.System.Update(TimeSpan.FromSeconds(100));        // nothing above the top rank: no error, no more promotions
+
+        Assert.Equal(2, job.RankIndex);
+        Assert.Equal(1, promotions);
+    }
+
+    [Fact]
+    public void Reputation_and_rank_are_kept_when_the_player_stops_and_comes_back()
+    {
+        world.GiveHackingLevel(3);
+        world.Service.StartWork("testcorp", "software");
+        world.System.Update(TenSeconds);                       // promoted to Developer
+        world.Service.Stop();
+
+        var again = world.Service.StartWork("testcorp");
+
+        Assert.Equal("Back at work as Developer.", again.Notice);
+        Assert.Equal(10, world.State.Employment.GetReputation("testcorp"), precision: 6);
+    }
+
+    [Fact]
+    public void A_course_earns_no_reputation()
+    {
+        world.Service.StartCourse(FacilityKind.University, "algorithms");
+
+        world.System.Update(TenSeconds);
+
+        Assert.Empty(world.State.Employment.Reputation);
+    }
+
     [Fact]
     public void A_progress_snapshot_does_not_change_when_the_activity_moves_on()
     {

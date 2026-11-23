@@ -29,9 +29,18 @@ internal sealed class ActivityTestWorld
     public ActivitySystem System { get; }
     public Player Player => State.Player;
 
+    /// <summary>Gives the player enough hacking experience to be at least this hacking level.</summary>
+    public void GiveHackingLevel(int level)
+    {
+        var needed = new SkillFormulas(Balance).CalculateExperienceForLevel(SkillKind.Hacking, level);
+
+        Player.Skills.AddExperience(SkillKind.Hacking, Math.Max(0, needed - Player.HackingExperience));
+    }
+
     /// <summary>
     /// Two universities (a plain and a fancy one), one gym, and three courses:
     /// "algorithms" costs $10/s for 2 hacking xp/s, "free-course" is free, "strength" costs $5/s.
+    /// There are also two companies to work for (see below).
     /// </summary>
     public static ActivityCatalog Catalog { get; } = new(
         facilities:
@@ -46,6 +55,35 @@ internal sealed class ActivityTestWorld
             new Course("free-course", FacilityKind.University, CostPerSecond: 0, new Dictionary<SkillKind, double> { [SkillKind.Charisma] = 1 }),
             new Course("strength", FacilityKind.Gym, CostPerSecond: 5, new Dictionary<SkillKind, double> { [SkillKind.Strength] = 1 })
         ],
-        companies: [],
+        companies:
+        [
+            // testcorp: software has three ranks (Intern, Developer needs reputation 10 and hacking level 3,
+            // Lead needs reputation 100 and hacking level 10); security has one. hardcorp's only rank needs hacking level 5.
+            new Company("testcorp",
+            [
+                new CareerPath("software",
+                [
+                    Rank("Intern", salary: 4, reputation: 1, requiredReputation: 0, hackingLevel: 0, hackingXp: 0.5),
+                    Rank("Developer", salary: 10, reputation: 2, requiredReputation: 10, hackingLevel: 3, hackingXp: 1),
+                    Rank("Lead", salary: 30, reputation: 5, requiredReputation: 100, hackingLevel: 10, hackingXp: 2)
+                ]),
+                new CareerPath("security",
+                [
+                    new JobRank("Trainee", 3, 1, 0, new Dictionary<SkillKind, int>(), new Dictionary<SkillKind, double> { [SkillKind.Strength] = 0.5 })
+                ])
+            ]),
+            new Company("hardcorp",
+            [
+                new CareerPath("software",
+                [
+                    Rank("Hard Intern", salary: 8, reputation: 1, requiredReputation: 0, hackingLevel: 5, hackingXp: 1)
+                ])
+            ])
+        ],
         crimes: []);
+
+    private static JobRank Rank(string title, double salary, double reputation, double requiredReputation, int hackingLevel, double hackingXp)
+        => new(title, salary, reputation, requiredReputation,
+            hackingLevel > 0 ? new Dictionary<SkillKind, int> { [SkillKind.Hacking] = hackingLevel } : new Dictionary<SkillKind, int>(),
+            new Dictionary<SkillKind, double> { [SkillKind.Hacking] = hackingXp });
 }
