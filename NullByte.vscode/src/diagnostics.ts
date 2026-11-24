@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Logger, NullByteClient, RunDiagnostic  } from './client';
 import { toGamePath, toUri } from './paths';
 
-const DebounceMs = 400;
+const debounceMs = 400;
 
 const severities: Record<string, vscode.DiagnosticSeverity> = {
   error: vscode.DiagnosticSeverity.Error,
@@ -23,7 +23,7 @@ const isScript = (doc: vscode.TextDocument) =>
 export class NullByteDiagnostics implements vscode.Disposable {
   private readonly collection = vscode.languages.createDiagnosticCollection('nullbyte');
   private readonly timers = new Map<string, NodeJS.Timeout>();
-    /** What each checked document reported, and for which file. Merged per file when published. */
+  /** What each checked document reported, and for which file. Merged per file when published. */
   private readonly reported = new Map<string, Reported[]>();
   private readonly subscriptions: vscode.Disposable[];
 
@@ -31,7 +31,7 @@ export class NullByteDiagnostics implements vscode.Disposable {
     this.subscriptions = [
       this.collection,
       vscode.workspace.onDidOpenTextDocument(doc => this.schedule(doc, 0)),
-      vscode.workspace.onDidChangeTextDocument(e => this.schedule(e.document, DebounceMs)),
+      vscode.workspace.onDidChangeTextDocument(e => this.schedule(e.document, debounceMs)),
       vscode.workspace.onDidCloseTextDocument(doc => this.clear(doc)),
     ];
   }

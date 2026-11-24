@@ -172,9 +172,11 @@ The editor crosses into the game through the same services used by the game itse
 
 `NullByte.vscode/src` contains:
 
-- `extension.ts` — extension activation.
+- `extension.ts` — extension activation and dependency wiring.
+- `connection.ts` — connection-file path resolution and validation.
 - `client.ts` — editor protocol client.
-- `commands.ts` — commands.
+- `commands.ts` — command class and command behavior.
+- `argumentParser.ts` — shell-style script argument parsing.
 - `runCodeLens.ts` — run actions.
 - `filesystem.ts`, `paths.ts` — virtual filesystem/path mapping.
 - `status.ts` — connection/status UI.

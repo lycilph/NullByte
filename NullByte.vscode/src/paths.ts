@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 /** VS Code labels the workspace root with the last segment of its path. */
-export const RootName = 'NullByte';
+export const rootName = 'NullByte';
 const prefix = `/${RootName}`;
 
 export const rootUri = vscode.Uri.from({ scheme: 'nullbyte', path: prefix });

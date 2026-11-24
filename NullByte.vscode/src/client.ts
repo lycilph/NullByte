@@ -20,7 +20,7 @@ export type ConnectionState = { status: 'connected' | 'connecting' | 'disconnect
 export type RunDiagnostic = { id: string; message: string; severity: string; line: number; column: number; file?: string | null; endLine: number; endColumn: number; };
 export type RunResult = { started: boolean; pid: number; failureMessage: string; diagnostics: RunDiagnostic[]; };
 
-const ReconnectDelayMs = 2000;
+const reconnectDelayMs = 2000;
 
 /** Whether a process with this id exists on this machine. Only used for log hints. */
 function isAlive(pid: number): boolean {
@@ -164,7 +164,7 @@ export class NullByteClient {
   private scheduleReconnect() {
     if (this.disposed || this.reconnectTimer) return;
 
-    const delay = this.immediateReconnect ? 0 : ReconnectDelayMs;
+    const delay = this.immediateReconnect ? 0 : reconnectDelayMs;
     this.immediateReconnect = false;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = undefined;
