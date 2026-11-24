@@ -39,9 +39,8 @@ The editor workflow has been expanded with:
 - connected-editor status;
 - run-current-script from VS Code;
 - script RAM queries;
-- launching VS Code from the game.
-
-The remaining item in this area is full-range diagnostic underlining in the VS Code extension.
+- launching VS Code from the game;
+- full-range diagnostic underlining in the VS Code extension, including source-mapped spans for included files.
 
 ## M12 — Sandbox and safety
 
