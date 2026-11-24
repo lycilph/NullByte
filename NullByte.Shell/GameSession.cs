@@ -50,7 +50,7 @@ public sealed record GameServices(
     BotnetService Botnet,
     ScriptService Scripts,
     ActivityService Activities,
-    Formulas Formulas);
+    FormulaSet Formulas);
 
 public sealed class GameSession : IAsyncDisposable
 {
@@ -178,7 +178,7 @@ public sealed class GameSession : IAsyncDisposable
         var state = options.State ?? InitialGameStateFactory.Create();
         var randomSource = options.Random ?? new SeededRandomSource(Random.Shared.Next());
 
-        var formulas = new Formulas(options.Balance);
+        var formulas = new FormulaSet(options.Balance);
 
         var networkService = new NetworkService(state, scheduler, formulas.Network);
         var serverActions = new ServerActions(state, scheduler, formulas.Hacking, randomSource);
