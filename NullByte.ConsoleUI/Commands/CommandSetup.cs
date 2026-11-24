@@ -1,6 +1,8 @@
 ﻿using NullByte.ConsoleUI.Commands.Groups;
+using NullByte.ConsoleUI.Configuration;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Services;
+using NullByte.Editor;
 using NullByte.Shell;
 using NullByte.Shell.Persistence;
 
@@ -11,9 +13,10 @@ public static class CommandSetup
     public static CommandRegistry Create(
         GameSession session,
         IGameTerminal terminal,
-        ShutdownRequest? shutdownRequest = null,
+        HostRequestMailbox hostRequests,
         SaveManager? saves = null,
-        LoadRequest? loadRequest = null)
+        IExternalEditorStatus? externalEditorStatus = null,
+        AppSettings? settings = null)
     {
         var registry = new CommandRegistry();
 
@@ -21,8 +24,8 @@ public static class CommandSetup
 
         List<ICommandGroup> groups =
         [
-            new DebugCommands(session.State.Player, session.Services.Network, session.State.FileSystem, session.Clock, registry, terminal),
-            new SystemCommands(registry, terminal, shutdownRequest),
+            new DebugCommands(session.State.Player, session.Clock, registry, terminal, externalEditorStatus),
+            new SystemCommands(registry, terminal, hostRequests, settings),
             new PlayerCommands(session.State.Player, session.Services.Network, session.Services.HackingFormulas, terminal),
             new NetworkCommands(session.Clock, session.Services.Network, session.Services.NetworkFormulas, terminal),
             new FileCommands(session.State.FileSystem, session.Services.Network, workingDirectory, terminal),
@@ -33,8 +36,8 @@ public static class CommandSetup
         ];
         
         // Hosts that cannot save (and tests) simply leave these out.
-        if (saves is not null && loadRequest is not null)   // new
-            groups.Add(new PersistenceCommands(session, saves, loadRequest, terminal));
+        if (saves is not null)
+            groups.Add(new PersistenceCommands(session, saves, hostRequests, terminal));
 
         foreach (var group in groups)
             group.Register(registry);

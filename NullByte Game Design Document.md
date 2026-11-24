@@ -26,7 +26,7 @@ The central fantasy is the same as Bitburner: you start by typing commands, get 
 - Scripts: write, compile, run, kill and list scripts, with RAM cost, threads and arguments, and reusable libraries through `#include`.
 - Home RAM as the limiting resource for scripts.
 - A console that blocks input while a manual hack/grow/weaken runs.
-- Save and load (late milestone).
+- Save, load and starting a completely new game through a confirmed reset command (late milestone).
 
 ### Out of scope (for now)
 
@@ -152,7 +152,7 @@ The details are in 4.10.
 - `NullByte.Scripting`: Roslyn compile, include resolution, analysis (RAM, banned APIs), loading and process management, and the language service (completion, hover, signature help) that editors use.
 - `NullByte.Editor`: optional VS Code integration on the host side: a websocket server, a small protocol and the file service (see 4.8). References Core and Scripting.
 - `NullByte.vscode`: the VS Code extension (TypeScript), built and packaged with npm rather than as part of the .NET solution.
-- `NullByte.ConsoleUI` Host: the first host, with command parser, rendering and input.
+- `NullByte.ConsoleUI` Host: the first host, with command parsing, settings loading and validation, application composition, rendering and input.
 - `NullByte` Host (later): WPF host with AvalonEdit, reusing Core and Scripting unchanged.
 - `NullByte.Tests`: unit tests, with a fake clock and seeded RNG.
 
@@ -289,6 +289,117 @@ Includes let a script use code from other files on the same server. The work hap
 - **Editor**: see Includes in the editor in 4.8.
 - **Known limits**: scripts are not re-checked automatically when a library they include changes, so after fixing a library its dependents update the next time they are edited. Included files are read from the game's saved files, so unsaved edits to a library open in the editor are not seen by other files until it is saved.
 
+### 4.11 Host requests and session lifecycle
+
+`GameHost` owns application-level lifecycle transitions and is the only component allowed to replace or shut down the active `GameSession`. Commands running inside a session may request a host operation, but they never dispose, replace or directly reset the session themselves.
+
+- **Request model**: host operations are represented by a closed `HostRequest` hierarchy. The initial variants are `Shutdown`, `Load(slot)` and `Reset`. Requests carry intent and the data required by that operation; execution remains in `GameHost`.
+- **Mailbox**: commands submit requests through one host-owned `HostRequestMailbox`. The mailbox has a single pending slot rather than a queue, because lifecycle transitions are mutually exclusive and are handled immediately after the current command returns. A second pending request is rejected instead of introducing implicit priority or executing contradictory transitions in sequence.
+- **Thread safety**: `HostRequestMailbox.TryRequest` uses `Interlocked.CompareExchange` and `Take` uses `Interlocked.Exchange`. Exactly one concurrent producer can fill an empty mailbox, and the host atomically removes at most one request. `Request` wraps `TryRequest` and throws `InvalidOperationException` when another request is already pending. No `volatile`, lock, `SemaphoreSlim` or `Channel<HostRequest>` is needed for this single-slot contract.
+- **Processing boundary**: commands execute on the game thread. After command dispatch completes, `GameHost` takes one request and handles it outside the session command. This prevents a session from disposing itself from its own game thread.
+- **Ownership**: the mailbox belongs to `GameHost` and survives session replacement. The per-session `Game` record contains only session-scoped runtime objects such as the session, dispatcher, completion catalog and autosave service. A request is removed before it is handled, so a failed operation is not retried automatically and a new session starts with an empty mailbox.
+- **Shutdown**: `Shutdown` replaces the former sticky shutdown request. After consuming it, `GameHost` records that the player requested shutdown and exits the command loop. That state controls whether disposal performs the final autosave. Cancellation remains a separate concern and uses the terminal or operation-specific cancellation tokens.
+- **Load**: `Load(slot)` reads and validates the save before replacing the active session. A missing or damaged save leaves the current session unchanged. The request is consumed even when loading fails; the player may explicitly retry.
+- **Reset command**: `reset` prints a warning without changing the game. `reset --confirm` requests a complete new game. Explicit confirmation is required because the operation is destructive.
+- **True reset**: reset removes all current progression, money, hacking experience, discovered servers, Botnet nodes, running processes, activities, files and folders. The replacement session uses the same initial-state path as an ordinary new game and starts immediately without restarting the application.
+- **Save behavior**: named saves are preserved. Before discarding the old session, reset stops its autosave service and deletes the autosave and its backup through `SaveManager`; save and delete share the same persistence gate so deletion cannot race an autosave write.
+- **Failure behavior**: if autosave deletion fails, reset is aborted. The existing session remains active, autosaving is restarted and no session-change notification is raised. The game must not report a successful reset while recoverable autosave state remains.
+- **Activities and input**: reset is a normal console command and cannot be entered while a focused activity owns the console. The player must stop or background the activity first. Terminal input is disabled during session replacement so queued input cannot run against the replacement session.
+- **Editor integration**: successful load and reset raise `GameHost.SessionChanged`. The editor integration sends its existing `reset` event so connected editors refresh their view of the virtual file system.
+- **Future operations**: a new host transition adds one `HostRequest` variant and one `GameHost` handler instead of another mutable request carrier threaded through setup and session objects. A future Bitburner-style augmentation reset may reuse this mechanism, but it is distinct from the clean `reset --confirm` command.
+
+### 4.12 Application settings and launch options
+
+Application configuration is a host concern owned by `NullByte.ConsoleUI`. Settings describe how one application instance is hosted; they are not saved game state and are not exposed directly to the simulation. The host translates the effective settings into the existing runtime boundaries such as `FileSaveStore`, `BalanceConfig` and `EditorServerOptions`.
+
+#### Configuration model
+
+- `AppSettings` is the immutable effective settings snapshot for a normal application run. It contains:
+  - `SaveDirectory`, defaulting to `Saves` to preserve the existing relative save location.
+  - `EditorSettings` with `Enabled`, optional `Port` and optional `ConnectionFilePath`.
+  - `DevelopmentSettings` with `GameSpeedMultiplier`, defaulting to `1.0`.
+- `CommandLineOptions` represents values explicitly supplied for the current invocation. Optional override values remain nullable so “not supplied” is distinct from an explicit value.
+- `ApplicationOptions` is the final startup result. It contains the effective `AppSettings` plus launch-only instructions such as `StartNewGame` and `WriteDefaultSettings`.
+- Settings are loaded once during startup and treated as immutable for the lifetime of the process. Runtime mutation and live reload are intentionally out of scope. A future debug command may deliberately alter game speed without making the settings object mutable.
+
+`BalanceConfig` remains separate from application settings. It owns gameplay and formula tuning. `DevelopmentSettings.GameSpeedMultiplier` is mapped by the host to `BalanceConfig.GameSpeedMultiplier`; other balance values are not configurable through `settings.json` in this iteration.
+
+#### Sources and precedence
+
+For a normal startup, effective settings are composed in this order:
+
+1. Defaults declared by `AppSettings` and its nested settings records.
+2. Optional `settings.json` values.
+3. Command-line overrides.
+4. Centralized validation of the effective result.
+
+The JSON file is optional and is never created during a normal startup. Its fixed location is `settings.json` beside the executable, resolved with `AppContext.BaseDirectory`, not the current working directory. This makes behavior independent of whether the game is started from Visual Studio, a terminal or another launcher.
+
+The loader uses `System.Text.Json` with case-insensitive property matching, camel-case output, comments, trailing commas and indented output. A typical file is:
+
+```json
+{
+  "saveDirectory": "Saves",
+  "editor": {
+    "enabled": true,
+    "port": 8765,
+    "connectionFilePath": ".nullbyte-connection.json"
+  },
+  "development": {
+    "gameSpeedMultiplier": 5.0
+  }
+}
+```
+
+Environment variables are not supported. The implementation deliberately uses the small, explicit configuration pipeline instead of `Microsoft.Extensions.Configuration` because the configuration surface is limited and requires precise command-line behavior, precedence and diagnostics.
+
+#### Command-line interface
+
+The supported arguments are:
+
+| Argument | Meaning |
+|---|---|
+| `--new` | Start a new session instead of resuming the autosave. This is a launch instruction, not a persistent setting. |
+| `--vscode` | Enable the VS Code editor integration for this run. |
+| `--vscode-port <port>` | Override the editor server port. |
+| `--vscode-file <path>` | Override the editor connection-file path. |
+| `--save-directory <path>` | Override `SaveDirectory` for this run. |
+| `--game-speed <multiplier>` | Override `Development.GameSpeedMultiplier` for this run. |
+| `--write-default-settings` | Write a default `settings.json` beside the executable and exit. |
+
+Unknown arguments, missing values and syntactically invalid numbers fail startup with a clear error. Numeric parsing uses `InvariantCulture`. Repeated value arguments use the last supplied value.
+
+`--write-default-settings` is an exclusive administrative operation. It cannot be combined with other arguments, does not load an existing settings file, writes `new AppSettings()` using camel-case indented JSON and exits before the terminal, save system, game host or editor server is created. It refuses to overwrite an existing file; regeneration requires explicitly deleting or moving the old file first.
+
+#### Responsibilities
+
+- `CommandLineParser` converts `args[]` into `CommandLineOptions`. It owns syntax only, including known argument names, required values and numeric parsing.
+- `SettingsFileLoader` resolves the standard path and serializes or deserializes `settings.json`. Path-based overloads exist to make filesystem behavior testable without touching the executable directory.
+- `SettingsValidator` owns all structural and semantic invariants. It collects every validation error and throws one `SettingsValidationException` containing the complete set.
+- `SettingsLoader` composes defaults, file settings and command-line overrides. It validates settings loaded from JSON before merging, then validates the effective settings after applying CLI overrides.
+- `Program` handles high-level startup errors and translates `ApplicationOptions` into runtime objects. It does not inspect argument names or implement configuration defaults.
+
+Validation requires:
+
+- `SaveDirectory` is not null, empty or whitespace.
+- `EditorSettings` and `DevelopmentSettings` are not null, including after JSON deserialization.
+- `EditorSettings.Port`, when supplied, is between 1 and 65535.
+- `EditorSettings.ConnectionFilePath`, when supplied, is not empty or whitespace.
+- `DevelopmentSettings.GameSpeedMultiplier` is finite and greater than zero.
+
+Validation does not require configured files or directories to exist. Save directories and connection files may be output locations created later by the responsible runtime component.
+
+#### Runtime mapping
+
+`Program` loads and validates configuration before creating runtime resources, then maps it as follows:
+
+- `Settings.SaveDirectory` creates the `FileSaveStore` used by `SaveManager`.
+- `Settings.Development.GameSpeedMultiplier` initializes `BalanceConfig.GameSpeedMultiplier` in `GameSessionOptions`.
+- `Settings.Editor` creates `EditorServerOptions` and controls whether the editor server starts.
+- `StartNewGame` is inverted into `resumeAutosave` when calling `GameHost.StartAsync`.
+
+This keeps `AppSettings` out of `NullByte.Core`, `NullByte.Scripting` and `NullByte.Editor`. Those components continue receiving their existing focused options and abstractions.
+
 ## 5. Milestones
 
 Each milestone ends with something runnable and tested. Acceptance criteria are what "done" means.
@@ -401,7 +512,7 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 - `kill` stops a script at its next `await` and frees its RAM.
 - Multi-thread runs scale effect and RAM cost correctly.
 
-### M7: Save and load
+### M7: Save, load and new game reset
 
 **Deliverables**
 
@@ -409,8 +520,21 @@ Each milestone ends with something runnable and tested. Acceptance criteria are 
 - Versioned save format with a migration hook.
 - Save format 2 stores file creation and modification times; format 3 stores folders, including empty ones (see 4.9). Older saves load through migrations.
 - Autosave and manual `save` and `load`.
+- A `reset` command that explains the consequences without changing the game.
+- A confirmed `reset --confirm` command that replaces the current session with a completely new game.
+- Reset deletes the autosave and its backup while preserving named saves.
+- Shutdown, load and reset use the unified host-request and session-lifecycle architecture described in 4.11.
 
-**Acceptance**: save, quit, load restores an equivalent state; a golden-file test guards the format.
+**Acceptance**
+
+- Save, quit and load restores an equivalent state; a golden-file test guards the format.
+- Running `reset` without `--confirm` leaves the current game unchanged and explains how to confirm the operation.
+- Running `reset --confirm` starts a fresh session without restarting the application.
+- A reset removes progression, Botnet nodes, processes, activities, files and folders.
+- Reset removes the previous autosave and its backup but leaves named saves available.
+- Restarting the application after reset cannot restore the pre-reset game through autosave.
+- If autosave deletion fails, the existing session remains active and autosaving is restored.
+- Successful load and reset notify connected editor integrations that the active session was replaced.
 
 ### M8: Visual Studio Code editor integration
 
@@ -475,11 +599,11 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
 
 **Deliverables**
 
-- Debug command to see if any (external) editors is connected
-- full-range underlines for diagnostics,
-- Run from VS Code: a command, or a run operation that executes the current file.
-- Get ram from VS Code: a command, or a ram operation that gets the ram cost of the current file.
+- *Done* ~~Debug command to see if any (external) editors is connected~~
+- *Done* ~~Run from VS Code: a command, or a run operation that executes the current file.~~
+- *Done* ~~Get ram from VS Code: a command, or a ram operation that gets the ram cost of the current file.~~
 - launch vs-code from the game
+- full-range underlines for diagnostics,
    
 **Acceptance**
 
@@ -523,7 +647,7 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
   - Opening vs code from within the game
 - **Includes follow-ups**: re-check scripts when a library they include changes, let the editor supply the unsaved text of an open library, and count RAM only for the library code a script can reach if whole-file costs turn out too coarse.
 - **Console follow-ups**: `scp -r` for copying folders, a recursive `ls`, and refreshing tab completion when files change outside the console (scripts, the editor).
-- Factions, augmentations, reset loop.
+- Factions, augmentations and a progression-reset loop that grants persistent bonuses. This is distinct from the M7 `reset --confirm` command, which starts a completely clean new game, but it may reuse the host-request and session-replacement architecture from 4.11.
 - Port-opening programs and more servers.
 - Purchased servers, stock market, offline progress.
 - Script API versioning.
@@ -537,10 +661,22 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
 - Thread-affinity assertions: a debug check in game-state setters that the current thread is the game thread.
 - File system tests: path rules, folder operations, change events, file times and restoring, with a manual clock.
 - Save tests: round trips including empty folders, migrations from every older version, damaged saves refused, and a golden file that guards the format.
+- Reset request model tests: each `HostRequest` variant carries only its required data, and invalid load slots are rejected.
+- Host request mailbox tests: an empty take returns null; request then take returns the same instance exactly once; a second pending request is rejected; take frees the slot for reuse; and two concurrent producers result in exactly one accepted request.
+- Reset command tests through the real dispatcher: `reset` warns without submitting a request, `reset --confirm` submits `HostRequest.Reset`, and invalid arguments do not submit a request.
+- Save deletion tests: deleting a slot removes its primary file and backup, is idempotent when the slot does not exist, honors cancellation and does not affect other slots.
+- Persistence concurrency tests: save and delete operations use the same `SaveManager` gate, so deletion cannot race an autosave write.
+- Game host reset tests: successful reset replaces the session with fresh state, removes autosave, preserves named saves, raises `SessionChanged` and leaves the new game running.
+- Reset failure tests: if autosave deletion fails, the original session and its state remain active, no session-change notification is raised, terminal input is restored and autosaving resumes.
 - Command tests through the real dispatcher with a recording terminal, including relative paths and the current directory.
 - Path resolution and tab completion tests: the resolver, the current directory state (including its resets), and the completion engine against hand-made snapshots.
 - Editor protocol tests that send requests through the file service against a real game state.
 - Include tests: the resolver (order, include once, cycles, depth, missing and malformed includes, directives inside strings and comments), compilation with includes (file and line of errors in libraries, unchanged line numbers, library shape, a library compiled on its own), RAM across files (counted once, whole-file cost, nested includes), and the language service with includes (completion, hover, signature help, definition).
+
+- Configuration parser tests cover every supported switch, all options together, missing values, unknown arguments, invalid numeric syntax, invariant numeric parsing, repeated values and the exclusivity of `--write-default-settings`.
+- Settings validation tests cover defaults, null nested settings, empty paths, editor port boundaries, non-positive and non-finite game-speed values, and aggregation of multiple errors.
+- Settings file tests use isolated temporary directories and cover absent files, valid and partial JSON, comments, trailing commas, malformed JSON, camel-case default-file output and refusal to overwrite an existing file.
+- Settings composition tests cover defaults, JSON values, CLI precedence, preservation of non-overridden file values, launch-only flags, validation before and after merging, and the fact that `--write-default-settings` does not load an existing file.
 
 ## 8. Open questions (resolved)
 
@@ -551,3 +687,5 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
 5. **Target framework**: .NET 10. Decided.
 6. **Network authoring format**: a JSON data file. Decided.
 7. **Includes**: `#include "path"` with root-relative paths, resolved on the server the script runs on; a missing include is a plain error and `scp` does not copy libraries; libraries hold usings and type declarations only and take `nb` as a parameter (no ambient `nb`); each file is included once, cycles are errors, nesting is limited to 8 levels; RAM counts every included file in full. Decided.
+8. **Host lifecycle requests**: shutdown, load and reset use a closed `HostRequest` hierarchy and one host-owned, atomic, single-slot `HostRequestMailbox`. Concurrent requests do not queue; exactly one is accepted and a second pending request is rejected. Decided.
+9. **Application settings**: optional `settings.json` beside the executable, with defaults overridden first by JSON and then by CLI; settings are immutable during a run, validated centrally and kept outside saved game state. `--new` and `--write-default-settings` remain launch-only instructions. The default writer refuses to overwrite an existing file. Environment variables and live reload are out of scope. Decided.

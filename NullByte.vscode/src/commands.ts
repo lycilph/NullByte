@@ -1,11 +1,84 @@
+
 import * as vscode from 'vscode';
 import { NullByteClient } from './client';
-import { rootUri } from './paths';
+import { NullByteDiagnostics, DiagnoseResult } from './diagnostics';
+import { rootUri, toGamePath } from './paths';
 
-export function registerCommands(log: vscode.LogOutputChannel, client: NullByteClient): vscode.Disposable {
+
+/** Parse shell-style arguments without performing shell expansion. */
+function parseArguments(input: string): string[] {
+  const args: string[] = [];
+  let current = '';
+  let quote: "'" | '"' | undefined;
+  let escaped = false;
+  let started = false;
+
+  for (const char of input) {
+    if (escaped) {
+      current += char;
+      escaped = false;
+      started = true;
+      continue;
+    }
+
+    if (char === '\\' && quote !== "'") {
+      escaped = true;
+      started = true;
+      continue;
+    }
+
+    if (quote) {
+      if (char === quote) {
+        quote = undefined;
+      } else {
+        current += char;
+      }
+      started = true;
+      continue;
+    }
+
+    if (char === "'" || char === '"') {
+      quote = char;
+      started = true;
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      if (started) {
+        args.push(current);
+        current = '';
+        started = false;
+      }
+      continue;
+    }
+
+    current += char;
+    started = true;
+  }
+
+  if (escaped) {
+    throw new Error('Argument input ends with an incomplete escape.');
+  }
+
+  if (quote) {
+    throw new Error(`Unclosed ${quote} quote in argument input.`);
+  }
+
+  if (started) {
+    args.push(current);
+  }
+
+  return args;
+}
+
+export function registerCommands(
+  log: vscode.LogOutputChannel,
+  client: NullByteClient,
+  diagnostics: NullByteDiagnostics
+): vscode.Disposable {
   return vscode.Disposable.from(
     vscode.commands.registerCommand('nullbyte.reconnect', () => client.reconnect()),
-    
+
     vscode.commands.registerCommand('nullbyte.showLog', () => log.show(true)),
 
     vscode.commands.registerCommand('nullbyte.openWorkspace', async () => {
@@ -19,5 +92,117 @@ export function registerCommands(log: vscode.LogOutputChannel, client: NullByteC
 
       // An empty window is reused. A window with a project in it is left alone.
       await vscode.commands.executeCommand('vscode.openFolder', rootUri, { forceNewWindow: folders.length > 0 });
-    }));
+    }),
+
+    vscode.commands.registerCommand('nullbyte.runCurrentFile', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        void vscode.window.showWarningMessage('No active editor.');
+        return;
+      }
+
+      const doc = editor.document;
+      const path = toGamePath(doc.uri);
+
+      if (path === undefined || !path.endsWith('.cx')) {
+        void vscode.window.showWarningMessage('The active file is not a NullByte script.');
+        return;
+      }
+
+      try {
+        const input = await vscode.window.showInputBox({
+          prompt: 'Enter script arguments',
+          placeHolder: 'foo "hello world" --verbose',
+          ignoreFocusOut: true
+        });
+
+        // Escape or cancellation: do not run the script.
+        if (input === undefined) return;
+
+        let args: string[];
+        try {
+          args = parseArguments(input);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          void vscode.window.showErrorMessage(`Invalid arguments: ${message}`);
+          return;
+        }
+
+        // Always run the saved version of the script.
+        if (!await doc.save()) {
+          void vscode.window.showWarningMessage('Could not save the script. Run cancelled.');
+          return;
+        }
+
+        const result = await client.runScript(path, args);
+
+        diagnostics.reportRunDiagnostics(doc, result.diagnostics ?? []);
+
+        if (!result.started) {
+          void vscode.window.showErrorMessage(
+            result.failureMessage || 'The script could not be started.'
+          );
+          return;
+        }
+
+        void vscode.window.showInformationMessage(
+          `Started ${path} (PID ${result.pid}).`
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log.error(`Failed to run ${path}: ${message}`);
+        void vscode.window.showErrorMessage(`Failed to run ${path}: ${message}`);
+      }
+    }),
+
+    vscode.commands.registerCommand('nullbyte.getRamCost', async () => {
+      const editor = vscode.window.activeTextEditor;
+
+      if (!editor) {
+        vscode.window.showErrorMessage('No active editor.');
+        return;
+      }
+
+      const doc = editor.document;
+
+      if (doc.uri.scheme !== 'nullbyte' || !doc.fileName.endsWith('.cx')) {
+        vscode.window.showErrorMessage('The active file is not a NullByte script.');
+        return;
+      }
+
+      const path = toGamePath(doc.uri);
+      if (path === undefined) {
+        vscode.window.showErrorMessage('Unable to resolve the script path.');
+        return;
+      }
+
+      try {
+        const result = await client.request<DiagnoseResult>('diagnose', path, { content: doc.getText() });
+        if (doc.isClosed) return;   // outdated: a newer check is on its way
+
+        // Update the Problems collection with the latest compiler diagnostics.
+        diagnostics.reportRunDiagnostics(doc, result.diagnostics);
+
+        if (result.diagnostics.some(d => d.severity.toLowerCase() === 'error')) {
+          vscode.window.showErrorMessage(
+            'Unable to calculate RAM cost. Check the Problems panel for compilation errors.',
+          );
+          return;
+        }
+
+        if (result.ramCost === null) {
+          vscode.window.showWarningMessage('RAM cost is not available.');
+          return;
+        }
+
+        vscode.window.showInformationMessage(
+          `RAM cost: ${result.ramCost.toFixed(2)} GB`,
+        );
+      } catch (error) {
+        vscode.window.showErrorMessage(
+          `Failed to calculate RAM cost: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    })
+  );
 }

@@ -14,7 +14,8 @@ public sealed class BotnetCommandTests
     {
         var terminal = new FakeTerminal();
         var session = GameSession.Create(new GameSessionOptions() { Output = terminal });
-        var registry = CommandSetup.Create(session, terminal);
+        var hostRequests = new HostRequestMailbox();
+        var registry = CommandSetup.Create(session, terminal, hostRequests);
 
         Assert.True(registry.TryGet("botnet", out var command));
         Assert.NotNull(command);
@@ -160,7 +161,8 @@ public sealed class BotnetCommandTests
             GameState = new GameState(new Player("home", startingMoney: money), network);
 
             var session = GameSession.Create(new GameSessionOptions() { Balance = balance, State = GameState, Output = terminal});
-            var registry = CommandSetup.Create(session, terminal);
+            var hostRequests = new HostRequestMailbox();
+            var registry = CommandSetup.Create(session, terminal, hostRequests);
             dispatcher = new CommandDispatcher(registry, terminal);
         }
 

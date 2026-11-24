@@ -28,5 +28,6 @@
     <Project Path="NullByte.Core.Tests/NullByte.Core.Tests.csproj" Id="3c692650-63b2-4dd8-85c7-47ee14ee95d2" />
     <Project Path="NullByte.Editor.Tests/NullByte.Editor.Tests.csproj" Id="7c33e0e5-08c0-4eb4-8c71-db4842ced24d" />
     <Project Path="NullByte.Scripting.Tests/NullByte.Scripting.Tests.csproj" Id="93564e8e-454e-4ca2-819a-c65ac0dae67a" />
+    <Project Path="NullByte.Shell.Tests/NullByte.Shell.Tests.csproj" Id="432f58a7-89b6-4633-82ca-3bfd55655b62" />
   </Folder>
 </Solution>

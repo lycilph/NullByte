@@ -41,6 +41,8 @@ public class SessionSaveLoadTests
         {
             lock (slots) return Task.FromResult<IReadOnlyList<SaveSlotInfo>>(slots.Keys.Select(k => new SaveSlotInfo(k, DateTimeOffset.UnixEpoch)).ToList());
         }
+
+        public Task DeleteAsync(string slot, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 
     /// <summary>Plays a little: a script running with two threads on home, args and all.</summary>

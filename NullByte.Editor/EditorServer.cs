@@ -24,7 +24,7 @@ public sealed class EditorServer(
     Func<EditorBackend?> backendProvider,
     IScriptCompiler compiler,
     ScriptLanguageService languageService,
-    EditorServerOptions options) : IAsyncDisposable
+    EditorServerOptions options) : IAsyncDisposable, IExternalEditorStatus
 {
     private readonly ConcurrentDictionary<EditorConnection, byte> connections = new();
     private readonly EditorFileService files = new(backendProvider, compiler, languageService);
@@ -207,6 +207,16 @@ public sealed class EditorServer(
         var json = JsonSerializer.Serialize(message);
         foreach (var connection in connections.Keys)
             connection.Send(json);
+    }
+
+    public ExternalEditorStatus GetStatus()
+    {
+        var connectionInfos = connections.Keys
+            .Select(connection => new ExternalEditorConnectionInfo(connection.ConnectedAt))
+            .OrderBy(info => info.ConnectedAt)
+            .ToArray();
+
+        return new ExternalEditorStatus(connectionInfos);
     }
 
     public async ValueTask DisposeAsync()

@@ -1,10 +1,16 @@
 ﻿using NullByte.Core.Domain;
 using NullByte.Core.Services;
 using NullByte.Core.Time;
+using NullByte.Editor;
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
-public sealed class DebugCommands(Player player, NetworkService networkService, VirtualFileSystem fileSystem, IGameClock clock, CommandRegistry registry, IGameOutput output) : ICommandGroup
+public sealed class DebugCommands(
+    Player player,
+    IGameClock clock,
+    CommandRegistry registry,
+    IGameOutput output,
+    IExternalEditorStatus? externalEditorStatus) : ICommandGroup
 {
     public void Register(CommandRegistry registry)
     {
@@ -34,10 +40,10 @@ public sealed class DebugCommands(Player player, NetworkService networkService, 
 
         registry.Register(
             new CommandDefinition(
-                "scripts",
-                "scripts",
-                "Create test scripts.",
-                TestScriptsAsync)
+                "editor",
+                "editor",
+                "Shows external editor connection status.",
+                EditorAsync)
             { Debug = true });
     }
 
@@ -52,6 +58,7 @@ public sealed class DebugCommands(Player player, NetworkService networkService, 
     {
         output.WriteLine($"Game time: {clock.Elapsed.TotalSeconds:F3}s");
     }
+
     private async Task CheatAsync(IReadOnlyList<string> arguments)
     {
         player.AddMoney(1000);
@@ -60,98 +67,43 @@ public sealed class DebugCommands(Player player, NetworkService networkService, 
         output.WriteLine($"Player - money: {player.Money}, experience: {player.HackingExperience}");
     }
 
-    private async Task TestScriptsAsync(IReadOnlyList<string> arguments)
+    private async Task EditorAsync(IReadOnlyList<string> arguments)
     {
-        var server = networkService.GetCurrentServer();
-        var fileName = "single_hack_test.cx";
-        var source =
-@"nb.Print($""Hacking n00dles"");
-var result = await nb.Hack(""n00dles"");
-if (!result.Succeeded)
-    nb.Print($""{result.FailureMessage}"");
-nb.Print($""Operation done"");";
-
-        fileSystem.WriteFile(server.Hostname, fileName, source);
-        output.WriteLine($"{fileName} created.");
-
-        fileName = "basic_hack.cx";
-        source =
-@"var target = args[0];
-nb.Print($""Starting against {target}"");
-int iteration = 0;
-
-while (true)
-{
-    nb.Print($""Iteration {iteration}"");
-    iteration++;
-
-    if (nb.GetServerSecurityLevel(target) > nb.GetServerMinSecurityLevel(target) + 5)
-    {
-        nb.Print($""Weakening {target}"");
-        var result = await nb.Weaken(target);
-        if (!result.Succeeded)
+        if (externalEditorStatus is null)
         {
-            nb.Print($""{result.FailureMessage}"");
+            output.WriteLine("External editor integration is not running.");
             return;
         }
-    }
-    else if (nb.GetServerMoneyAvailable(target) < nb.GetServerMaxMoney(target) * 0.75)
-    {
-        nb.Print($""Growing {target}"");
-        var result = await nb.Grow(target);
-        if (!result.Succeeded)
+        var status = externalEditorStatus.GetStatus();
+
+        if (status.Connections.Count == 0)
         {
-            nb.Print($""{result.FailureMessage}"");
+            output.WriteLine("External editor integration is running, but no external editors are connected.");
             return;
         }
-    }
-    else
-    {
-        nb.Print($""Hacking {target}"");
-        var result = await nb.Hack(target);
-        if (!result.Succeeded)
+
+        output.WriteLine("External editor integration is running.");
+        output.WriteLine($"Connected editors: {status.Connections.Count}");
+        output.WriteLine();
+
+        var now = DateTimeOffset.UtcNow;
+        for (var i = 0; i < status.Connections.Count; i++)
         {
-            nb.Print($""{result.FailureMessage}"");
-            return;
+            var connection = status.Connections[i];
+            var duration = now - connection.ConnectedAt;
+
+            output.WriteLine($"  #{i + 1}  connected {FormatDuration(duration)} ago");
         }
     }
 
-    nb.Print($""Operation done"");
-}";
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration < TimeSpan.Zero)
+            duration = TimeSpan.Zero;
 
-        fileSystem.WriteFile(server.Hostname, fileName, source);
-        output.WriteLine($"{fileName} created.");
+        if (duration.TotalDays >= 1)
+            return $"{(int)duration.TotalDays}d {duration.Hours:00}:{duration.Minutes:00}:{duration.Seconds:00}";
 
-        fileName = "scan_network.cx";
-        source =
-@"var visited = new HashSet<string> { ""home"" };
-        var queue = new Queue<string>();
-        queue.Enqueue(""home"");
-
-        while (queue.Count > 0)
-        {
-            string currentServer = queue.Dequeue();
-            IEnumerable<string> neighbors = nb.Scan(currentServer);
-
-            foreach (string neighbor in neighbors)
-            {
-                if (visited.Add(neighbor))
-                    queue.Enqueue(neighbor);
-            }
-        }
-
-        var allServers = new List<string>(visited);
-        nb.Print($""Found {allServers.Count} servers:"");
-        nb.Print(string.Join("", "", allServers));";
-
-        fileSystem.WriteFile(server.Hostname, fileName, source);
-        output.WriteLine($"{fileName} created.");
-
-        fileName = "api_test.cx";
-        source =
-@"nb.Print($""api_test.cx running {nb.ScriptRunning(""api_test.cx"")}"");";
-
-        fileSystem.WriteFile(server.Hostname, fileName, source);
-        output.WriteLine($"{fileName} created.");
+        return $"{(int)duration.TotalHours:00}:{duration.Minutes:00}:{duration.Seconds:00}";
     }
 }

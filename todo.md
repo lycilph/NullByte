@@ -1,5 +1,16 @@
 ﻿# In progress
 
+* Launch vs code with: `code -n --folder-uri "nullbyte:/NullByte/"`
+```
+using System.Diagnostics;
+
+Process.Start(new ProcessStartInfo
+{
+    FileName = "vscode://command/nullbyte.openWorkspace",
+    UseShellExecute = true
+});
+```
+
 - Milestone M10: Activities (jobs, training, studying etc.)
 - Clean up
   - Skill/Hacking formulas
@@ -17,8 +28,8 @@
 # Future ideas
 
 - Do another cleanup round (see `AIPrompts.md`)
-- Add a command to reset the game
-- Add settings (instead of the args to the program.cs)
+	- Both game and vscode extension 
+- Change the editor integration to something that can be enabled/disabled while the game is running
 - Add options for Ram usage and compilation to the NanoEditor 
 - Align script method names and console commands
 - Add the backdoor command

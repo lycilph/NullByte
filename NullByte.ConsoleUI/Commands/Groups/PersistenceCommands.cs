@@ -5,7 +5,10 @@ using NullByte.Shell.Persistence;
 namespace NullByte.ConsoleUI.Commands.Groups;
 
 public sealed class PersistenceCommands(
-    GameSession session, SaveManager saves, LoadRequest loadRequest, IGameTerminal terminal) : ICommandGroup
+    GameSession session,
+    SaveManager saves,
+    HostRequestMailbox hostRequests,
+    IGameTerminal terminal) : ICommandGroup
 {
     private const string DefaultSlot = "quicksave";
 
@@ -36,6 +39,16 @@ public sealed class PersistenceCommands(
             "saves",
             "List saved games, newest first.", 
             ListAsync));
+
+        registry.Register(new CommandDefinition(
+            "reset",
+            "reset [--confirm]",
+            "Start a new game. All unsaved progress and game files are lost.",
+            ResetAsync)
+        {
+            MinArgs = 0, MaxArgs = 1,
+            Completions = [new ArgumentCompletion { ArgumentIndex = 0, Values = ["--confirm"] }]
+        });
     }
 
     private async Task SaveAsync(IReadOnlyList<string> arguments)
@@ -64,7 +77,7 @@ public sealed class PersistenceCommands(
         // This command runs on the game thread of the session it would replace,
         // so it only asks. The host swaps the session when the command returns.
         terminal.WriteLine($"Loading '{slot}'...");
-        loadRequest.Request(slot);
+        hostRequests?.Request(new HostRequest.Load(slot));
 
         return Task.CompletedTask;
     }
@@ -81,6 +94,31 @@ public sealed class PersistenceCommands(
 
         foreach (var slot in slots)
             terminal.WriteLine($"  {slot.Name,-34} {slot.SavedAtUtc.ToLocalTime():yyyy-MM-dd HH:mm:ss}");
+    }
+
+    private Task ResetAsync(IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count == 0)
+        {
+            terminal.WriteLine("This will start a completely new game.");
+            terminal.WriteLine("All current progress, scripts and files will be lost.");
+            terminal.WriteLine("Your named saves will not be deleted.");
+            terminal.WriteLine();
+            terminal.WriteLine("Run 'reset --confirm' to continue.");
+
+            return Task.CompletedTask;
+        }
+
+        if (arguments[0] != "--confirm")
+        {
+            terminal.WriteLine("Usage: reset [--confirm]");
+            return Task.CompletedTask;
+        }
+
+        terminal.WriteLine("Resetting game...");
+        hostRequests.Request(new HostRequest.Reset());
+
+        return Task.CompletedTask;
     }
 
     private string? SlotFrom(IReadOnlyList<string> arguments)

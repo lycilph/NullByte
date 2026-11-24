@@ -32,6 +32,13 @@ Please review this codebase and suggest where I can simplify the code.
 Secondarily review for best practises
 
 
+You are an expert developer and architect, so with the current codebase and design doc here,
+<request here>
+We should settle on a target architecture, and then work towards that.
+Before we start the implementation, ask any clarifying questions. 
+When ready, go one step at a time and explain the steps in a concise manner.
+
+
 ---- Repomix ---
 Include:
 AI_CONTEXT.md, ARCHITECTURE.md, CODEBASE.md, CURRENT_STATUS.md, DESIGN.md (~32k tokens)

@@ -33,6 +33,18 @@ public sealed class FileSaveStore(string directory) : ISaveStore
             : null;
     }
 
+    public Task DeleteAsync(string slot, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var path = PathFor(slot);
+
+        File.Delete(path);
+        File.Delete(path + ".bak");
+
+        return Task.CompletedTask;
+    }
+
     public Task<IReadOnlyList<SaveSlotInfo>> ListAsync(CancellationToken cancellationToken = default)
     {
         if (!Directory.Exists(directory))

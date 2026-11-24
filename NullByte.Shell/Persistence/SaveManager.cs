@@ -49,6 +49,20 @@ public sealed class SaveManager
             : SaveGameMapper.Restore(serializer.Deserialize(json));
     }
 
+    public async Task DeleteAsync(string slot, CancellationToken cancellationToken = default)
+    {
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await store.DeleteAsync(slot, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
     public Task<IReadOnlyList<SaveSlotInfo>> ListAsync(CancellationToken cancellationToken = default)
         => store.ListAsync(cancellationToken);
 }
