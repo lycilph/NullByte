@@ -31,6 +31,8 @@ public sealed class IncludeCompilationTests
 
         var error = Assert.Single(result.Diagnostics, d => d.Id == "CS0029");
         Assert.Equal(("lib/bad.cx", 5), (error.File, error.Line));
+        Assert.Equal(5, error.EndLine);
+        Assert.True(error.EndColumn > error.Column);
     }
 
     [Fact]

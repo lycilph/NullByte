@@ -200,6 +200,8 @@ public sealed class ScriptCompilerTests
 
         Assert.Equal(3, diagnostic.Line);
         Assert.Equal(10, diagnostic.Column);
+        Assert.Equal(3, diagnostic.EndLine);
+        Assert.Equal(22, diagnostic.EndColumn);
     }
 
     [Fact]

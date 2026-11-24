@@ -7,6 +7,27 @@ namespace NullByte.Editor.Tests;
 public sealed class EditorFileServiceTests
 {
     [Fact]
+    public async Task Diagnose_ReturnsFullDiagnosticRange()
+    {
+        using var editor = new EditorFixture();
+
+        var response = await editor.SendAsync(
+            "diagnose",
+            "/home/test.cx",
+            ("content", "nb.Print(missingValue);"));
+
+        Assert.True(response["ok"]!.GetValue<bool>());
+        var diagnostic = Assert.Single(
+            response["result"]!["diagnostics"]!.AsArray(),
+            item => item!["id"]!.GetValue<string>() == "CS0103");
+
+        Assert.Equal(1, diagnostic!["line"]!.GetValue<int>());
+        Assert.Equal(10, diagnostic["column"]!.GetValue<int>());
+        Assert.Equal(1, diagnostic["endLine"]!.GetValue<int>());
+        Assert.Equal(22, diagnostic["endColumn"]!.GetValue<int>());
+    }
+
+    [Fact]
     public async Task Stat_AndWriteFile_ExposeAndUpdateFileTimestamps()
     {
         using var editor = new EditorFixture();
