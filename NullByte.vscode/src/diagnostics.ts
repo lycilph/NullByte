@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Logger, NullByteClient, RunDiagnostic  } from './client';
+import { Logger, NullByteClient, RunDiagnostic } from './client';
 import { toGamePath, toUri } from './paths';
 
 const debounceMs = 400;
@@ -62,7 +62,7 @@ export class NullByteDiagnostics implements vscode.Disposable {
       if (path === undefined) return;
 
       const result = await this.client.request<DiagnoseResult>('diagnose', path, { content: doc.getText() });
-      if (doc.isClosed || doc.version !== version) return;   // outdated: a newer check is on its way
+      if (doc.isClosed || doc.version !== version) return; // outdated: a newer check is on its way
 
       const host = path.split('/')[1];   // '/home/a.cx' -> 'home'
       const key = doc.uri.toString();
