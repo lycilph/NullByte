@@ -8,7 +8,17 @@
 | CURRENT_STATUS.md | Where development currently stands | Frequently |
 | AI_CONTEXT.md | Compact instructions/context for AI-assisted development | Rarely |
 
-For each new milestone:
+## Token budget
+AI_CONTEXT       ~2.0k
+CODEBASE         ~3.0k
+CURRENT_STATUS   ~1.5k
+ARCHITECTURE     ~2.5k
+DESIGN           ~3.0k
+               ------
+Baseline        ~12.0k
+
+
+## For each new milestone:
 
 1. Load the five small context documents.
 2. Describe what you want to implement.
@@ -27,8 +37,11 @@ files or code symbols on demand, rather than you manually supplying them. That's
 and for a project you're developing over months it can remove much of the remaining manual context management.
 
 
-# Or just
+## Or just
 
 Using AI_CONTEXT.md, CODEBASE.md, and the current design document, I want to implement M11.3.
 
 First review the architecture and identify which implementation files you'll need.
+
+
+

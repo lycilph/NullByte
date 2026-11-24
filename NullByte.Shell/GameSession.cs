@@ -36,7 +36,10 @@ public sealed record GameSessionOptions
         {
             State = restored.State,
             InitialGameTime = restored.GameTime,
-            ProcessesToRestart = restored.Processes
+            ProcessesToRestart = restored.Processes,
+
+            // The restored activity was built from this catalog, so the session should use the same one.
+            ActivityCatalog = restored.ActivityCatalog ?? ActivityCatalog
         };
     }
 }

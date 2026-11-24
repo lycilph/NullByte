@@ -180,6 +180,10 @@ public sealed class GameHost(
             if (restored is null && reportMissing)
                 terminal.WriteLine($"No save named '{slot}'.");
 
+            // Parts of the save that the game no longer has: the rest of it loads fine, but say so.
+            foreach (var warning in restored?.Warnings ?? [])
+                terminal.WriteLine($"Warning: {warning}");
+
             return restored;
         }
         catch (Exception exception) when (exception is SaveFormatException or IOException or UnauthorizedAccessException)
@@ -210,6 +214,13 @@ public sealed class GameHost(
         });
 
         terminal.SetPrompt(BuildPrompt(session.State));
+
+        // A loaded game picks up what the player was doing, in the background.
+        if (session.State.Activity.Current is { } resumed)
+        {
+            terminal.WriteLine($"You were busy when this was saved: {resumed.Description}. It carries on in the background;");
+            terminal.WriteLine("use 'focus' to take over or 'stop' to end it.");
+        }
 
         // An activity that ends by itself (the player ran out of money) changes the prompt too.
         session.Services.Activities.ActivityEnded += _ => terminal.SetPrompt(BuildPrompt(session.State));

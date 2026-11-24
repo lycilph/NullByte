@@ -130,3 +130,43 @@ Please judge by hand
 
 Shoplift attempts every 2 game-seconds at game speed 5 means about 2.5 result lines per real second while focused. That may bury the console,
 and I'd like your opinion before I add a throttle or collapse repeated lines.
+
+## Step 7 is done: save format v4, with all six skills, jobs and reputation, and the current activity. 
+All 259 tests (steps 1 to 7) pass in my stand-in runner, in the default culture and under da-DK. 
+I also broke the mapper and the migration on purpose in three ways (skipping the progress restore, resuming focused, 
+leaving the old field behind), and the tests failed each time.
+
+Three caveats about what I could and couldn't verify:
+
+Serializer copy. The round-trip tests ran against a copy of SaveGameSerializer without its two .NET 9+ options (NewLine, RespectNullableAnnotations), 
+because my sandbox is .NET 8. Your real file is unchanged.
+Uncompiled edits. The GameSession.cs and GameHost.cs edits are uncompiled.
+Your own tests. I can't see your existing persistence tests, so the breakages in the list below are inferred from the code.
+What the format does
+Skills. PlayerSave.HackingExperience is replaced by Skills, a dictionary keyed by lowercase skill name. All six are always written,
+so the file has the same shape every time.
+Employment. EmploymentSave holds jobs (company, career, rank) and reputation per company, both sorted for deterministic output.
+Activity. ActivitySave? is null when idle. Otherwise it holds the progress totals plus exactly one of class, job or crime. 
+Unused kinds aren't written. A job stores only company and career, because the rank comes from the saved jobs and there's one 
+source of truth. A crime stores its repeat flag and how far into the current attempt it was.
+Names only. The save never stores rates or ranks, so rebalancing in M13 can't corrupt a save. A resumed activity always comes 
+back in the background, as decided.
+Content that vanished (a renamed course, a removed company, a shortened career) is not corruption. The activity or job is dropped 
+and RestoredGame.Warnings says so. GameHost prints each warning as Warning: …. Reputation is kept even for a vanished company. 
+A dropped job isn't lost either: working there again hires you at the highest rank you qualify for.
+Invalid data is still refused with SaveFormatException: unknown skill, negative or non-finite numbers, successes above attempts, 
+two kinds of activity at once, working without holding the job, duplicate companies.
+Migration v3→v4 turns hackingExperience into skills.hacking, removes the old field, and adds an empty employment. 
+A v3 save never had an activity.
+Catalog. Restore(save, catalog = null) defaults to the shipped catalog, so existing calls still compile. 
+RestoredGame remembers the catalog it used, and WithSave hands it to the session.
+When you load, the host prints You were busy when this was saved: … and the prompt shows the tag. The same happens 
+when the game resumes from autosave.
+
+Saved numbers will show floating-point noise (for example 17.999999999999968). That's normal, and it round-trips exactly.
+
+What breaks on your side
+The golden-file test will fail, as designed, because the format changed. Regenerate it for v4. 
+I'd keep your old v3 file as a migration fixture. My migration test builds the v3 shape in code, so it doesn't depend on yours.
+Any test that builds a PlayerSave or SaveGame by hand won't compile. Replace HackingExperience = x with 
+Skills = new Dictionary<string, double> { ["hacking"] = x }, and add Employment = new EmploymentSave { Jobs = [], Reputation = [] }.

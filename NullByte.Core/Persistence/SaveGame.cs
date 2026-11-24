@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace NullByte.Core.Persistence;
 
 /// <summary>
@@ -12,7 +14,7 @@ namespace NullByte.Core.Persistence;
 public sealed record SaveGame
 {
     /// <summary>The format version this build writes, and the newest one it can read.</summary>
-    public const int CurrentVersion = 3;
+    public const int CurrentVersion = 4;
 
     public required int Version { get; init; }
     public required DateTimeOffset SavedAtUtc { get; init; }
@@ -22,6 +24,10 @@ public sealed record SaveGame
     public required IReadOnlyList<ServerSave> Servers { get; init; }
     public required IReadOnlyList<ConnectionSave> Connections { get; init; }
     public required BotnetSave Botnet { get; init; }
+    /// <summary>Jobs held and reputation earned. Added in version 4.</summary>
+    public required EmploymentSave Employment { get; init; }
+    /// <summary>What the player was doing when the game was saved, or null if nothing. Added in version 4.</summary>
+    public ActivitySave? Activity { get; init; }
     /// <summary>Every directory, including empty ones. Files restore the directories above them on their own.</summary>
     public required IReadOnlyList<DirectorySave> Directories { get; init; }
     public required IReadOnlyList<FileSave> Files { get; init; }
@@ -34,7 +40,11 @@ public sealed record PlayerSave
     public required string HomeHostname { get; init; }
     public required string CurrentHostname { get; init; }
     public required double Money { get; init; }
-    public required double HackingExperience { get; init; }
+    /// <summary>
+    /// Experience per skill, by lowercase skill name (<c>hacking</c>, <c>strength</c>, ...). Skills that are missing have none.
+    /// Before version 4 this was a single <c>HackingExperience</c> number.
+    /// </summary>
+    public required IReadOnlyDictionary<string, double> Skills { get; init; }
     public required IReadOnlyList<string> DiscoveredHostnames { get; init; }
 }
 
@@ -102,4 +112,82 @@ public sealed record ProcessSave
     public required string Hostname { get; init; }
     public required IReadOnlyList<string> Args { get; init; }
     public required int Threads { get; init; }
+}
+
+/// <summary>
+/// The player's working life. Companies are referred to by name, so a save never depends on the
+/// ranks or rates in the shipped data, only on the names existing.
+/// </summary>
+public sealed record EmploymentSave
+{
+    public required IReadOnlyList<JobSave> Jobs { get; init; }
+    public required IReadOnlyList<ReputationSave> Reputation { get; init; }
+}
+
+public sealed record JobSave
+{
+    public required string Company { get; init; }
+    public required string Career { get; init; }
+    /// <summary>The position on the career path, counting from zero at the entry rank.</summary>
+    public required int RankIndex { get; init; }
+}
+
+public sealed record ReputationSave
+{
+    public required string Company { get; init; }
+    public required double Amount { get; init; }
+}
+
+/// <summary>
+/// What the player was doing. Exactly one of <see cref="Class"/>, <see cref="Job"/> and
+/// <see cref="Crime"/> is set. A loaded game resumes the activity in the background, so the
+/// mode is not saved.
+/// </summary>
+public sealed record ActivitySave
+{
+    public required ActivityProgressSave Progress { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ClassActivitySave? Class { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public JobActivitySave? Job { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public CrimeActivitySave? Crime { get; init; }
+}
+
+/// <summary>What the activity has earned so far, so that its summary carries on after a load.</summary>
+public sealed record ActivityProgressSave
+{
+    public required TimeSpan Elapsed { get; init; }
+    public required double NetMoney { get; init; }
+    /// <summary>Experience gained so far, by lowercase skill name.</summary>
+    public required IReadOnlyDictionary<string, double> Experience { get; init; }
+    public required double ReputationGained { get; init; }
+    public required int Attempts { get; init; }
+    public required int Successes { get; init; }
+}
+
+public sealed record ClassActivitySave
+{
+    public required string Course { get; init; }
+    public required string Facility { get; init; }
+}
+
+/// <summary>
+/// The rank is not repeated here: it is the one in <see cref="EmploymentSave.Jobs"/>.
+/// </summary>
+public sealed record JobActivitySave
+{
+    public required string Company { get; init; }
+    public required string Career { get; init; }
+}
+
+public sealed record CrimeActivitySave
+{
+    public required string Crime { get; init; }
+    public required bool Repeat { get; init; }
+    /// <summary>How far into the current attempt the player was, in game seconds.</summary>
+    public required double CycleSeconds { get; init; }
 }

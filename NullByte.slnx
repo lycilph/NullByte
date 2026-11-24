@@ -5,6 +5,7 @@
     <File Path="codebase.md" />
     <File Path="CURRENT_STATUS.md" />
     <File Path="DESIGN.md" />
+    <File Path="feature development sequence.md" />
     <File Path="how-to.md" />
   </Folder>
   <Folder Name="/Docs/">

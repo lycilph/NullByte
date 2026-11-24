@@ -33,8 +33,11 @@ Secondarily review for best practises
 
 
 ---- Repomix ---
+Include:
+AI_CONTEXT.md, ARCHITECTURE.md, CODEBASE.md, CURRENT_STATUS.md, DESIGN.md (~32k tokens)
+
 Exclusion parameter:
-*.md, *.git*, NullByte/* 
+*.md, *.git*, NullByte/* (~240k tokens)
 
 Or without the test projects
-*.md, *.git*, NullByte/*, NullByte*Test*/**
+*.md, *.git*, NullByte/*, NullByte*Test*/** (~123k tokens)
