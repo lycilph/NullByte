@@ -50,10 +50,7 @@ public sealed record GameServices(
     BotnetService Botnet,
     ScriptService Scripts,
     ActivityService Activities,
-    SkillFormulas Skills,
-    HackingFormulas HackingFormulas,
-    BotnetFormulas BotnetFormulas,
-    NetworkFormulas NetworkFormulas);
+    Formulas Formulas);
 
 public sealed class GameSession : IAsyncDisposable
 {
@@ -181,18 +178,14 @@ public sealed class GameSession : IAsyncDisposable
         var state = options.State ?? InitialGameStateFactory.Create();
         var randomSource = options.Random ?? new SeededRandomSource(Random.Shared.Next());
 
-        var skillFormulas = new SkillFormulas(options.Balance);
-        var hackingFormulas = new HackingFormulas(options.Balance);
-        var botnetFormulas = new BotnetFormulas(options.Balance);
-        var networkFormulas = new NetworkFormulas(options.Balance);
+        var formulas = new Formulas(options.Balance);
 
-        var networkService = new NetworkService(state, scheduler, networkFormulas);
-        var serverActions = new ServerActions(state, scheduler, hackingFormulas, randomSource);
-        var botnetService = new BotnetService(state, botnetFormulas);
+        var networkService = new NetworkService(state, scheduler, formulas.Network);
+        var serverActions = new ServerActions(state, scheduler, formulas.Hacking, randomSource);
+        var botnetService = new BotnetService(state, formulas.Botnet);
 
-        var activityFormulas = new ActivityFormulas(options.Balance);
         var activityCatalog = options.ActivityCatalog ?? ActivityCatalogFactory.CreateDefault();
-        var activityService = new ActivityService(state, activityCatalog, activityFormulas);
+        var activityService = new ActivityService(state, activityCatalog, formulas.Activities);
 
         var scriptCompiler = new ScriptCompiler();
         var scriptLoader = new ScriptAssemblyLoader();
@@ -206,17 +199,15 @@ public sealed class GameSession : IAsyncDisposable
                 botnetService,
                 serverActions,
                 activityService,
-                hackingFormulas,
-                botnetFormulas,
-                skillFormulas,
+                formulas,
                 options.Output);
         var scriptService = new ScriptService(state, scriptCompiler, scriptRunner, apiFactory, scriptProcessManager);
 
-        var services = new GameServices(networkService, serverActions, botnetService, scriptService, activityService, skillFormulas, hackingFormulas, botnetFormulas, networkFormulas);
+        var services = new GameServices(networkService, serverActions, botnetService, scriptService, activityService, formulas);
 
         // Systems are updated by the game loop on the game thread; they must be added before it starts.
-        gameLoop.AddSystem(new BotnetSystem(state, botnetFormulas));
-        gameLoop.AddSystem(new ActivitySystem(state, activityFormulas, activityService, randomSource));
+        gameLoop.AddSystem(new BotnetSystem(state, formulas.Botnet));
+        gameLoop.AddSystem(new ActivitySystem(state, formulas.Activities, activityService, randomSource));
 
         scriptService.ProcessFailed += (proc, exception) => options.Output.WriteLine($"Process {proc.Pid} failed: {exception.Message}");
         gameLoop.UnhandledException += exception => options.Output.WriteLine($"Unhandled error on the game thread: {exception.Message}");
