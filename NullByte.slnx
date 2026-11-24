@@ -1,11 +1,11 @@
 <Solution>
   <Folder Name="/AI/">
-    <File Path="ai_context.md" />
+    <File Path="AI_CONTEXT.md" />
     <File Path="ARCHITECTURE.md" />
-    <File Path="codebase.md" />
+    <File Path="CODEBASE.md" />
     <File Path="CURRENT_STATUS.md" />
     <File Path="DESIGN.md" />
-    <File Path="feature development sequence.md" />
+    <File Path="FEATURE_WORKFLOW.md" />
     <File Path="how-to.md" />
   </Folder>
   <Folder Name="/Docs/">
