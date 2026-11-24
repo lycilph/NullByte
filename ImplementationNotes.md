@@ -8,7 +8,7 @@
 ~~5. Jobs.~~
 ~~6. Crimes (cycle loop, progress bar that restarts).~~
 ~~7. Save v4 and the migration.~~
-8. nb.Activities.
+~~8. nb.Activities.~~
 9 Design doc update.
 
 ## Step 1: skills model (no behaviour change)

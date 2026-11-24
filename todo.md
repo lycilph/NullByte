@@ -1,5 +1,7 @@
 ﻿# In progress
 
+- Integrate claude & chatgpt with github
+
 - Milestone M10: Activities (jobs, training, studying etc.)
 - Clean up
   - Skill/Hacking formulas
