@@ -5,6 +5,7 @@ using NullByte.Core.Randomness;
 using NullByte.Core.Scripting;
 using NullByte.Core.Services;
 using NullByte.Core.Time;
+using NullByte.Core.World;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Loading;
 using NullByte.Scripting.Runtime;
@@ -20,6 +21,8 @@ public sealed class ScriptAcceptanceTests
         var formulas = new HackingFormulas(balance);
         var botnetFormulas = new BotnetFormulas(balance);
         var networkFormulas = new NetworkFormulas(balance);
+        var activityFormulas = new ActivityFormulas(balance);
+        var skillFormulas = new SkillFormulas(balance);
 
         var player = new Player(
             homeHostname: "home",
@@ -69,6 +72,7 @@ public sealed class ScriptAcceptanceTests
             scheduler,
             formulas,
             randomSource);
+        var activityService = new ActivityService(gameState, ActivityCatalogFactory.CreateDefault(), activityFormulas);
 
         var output = new TestScriptOutput();
 
@@ -81,8 +85,10 @@ public sealed class ScriptAcceptanceTests
             networkServices,
             botnetService,
             actions,
+            activityService,
             formulas,
             botnetFormulas,
+            skillFormulas,
             scriptOperations,
             output,
             home.Hostname);

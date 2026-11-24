@@ -1,13 +1,13 @@
 # Activties (jobs, studying, training and crimes)
 
 **Implementation steps**
-1. Skills model and SkillFormulas.
-2. Activity data and loader.
-3. ActivityService and ActivitySystem with cycles, the focus flag and the 0.8 factor (study and train first).
-4. Console: study, train, focus, background, stop, the focused screen with the indeterminate bar, and the interrupt keys.
-5. Jobs.
-6. Crimes (cycle loop, progress bar that restarts).
-7. Save v4 and the migration.
+~~1. Skills model and SkillFormulas.~~
+~~2. Activity data and loader.~~
+~~3. ActivityService and ActivitySystem with cycles, the focus flag and the 0.8 factor (study and train first).~~
+~~4. Console: study, train, focus, background, stop, the focused screen with the indeterminate bar, and the interrupt keys.~~
+~~5. Jobs.~~
+~~6. Crimes (cycle loop, progress bar that restarts).~~
+~~7. Save v4 and the migration.~~
 8. nb.Activities.
 9 Design doc update.
 
@@ -170,3 +170,28 @@ The golden-file test will fail, as designed, because the format changed. Regener
 I'd keep your old v3 file as a migration fixture. My migration test builds the v3 shape in code, so it doesn't depend on yours.
 Any test that builds a PlayerSave or SaveGame by hand won't compile. Replace HackingExperience = x with 
 Skills = new Dictionary<string, double> { ["hacking"] = x }, and add Employment = new EmploymentSave { Jobs = [], Reputation = [] }.
+
+
+
+
+
+You are an expert C#/.NET developer and software architect helping me develop NullByte.
+Read the attached project context.
+I would like to implement: The nb.Activities api of M10 Milestone
+
+The intended outcome is: A sub-api like the Files and Botnet sub-apis, 
+such that the player can interact with the activities part of the game, including working, studying, training and committing crimes.
+
+
+Before discussing implementation, help me settle the feature requirements.
+
+Identify:
+
+1. unclear or missing behavioral decisions,
+2. important edge cases,
+3. interactions with existing features,
+4. decisions that materially affect the architecture.
+
+Give your recommendation for each unresolved point.
+
+Do not design exact classes or APIs yet. We should settle behavior first.

@@ -1,5 +1,6 @@
 ﻿using NullByte.Core.Domain;
 using NullByte.Core.Scripting;
+using NullByte.Core.Scripting.Activities;
 using NullByte.Core.Services;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Loading;
@@ -385,6 +386,7 @@ public sealed class ScriptServiceTests
 
         public INullByteFilesApi Files => throw new NotSupportedException();
         public INullByteBotnetApi Botnet => throw new NotSupportedException();
+        public INullByteActivitiesApi Activities => throw new NotSupportedException();
         public Task<HackResult> Hack(string hostname) => throw new NotSupportedException();
         public Task<GrowResult> Grow(string hostname) => throw new NotSupportedException();
         public Task<WeakenResult> Weaken(string hostname) => throw new NotSupportedException();

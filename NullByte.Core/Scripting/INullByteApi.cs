@@ -1,4 +1,5 @@
-﻿using NullByte.Core.Services;
+﻿using NullByte.Core.Scripting.Activities;
+using NullByte.Core.Services;
 
 namespace NullByte.Core.Scripting;
 
@@ -10,6 +11,7 @@ public interface INullByteApi
 {
     INullByteFilesApi Files { get; }
     INullByteBotnetApi Botnet { get; }
+    INullByteActivitiesApi Activities { get; }
 
     /// <summary>Writes a line to the script's output.</summary>
     [RamCost(0.1)]

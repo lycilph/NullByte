@@ -4,313 +4,115 @@ Read this file before modifying NullByte.
 
 Use the other context documents as needed:
 
-- `CURRENT_STATUS.md` - current milestone, recent work and known issues.
-- `CODEBASE.md` - where relevant implementation and tests live.
+- `CURRENT_STATUS.md` - current milestone and next work.
+- `CODEBASE.md` - source/test navigation.
 - `ARCHITECTURE.md` - system structure, ownership and data flows.
-- `DESIGN.md` - authoritative gameplay behavior, product decisions and roadmap.
+- `DESIGN.md` - authoritative gameplay behavior and roadmap.
 
-The current source code is authoritative for implementation details.
+Current source is authoritative for implementation details.
 
----
+## 1. Project
 
-# 1. Project
+NullByte is a text-driven incremental hacking game inspired by Bitburner. The player starts with manual terminal commands and increasingly automates gameplay using C# `.cx` scripts compiled at runtime with Roslyn.
 
-NullByte is a text-driven incremental hacking game inspired by Bitburner.
+Core principle: **Scripting is the game.** Manual commands and scripts should use the same underlying gameplay rules.
 
-The player begins with manual terminal commands and increasingly automates gameplay using C# `.cx` scripts compiled at runtime with Roslyn.
+Stack: C#/.NET 10, Roslyn, xUnit, TypeScript/VS Code, WebSockets.
 
-Core principle:
+## 2. Critical invariants
 
-> Scripting is the game.
+### Game-thread ownership
 
-Manual commands and scripts should use the same underlying gameplay rules.
+Mutable game state belongs to the game thread. External threads, editor requests and background work must cross the appropriate game-thread boundary before accessing it. Do not add locks around domain state to bypass this model.
 
-Technologies include:
+### Shared game mechanics
 
-- C# / .NET 10
-- Roslyn
-- xUnit
-- NSubstitute where useful
-- TypeScript for the VS Code extension
-- WebSockets between the game and VS Code
+Console commands and script APIs adapt shared game behavior. Do not implement separate gameplay rules for ConsoleUI, scripts or VS Code.
 
----
+### Async gameplay and determinism
 
-# 2. Critical invariants
+Long-running game operations suspend without blocking simulation. Avoid `Thread.Sleep`, `.Result`, `.Wait()` and synchronous waits on the game thread. Gameplay time uses the game clock/scheduler. Prefer injected time and randomness.
 
-## Game-thread ownership
+### Virtual filesystem
 
-Mutable game state belongs to the game thread.
+Player files belong to NullByte's virtual filesystem. Reuse `VirtualFileSystem`/`VirtualPath`. Console paths may use the player's current directory; scripts and editor operations use server-root-relative paths.
 
-External threads, editor requests and background work must cross the appropriate game-thread boundary before accessing it.
+### Background work
 
-Do not introduce locks around domain state to bypass this model.
+Roslyn/editor work must not access mutable game state directly. Snapshot required data through the game-thread boundary, then do expensive work off-thread.
 
-## Shared game mechanics
+## 3. Dependency rules
 
-Console commands and script APIs are adapters around shared game behavior.
+- `NullByte.Core`: domain, services, formulas, simulation, persistence models and script-facing APIs.
+- `NullByte.Scripting`: compilation, analysis, loading, runtime and language services.
+- `NullByte.Shell`: session and persistence lifecycle.
+- `NullByte.Editor`: external-editor adapter/protocol.
+- `NullByte.ConsoleUI`: terminal host and composition.
+- `NullByte.vscode`: external TypeScript client.
 
-Do not create separate implementations of the same gameplay rule for ConsoleUI, scripts or VS Code.
+Core must not depend on presentation/editor infrastructure. Add abstractions when they represent a real boundary, lifecycle or test seam, not for architectural purity alone.
 
-## Async gameplay
+## 4. Scripting rules
 
-Long-running game operations suspend without blocking simulation.
+Main `.cx` scripts receive implicit `nb` and `args`. Libraries use `#include` and receive dependencies explicitly. Compilation, RAM analysis and language services must model scripts consistently.
 
-Avoid:
-
-- `Thread.Sleep`
-- `.Result`
-- `.Wait()`
-- synchronous waits on the game thread
-
-Gameplay timing should use the game clock/scheduler where appropriate.
-
-## Determinism
-
-Prefer injected time and randomness.
-
-Avoid hidden global sources of time, randomness or mutable state in gameplay logic.
-
-## Virtual filesystem
-
-Player files belong to NullByte's virtual filesystem, not the host filesystem.
-
-Reuse `VirtualFileSystem` and `VirtualPath` semantics rather than recreating path/file rules in individual consumers.
-
-Console paths may use the player's current directory.
-
-Scripts and editor operations use server-root-relative paths.
-
-## Thread-boundary snapshots
-
-Background Roslyn/editor work must not directly access mutable game state.
-
-Acquire required data through the game-thread boundary, create an immutable snapshot, then perform expensive work off-thread.
-
----
-
-# 3. Dependency rules
-
-Keep dependency direction clean.
-
-- `NullByte.Core` owns domain and simulation.
-- `NullByte.Scripting` owns compilation/runtime tooling around the Core scripting API.
-- `NullByte.Shell` owns reusable session/persistence lifecycle.
-- `NullByte.Editor` adapts game/scripting functionality for external editors.
-- `NullByte.ConsoleUI` hosts the terminal application.
-- `NullByte.vscode` is an external TypeScript client.
-
-Core must not depend on presentation, VS Code or terminal behavior.
-
-Before adding a project reference, check whether responsibility belongs at a lower existing boundary.
-
-Do not create abstractions solely for architectural purity. Add them when they represent a real boundary, lifecycle, interchangeability or testing need.
-
----
-
-# 4. Scripting rules
-
-Player `.cx` scripts are compiled with Roslyn.
-
-Main scripts receive implicit:
-
-- `nb`
-- `args`
-
-Reusable libraries use `#include`.
-
-Compilation, runtime RAM analysis and editor language services must interpret scripts consistently.
-
-When changing scripting semantics, consider all affected paths:
-
-- compilation
-- diagnostics
-- includes
-- RAM
-- runtime
-- language service
+RAM is gameplay cost calculated semantically from API usage. Running processes contain compiled code; later source/library edits do not mutate them.
 
 Do not expose unrestricted CLR capabilities merely because they simplify an API.
 
-RAM is a gameplay resource calculated semantically from script API usage, not actual CLR memory consumption.
+## 5. Persistence and lifecycle
 
-Running scripts contain compiled code. Editing their source or included libraries does not mutate already-running processes.
+Persistent formats are versioned. Persistent-state changes require mapping, serialization, migration, validation and tests.
 
----
+Reset is true session replacement, not field clearing. On replacement consider processes, activities, autosave, disposal, observers, editor notifications and stale subscriptions.
 
-# 5. Persistence and lifecycle
+Host-level transitions (`Shutdown`, `Load`, `Reset`) use the closed `HostRequest` hierarchy and host-owned atomic single-slot `HostRequestMailbox`. Commands request transitions; `GameHost` executes them outside the session command.
 
-Persistent formats are versioned.
+Application settings are host configuration, not saved game state. Effective settings are defaults -> optional `settings.json` -> CLI overrides -> centralized validation.
 
-Changes to persisted state require explicit consideration of:
+## 6. Editor integration
 
-- mapping
-- serialization
-- migration
-- validation
-- golden tests
+VS Code integration is optional. `NullByte.Editor` and `NullByte.vscode` are two sides of one protocol; inspect both when changing it.
 
-Reset means creating a genuinely new game/session, not clearing fields on the old `GameState`.
+Editor game-state access respects the game thread. Preserve loopback-only communication, per-run authentication, Origin checks, connection discovery and cleanup.
 
-When replacing game/session state, consider:
+`IExternalEditorStatus` provides the ConsoleUI a read-only view of live editor connections without exposing transport internals.
 
-- running processes
-- activities
-- autosave
-- lifecycle/disposal
-- external observers
-- stale event subscriptions
-- editor reset/change notifications
+Editor script execution and RAM queries reuse `IScriptService`; do not create editor-specific scripting behavior.
 
-Host-level operations such as load, reset and shutdown should use the established request/mailbox model rather than introducing independent polling flags.
+## 7. Activities
 
-Inspect the current implementation before extending that model.
+Activities share one lifecycle and may run focused or background. Current activities include study/training, jobs and crimes. Crimes are repeated timed attempts with success chance/rewards and use the same activity simulation/persistence model.
 
----
+Do not create a parallel lifecycle for new long-running player activities when the existing activity model fits.
 
-# 6. Editor integration
+## 8. Testing
 
-VS Code integration is optional.
+Use xUnit. Use NSubstitute only when it makes the test clearer; prefer lightweight real collaborators where practical.
 
-The base game must work without an editor server.
+Prefer observable behavior. Use fake clocks, deterministic randomness, game-thread harnesses, real Roslyn tests, persistence migrations/golden tests and integration/acceptance tests where appropriate. Bugs should normally receive regression tests.
 
-`NullByte.Editor` and `NullByte.vscode` are opposite sides of the same protocol.
-
-When changing a protocol operation, inspect both C# and TypeScript implementations.
-
-Editor operations accessing game state must respect game-thread ownership.
-
-Editor connection/security behavior should preserve:
-
-- loopback-only communication
-- per-run authentication
-- connection discovery
-- Origin checks
-- connection-file cleanup
-
-Do not remove these merely to simplify connectivity.
-
----
-
-# 7. Testing
-
-Use xUnit.
-
-Use NSubstitute when substitution materially improves the test; prefer real lightweight collaborators when they better demonstrate behavior.
-
-Prefer observable behavior over implementation-detail tests.
-
-Important techniques include:
-
-- fake game clocks
-- deterministic randomness
-- game-thread harnesses
-- real Roslyn compilation
-- golden persistence tests
-- integration/acceptance tests for cross-component behavior
-
-Fixes should normally include regression tests when practical.
-
-After structural changes, run the relevant project tests and preferably the full solution test suite.
-
----
-
-# 8. How to approach development tasks
+## 9. Development workflow
 
 Before writing exact code:
 
 1. Read `CURRENT_STATUS.md`.
 2. Use `CODEBASE.md` to identify the subsystem.
-3. Inspect the current primary implementation files.
-4. Inspect relevant interfaces/contracts.
-5. Inspect relevant tests.
-6. Load additional dependencies only when discovered to be necessary.
-7. Establish the target design.
-8. Implement incrementally.
-9. Add/update tests.
-10. Update documentation if architecture, design or status changed.
+3. Inspect current implementation, contracts and relevant tests.
+4. Load additional dependencies only when needed.
+5. Agree on the target design before large changes.
+6. Implement incrementally and test.
+7. Update context documents only where their owned information changed.
 
-Do not assume APIs from previous conversations or documentation.
+Never invent existing constructors, methods, properties or interfaces. If docs and code disagree, call it out. Always use the current version of a file before modifying it.
 
-Before modifying a file, use its current repository version.
+## 10. Change discipline
 
-Never invent constructors, methods, properties or interfaces and present them as existing code.
+Prefer the smallest coherent change. Reuse existing concepts. Avoid parallel mechanisms, speculative infrastructure, unrelated refactors, presentation logic in Core, duplicated rules, blocking the game thread and direct background access to game state.
 
-If documentation and source disagree, identify the discrepancy explicitly.
+For guided implementation, work file-by-file and explain responsibility, interaction and tests.
 
----
-
-# 9. Change discipline
-
-Prefer the smallest coherent change that solves the current requirement.
-
-Reuse existing concepts where they fit.
-
-Avoid:
-
-- parallel implementations of existing concepts
-- speculative infrastructure
-- unrelated refactoring
-- unnecessary abstractions
-- presentation logic in Core
-- game rules in commands/editor code
-- blocking the game thread
-- direct background access to game-owned state
-
-If the existing architecture prevents a correct implementation, explain why and agree on the architectural change before producing a large code drop.
-
----
-
-# 10. Implementation style
-
-Favor explicit, readable C# over clever abstraction.
-
-Match existing:
-
-- naming
-- namespace organization
-- dependency style
-- result/error patterns
-- nullable conventions
-- test structure
-
-For guided implementation, work incrementally and file-by-file.
-
-Explain:
-
-- what each change does
-- why the responsibility belongs there
-- how it interacts with existing architecture
-- what tests validate it
-
-When providing code, keep ordinary lines intact unless they become meaningfully long.
-
----
-
-# 11. Completion checklist
-
-For significant changes, verify the relevant items:
-
-- game-thread ownership remains correct
-- game rules are not duplicated
-- async gameplay does not block simulation
-- time/randomness remain testable
-- virtual filesystem semantics remain centralized
-- background work uses snapshots where required
-- scripting/compiler/editor semantics remain aligned
-- RAM behavior remains consistent
-- protocol changes cover C# and TypeScript sides
-- persistence changes include migration considerations
-- replaced state leaves no stale observers
-- dependency direction remains valid
-- relevant tests pass
-- current documentation is updated when necessary
-
----
-
-# 12. Guiding rules
-
-When uncertain, preserve these principles:
+## 11. Guiding rules
 
 > Mutable game state has one owner thread.
 

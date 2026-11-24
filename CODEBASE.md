@@ -1,650 +1,192 @@
 ﻿# NullByte Codebase Map
 
-Use this file to identify the source and tests needed for a task.
+Use this file to identify the current source and tests needed for a task. Read `AI_CONTEXT.md` for rules, `CURRENT_STATUS.md` for active work, `ARCHITECTURE.md` for structure and `DESIGN.md` for intended behavior.
 
-Read:
-
-- `AI_CONTEXT.md` for development rules.
-- `CURRENT_STATUS.md` for active work.
-- `ARCHITECTURE.md` for system structure.
-- `DESIGN.md` for intended behavior.
-
-Inspect current source before proposing exact APIs.
-
----
-
-# 1. Projects
+## 1. Projects
 
 ```text
-NullByte.Core
-  Domain, formulas, services, simulation, persistence models,
-  virtual filesystem and script-facing API.
-
-NullByte.Scripting
-  Roslyn compilation, includes, RAM analysis, language services,
-  assembly loading and script processes.
-
-NullByte.Shell
-  Game session, save management and autosave.
-
-NullByte.ConsoleUI
-  Executable host, terminal, commands, completion and built-in editor.
-
-NullByte.Editor
-  C# WebSocket server and editor protocol.
-
-NullByte.vscode
-  TypeScript VS Code extension.
+NullByte.Core        Domain, formulas, services, simulation, VFS, persistence models, script API
+NullByte.Scripting   Roslyn compilation, includes, RAM, language service, runtime/processes
+NullByte.Shell       Game session, save storage/management, autosave
+NullByte.ConsoleUI   Executable host, configuration, terminal, commands, completion
+NullByte.Editor      WebSocket editor server/protocol/adapters
+NullByte.vscode      TypeScript VS Code extension
 ```
 
-Tests:
+Tests: `NullByte.Core.Tests`, `NullByte.Scripting.Tests`, `NullByte.Shell.Tests`, `NullByte.ConsoleUI.Tests`, `NullByte.Editor.Tests`.
 
-```text
-NullByte.Core.Tests
-NullByte.Scripting.Tests
-NullByte.ConsoleUI.Tests
-NullByte.Editor.Tests
-```
+## 2. Core map
 
-Dependency direction is described in `ARCHITECTURE.md`.
-
----
-
-# 2. Core map
-
-## Domain
+### Domain
 
 `NullByte.Core/Domain/`
 
-- `GameState.cs` - authoritative mutable game state
-- `Player.cs` - player state
-- `PlayerSkills.cs` - skill state
-- `Server.cs` - server state
-- `Network.cs` - server collection/topology
-- `VirtualFileSystem.cs` - in-game filesystem
-- `VirtualPath.cs` - path validation/normalization
-- `PathResolver.cs` - contextual path resolution
-- `Botnet.cs`, `BotnetNode.cs` - Botnet state
+- `GameState.cs` - authoritative mutable state
+- `Player.cs`, `PlayerSkills.cs`
+- `Server.cs`, `Network.cs`
+- `VirtualFileSystem.cs`, `VirtualPath.cs`, `PathResolver.cs`
+- `Botnet.cs`, `BotnetNode.cs`
+- `Activities/` - activity, job, course, company, crime and training models
 
-Activities:
-
-`NullByte.Core/Domain/Activities/`
-
-Contains activity, employment, job, course, company and training models.
-
-## Services
+### Services/formulas
 
 `NullByte.Core/Services/`
 
 - `ServerActions.cs` - Hack/Grow/Weaken
-- `NetworkService.cs` - network operations
-- `ActivityService.cs` - activity transitions
-- `BotnetService.cs` - purchases/upgrades
-- `WorkingDirectory.cs` - console working directory
-- `IGameOutput.cs` - game output abstraction
+- `NetworkService.cs`
+- `ActivityService.cs` - activity lifecycle, jobs/courses/crimes
+- `CrimeAttempt.cs`
+- `BotnetService.cs`
+- `WorkingDirectory.cs`
 
-## Formulas
+`NullByte.Core/Formulas/`: hacking, network, skills, Botnet, activities and `CrimeRewards.cs`.
 
-`NullByte.Core/Formulas/`
+### Simulation/time
 
-- `HackingFormulas.cs`
-- `NetworkFormulas.cs`
-- `SkillFormulas.cs`
-- `ActivityFormulas.cs`
-- `ActivityRates.cs`
-- `BotnetFormulas.cs`
-
-## Simulation and time
-
-- `Simulation/GameLoop.cs` - simulation loop
-- `Simulation/IGameThread.cs` - game-thread boundary
+- `Simulation/GameLoop.cs`, `IGameThread.cs`
 - `Threading/GameSynchronizationContext.cs`
-- `Time/IGameClock.cs`
-- `Time/RealGameClock.cs`
-- `Time/FakeGameClock.cs`
-- `Time/GameScheduler.cs`
+- `Time/IGameClock.cs`, `RealGameClock.cs`, `FakeGameClock.cs`, `GameScheduler.cs`
+- `Systems/ActivitySystem.cs`, `BotnetSystem.cs`
 
-Systems:
+### Script-facing API
 
-- `Systems/ISimulationSystem.cs`
-- `Systems/ActivitySystem.cs`
-- `Systems/BotnetSystem.cs`
+`NullByte.Core/Scripting/`: `INullByteApi`, `NullByteApi`, files/Botnet APIs, `IScript`, `IScriptOperations`, `RamCostAttribute`, process info/state.
 
-## Script-facing API
+### Persistence/world
 
-`NullByte.Core/Scripting/`
+- `Persistence/SaveGame.cs`, `SaveGameMapper.cs`, `SaveGameSerializer.cs`, `SaveMigration.cs`
+- `Persistence/Migrations/V1ToV2Migration.cs` through `V3ToV4Migration.cs`
+- `Data/initial-network.json`, `Data/activities.json`
+- `World/` loaders and `InitialGameStateFactory.cs`
 
-- `INullByteApi.cs`, `NullByteApi.cs`
-- `INullByteApiFactory.cs`, `NullByteApiFactory.cs`
-- `INullByteFilesApi.cs`, `NullByteFilesApi.cs`
-- `INullByteBotnetApi.cs`, `NullByteBotnetApi.cs`
-- `IScript.cs` - compiled-script contract
-- `IScriptOperations.cs` - process operations
-- `RamCostAttribute.cs`
-- `ScriptProcessInfo.cs`, `ScriptProcessState.cs`
+## 3. Scripting map
 
-## Persistence and world data
-
-`NullByte.Core/Persistence/`
-
-- `SaveGame.cs` - persistent model
-- `SaveGameMapper.cs` - state/save mapping
-- `SaveGameSerializer.cs`
-- `SaveMigration.cs`
-- `Migrations/` - version migrations
-
-World/data:
-
-- `Data/initial-network.json`
-- `Data/activities.json`
-- `World/` - loaders and initial-state creation
-
----
-
-# 3. Scripting map
-
-## Compilation
+### Compilation
 
 `NullByte.Scripting/Compilation/`
 
 - `ScriptCompiler.cs` - Roslyn pipeline
-- `IScriptCompiler.cs`
 - `ScriptSourceGenerator.cs` - generated wrapper
-- `CompiledScript.cs`
-- `ScriptCompilationResult.cs`
+- `ScriptRamAnalyzer.cs` - semantic RAM
 - `ScriptDiagnostic.cs`
-- `ScriptRamAnalyzer.cs` - semantic RAM calculation
-- `ScriptRamResult.cs`
-- `SourceSnapshot.cs` - immutable source set
-- `IncludeScanner.cs` - parses include directives
-- `IncludeResolver.cs` - resolves include graph
+- `IncludeScanner.cs`, `IncludeResolver.cs`
+- `SourceSnapshot.cs`
 
-## Runtime
+### Runtime/loading
 
-`NullByte.Scripting/Runtime/`
+- `Runtime/IScriptService.cs` - editor/host-facing script service contract
+- `Runtime/ScriptService.cs` - compile/start/restore/measure orchestration
+- `Runtime/ScriptRunner.cs`
+- `Runtime/ScriptProcess.cs`, `ScriptProcessManager.cs`
+- `Runtime/ServerSourceProvider.cs`
+- `Loading/ScriptAssemblyLoader.cs`, `ScriptLoadContext.cs`
 
-- `ScriptService.cs` - compile/start/restore orchestration
-- `ScriptRunner.cs` - executes compiled scripts
-- `ScriptProcess.cs`
-- `ScriptProcessManager.cs`
-- `ScriptStartResult.cs`
-- `ScriptRestoreResult.cs`
-- `ServerSourceProvider.cs` - reads server script source
+### Language service
 
-## Assembly loading
+`LanguageService/ScriptLanguageService.cs` - diagnostics, completion, hover, signatures and definitions.
 
-`NullByte.Scripting/Loading/`
+## 4. Host/UI map
 
-- `ScriptAssemblyLoader.cs`
-- `ScriptAssembly.cs`
-- `ScriptLoadContext.cs`
+### Shell
 
-## Language service
+- `GameSession.cs`
+- `Persistence/SaveManager.cs`, `AutosaveService.cs`, `ISaveStore.cs`, `FileSaveStore.cs`
 
-- `LanguageService/ScriptLanguageService.cs`
+### Console host
 
-Provides diagnostics, completion, hover, signature help and definition lookup.
-
----
-
-# 4. Host and UI map
-
-## Shell
-
-`NullByte.Shell/`
-
-- `GameSession.cs` - active simulation composition
-- `Persistence/SaveManager.cs`
-- `Persistence/AutosaveService.cs`
-- `Persistence/ISaveStore.cs`
-- `Persistence/FileSaveStore.cs`
-
-## Console host
-
-`NullByte.ConsoleUI/`
-
-- `Program.cs` - process startup/composition
-- `GameHost.cs` - host/session lifecycle
-- `LoadRequest.cs`
-- `ShutdownRequest.cs`
+- `Program.cs` - process composition/config mapping
+- `GameHost.cs` - active session lifecycle
+- `HostRequest.cs`, `HostRequestMailbox.cs`
 - `NanoEditor.cs`
 
-Use the current source for the unified host request/mailbox and settings implementations; the packed repository may predate their latest forms.
+### Configuration
 
-## Commands
+`NullByte.ConsoleUI/Configuration/`
 
-`NullByte.ConsoleUI/Commands/`
+- `AppSettings.cs`, `ApplicationOptions.cs`
+- `CommandLineOptions.cs`, `CommandLineParser.cs`
+- `SettingsFileLoader.cs`, `SettingsLoader.cs`
+- `SettingsValidator.cs`, `SettingsValidationException.cs`
 
-Infrastructure:
+### Commands
 
-- `CommandDefinition.cs`
-- `CommandRegistry.cs`
-- `CommandDispatcher.cs`
-- `CommandSetup.cs`
-- `ICommandGroup.cs`
+`Commands/Groups/`: action, activity, Botnet, debug, file, network, persistence, player, script and system commands. Wiring is in `CommandSetup.cs`.
 
-Groups:
+### Terminal
 
-- `ActionCommands.cs`
-- `ActivityCommands.cs`
-- `BotnetCommands.cs`
-- `DebugCommands.cs`
-- `FileCommands.cs`
-- `NetworkCommands.cs`
-- `PersistenceCommands.cs`
-- `PlayerCommands.cs`
-- `ScriptCommands.cs`
-- `SystemCommands.cs`
+`Terminal/`: `IGameTerminal`, `ThreadSafeConsoleTerminal`, terminal `CommandLineParser`, completion infrastructure, history, hotkeys and live panels.
 
-## Terminal
+## 5. Editor map
 
-`NullByte.ConsoleUI/Terminal/`
-
-Key files:
-
-- `IGameTerminal.cs`
-- `ThreadSafeConsoleTerminal.cs`
-- `CommandLineParser.cs`
-- `CompletionEngine.cs`
-- `CompletionCatalog.cs`
-- `CompletionSnapshot.cs`
-- `InputHistory.cs`
-- `LivePanel.cs`
-- `PanelFormatter.cs`
-
----
-
-# 5. Editor map
-
-## C# server
+### C# server
 
 `NullByte.Editor/`
 
-- `EditorServer.cs` - lifecycle, connections and notifications
-- `EditorProtocol.cs` - request/response protocol
-- `EditorConnection.cs` - active connection
-- `EditorFileService.cs` - virtual-filesystem adapter
-- `EditorConnectionFile.cs` - connection discovery
-- `EditorToken.cs` - authentication token
-
-## VS Code extension
-
-`NullByte.vscode/`
-
-- `src/extension.ts` - activation/composition
-- `src/client.ts` - WebSocket protocol client
-- `src/commands.ts` - extension commands
-- `src/filesystem.ts` - VS Code filesystem provider
-- `src/paths.ts` - URI/path helpers
-- `src/status.ts` - connection status
-- `src/diagnostics.ts`
-- `src/completion.ts`
-- `src/hover.ts`
-- `src/signature.ts`
-- `src/definition.ts`
-- `package.json` - command/configuration contributions
-- `syntaxes/nullbyte-script.tmLanguage.json`
-
-Protocol changes normally require both C# and TypeScript changes.
-
----
-
-# 6. Task index
-
-## Hack/Grow/Weaken
-
-```text
-ServerActions.cs
-HackingFormulas.cs
-Server.cs
-Player.cs
-```
-
-If scripts are affected:
-
-```text
-INullByteApi.cs
-NullByteApi.cs
-```
-
-Tests:
-
-```text
-ServerActionsTests.cs
-ServerActionsSimulationTests.cs
-HackingFormulasTests.cs
-```
-
-## New script API method
-
-```text
-INullByteApi.cs
-NullByteApi.cs
-RamCostAttribute.cs
-relevant Core service
-ScriptRamAnalyzer.cs
-```
-
-Inspect API and RAM/compiler tests.
-
-## Script compilation
-
-```text
-ScriptCompiler.cs
-ScriptSourceGenerator.cs
-CompiledScript.cs
-ScriptCompilationResult.cs
-ScriptDiagnostic.cs
-ScriptRamAnalyzer.cs
-```
-
-Tests: `Scripting.Tests/Compilation/`
-
-## Includes
-
-```text
-IncludeScanner.cs
-IncludeResolver.cs
-SourceSnapshot.cs
-ServerSourceProvider.cs
-ScriptCompiler.cs
-ScriptRamAnalyzer.cs
-ScriptLanguageService.cs
-```
-
-Tests:
-
-```text
-IncludeResolverTests.cs
-IncludeCompilationTests.cs
-IncludeRamTests.cs
-IncludeLanguageServiceTests.cs
-LibraryOnItsOwnTests.cs
-```
-
-## Script processes
-
-```text
-ScriptService.cs
-ScriptRunner.cs
-ScriptProcess.cs
-ScriptProcessManager.cs
-NullByteApiFactory.cs
-IScriptOperations.cs
-```
-
-Tests: `Scripting.Tests/Runtime/`
-
-## Virtual filesystem
-
-```text
-VirtualFileSystem.cs
-VirtualPath.cs
-```
-
-Add the relevant adapter:
-
-```text
-FileCommands.cs
-NullByteFilesApi.cs
-EditorFileService.cs
-filesystem.ts
-```
-
-Inspect filesystem, path and adapter tests.
-
-## Console paths/completion
-
-```text
-WorkingDirectory.cs
-PathResolver.cs
-FileCommands.cs
-CompletionEngine.cs
-CompletionCatalog.cs
-CompletionSnapshot.cs
-```
-
-Tests include:
-
-```text
-WorkingDirectoryTests.cs
-PathCompletionTests.cs
-ScriptCommandsPathTests.cs
-CompletionEngineTests.cs
-```
-
-## Game loop/threading/time
-
-```text
-GameLoop.cs
-IGameThread.cs
-GameSynchronizationContext.cs
-GameScheduler.cs
-IGameClock.cs
-```
-
-Tests include:
-
-```text
-GameLoopTests.cs
-GameLoopSystemTests.cs
-GameLoopResilienceTests.cs
-GameSynchronizationContextTests.cs
-GameSchedulerTests.cs
-GameThreadHarness.cs
-```
-
-## Activities
-
-```text
-Domain/Activities/
-ActivityService.cs
-ActivitySystem.cs
-ActivityFormulas.cs
-ActivityRates.cs
-Data/activities.json
-ActivityCommands.cs
-```
-
-Tests: activity formula, service, system and command tests.
-
-## Botnet
-
-```text
-Botnet.cs
-BotnetNode.cs
-BotnetService.cs
-BotnetSystem.cs
-BotnetFormulas.cs
-BotnetCommands.cs
-NullByteBotnetApi.cs
-```
-
-Tests: Botnet formula, service, system, API and early-game tests.
-
-## Save format
-
-```text
-SaveGame.cs
-SaveGameMapper.cs
-SaveGameSerializer.cs
-SaveMigration.cs
-Persistence/Migrations/
-```
-
-Tests:
-
-```text
-SaveGameTests.cs
-SaveDirectoriesTests.cs
-GoldenSaves.cs
-```
-
-## Save/load/reset
-
-```text
-GameHost.cs
-GameSession.cs
-PersistenceCommands.cs
-SaveManager.cs
-AutosaveService.cs
-EditorServer.cs
-```
-
-Also inspect current host mailbox/request types.
-
-## Startup/settings
-
-```text
-Program.cs
-GameHost.cs
-GameSession.cs
-current settings and CLI parsing files
-```
-
-The latest local source is authoritative.
-
-## Console command
-
-```text
-relevant Commands/Groups/*Commands.cs
-CommandSetup.cs
-CommandDefinition.cs
-CommandRegistry.cs
-CommandDispatcher.cs
-```
-
-Then inspect the service that owns the actual behavior.
-
-## Editor connectivity
-
-```text
-EditorServer.cs
-EditorConnection.cs
-EditorConnectionFile.cs
-EditorToken.cs
-EditorProtocol.cs
-client.ts
-extension.ts
-status.ts
-```
-
-## Editor protocol operation
-
-```text
-EditorProtocol.cs
-EditorServer.cs
-client.ts
-relevant TypeScript feature module
-```
-
-Check game-thread access.
-
-## VS Code command
-
-```text
-commands.ts
-extension.ts
-package.json
-client.ts
-EditorProtocol.cs
-```
-
-## Diagnostics/language features
-
-```text
-ScriptLanguageService.cs
-EditorProtocol.cs
-ScriptDiagnostic.cs
-ScriptCompiler.cs
-```
-
-Add the relevant TypeScript file:
-
-```text
-diagnostics.ts
-completion.ts
-hover.ts
-signature.ts
-definition.ts
-```
-
----
-
-# 7. Test map
-
-## Core
-
-`NullByte.Core.Tests/`
-
-Key areas:
-
-```text
-Formulas/
-Services/
-Simulation/
-Systems/
-Threading/
-Time/
-Persistence/
-Scripting/
-World/
-```
-
-Useful helpers:
-
-- `Helpers/GameThreadHarness.cs`
-- `TestDoubles/SequenceRandomSource.cs`
-
-## Scripting
-
-`NullByte.Scripting.Tests/`
-
-Key areas:
-
-```text
-Compilation/
-Runtime/
-Loading/
-LanguageService/
-Acceptance/
-```
-
-## ConsoleUI
-
-`NullByte.ConsoleUI.Tests/`
-
-Key areas:
-
-```text
-Commands/
-Terminal/
-Persistence/
-```
-
-## Editor
-
-`NullByte.Editor.Tests/`
-
-Contains editor filesystem/folder behavior tests.
-
----
-
-# 8. Context-loading workflow
-
-For a task:
+- `EditorServer.cs` - lifecycle/connections/events; implements `IExternalEditorStatus`
+- `IExternalEditorStatus.cs`, `ExternalEditorStatus.cs`, `ExternalEditorConnectionInfo.cs`
+- `EditorProtocol.cs` - JSON protocol
+- `EditorFileService.cs` - VFS plus run/RAM operations
+- `EditorConnection.cs`, `EditorConnectionFile.cs`, `EditorToken.cs`
+
+### VS Code
+
+`NullByte.vscode/src/`
+
+- `extension.ts` - composition
+- `client.ts` - WebSocket client
+- `commands.ts` - extension commands
+- `runCodeLens.ts` - script Run CodeLens
+- `filesystem.ts`, `paths.ts`, `status.ts`
+- `diagnostics.ts`, `completion.ts`, `hover.ts`, `signature.ts`, `definition.ts`
+- `package.json` - contributions/configuration
+
+## 6. Task index
+
+### Hack/Grow/Weaken
+`ServerActions.cs`, `HackingFormulas.cs`, `Server.cs`, `Player.cs`; tests: `ServerActions*`, `HackingFormulasTests`.
+
+### Activities/jobs/study/crime
+`Domain/Activities/`, `ActivityService.cs`, `ActivitySystem.cs`, `ActivityFormulas.cs`, `CrimeRewards.cs`, `activities.json`, `ActivityCommands.cs`; tests under Core `Activities/`, Services/Systems, persistence and ConsoleUI Commands.
+
+### Script API
+`INullByteApi.cs`, `NullByteApi.cs`, relevant Core service, `RamCostAttribute.cs`, `ScriptRamAnalyzer.cs`.
+
+### Compilation/includes
+`ScriptCompiler.cs`, `ScriptSourceGenerator.cs`, `IncludeScanner.cs`, `IncludeResolver.cs`, `SourceSnapshot.cs`, `ServerSourceProvider.cs`, `ScriptRamAnalyzer.cs`, `ScriptLanguageService.cs`; tests under `Scripting.Tests/Compilation` and `LanguageService`.
+
+### Script runtime/processes
+`IScriptService.cs`, `ScriptService.cs`, `ScriptRunner.cs`, `ScriptProcess.cs`, `ScriptProcessManager.cs`, `NullByteApiFactory.cs`; tests under `Scripting.Tests/Runtime`.
+
+### Virtual filesystem/paths
+`VirtualFileSystem.cs`, `VirtualPath.cs`, then relevant adapter: `FileCommands.cs`, `NullByteFilesApi.cs`, `EditorFileService.cs`, `filesystem.ts`.
+
+### Game loop/threading/time
+`GameLoop.cs`, `IGameThread.cs`, `GameSynchronizationContext.cs`, `GameScheduler.cs`, `IGameClock.cs`; use `GameThreadHarness.cs` and relevant Simulation/Threading/Time tests.
+
+### Persistence/save format
+`SaveGame.cs`, `SaveGameMapper.cs`, serializer, migrations; tests include `SaveGameTests.cs`, `SaveActivityTests.cs`, `SaveDirectoriesTests.cs`, `GoldenSaves.cs`.
+
+### Save/load/reset
+`GameHost.cs`, `HostRequest.cs`, `HostRequestMailbox.cs`, `GameSession.cs`, `PersistenceCommands.cs`, `SaveManager.cs`, `AutosaveService.cs`, `EditorServer.cs`.
+
+### Startup/settings
+`Program.cs` plus `Configuration/`; tests under `ConsoleUI.Tests/Configuration`.
+
+### Editor connection status
+`DebugCommands.cs`, `CommandSetup.cs`, `IExternalEditorStatus.cs`, `EditorServer.cs`.
+
+### Editor run/RAM
+`EditorFileService.cs`, `EditorProtocol.cs`, `IScriptService.cs`, `ScriptService.cs`, `client.ts`, `commands.ts`, `runCodeLens.ts`, `package.json`; tests include `EditorFileServiceRunTests.cs`.
+
+### Diagnostics/language features
+`ScriptDiagnostic.cs`, `ScriptCompiler.cs`, `ScriptLanguageService.cs`, `EditorProtocol.cs`, plus the relevant TypeScript provider.
+
+## 7. Context workflow
 
 1. Read `AI_CONTEXT.md` and `CURRENT_STATUS.md`.
-2. Use this file to identify the subsystem.
-3. Load primary implementation files.
-4. Load interfaces/direct collaborators.
-5. Load relevant tests.
-6. Expand only when another dependency proves necessary.
-7. For architectural changes, also load `ARCHITECTURE.md`.
-8. For gameplay decisions, load the relevant section of `DESIGN.md`.
+2. Use this map to select primary source, contracts and tests.
+3. Expand only when dependencies prove necessary.
+4. Load `ARCHITECTURE.md` for structural changes and `DESIGN.md` for gameplay decisions.
+5. Always use current versions of files being modified.
 
-Always use the current version of every file being modified.
-
-A typical task should begin with 5-10 source/test files, not a full repository dump.
-
-Update this map only when major entry points, projects or subsystem ownership change.
+A typical task should start with 5-10 source/test files, not a full repository dump.

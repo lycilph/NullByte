@@ -8,6 +8,7 @@
   - Fix tab-completion for the work command (see registration for the work command in ActivityCommands.cs)
   - study: the free tier should NOT get the x3 multiplier, or should only be available at the x1 university
 - Remove/delete the ActivityState class? 
+  -	Group all formulas in one master formula class
 	
 # Todo
 

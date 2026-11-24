@@ -1,4 +1,5 @@
 ﻿using NullByte.Core.Scripting;
+using NullByte.Core.Scripting.Activities;
 using NullByte.Core.Services;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Loading;
@@ -284,6 +285,7 @@ public sealed class ScriptRunnerTests
 
         public INullByteFilesApi Files => throw new NotSupportedException();
         public INullByteBotnetApi Botnet => throw new NotSupportedException();
+        public INullByteActivitiesApi Activities => throw new NotSupportedException();
         public Task<HackResult> Hack(string hostname)
         {
             throw new NotSupportedException("Hack is not used by these runner tests.");

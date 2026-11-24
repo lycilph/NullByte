@@ -199,7 +199,17 @@ public sealed class GameSession : IAsyncDisposable
         var scriptRunner = new ScriptRunner(scriptLoader);
         var scriptProcessManager = new ScriptProcessManager();
         var apiFactory = options.ApiFactory 
-            ?? new NullByteApiFactory(state, scheduler, networkService, botnetService, serverActions, hackingFormulas, botnetFormulas, options.Output);
+            ?? new NullByteApiFactory(
+                state,
+                scheduler,
+                networkService,
+                botnetService,
+                serverActions,
+                activityService,
+                hackingFormulas,
+                botnetFormulas,
+                skillFormulas,
+                options.Output);
         var scriptService = new ScriptService(state, scriptCompiler, scriptRunner, apiFactory, scriptProcessManager);
 
         var services = new GameServices(networkService, serverActions, botnetService, scriptService, activityService, skillFormulas, hackingFormulas, botnetFormulas, networkFormulas);

@@ -1,228 +1,127 @@
 ﻿# NullByte Current Status
 
-Working snapshot of current NullByte development.
+Working snapshot of current development. Source is authoritative if this file becomes stale.
 
-Update after completing a deliverable or changing development focus.
+See `AI_CONTEXT.md`, `CODEBASE.md`, `ARCHITECTURE.md` and `DESIGN.md` for stable context.
 
-See:
+## Current focus
 
-- `AI_CONTEXT.md` - development rules
-- `CODEBASE.md` - source/test navigation
-- `ARCHITECTURE.md` - system structure
-- `DESIGN.md` - intended behavior and roadmap
+**Milestone:** M11 - VS Code editor integration improvements.
 
-Current source is authoritative if this file becomes stale.
+Three M11 deliverables are complete:
 
----
+- connected external-editor debug status
+- run current script from VS Code
+- query current script RAM from VS Code
 
-# Current focus
+Remaining M11 work:
 
-**Milestone:** M11 - VS Code editor integration improvements
+1. launch VS Code from the game
+2. full-range diagnostic underlines
 
-**Current deliverable:** M11.1 - Debug command for connected external editors
+No known implementation blocker is recorded for the next deliverable. Before starting it, inspect the current M11 implementation rather than assuming the earlier pre-merge APIs.
 
-Goal:
+## Completed M11 work
 
-Allow the in-game debug command system to show all currently connected external editor clients.
+### External editor status
 
-Expected behavior:
+`DebugCommands` now exposes `editor`. ConsoleUI receives the nullable `IExternalEditorStatus` abstraction rather than editor transport internals. It distinguishes integration disabled, no connected editors and active connections.
 
-- list every active editor connection
-- report clearly when none are connected
-- obtain live state from the editor subsystem
-- avoid maintaining a duplicate connection registry
-
----
-
-# Current issue
-
-While integrating editor connection information into `DebugCommands`, the supplied delegate/provider was observed as `null` during command registration/composition.
-
-Before continuing, inspect the current versions of:
+Relevant files:
 
 ```text
-NullByte.ConsoleUI/Commands/Groups/DebugCommands.cs
-NullByte.ConsoleUI/Commands/CommandSetup.cs
-NullByte.ConsoleUI/GameHost.cs
-NullByte.Editor/EditorServer.cs
-NullByte.Editor/EditorConnection.cs
+DebugCommands.cs
+CommandSetup.cs
+EditorServer.cs
+IExternalEditorStatus.cs
+ExternalEditorStatus.cs
+ExternalEditorConnectionInfo.cs
 ```
 
-Do not continue from an assumed API.
+### Run from VS Code
 
-Trace the current composition path first and resolve the lifetime/wiring issue rather than introducing global/static connection state.
+The editor stack can execute a `.cx` file through the existing scripting runtime. Editor-side execution reuses `IScriptService` rather than implementing a second execution path.
 
-The final abstraction should expose only the read-only connection information required by the command.
-
----
-
-# M11 roadmap
-
-## M11.1 - Connected editor debug command
-
-**Status:** In progress
-
-Current task described above.
-
-## M11.2 - Full-range diagnostics
-
-**Status:** Planned
-
-Improve VS Code diagnostics so the relevant source range is underlined rather than only a partial position.
-
-Likely areas:
+Relevant files:
 
 ```text
-ScriptDiagnostic.cs
-ScriptCompiler.cs
-ScriptLanguageService.cs
+EditorFileService.cs
 EditorProtocol.cs
-diagnostics.ts
+IScriptService.cs
+ScriptService.cs
+commands.ts
+runCodeLens.ts
+package.json
 ```
 
-## M11.3 - Run current script from VS Code
+### RAM from VS Code
+
+The extension can query the current script's RAM using the existing script RAM/compilation behavior, preserving normal diagnostics and include semantics.
+
+## Recently merged gameplay work
+
+M10 activities now include crimes in addition to study/training and jobs.
+
+Crime support includes:
+
+- crime definitions/catalog data
+- repeated timed crime attempts
+- success chance and rewards
+- focused/background activity modes
+- activity UI/progress reporting
+- persistence support
+
+Relevant additions include `Crime.cs`, `CrimeActivity.cs`, `CrimeAttempt.cs` and `CrimeRewards.cs`.
+
+Persistence is now at save format 4 with `V3ToV4Migration`, and activity persistence has dedicated tests.
+
+## Established host work
+
+The current codebase includes:
+
+- closed `HostRequest` hierarchy for shutdown/load/reset
+- atomic single-slot `HostRequestMailbox`
+- true reset/session replacement
+- autosave deletion during reset
+- optional `settings.json`
+- CLI overrides and centralized validation
+- `--write-default-settings`
+
+Configuration files live under `NullByte.ConsoleUI/Configuration/`.
+
+## M11 remaining
+
+### Launch VS Code from the game
 
 **Status:** Planned
 
-Add editor protocol/VS Code commands for executing the currently open `.cx` file through the existing `ScriptService`.
+Keep external-process launching outside Core. Decide command name, executable discovery, workspace behavior and failure messages before implementation.
 
-Do not create an editor-specific execution path.
-
-## M11.4 - Get RAM from VS Code
+### Full-range diagnostics
 
 **Status:** Planned
 
-Expose existing script RAM measurement through the editor protocol and VS Code.
+Diagnostics currently need start/end range support carried consistently through `ScriptDiagnostic`, language service, editor protocol and `diagnostics.ts`.
 
-Reuse `ScriptService`/existing RAM analysis and preserve include behavior and diagnostics.
-
-## M11.5 - Launch VS Code from the game
-
-**Status:** Planned
-
-Add a host-level command for launching VS Code into the NullByte editing workflow.
-
-Keep external-process launching outside Core.
-
----
-
-# Recently completed
-
-## Reset / new game
-
-Implemented as a true replacement of game/session state rather than field-by-field clearing.
-
-The completed design includes:
-
-- new game state/session
-- autosave deletion
-- lifecycle cleanup
-- editor notification
-- restrictions around incompatible active activity
-
-Verify exact APIs against current source before modifying this flow.
-
-## Host request/mailbox architecture
-
-Host-directed lifecycle requests were consolidated around a common mailbox/request concept instead of independent polling mechanisms.
-
-Use the current implementation for operations such as load, reset and shutdown.
-
-## Application settings
-
-Completed settings architecture includes:
-
-- command-line parsing
-- `settings.json`
-- settings beside the executable
-- CLI overrides
-- centralized validation
-- settings-file writing
-- refactored startup
-- unit tests
-
-Application settings remain separate from gameplay balance.
-
-## Script includes
-
-Implemented including:
-
-- recursive includes
-- cycle/depth validation
-- compilation
-- RAM analysis
-- language-service support
-- tests
-
----
-
-# Established foundation
-
-The following major capabilities are already present and should normally be treated as existing systems rather than redesigned during unrelated work:
-
-- single-threaded simulation
-- Hack/Grow/Weaken
-- console command system
-- virtual filesystem
-- Botnet
-- Roslyn `.cx` scripting
-- script processes/threads/RAM
-- persistence and autosave
-- VS Code virtual filesystem
-- VS Code language services
-- script includes/libraries
-- activities/jobs/training
-
-See `CODEBASE.md` for their implementation locations.
-
----
-
-# Next milestone
+## Next milestone
 
 **M12 - Sandbox and safety**
 
-Not started.
+Planned areas:
 
-Expected areas include:
-
-- restricted references/APIs
-- semantic analyzers
-- blocking-operation prevention
+- allow-listed references / banned API analysis
+- blocking API prevention
 - synchronous infinite-loop protection
 - script failure containment
 
-Do not start M12 implicitly while completing M11 unless required for correctness.
+Do not fold M12 into M11 unless needed for correctness.
 
----
+## Documentation rule
 
-# Immediate next steps
+After meaningful work:
 
-1. Inspect current M11.1 implementation files.
-2. Trace `DebugCommands` creation and registration.
-3. Determine why the connection-information provider becomes `null`.
-4. Settle the smallest correct read-only boundary.
-5. Implement connection listing.
-6. Verify zero, one and multiple connections.
-7. Add tests where practical.
-8. Mark M11.1 complete here.
-9. Proceed to M11.2.
-
----
-
-# Documentation update rule
-
-After completing meaningful work:
-
-- update this file for progress/blockers
-- update `CODEBASE.md` only if important entry points move
-- update `ARCHITECTURE.md` only for architectural changes
-- update `DESIGN.md` only for product/game-design decisions
-- update `AI_CONTEXT.md` only when development invariants change
-
----
-
-# Last updated
-
-2026-11-24
-
-**Active:** M11.1 - connected external editor debug command.
+- `CURRENT_STATUS.md`: progress/current focus
+- `CODEBASE.md`: important entry points/ownership only
+- `ARCHITECTURE.md`: architectural changes only
+- `DESIGN.md`: player-facing/product decisions only
+- `AI_CONTEXT.md`: durable development invariants only

@@ -6,6 +6,7 @@ using NullByte.Core.Randomness;
 using NullByte.Core.Scripting;
 using NullByte.Core.Services;
 using NullByte.Core.Time;
+using NullByte.Core.World;
 
 namespace NullByte.Core.Tests.Scripting;
 
@@ -482,6 +483,7 @@ public sealed class NullByteApiTests
         private readonly ServerActions serverActions;
         private readonly NetworkService networkService;
         private readonly BotnetService botnetService;
+        private readonly ActivityService activityService;
 
         public Fixture()
         {
@@ -526,9 +528,12 @@ public sealed class NullByteApiTests
             HackingFormulas = new HackingFormulas(balance);
             BotnetFormulas = new BotnetFormulas(balance);
             var networkFormulas = new NetworkFormulas(balance);
+            var activityFormulas = new ActivityFormulas(balance);
+            SkillFormulas = new SkillFormulas(balance);
 
             networkService = new NetworkService(GameState, scheduler, networkFormulas);
             botnetService = new BotnetService(GameState, BotnetFormulas);
+            activityService = new ActivityService(GameState, ActivityCatalogFactory.CreateDefault(), activityFormulas);
             
             ScriptOperations = Substitute.For<IScriptOperations>();
 
@@ -546,6 +551,7 @@ public sealed class NullByteApiTests
         public Server NukeTarget { get; }
         public HackingFormulas HackingFormulas { get; }
         public BotnetFormulas BotnetFormulas { get; }
+        public SkillFormulas SkillFormulas { get; }
         public IScriptOperations ScriptOperations { get; }
         public TestScriptOutput Output { get; }
 
@@ -557,8 +563,10 @@ public sealed class NullByteApiTests
                 networkService,
                 botnetService,
                 serverActions,
+                activityService,
                 HackingFormulas,
                 BotnetFormulas,
+                SkillFormulas,
                 ScriptOperations,
                 Output,
                 hostname,

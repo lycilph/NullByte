@@ -1,556 +1,163 @@
 ﻿# NullByte Design
 
-Authoritative product and gameplay specification for NullByte.
+Authoritative product/gameplay specification. Source defines current implementation; this file defines intended behavior.
 
-See:
+## 1. Vision
 
-- `AI_CONTEXT.md` - development rules
-- `ARCHITECTURE.md` - technical architecture
-- `CODEBASE.md` - source/test navigation
-- `CURRENT_STATUS.md` - implementation progress
-
-Source code defines current implementation. This document defines intended behavior.
-
----
-
-# 1. Vision
-
-NullByte is a text-driven incremental hacking game inspired by Bitburner.
-
-The player begins by manually exploring and hacking servers through a terminal. Repetition creates motivation to automate those actions with C# scripts.
-
-The core progression loop is:
+NullByte is a text-driven incremental hacking game inspired by Bitburner. The player starts with manual terminal work, then increasingly automates gameplay with C# scripts.
 
 ```text
-Do manually
-  -> understand
-  -> automate
-  -> scale
-  -> optimize
-  -> encounter harder problem
+manual -> understand -> automate -> scale -> optimize -> harder problem
 ```
 
-Core principle:
+**Scripting is the game.** Manual commands and scripts use the same rules; scripts gain power through automation, scale and coordination.
 
-> Scripting is the game.
+## 2. Progression principles
 
-Programming should increasingly become how the player interacts with and optimizes the world.
+- Players should encounter a mechanic before automating it.
+- Repetition should naturally motivate scripting.
+- Reusable programs/libraries should become a personal toolset.
+- Better algorithms, targeting, timing, RAM use and infrastructure should matter.
 
----
+Initial arc: learn terminal/network -> Hack/Grow/Weaken manually -> Botnet -> first script -> RAM/threads/processes -> multi-server automation -> reusable libraries -> optimization.
 
-# 2. Design principles
+Target first-playable progression: roughly **1-2 hours** to the final initial server tier.
 
-## Shared rules
+## 3. Network and hacking
 
-Manual commands and scripts use the same gameplay mechanics.
+The first version uses a hand-authored network. Servers have topology, hacking requirement, money/max money, security/min security, growth, RAM, root state and virtual files. `scan` reveals reachable servers; `nuke` provides simplified initial root progression.
 
-Scripts gain power through automation, scale and coordination, not stronger versions of actions.
-
-## Automation is earned
-
-Players should normally encounter and understand a mechanic before automating it.
-
-Repetition should naturally create the thought:
-
-> I should write a script for this.
-
-## Programs compose
-
-Players should gradually build reusable tools and libraries rather than isolated scripts.
-
-## Programming skill matters
-
-Better:
-
-- algorithms
-- abstractions
-- targeting
-- scheduling
-- thread allocation
-- RAM usage
-- infrastructure
-
-should produce observable gameplay benefits.
-
----
-
-# 3. Initial progression
-
-The first playable experience should broadly progress through:
-
-1. Learn terminal/network exploration.
-2. Manually Hack/Grow/Weaken servers.
-3. Establish passive Botnet income.
-4. Write a first automation script.
-5. Learn RAM, threads and processes.
-6. Execute automation across multiple servers.
-7. Build reusable libraries.
-8. Optimize targeting and infrastructure.
-
-By late early-game, the player's programs should drive substantially more progress than manual commands.
-
-Target first-playable progression is approximately **1-2 hours** to the final initial server tier.
-
----
-
-# 4. Network and servers
-
-The first version uses a hand-authored network.
-
-Servers may contain:
-
-- hostname/connections
-- hacking requirement
-- money/max money
-- security/min security
-- growth
-- RAM
-- root status
-- virtual files
-
-Servers are discovered through exploration rather than all being visible initially.
-
-`scan` reveals reachable servers.
-
-`nuke` provides initial root-access progression. More advanced port-opening requirements are deferred.
-
----
-
-# 5. Hack, Grow and Weaken
-
-These are the fundamental early automation mechanics.
-
-## Hack
-
-Attempts to steal server money.
-
-Affected by factors including:
-
-- hacking skill
-- server requirement/security
-- thread count
-
-Hack takes time, changes security and grants hacking experience.
-
-## Grow
-
-Restores/increases server money toward its maximum.
-
-Effectiveness depends on server characteristics, security and threads.
-
-Grow takes time, raises security and grants experience.
-
-## Weaken
-
-Reduces server security toward its minimum.
-
-Effect scales with threads.
-
-Weaken takes time and grants experience.
-
-Together they produce the first meaningful scripting problem:
+Hack, Grow and Weaken take game time, scale with appropriate factors/threads, affect money/security and grant hacking XP. Together they create the first automation problem:
 
 ```text
-security too high -> weaken
-money too low     -> grow
-otherwise         -> hack
+security high -> weaken
+money low     -> grow
+otherwise     -> hack
 ```
 
-Players should be free to improve substantially on this simple strategy.
+Manual long actions block normal console input but not simulation; scripts, Botnet and activities continue.
 
----
+## 4. Botnet
 
-# 6. Time and manual actions
+Botnet is the early passive-income loop. Nodes have level, RAM and cores and can be purchased/upgraded. It should bootstrap progress without permanently dominating effective scripted hacking.
 
-Gameplay progresses in game time, initially approximately **1 game second per real second**.
+## 5. Activities
 
-Long manual operations temporarily block normal console input but do not stop simulation.
+The player can perform longer-running activities in **focused** or **background** mode. Background activity leaves the console free but reduces rewards; focused activity owns the console until ended/backgrounded.
 
-While waiting:
+Current activity types:
 
-- scripts continue
-- Botnet progresses
-- activities progress
-- scheduled operations continue
+- study/training for skill XP
+- jobs for money, reputation and career progression
+- crimes for risk/reward progression
 
-Automation therefore provides practical advantages without different game rules.
+Crimes repeat timed attempts until stopped/background rules end them. Each attempt has a success chance; success/failure determines money/XP rewards. Crime progress, attempt counts and success counts are player-visible. Activities share one lifecycle and persist through saves where defined.
 
----
+## 6. Virtual filesystem
 
-# 7. Botnet
+Each server has an in-game filesystem, independent of the host OS. Paths use `/`, are case-sensitive, max 8 levels and 256 characters, and cannot contain empty/unresolved `.`/`..` segments or conflicting file/folder identities.
 
-Botnet provides passive income and an early incremental loop.
+Console commands support current-directory/relative-path behavior. Scripts and editor API paths are server-root-relative.
 
-Nodes have upgradeable:
+## 7. Scripts, processes and RAM
 
-- level
-- RAM
-- cores
+Scripts are `.cx` C# top-level source compiled at runtime. Main scripts implicitly receive `nb` and `args`.
 
-Players can buy nodes and upgrades.
+Running scripts are game processes with PID, host, path, arguments, threads, RAM and state.
 
-Botnet should provide useful, reliable passive income but should not permanently dominate well-designed scripted hacking.
-
-The two economies should complement each other.
-
----
-
-# 8. Activities
-
-Players can perform longer-running activities such as:
-
-- jobs
-- training
-- studying
-
-Activities may provide money and progression.
-
-Jobs may involve companies, ranks, requirements, salaries and promotions.
-
-Training/study can exchange time and potentially money for skill progression.
-
-Activities should create meaningful alternatives rather than only idle waiting.
-
----
-
-# 9. Virtual filesystem
-
-Every server has a virtual filesystem.
-
-Player files are part of game state, not the operating-system filesystem.
-
-Paths use `/` and are case-sensitive.
-
-Important rules:
-
-- root-relative paths may optionally start with `/`
-- maximum depth: 8
-- maximum path length: 256 characters
-- empty segments are invalid
-- raw paths cannot contain unresolved `.` or `..`
-- a path cannot simultaneously be a file and directory
-
-Console commands support a current working directory and shell-style relative paths.
-
-Scripts always use server-root-relative paths and do not inherit the console working directory.
-
----
-
-# 10. Scripts
-
-Player scripts use `.cx`.
-
-They contain C# top-level statements and are compiled at runtime.
-
-Main scripts implicitly receive:
-
-- `nb` - NullByte API
-- `args` - script arguments
-
-Example:
-
-```text
-var target = args[0];
-
-while (true)
-{
-    if (nb.GetServerSecurityLevel(target) >
-        nb.GetServerMinSecurityLevel(target) + 5)
-        await nb.Weaken(target);
-    else
-        await nb.Hack(target);
-}
-```
-
-Players do not write an explicit runtime entry class/method.
-
----
-
-# 11. Processes and RAM
-
-Running scripts are game processes with concepts such as:
-
-- PID
-- host
-- path
-- arguments
-- threads
-- RAM
-- state
-
-Scripts have a static gameplay RAM cost based on API capabilities used.
-
-Conceptually:
+Script RAM is a static gameplay cost based semantically on API capabilities used:
 
 ```text
 required RAM = script RAM * threads
 ```
 
-Execution fails clearly when the server lacks available RAM.
+Insufficient server RAM rejects execution clearly.
 
-RAM should encourage meaningful choices between general-purpose and focused scripts.
+The `nb` API covers game actions, server/player information, network/rooting, scripts/processes, files, Botnet and output. It should expand from gameplay needs rather than expose internal game objects.
 
----
+## 8. Includes/libraries
 
-# 12. Script API
+Reusable source uses `#include "path"`. Includes are server-root-relative and resolved on the execution server.
 
-The API exposed through `nb` includes capabilities covering:
+Libraries may contain usings/types but no top-level executable statements. They do not implicitly receive `nb`/`args`; dependencies are explicit.
 
-- Hack/Grow/Weaken/Sleep
-- server information
-- player information
-- scanning/root access
-- script execution/process management
-- files
-- Botnet
-- output
+Rules:
 
-The API should expand according to gameplay needs rather than exposing internal game objects indiscriminately.
+- recursive includes allowed
+- each file included once
+- max depth 8
+- cycles/missing/invalid includes are errors
+- `scp` does not automatically copy dependencies
+- all included source participates in diagnostics/RAM
+- running processes keep the code compiled at start
 
----
+Diagnostics: NB1001 missing, NB1002 cycle, NB1003 depth, NB1004 invalid path, NB1005 malformed directive, NB1006 top-level library statements.
 
-# 13. Libraries and includes
+## 9. Persistence and reset
 
-Reusable source uses:
+Saves are versioned and migrated. Persistent state includes the gameplay state required to resume, including virtual files/folders and restorable process/activity state. Live CLR execution is not serialized; scripts are reconstructed from saved source.
 
-`#include "path"`
+Reset means a genuinely new game/session. Confirmed reset removes progression and autosave/backup while preserving named saves. If autosave deletion fails, reset aborts and the existing session remains active. Successful load/reset notifies editor integrations that the session changed.
 
-Includes are server-root-relative.
+## 10. Configuration
 
-Libraries may contain:
+Application settings are not game state. Optional `settings.json` beside the executable is merged with CLI overrides and validated at startup.
 
-- using directives
-- type declarations
+Current host settings include save directory, editor enable/port/connection file and development game-speed multiplier. `--new` and `--write-default-settings` are launch-only instructions. Environment variables and live reload are out of scope.
 
-They may not contain top-level executable statements.
+## 11. VS Code integration
 
-Libraries do not implicitly receive `nb` or `args`; dependencies are passed explicitly.
+VS Code is optional and exposes discovered servers/files as the actual NullByte virtual filesystem. It supports file/folder editing plus Roslyn-backed diagnostics, completion, hover, signature help and definitions that match runtime script semantics.
 
-Includes:
+M11 workflow improvements include:
 
-- may be recursive
-- are included once
-- are limited to depth 8
-- may not form cycles
-- fail clearly when missing/invalid
+- connected-editor status from the game - **done**
+- run current script from VS Code - **done**
+- query current script RAM from VS Code - **done**
+- launch VS Code from the game - remaining
+- full-range diagnostic underlines - remaining
 
-Included source contributes to compilation, diagnostics and RAM analysis.
+Editor Run/RAM must use the same runtime behavior as normal game commands, not editor-specific game rules.
 
-Current RAM behavior charges API usage across all included source rather than runtime reachability.
+## 12. Script safety
 
-Running processes use the source compiled when they started; later edits do not mutate them.
+M12 will strengthen restrictions around host filesystem/network/process access, reflection/assembly loading, uncontrolled threading, blocking waits and synchronous infinite loops. This is practical hobby-game sandboxing, not a hostile-code security boundary.
 
----
+## 13. First-playable scope
 
-# 14. Include diagnostics
+Includes terminal/network exploration, hacking, Botnet, virtual filesystem, C# scripting, processes/threads/RAM, libraries, activities, persistence, optional VS Code integration, sandboxing and a balance/tutorial pass.
 
-NullByte-specific include errors:
+Deferred: factions, augmentations, stock market, corporations, gangs, Sleeves, multiplayer, offline progression and full GUI. Purchased servers/port-opening progression remain candidates where they improve the initial arc.
 
-| ID | Meaning |
-|---|---|
-| NB1001 | Include not found |
-| NB1002 | Include cycle |
-| NB1003 | Depth > 8 |
-| NB1004 | Invalid include path |
-| NB1005 | Malformed include |
-| NB1006 | Top-level statements in library |
+## 14. Roadmap
 
-Diagnostics should identify the player's actual file and source location.
-
----
-
-# 15. Persistence and reset
-
-Game progress can be manually saved/loaded and periodically autosaved.
-
-The save format is versioned and supports migration.
-
-Virtual files are persisted.
-
-Running scripts are represented by game-level process information and reconstructed from saved source rather than serializing live CLR execution state.
-
-Reset means:
-
-> Start a genuinely new game.
-
-It replaces the previous game state/session and removes the previous autosave.
-
-Reset should not silently discard incompatible active foreground activity.
-
----
-
-# 16. VS Code integration
-
-VS Code is an optional richer script-development environment.
-
-Players can:
-
-- browse discovered servers/files
-- create/edit/move/delete virtual files
-- receive diagnostics
-- use completion
-- use hover/signature help
-- navigate to definitions
-
-Changes affect the actual in-game virtual filesystem.
-
-The editor should understand the same script/include environment as runtime compilation.
-
-Planned workflow improvements include:
-
-- inspect connected editors
-- full-range diagnostics
-- run current script
-- query RAM
-- launch VS Code from the game
+- **M0-M3:** foundation, simulation, network/formulas, console/manual actions and QoL.
+- **M4:** Botnet.
+- **M5-M6:** Roslyn scripting, processes, threads, RAM and remote execution.
+- **M7:** persistence, host lifecycle and true reset.
+- **M8:** initial VS Code integration.
+- **M9:** includes/libraries.
+- **M10:** activities including jobs, study/training and crimes.
+- **M11:** VS Code workflow improvements; three of five deliverables complete.
+- **M12:** sandbox and safety.
+- **M13:** progression/balance, tutorial/help, home RAM upgrades; target 1-2 hour initial arc.
+- **M14:** stabilization, docs, packaging and first playable.
 
 Current implementation progress belongs in `CURRENT_STATUS.md`.
 
----
+## 15. Future possibilities
 
-# 17. Script safety
+WPF/AvalonEdit host, larger networks, home RAM/purchased-server progression, port-opening programs, factions/augmentations/prestige, additional economies, offline progression, API versioning and improved include dependency/RAM analysis.
 
-Player scripts should eventually be restricted from unsafe host capabilities such as:
-
-- unrestricted filesystem access
-- networking
-- process launching
-- reflection/assembly loading
-- uncontrolled threading
-- blocking waits
-
-Synchronous infinite loops also require mitigation.
-
-This is practical game sandboxing, not a hardened hostile-code security boundary.
-
----
-
-# 18. First playable scope
-
-Includes:
-
-- terminal/network exploration
-- Hack/Grow/Weaken
-- player progression
-- Botnet
-- virtual filesystem
-- C# scripting
-- processes, threads and RAM
-- reusable libraries
-- activities
-- persistence
-- optional VS Code integration
-- sandboxing
-- balance/tutorial pass
-
-Explicitly deferred include:
-
-- factions
-- augmentations
-- stock market
-- corporations
-- gangs
-- Sleeves
-- multiplayer
-- full graphical UI
-- other large Bitburner-inspired systems
-
-Purchased servers and port-opening progression may be introduced when they meaningfully improve initial progression.
-
----
-
-# 19. Roadmap
-
-Completed milestone implementation status belongs in `CURRENT_STATUS.md`; this roadmap defines intended scope.
-
-## M0-M3 - Foundation and manual game
-
-- project foundation
-- simulation/threading
-- network/model/formulas
-- terminal and manual actions
-- completion/history
-
-## M4 - Botnet
-
-Passive income and upgrade loop.
-
-## M5-M6 - Scripting
-
-Roslyn scripts, script API, processes, RAM, threads and remote execution.
-
-## M7 - Persistence
-
-Versioned saves, migration, manual saves and autosave.
-
-## M8 - VS Code
-
-Virtual filesystem and initial language-service integration.
-
-## M9 - Includes
-
-Reusable libraries with compilation, RAM and editor support.
-
-## M10 - Activities
-
-Jobs, training and study.
-
-## M11 - VS Code improvements
-
-- connected-editor visibility
-- improved diagnostics
-- run from editor
-- RAM query
-- launch VS Code
-
-## M12 - Sandbox and safety
-
-Restrict unsafe APIs and contain problematic scripts.
-
-## M13 - Progression and balance
-
-Tune network progression, economy, Botnet, hacking, RAM, tutorial/help and sample scripts.
-
-Target roughly 1-2 hours for the initial progression arc.
-
-## M14 - First playable
-
-Stabilization, documentation, packaging and validation with another player.
-
----
-
-# 20. Future possibilities
-
-After the first playable:
-
-- WPF host, potentially using AvalonEdit
-- larger networks
-- home RAM progression
-- purchased servers
-- port-opening programs
-- factions
-- augmentations/prestige
-- additional economies
-- offline progression
-- script API versioning
-- improved include dependency/reachability handling
-
-New systems should strengthen rather than dilute the programming/automation fantasy.
-
----
-
-# 21. Design test
+## 16. Design test
 
 Before adding a feature, ask:
 
-1. Does it create an interesting problem?
-2. Can the player understand the problem?
-3. Can programming automate or improve it?
-4. Can better programming improve it further?
-5. Does it interact meaningfully with time, RAM, money or infrastructure?
-6. Does it encourage reusable tools?
-7. Are the rules understandable?
-
-The deciding question is:
+1. Does it create an understandable problem?
+2. Can programming automate/improve it?
+3. Can better programming improve it further?
+4. Does it interact with time, RAM, money, risk or infrastructure?
+5. Does it encourage reusable tools?
+6. Are the rules understandable?
 
 > Does this give the player a reason to write a better program?

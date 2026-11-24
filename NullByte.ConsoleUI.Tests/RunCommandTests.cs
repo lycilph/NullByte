@@ -3,6 +3,7 @@ using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Configuration;
 using NullByte.Core.Domain;
 using NullByte.Core.Scripting;
+using NullByte.Core.Scripting.Activities;
 using NullByte.Core.Services;
 using NullByte.Scripting.Runtime;
 using NullByte.Shell;
@@ -252,8 +253,9 @@ public sealed class RunCommandTests
         private readonly TaskCompletionSource sleepCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly CancellationToken cancellationToken = new();
 
-        public INullByteFilesApi Files => throw new NotImplementedException();
+        public INullByteFilesApi Files => throw new NotSupportedException();
         public INullByteBotnetApi Botnet => throw new NotSupportedException();
+        public INullByteActivitiesApi Activities => throw new NotSupportedException();
 
         public TestNullByteApi(IGameTerminal terminal)
         {

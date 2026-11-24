@@ -44,4 +44,5 @@ Using AI_CONTEXT.md, CODEBASE.md, and the current design document, I want to imp
 First review the architecture and identify which implementation files you'll need.
 
 
-
+## Files
+AI_CONTEXT.md, CODEBASE.md, CURRENT_STATUS.md, ARCHITECTURE.md, DESIGN.md
