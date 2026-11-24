@@ -1,16 +1,5 @@
 ﻿# In progress
 
-* Launch vs code with: `code -n --folder-uri "nullbyte:/NullByte/"`
-```
-using System.Diagnostics;
-
-Process.Start(new ProcessStartInfo
-{
-    FileName = "vscode://command/nullbyte.openWorkspace",
-    UseShellExecute = true
-});
-```
-
 - Milestone M10: Activities (jobs, training, studying etc.)
 - Clean up
   - Skill/Hacking formulas
