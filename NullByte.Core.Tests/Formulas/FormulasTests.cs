@@ -3,7 +3,7 @@ using NullByte.Core.Formulas;
 
 namespace NullByte.Core.Tests.Formulas;
 
-public sealed class FormulasTests
+public sealed class FormulaSetTests
 {
     [Fact]
     public void Creates_all_formula_domains_from_the_same_balance_configuration()
@@ -15,7 +15,7 @@ public sealed class FormulasTests
             AnalyzeDuration = 42
         };
 
-        var formulas = new Formulas(balance);
+        var formulas = new FormulaSet(balance);
 
         Assert.Equal(42, formulas.Network.CalculateAnalyzeDuration().TotalSeconds);
         Assert.Equal(
@@ -33,7 +33,7 @@ public sealed class FormulasTests
     [Fact]
     public void Creates_distinct_domain_formula_objects()
     {
-        var formulas = new Formulas(new BalanceConfig());
+        var formulas = new FormulaSet(new BalanceConfig());
 
         Assert.NotSame(formulas.Skills, formulas.Hacking);
         Assert.NotSame(formulas.Skills, formulas.Activities);
