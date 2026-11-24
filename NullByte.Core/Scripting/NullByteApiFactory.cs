@@ -12,7 +12,7 @@ public sealed class NullByteApiFactory(
     BotnetService botnetService,
     ServerActions serverActions,
     ActivityService activityService,
-    Formulas formulas,
+    FormulaSet formulas,
     IGameOutput output) : INullByteApiFactory
 {
     public INullByteApi Create(IScriptOperations scriptOperations, string processHostname, int threads, CancellationToken cancellationToken)
