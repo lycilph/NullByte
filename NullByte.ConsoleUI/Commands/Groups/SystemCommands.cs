@@ -1,4 +1,5 @@
-﻿using NullByte.ConsoleUI.Configuration;
+﻿using System.Diagnostics;
+using NullByte.ConsoleUI.Configuration;
 using NullByte.ConsoleUI.Terminal;
 
 namespace NullByte.ConsoleUI.Commands.Groups;
@@ -48,6 +49,15 @@ public sealed class SystemCommands(
     private async Task VSCodeAsync(IReadOnlyList<string> arguments)
     {
         terminal.WriteLine("Launching VS Code...");
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            Arguments = "/c code -n --folder-uri \"nullbyte:/NullByte/\"",
+            UseShellExecute = false,
+            CreateNoWindow = true // Prevents a black console window from flashing
+        };
+
+        Process.Start(startInfo);
     }
 
     private async Task HelpAsync(IReadOnlyList<string> arguments)
