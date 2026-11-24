@@ -271,10 +271,12 @@ public sealed class ScriptCompilerTests
 
         AssertCompilationSucceeded(result);
         Assert.NotNull(result.Script);
-        Assert.Contains(
+        var warning = Assert.Single(
             result.Diagnostics,
-            diagnostic =>
-                diagnostic.Severity == ScriptDiagnosticSeverity.Warning);
+            diagnostic => diagnostic.Severity == ScriptDiagnosticSeverity.Warning);
+
+        Assert.Equal(warning.Line, warning.EndLine);
+        Assert.True(warning.EndColumn > warning.Column);
     }
 
     [Fact]
