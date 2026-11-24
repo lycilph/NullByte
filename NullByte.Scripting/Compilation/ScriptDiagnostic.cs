@@ -9,4 +9,6 @@ public sealed record ScriptDiagnostic(
     ScriptDiagnosticSeverity Severity,
     int Line,
     int Column,
-    string? File = null);
+    string? File = null,
+    int EndLine = 0,
+    int EndColumn = 0);

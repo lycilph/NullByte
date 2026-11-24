@@ -166,6 +166,8 @@ public sealed class ScriptCompiler : IScriptCompiler
     {
         var line = 0;
         var column = 0;
+        var endLine = 0;
+        var endColumn = 0;
         string? file = null;
 
         if (diagnostic.Location.IsInSource)

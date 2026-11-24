@@ -17,7 +17,7 @@ type Pending = { op: string; started: number; resolve: (value: any) => void; rej
 export type Connection = { url: string; token: string; pid?: number  };
 export type ConnectionState = { status: 'connected' | 'connecting' | 'disconnected'; detail: string };
 
-export type RunDiagnostic = { id: string; message: string; severity: string; line: number; column: number; file?: string | null; };
+export type RunDiagnostic = { id: string; message: string; severity: string; line: number; column: number; file?: string | null; endLine: number; endColumn: number; };
 export type RunResult = { started: boolean; pid: number; failureMessage: string; diagnostics: RunDiagnostic[]; };
 
 const ReconnectDelayMs = 2000;
