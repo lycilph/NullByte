@@ -163,6 +163,19 @@ public sealed class ScriptCompilerTests
     }
 
     [Fact]
+    public void Compile_WithMissingToken_ReportsEmptyRange()
+    {
+        const string source = "var target = args[0]";
+
+        var result = compiler.Compile(source, "missing-token.cx");
+
+        var diagnostic = Assert.Single(result.Diagnostics, d => d.Id == "CS1002");
+
+        Assert.Equal(diagnostic.Line, diagnostic.EndLine);
+        Assert.Equal(diagnostic.Column, diagnostic.EndColumn);
+    }
+
+    [Fact]
     public void Compile_WithSemanticError_Fails()
     {
         const string source = """

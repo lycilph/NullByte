@@ -55,7 +55,12 @@ public sealed class IncludeCompilationTests
     [Fact]
     public void StatementsInAnInclude_AreRejected()
     {
-        var result = Compile("#include \"lib/bad.cx\"", new() { ["lib/bad.cx"] = "nb.Print(\"x\");" });
-        Assert.Contains(result.Diagnostics, d => d is { Id: "NB1006", File: "lib/bad.cx" });
+        var result = Compile("#include \"lib/bad.cx\"", new() { ["lib/bad.cx"] = "nb.Print(\n    \"x\"\n);" });
+        var diagnostic = Assert.Single(result.Diagnostics, d => d.Id == "NB1006");
+
+        Assert.Equal("lib/bad.cx", diagnostic.File);
+        Assert.Equal(1, diagnostic.Line);
+        Assert.Equal(3, diagnostic.EndLine);
+        Assert.True(diagnostic.EndColumn > 1);
     }
 }
