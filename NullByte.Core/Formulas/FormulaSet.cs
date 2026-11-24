@@ -1,6 +1,6 @@
 ﻿using NullByte.Core.Configuration;
 
-namespace NullByte.Core.FormulaSet;
+namespace NullByte.Core.Formulas;
 
 /// <summary>
 /// Provides the game's formula subsystem as a single composition boundary.
@@ -15,20 +15,20 @@ public sealed class FormulaSet
     {
         ArgumentNullException.ThrowIfNull(balance);
 
-        Skills = new SkillFormulaSet(balance);
-        Hacking = new HackingFormulaSet(balance);
-        Botnet = new BotnetFormulaSet(balance);
-        Network = new NetworkFormulaSet(balance);
-        Activities = new ActivityFormulaSet(balance);
+        Skills = new SkillFormulas(balance);
+        Hacking = new HackingFormulas(balance);
+        Botnet = new BotnetFormulas(balance);
+        Network = new NetworkFormulas(balance);
+        Activities = new ActivityFormulas(balance);
     }
 
-    public SkillFormulaSet Skills { get; }
+    public SkillFormulas Skills { get; }
 
-    public HackingFormulaSet Hacking { get; }
+    public HackingFormulas Hacking { get; }
 
-    public BotnetFormulaSet Botnet { get; }
+    public BotnetFormulas Botnet { get; }
 
-    public NetworkFormulaSet Network { get; }
+    public NetworkFormulas Network { get; }
 
-    public ActivityFormulaSet Activities { get; }
+    public ActivityFormulas Activities { get; }
 }
