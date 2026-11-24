@@ -14,7 +14,7 @@ internal sealed record DirectoryResult(IReadOnlyList<DirectoryEntry> Entries);
 internal sealed record FileResult(string Content);
 internal sealed record WriteResult(bool Created);
 internal sealed record DefinitionResult(ScriptDefinition? Definition);
-internal sealed record DiagnosticInfo(string Id, string Message, string Severity, int Line, int Column, string? File = null);
+internal sealed record DiagnosticInfo(string Id, string Message, string Severity, int Line, int Column, string? File = null, int EndLine = 0, int EndColumn = 0);
 internal sealed record DiagnoseResult(IReadOnlyList<DiagnosticInfo> Diagnostics, double ramCost);
 internal sealed record CompleteResult(IReadOnlyList<ScriptCompletion> Items);
 internal sealed record HoverResult(ScriptHover? Hover);

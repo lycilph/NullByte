@@ -39,7 +39,9 @@ public sealed class EditorFileServiceRunTests
                 ScriptDiagnosticSeverity.Error,
                 3,
                 12,
-                "test.cx")
+                "test.cx",
+                3,
+                18)
         };
 
         var scripts = new FakeScriptService(
@@ -70,6 +72,8 @@ public sealed class EditorFileServiceRunTests
         Assert.Equal(3, diagnostic["line"]!.GetValue<int>());
         Assert.Equal(12, diagnostic["column"]!.GetValue<int>());
         Assert.Equal("test.cx", diagnostic["file"]!.GetValue<string>());
+        Assert.Equal(3, diagnostic["endLine"]!.GetValue<int>());
+        Assert.Equal(18, diagnostic["endColumn"]!.GetValue<int>());
     }
 
     [Fact]

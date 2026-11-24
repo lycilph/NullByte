@@ -120,7 +120,7 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
 
         var result = compiler.Compile(content, file, sources);
         return new DiagnoseResult(result.Diagnostics
-            .Select(d => new DiagnosticInfo(d.Id, d.Message, d.Severity.ToString().ToLowerInvariant(), d.Line, d.Column, d.File))
+            .Select(d => new DiagnosticInfo(d.Id, d.Message, d.Severity.ToString().ToLowerInvariant(), d.Line, d.Column, d.File, d.EndLine, d.EndColumn))
             .ToArray(),
             result.Script?.RamCost ?? 0.0);
     }
@@ -371,7 +371,9 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
         },
         diagnostic.Line,
         diagnostic.Column,
-        diagnostic.File);
+        diagnostic.File,
+        diagnostic.EndLine,
+        diagnostic.EndColumn);
 
     private static (string Host, string Path) RequireInsideServer(GameState state, NodePath p)
     {

@@ -31,6 +31,8 @@ public sealed class IncludeCompilationTests
 
         var error = Assert.Single(result.Diagnostics, d => d.Id == "CS0029");
         Assert.Equal(("lib/bad.cx", 5), (error.File, error.Line));
+        Assert.Equal(5, error.EndLine);
+        Assert.True(error.EndColumn > error.Column);
     }
 
     [Fact]
@@ -47,13 +49,52 @@ public sealed class IncludeCompilationTests
     {
         var result = Compile("#include \"nope.cx\"", []);
         Assert.False(result.Succeeded);
-        Assert.Contains(result.Diagnostics, d => d.Id == "NB1001");
+        var diagnostic = Assert.Single(result.Diagnostics, d => d.Id == "NB1001");
+        Assert.Equal(1, diagnostic.Line);
+        Assert.Equal(1, diagnostic.Column);
+        Assert.Equal(1, diagnostic.EndLine);
+        Assert.Equal("#include \"nope.cx\"".Length + 1, diagnostic.EndColumn);
+    }
+
+    [Fact]
+    public void MalformedInclude_HighlightsTheWholeDirective()
+    {
+        const string source = "#include missing";
+        var result = Compile(source, []);
+
+        var diagnostic = Assert.Single(result.Diagnostics, d => d.Id == "NB1005");
+        Assert.Equal(1, diagnostic.Line);
+        Assert.Equal(1, diagnostic.Column);
+        Assert.Equal(1, diagnostic.EndLine);
+        Assert.Equal(source.Length + 1, diagnostic.EndColumn);
+    }
+
+    [Fact]
+    public void IncludeCycle_HighlightsTheCycleDirective()
+    {
+        const string include = "#include \"main.cx\"";
+        var result = Compile("#include \"lib/a.cx\"", new()
+        {
+            ["lib/a.cx"] = include
+        });
+
+        var diagnostic = Assert.Single(result.Diagnostics, d => d.Id == "NB1002");
+        Assert.Equal("lib/a.cx", diagnostic.File);
+        Assert.Equal(1, diagnostic.Line);
+        Assert.Equal(1, diagnostic.Column);
+        Assert.Equal(1, diagnostic.EndLine);
+        Assert.Equal(include.Length + 1, diagnostic.EndColumn);
     }
 
     [Fact]
     public void StatementsInAnInclude_AreRejected()
     {
-        var result = Compile("#include \"lib/bad.cx\"", new() { ["lib/bad.cx"] = "nb.Print(\"x\");" });
-        Assert.Contains(result.Diagnostics, d => d is { Id: "NB1006", File: "lib/bad.cx" });
+        var result = Compile("#include \"lib/bad.cx\"", new() { ["lib/bad.cx"] = "nb.Print(\n    \"x\"\n);" });
+        var diagnostic = Assert.Single(result.Diagnostics, d => d.Id == "NB1006");
+
+        Assert.Equal("lib/bad.cx", diagnostic.File);
+        Assert.Equal(1, diagnostic.Line);
+        Assert.Equal(3, diagnostic.EndLine);
+        Assert.True(diagnostic.EndColumn > 1);
     }
 }

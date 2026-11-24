@@ -12,6 +12,7 @@ const severities: Record<string, vscode.DiagnosticSeverity> = {
 
 type DiagnosticItem = {
   id: string; message: string; severity: string; line: number; column: number; file?: string | null;
+  endLine: number; endColumn: number;
 };
 export type DiagnoseResult = { diagnostics: DiagnosticItem[]; ramCost: number | null; };
 type Reported = { uri: vscode.Uri; diagnostic: vscode.Diagnostic };
@@ -98,12 +99,20 @@ export class NullByteDiagnostics implements vscode.Disposable {
     const uri = d.file ? toUri(`/${host}/${d.file.replace(/^\/+/, '')}`) : doc.uri;
 
     // Lines and columns are 1-based. 0 means the compiler gave no location.
-    let position = new vscode.Position(Math.max(d.line, 1) - 1, Math.max(d.column, 1) - 1);
-    if (uri.toString() === doc.uri.toString()) position = doc.validatePosition(position);
+    const start = new vscode.Position(Math.max(d.line, 1) - 1, Math.max(d.column, 1) - 1);
+    const end = d.endLine > 0 && d.endColumn > 0
+      ? new vscode.Position(d.endLine - 1, d.endColumn - 1)
+      : start;
 
-    // The compiler reports a start position only. An empty range makes VS Code underline the word there.
+    // Included-file diagnostics must be validated against the target document, not the source that included it.
+    const targetDoc = uri.toString() === doc.uri.toString()
+      ? doc
+      : vscode.workspace.textDocuments.find(open => open.uri.toString() === uri.toString());
+    let range = new vscode.Range(start, end);
+    if (targetDoc) range = targetDoc.validateRange(range);
+
     const diagnostic = new vscode.Diagnostic(
-      new vscode.Range(position, position), d.message, severities[d.severity.toLowerCase()] ?? vscode.DiagnosticSeverity.Error);
+      range, d.message, severities[d.severity.toLowerCase()] ?? vscode.DiagnosticSeverity.Error);
     diagnostic.code = d.id;
     diagnostic.source = 'NullByte';
     return { uri, diagnostic };

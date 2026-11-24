@@ -166,6 +166,8 @@ public sealed class ScriptCompiler : IScriptCompiler
     {
         var line = 0;
         var column = 0;
+        var endLine = 0;
+        var endColumn = 0;
         string? file = null;
 
         if (diagnostic.Location.IsInSource)
@@ -173,6 +175,8 @@ public sealed class ScriptCompiler : IScriptCompiler
             var span = diagnostic.Location.GetMappedLineSpan();
             line = span.StartLinePosition.Line + 1;
             column = span.StartLinePosition.Character + 1;
+            endLine = span.EndLinePosition.Line + 1;
+            endColumn = span.EndLinePosition.Character + 1;
 
             // Our own generated wrapper files are not something the player can open.
             file = span.Path.EndsWith(".g.cx", StringComparison.Ordinal) ? null : span.Path;
@@ -189,7 +193,9 @@ public sealed class ScriptCompiler : IScriptCompiler
             },
             line,
             column,
-            file);
+            file,
+            endLine,
+            endColumn);
     }
 
     // A library is usings and type declarations only: no entry point, no nb, nothing that runs.
@@ -199,14 +205,17 @@ public sealed class ScriptCompiler : IScriptCompiler
         if (statement is null)
             yield break;
 
-        var position = tree.GetLineSpan(statement.Span).StartLinePosition;
+        var span = tree.GetLineSpan(statement.Span);
+        var position = span.StartLinePosition;
         yield return new ScriptDiagnostic(
             "NB1006",
             "An included file may only contain usings and type declarations. Put methods inside a static class.",
             ScriptDiagnosticSeverity.Error,
             position.Line + 1,
             position.Character + 1,
-            tree.FilePath);
+            tree.FilePath,
+            span.EndLinePosition.Line + 1,
+            span.EndLinePosition.Character + 1);
     }
 
     private sealed class NoSources : IScriptSourceProvider

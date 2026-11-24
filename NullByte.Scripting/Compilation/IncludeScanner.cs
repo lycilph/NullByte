@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 namespace NullByte.Scripting.Compilation;
 
 /// <summary>One <c>#include "path"</c> line: the path as typed, and where the directive sits in the file.</summary>
-internal sealed record IncludeDirective(string Path, int Start, int Length, int Line, int Column);
+internal sealed record IncludeDirective(string Path, int Start, int Length, int Line, int Column, int EndLine, int EndColumn);
 
 internal static class IncludeScanner
 {
@@ -28,18 +28,21 @@ internal static class IncludeScanner
                 continue;   // some other bad directive: the normal syntax errors report it
 
             var position = text.Lines.GetLinePosition(trivia.Span.Start);
+            var endPosition = text.Lines.GetLinePosition(trivia.Span.End);
             var match = WellFormed.Match(directive);
 
             if (!match.Success)
             {
                 diagnostics.Add(new ScriptDiagnostic("NB1005",
                     "Malformed #include. Expected: #include \"path/to/file.cx\"",
-                    ScriptDiagnosticSeverity.Error, position.Line + 1, position.Character + 1, fileName));
+                    ScriptDiagnosticSeverity.Error, position.Line + 1, position.Character + 1, fileName,
+                    endPosition.Line + 1, endPosition.Character + 1));
                 continue;
             }
 
             result.Add(new IncludeDirective(match.Groups["path"].Value,
-                trivia.Span.Start, trivia.Span.Length, position.Line + 1, position.Character + 1));
+                trivia.Span.Start, trivia.Span.Length, position.Line + 1, position.Character + 1,
+                endPosition.Line + 1, endPosition.Character + 1));
         }
 
         return result;
