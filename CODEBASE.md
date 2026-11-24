@@ -177,7 +177,7 @@ The editor crosses into the game through the same services used by the game itse
 - `client.ts` — editor protocol client.
 - `commands.ts` — command class and command behavior.
 - `argumentParser.ts` — shell-style script argument parsing.
-- `runCodeLens.ts` — run actions.
+- `codeLens.ts` — run and RAM-cost actions.
 - `filesystem.ts`, `paths.ts` — virtual filesystem/path mapping.
 - `status.ts` — connection/status UI.
 - `diagnostics.ts` — diagnostics.

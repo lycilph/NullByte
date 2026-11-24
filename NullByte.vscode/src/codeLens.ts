@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export class NullByteRunCodeLensProvider implements vscode.CodeLensProvider {
+export class NullByteCodeLensProvider implements vscode.CodeLensProvider {
   provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
     if (document.uri.scheme !== 'nullbyte' || !document.uri.path.endsWith('.cx')) {
       return [];

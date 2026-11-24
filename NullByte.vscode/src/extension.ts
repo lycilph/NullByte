@@ -9,7 +9,7 @@ import { registerSignatureHelp } from './signature';
 import { NullByteCommands } from './commands';
 import { NullByteStatusBar } from './status';
 import { registerDefinition } from './definition';
-import { NullByteRunCodeLensProvider } from './codeLens';
+import { NullByteCodeLensProvider } from './codeLens';
 
 export function activate(context: vscode.ExtensionContext): void {
   const log = vscode.window.createOutputChannel('NullByte', { log: true });
@@ -31,7 +31,7 @@ export function activate(context: vscode.ExtensionContext): void {
     statusBar,
     vscode.languages.registerCodeLensProvider(
       { scheme: 'nullbyte', pattern: '**/*.cx' },
-      new NullByteRunCodeLensProvider(),
+      new NullByteCodeLensProvider(),
     ),
     vscode.workspace.onDidChangeConfiguration(event => {
       if (!event.affectsConfiguration('nullbyte.connectionFile')) return;

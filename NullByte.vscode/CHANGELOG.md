@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0
+
+- Run the current script directly from VS Code, with support for entering script arguments
+- Inspect a script's RAM cost from its CodeLens or command
+- Improved editor diagnostics, including full diagnostic ranges and source mapping for included files
+- Improved connection handling and automatic workspace refresh after reconnecting
+
 ## 0.2.0
 
 - Folders: create, rename, move, drag and drop and delete folders, with live updates in both directions
