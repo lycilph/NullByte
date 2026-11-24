@@ -44,7 +44,8 @@ internal sealed class IncludeResolver(IScriptSourceProvider provider)
         foreach (var directive in directives)
         {
             ScriptDiagnostic Error(string id, string message)
-                => new(id, message, ScriptDiagnosticSeverity.Error, directive.Line, directive.Column, path);
+                => new(id, message, ScriptDiagnosticSeverity.Error, directive.Line, directive.Column, path,
+                    directive.EndLine, directive.EndColumn);
 
             if (!VirtualPath.TryNormalizeFile(directive.Path, out var target, out var pathError))
             {

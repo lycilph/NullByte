@@ -49,7 +49,41 @@ public sealed class IncludeCompilationTests
     {
         var result = Compile("#include \"nope.cx\"", []);
         Assert.False(result.Succeeded);
-        Assert.Contains(result.Diagnostics, d => d.Id == "NB1001");
+        var diagnostic = Assert.Single(result.Diagnostics, d => d.Id == "NB1001");
+        Assert.Equal(1, diagnostic.Line);
+        Assert.Equal(1, diagnostic.Column);
+        Assert.Equal(1, diagnostic.EndLine);
+        Assert.Equal("#include \"nope.cx\"".Length + 1, diagnostic.EndColumn);
+    }
+
+    [Fact]
+    public void MalformedInclude_HighlightsTheWholeDirective()
+    {
+        const string source = "#include missing";
+        var result = Compile(source, []);
+
+        var diagnostic = Assert.Single(result.Diagnostics, d => d.Id == "NB1005");
+        Assert.Equal(1, diagnostic.Line);
+        Assert.Equal(1, diagnostic.Column);
+        Assert.Equal(1, diagnostic.EndLine);
+        Assert.Equal(source.Length + 1, diagnostic.EndColumn);
+    }
+
+    [Fact]
+    public void IncludeCycle_HighlightsTheCycleDirective()
+    {
+        const string include = "#include \"main.cx\"";
+        var result = Compile("#include \"lib/a.cx\"", new()
+        {
+            ["lib/a.cx"] = include
+        });
+
+        var diagnostic = Assert.Single(result.Diagnostics, d => d.Id == "NB1002");
+        Assert.Equal("lib/a.cx", diagnostic.File);
+        Assert.Equal(1, diagnostic.Line);
+        Assert.Equal(1, diagnostic.Column);
+        Assert.Equal(1, diagnostic.EndLine);
+        Assert.Equal(include.Length + 1, diagnostic.EndColumn);
     }
 
     [Fact]
