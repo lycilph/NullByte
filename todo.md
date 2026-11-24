@@ -3,13 +3,11 @@
 - Add the backdoor command (Claude)
 	- Time = same as hack, level required = same as hack, effect: the player can always connect directly to the server
 
-- Group all formulas in one master formula class (ChatGPT)
-
-# Todo
-
-- Test projects clean up
+- Test projects clean up (chatgpt)
   - Consolidate startup/fixture/infrastructure code in a shared class
   - Use Mocks where appropriate
+
+# Todo
 
 - Clean up
   - Skill/Hacking formulas
