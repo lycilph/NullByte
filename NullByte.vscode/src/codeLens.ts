@@ -13,7 +13,7 @@ export class NullByteRunCodeLensProvider implements vscode.CodeLensProvider {
     });
 
     const ram = new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), {
-      title: '$(play) Ram Cost',
+      title: '$(chip) Ram Cost',
       command: 'nullbyte.getRamCost',
       tooltip: 'Get ram cost of this NullByte script'
     });

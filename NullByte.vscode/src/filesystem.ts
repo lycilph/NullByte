@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Logger, NullByteClient, NullByteError, ServerEvent } from './client';
-import { RootName, rootUri, toGamePath, toUri } from './paths';
+import { rootName, rootUri, toGamePath, toUri } from './paths';
 
 const changeTypes: Record<string, vscode.FileChangeType> = {
   created: vscode.FileChangeType.Created,
@@ -39,7 +39,7 @@ export class NullByteFileSystem implements vscode.FileSystemProvider {
   }
 
   async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
-    if (uri.path === '/') return [[RootName, vscode.FileType.Directory]];
+    if (uri.path === '/') return [[rootName, vscode.FileType.Directory]];
 
     const r = await this.call<{ entries: { name: string; type: string }[] }>('readDirectory', uri);
     return r.entries.map(e => [e.name, toFileType(e.type)]);

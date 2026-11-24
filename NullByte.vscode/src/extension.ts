@@ -9,7 +9,7 @@ import { registerSignatureHelp } from './signature';
 import { NullByteCommands } from './commands';
 import { NullByteStatusBar } from './status';
 import { registerDefinition } from './definition';
-import { NullByteRunCodeLensProvider } from './runCodeLens';
+import { NullByteRunCodeLensProvider } from './codeLens';
 
 export function activate(context: vscode.ExtensionContext): void {
   const log = vscode.window.createOutputChannel('NullByte', { log: true });
