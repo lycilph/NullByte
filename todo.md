@@ -1,8 +1,16 @@
 ﻿# In progress
 
-- Integrate claude & chatgpt with github
+- Add the backdoor command (Claude)
+	- Time = same as hack, level required = same as hack, effect: the player can always connect directly to the server
 
-- Milestone M10: Activities (jobs, training, studying etc.)
+- Group all formulas in one master formula class (ChatGPT)
+
+# Todo
+
+- Test projects clean up
+  - Consolidate startup/fixture/infrastructure code in a shared class
+  - Use Mocks where appropriate
+
 - Clean up
   - Skill/Hacking formulas
   - session.Services.Activities.ActivityEnded += _ => terminal.SetPrompt(BuildPrompt(session.State)); (in gamehost)
@@ -10,22 +18,17 @@
   - Fix tab-completion for the work command (see registration for the work command in ActivityCommands.cs)
   - study: the free tier should NOT get the x3 multiplier, or should only be available at the x1 university
 - Remove/delete the ActivityState class? 
-  -	Group all formulas in one master formula class
-	
-# Todo
-
-- Make botnet and cloud servers unlockable
-  - Make a system to unlock features on a trigger
+  
 
 # Future ideas
 
+- Make botnet and cloud servers unlockable
+  - Make a system to unlock features on a trigger
 - Do another cleanup round (see `AIPrompts.md`)
-	- Both game and vscode extension 
+	- Both game ~~and vscode extension~~
 - Change the editor integration to something that can be enabled/disabled while the game is running
 - Add options for Ram usage and compilation to the NanoEditor 
 - Align script method names and console commands
-- Add the backdoor command
-	- Time = same as hack, level required = same as hack, effect: the player can always connect directly to the server
 - Later on extra servers would live in api.cloud.* etc.
 - Add debugdisplay to domain classes
 - Use mocks in the tests
