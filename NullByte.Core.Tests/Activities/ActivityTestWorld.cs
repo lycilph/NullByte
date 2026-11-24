@@ -2,6 +2,7 @@
 using NullByte.Core.Domain;
 using NullByte.Core.Domain.Activities;
 using NullByte.Core.Formulas;
+using NullByte.Core.Randomness;
 using NullByte.Core.Services;
 using NullByte.Core.Systems;
 using NullByte.Core.World;
@@ -19,7 +20,8 @@ internal sealed class ActivityTestWorld
         State = InitialGameStateFactory.Create();          // the player starts with $1000
         Formulas = new ActivityFormulas(Balance);
         Service = new ActivityService(State, Catalog, Formulas);
-        System = new ActivitySystem(State, Formulas, Service);
+        Random = new ScriptedRandom();
+        System = new ActivitySystem(State, Formulas, Service, Random);
     }
 
     public BalanceConfig Balance { get; }
@@ -27,6 +29,9 @@ internal sealed class ActivityTestWorld
     public ActivityFormulas Formulas { get; }
     public ActivityService Service { get; }
     public ActivitySystem System { get; }
+
+    /// <summary>Decides every crime roll. By default every attempt with a chance above zero succeeds.</summary>
+    public ScriptedRandom Random { get; }
     public Player Player => State.Player;
 
     /// <summary>Gives the player enough hacking experience to be at least this hacking level.</summary>
@@ -40,7 +45,7 @@ internal sealed class ActivityTestWorld
     /// <summary>
     /// Two universities (a plain and a fancy one), one gym, and three courses:
     /// "algorithms" costs $10/s for 2 hacking xp/s, "free-course" is free, "strength" costs $5/s.
-    /// There are also two companies to work for (see below).
+    /// There are also two companies to work for and four crimes (see below).
     /// </summary>
     public static ActivityCatalog Catalog { get; } = new(
         facilities:
@@ -80,10 +85,21 @@ internal sealed class ActivityTestWorld
                 ])
             ])
         ],
-        crimes: []);
+        crimes:
+        [
+            // chance = weighted average skill level / (difficulty * 100), so at level 1:
+            // sure-thing is certain, coin-flip is 50%, long-shot is 1%. mixed counts strength three times as much as agility.
+            new Crime("sure-thing", 2, 100, 0.01, Amounts((SkillKind.Strength, 4), (SkillKind.Agility, 2)), Amounts((SkillKind.Strength, 1))),
+            new Crime("coin-flip", 4, 500, 0.02, Amounts((SkillKind.Dexterity, 8)), Amounts((SkillKind.Dexterity, 1))),
+            new Crime("long-shot", 10, 1000, 1.0, Amounts((SkillKind.Charisma, 10)), Amounts((SkillKind.Charisma, 1))),
+            new Crime("mixed", 4, 200, 0.05, Amounts((SkillKind.Strength, 1)), Amounts((SkillKind.Strength, 3), (SkillKind.Agility, 1)))
+        ]);
 
     private static JobRank Rank(string title, double salary, double reputation, double requiredReputation, int hackingLevel, double hackingXp)
         => new(title, salary, reputation, requiredReputation,
             hackingLevel > 0 ? new Dictionary<SkillKind, int> { [SkillKind.Hacking] = hackingLevel } : new Dictionary<SkillKind, int>(),
             new Dictionary<SkillKind, double> { [SkillKind.Hacking] = hackingXp });
+
+    private static IReadOnlyDictionary<SkillKind, double> Amounts(params (SkillKind Skill, double Amount)[] amounts)
+        => amounts.ToDictionary(a => a.Skill, a => a.Amount);
 }

@@ -9,6 +9,60 @@ public sealed class ActivityServiceTests
     private readonly ActivityTestWorld world = new();
 
     [Fact]
+    public void Starting_a_crime_makes_it_the_current_activity_and_it_repeats_by_default()
+    {
+        var result = world.Service.StartCrime("sure-thing");
+
+        var crime = Assert.IsType<CrimeActivity>(result.Activity);
+        Assert.True(result.Succeeded);
+        Assert.True(crime.Repeat);
+        Assert.Equal(ActivityMode.Focused, crime.Mode);
+        Assert.Equal("Committing sure-thing", crime.Description);
+        Assert.Same(crime, world.Service.Current);
+    }
+
+    [Fact]
+    public void A_crime_can_be_started_once_and_in_the_background()
+    {
+        var crime = (CrimeActivity)world.Service.StartCrime("SURE-THING", repeat: false, ActivityMode.Background).Activity!;
+
+        Assert.False(crime.Repeat);
+        Assert.Equal(ActivityMode.Background, crime.Mode);
+    }
+
+    [Fact]
+    public void An_unknown_crime_is_explained_and_a_crime_cannot_start_while_busy()
+    {
+        var unknown = world.Service.StartCrime("nope");
+
+        Assert.False(unknown.Succeeded);
+        Assert.Contains("Unknown crime 'nope'. Available: sure-thing, coin-flip, long-shot, mixed", unknown.FailureMessage);
+
+        world.Service.StartCourse(FacilityKind.University, "algorithms");
+        var busy = world.Service.StartCrime("sure-thing");
+
+        Assert.False(busy.Succeeded);
+        Assert.Contains("already busy", busy.FailureMessage);
+    }
+
+    [Fact]
+    public void A_crime_needs_no_money()
+    {
+        world.Player.TrySpendMoney(world.Player.Money);
+
+        Assert.True(world.Service.StartCrime("sure-thing").Succeeded);
+    }
+
+    [Fact]
+    public void The_chance_and_rewards_of_a_crime_come_from_the_formulas()
+    {
+        Assert.True(world.Service.Catalog.TryGetCrime("coin-flip", out var crime));
+
+        Assert.Equal(0.5, world.Service.GetCrimeChance(crime), precision: 9);
+        Assert.Equal(400, world.Service.GetCrimeRewards(crime, ActivityMode.Background, succeeded: true).Money, precision: 9);
+    }
+
+    [Fact]
     public void Starting_work_hires_the_player_at_the_entry_rank()
     {
         var result = world.Service.StartWork("testcorp", "software");

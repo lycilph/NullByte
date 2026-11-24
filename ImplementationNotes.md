@@ -94,3 +94,39 @@ Starting work. ActivityService.StartWork hires you at the highest rank you quali
 Promotions. ActivitySystem promotes you automatically while you work, and the service raises a JobPromoted event that the console prints.
 Commands. work [company] [career] [-b] starts work or, with no arguments, lists the companies with your standing. quit is dropped: 
 with automatic promotion and a persistent rank it would do nothing, and switching career at the same company already replaces the job.
+
+## Step 6 is done: you can crime [name] [-b]. 
+All 217 tests (steps 1 to 6) pass in my stand-in runner, in the default culture and under da-DK. 
+The real terminal rendering is untested here, and the one-line GameSession.cs edit is uncompiled.
+
+What changed
+Attempts. A CrimeActivity is a cycle of fixed length. The roll happens when an attempt ends, using the same IRandomSource 
+the hack roll uses (so tests can script it). ActivitySystem now takes it as a constructor parameter, and GameSession 
+passes the one it already has.
+Chance is the weighted average of the skill levels the crime asks for, divided by difficulty × CrimeSkillScale (100), 
+clamped to 0 to 1. Not being focused never changes the chance.
+Rewards. Success pays the money and all the XP. Failure pays no money and 25% of the XP (CrimeFailureExperienceFactor). 
+Background multiplies everything by 0.8.
+Timing. One update can finish several attempts, each rolled with the skills the player has by then (a success can lift 
+your level mid-update). Left-over time carries into the next attempt.
+repeat. The console always repeats. StartCrime(name, repeat: false) ends after one attempt with the new ActivityEndReason.
+Completed, ready for the script API in step 8.
+Console.
+crime lists each crime with its duration, your current chance and the success reward.
+Focused, the panel shows a real progress bar that fills and starts over, with 3/5 succeeded in the detail line.
+A one-line result is printed per attempt while focused (shoplift: success (20% chance): +$300.00, …) and none in the background.
+activity shows attempts, chance now and the reward.
+Event order fix. CrimeAttempted is raised after progress is recorded, so attempt.Activity.Attempts is always current. 
+The earlier order would have been a trap for the script API.
+No constant rates. CalculateRates throws for a crime. Use GetCrimeChance and GetCrimeRewards instead.
+**Balance flag for M13**
+
+I ran the shipped numbers (seeded dice). Shoplift starts at 20%, reaches 100% after about 2 game-minutes, and then pays about 
+$9,000 per game-minute. The entry job pays $240. So crime is roughly 40 times better than the intern job, which makes jobs pointless early on. 
+That is partly Bitburner-like, but 40 times is a lot, and I haven't compared with hacking income. Money per attempt, not the formula, 
+is probably the knob to turn.
+
+Please judge by hand
+
+Shoplift attempts every 2 game-seconds at game speed 5 means about 2.5 result lines per real second while focused. That may bury the console,
+and I'd like your opinion before I add a throttle or collapse repeated lines.

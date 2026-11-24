@@ -23,6 +23,118 @@ public sealed class ActivityFormulasTests
         skills.AddExperience(SkillKind.Hacking, new SkillFormulas(new BalanceConfig()).CalculateExperienceForLevel(SkillKind.Hacking, level));
         return skills;
     }
+    private static readonly Crime CoinFlip = new("coin-flip", 4, 500, 0.02,
+    new Dictionary<SkillKind, double> { [SkillKind.Dexterity] = 8 },
+    new Dictionary<SkillKind, double> { [SkillKind.Dexterity] = 1 });
+
+    private static readonly Crime Mixed = new("mixed", 4, 200, 0.05,
+        new Dictionary<SkillKind, double> { [SkillKind.Strength] = 1 },
+        new Dictionary<SkillKind, double> { [SkillKind.Strength] = 3, [SkillKind.Agility] = 1 });
+
+    private static PlayerSkills SkillsAt(SkillKind skill, int level)
+    {
+        var skills = new PlayerSkills();
+        skills.AddExperience(skill, new SkillFormulas(new BalanceConfig()).CalculateExperienceForLevel(skill, level));
+        return skills;
+    }
+
+    [Fact]
+    public void The_chance_of_a_crime_is_the_skill_level_against_the_difficulty()
+    {
+        var formulas = new ActivityFormulas(new BalanceConfig());
+
+        Assert.Equal(0.5, formulas.CalculateCrimeSuccessChance(CoinFlip, new PlayerSkills()), precision: 9);   // level 1 / (0.02 * 100)
+        Assert.Equal(1.0, formulas.CalculateCrimeSuccessChance(CoinFlip, SkillsAt(SkillKind.Dexterity, 2)), precision: 9);
+    }
+
+    [Fact]
+    public void The_chance_is_never_more_than_certain()
+    {
+        var formulas = new ActivityFormulas(new BalanceConfig());
+
+        Assert.Equal(1.0, formulas.CalculateCrimeSuccessChance(CoinFlip, SkillsAt(SkillKind.Dexterity, 50)));
+    }
+
+    [Fact]
+    public void The_skills_of_a_crime_count_in_proportion_to_their_weights()
+    {
+        var formulas = new ActivityFormulas(new BalanceConfig());
+        var skills = SkillsAt(SkillKind.Strength, 3);                  // strength 3, agility 1
+
+        // (3 * 3 + 1 * 1) / 4 = 2.5, against 0.05 * 100 = 5
+        Assert.Equal(0.5, formulas.CalculateCrimeSuccessChance(Mixed, skills), precision: 9);
+    }
+
+    [Fact]
+    public void A_skill_that_a_crime_does_not_weigh_makes_no_difference()
+    {
+        var formulas = new ActivityFormulas(new BalanceConfig());
+
+        Assert.Equal(
+            formulas.CalculateCrimeSuccessChance(CoinFlip, new PlayerSkills()),
+            formulas.CalculateCrimeSuccessChance(CoinFlip, SkillsAt(SkillKind.Hacking, 40)));
+    }
+
+    [Fact]
+    public void The_skill_scale_is_used()
+    {
+        var formulas = new ActivityFormulas(new BalanceConfig { CrimeSkillScale = 200 });
+
+        Assert.Equal(0.25, formulas.CalculateCrimeSuccessChance(CoinFlip, new PlayerSkills()), precision: 9);
+    }
+
+    [Fact]
+    public void A_successful_attempt_gives_all_the_money_and_experience()
+    {
+        var rewards = new ActivityFormulas(new BalanceConfig()).CalculateCrimeRewards(CoinFlip, ActivityMode.Focused, succeeded: true);
+
+        Assert.Equal(500, rewards.Money);
+        Assert.Equal(8, rewards.Experience[SkillKind.Dexterity]);
+    }
+
+    [Fact]
+    public void A_failed_attempt_gives_no_money_and_a_quarter_of_the_experience()
+    {
+        var rewards = new ActivityFormulas(new BalanceConfig()).CalculateCrimeRewards(CoinFlip, ActivityMode.Focused, succeeded: false);
+
+        Assert.Equal(0, rewards.Money);
+        Assert.Equal(2, rewards.Experience[SkillKind.Dexterity], precision: 9);
+    }
+
+    [Fact]
+    public void Not_being_focused_reduces_the_rewards_but_not_the_chance()
+    {
+        var formulas = new ActivityFormulas(new BalanceConfig());
+
+        var success = formulas.CalculateCrimeRewards(CoinFlip, ActivityMode.Background, succeeded: true);
+        var failure = formulas.CalculateCrimeRewards(CoinFlip, ActivityMode.Background, succeeded: false);
+
+        Assert.Equal(400, success.Money, precision: 9);
+        Assert.Equal(6.4, success.Experience[SkillKind.Dexterity], precision: 9);
+        Assert.Equal(1.6, failure.Experience[SkillKind.Dexterity], precision: 9);       // 8 * 0.25 * 0.8
+    }
+
+    [Fact]
+    public void Crime_balance_multipliers_and_the_failure_factor_are_used()
+    {
+        var balance = new BalanceConfig { CrimeMoneyMultiplier = 2, CrimeExperienceMultiplier = 3, CrimeFailureExperienceFactor = 0.5 };
+        var formulas = new ActivityFormulas(balance);
+
+        var success = formulas.CalculateCrimeRewards(CoinFlip, ActivityMode.Focused, succeeded: true);
+        var failure = formulas.CalculateCrimeRewards(CoinFlip, ActivityMode.Focused, succeeded: false);
+
+        Assert.Equal(1000, success.Money);
+        Assert.Equal(24, success.Experience[SkillKind.Dexterity]);
+        Assert.Equal(12, failure.Experience[SkillKind.Dexterity]);
+    }
+
+    [Fact]
+    public void A_crime_has_no_constant_rates()
+    {
+        var formulas = new ActivityFormulas(new BalanceConfig());
+
+        Assert.Throws<NotSupportedException>(() => formulas.CalculateRates(new CrimeActivity(CoinFlip, repeat: true, ActivityMode.Focused)));
+    }
 
     [Fact]
     public void A_focused_job_pays_a_salary_and_gives_experience_and_reputation()

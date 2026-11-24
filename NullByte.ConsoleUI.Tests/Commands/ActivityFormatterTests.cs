@@ -2,6 +2,7 @@
 using NullByte.Core.Domain;
 using NullByte.Core.Domain.Activities;
 using NullByte.Core.Formulas;
+using NullByte.Core.Services;
 
 namespace NullByte.ConsoleUI.Tests.Commands;
 
@@ -10,6 +11,52 @@ public sealed class ActivityFormatterTests : IDisposable
     private readonly InvariantCulture culture = new();
 
     public void Dispose() => culture.Dispose();
+
+    private static Crime Shoplift { get; } = new("shoplift", 2, 300, 0.05,
+    new Dictionary<SkillKind, double> { [SkillKind.Dexterity] = 2, [SkillKind.Agility] = 2 },
+    new Dictionary<SkillKind, double> { [SkillKind.Dexterity] = 1 });
+
+    [Theory]
+    [InlineData(0.0, "0%")]
+    [InlineData(0.004, "<1%")]
+    [InlineData(0.2, "20%")]
+    [InlineData(0.995, "100%")]
+    [InlineData(1.0, "100%")]
+    public void A_chance_is_a_whole_percentage_without_any_cultural_spacing(double chance, string expected)
+    {
+        Assert.Equal(expected, ActivityFormatter.FormatChance(chance));
+    }
+
+    [Fact]
+    public void Crime_rewards_say_when_there_is_no_money()
+    {
+        var experience = new Dictionary<SkillKind, double> { [SkillKind.Dexterity] = 2 };
+
+        Assert.Equal("+$300.00, +2.00 dexterity xp", ActivityFormatter.FormatCrimeRewards(new CrimeRewards(300, experience)));
+        Assert.Equal("no money, +0.50 dexterity xp", ActivityFormatter.FormatCrimeRewards(new CrimeRewards(0, new Dictionary<SkillKind, double> { [SkillKind.Dexterity] = 0.5 })));
+    }
+
+    [Fact]
+    public void An_attempt_is_shown_as_one_line()
+    {
+        var crime = new CrimeActivity(Shoplift, repeat: true, ActivityMode.Focused);
+        var success = new CrimeAttempt(crime, true, 0.2, new CrimeRewards(300, new Dictionary<SkillKind, double> { [SkillKind.Dexterity] = 2, [SkillKind.Agility] = 2 }));
+        var failure = new CrimeAttempt(crime, false, 0.2, new CrimeRewards(0, new Dictionary<SkillKind, double> { [SkillKind.Dexterity] = 0.5, [SkillKind.Agility] = 0.5 }));
+
+        Assert.Equal("shoplift: success (20% chance): +$300.00, +2.00 dexterity xp, +2.00 agility xp", ActivityFormatter.FormatAttempt(success));
+        Assert.Equal("shoplift: failed (20% chance): no money, +0.50 dexterity xp, +0.50 agility xp", ActivityFormatter.FormatAttempt(failure));
+    }
+
+    [Fact]
+    public void A_crime_is_tagged_and_its_attempts_are_counted_in_the_progress_and_the_summary()
+    {
+        var crime = new CrimeActivity(Shoplift, repeat: true, ActivityMode.Focused);
+        crime.RecordProgress(TimeSpan.FromSeconds(10), 900, new Dictionary<SkillKind, double> { [SkillKind.Dexterity] = 6 }, attempts: 5, successes: 3);
+
+        Assert.Equal("crime", ActivityFormatter.PromptTag(crime));
+        Assert.Equal("10s | +$900.00 | +6.00 dexterity xp | 3/5 succeeded", ActivityFormatter.FormatProgress(crime.Progress));
+        Assert.Equal("Committing shoplift: 10s, +$900.00, +6.00 dexterity xp, 3 of 5 succeeded.", ActivityFormatter.FormatSummary(crime));
+    }
 
     [Fact]
     public void Reputation_is_shown_where_there_is_any()

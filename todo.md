@@ -3,7 +3,6 @@
 - Milestone M10: Activities (jobs, training, studying etc.)
 - Clean up
   - Skill/Hacking formulas
-  - etc?
   - session.Services.Activities.ActivityEnded += _ => terminal.SetPrompt(BuildPrompt(session.State)); (in gamehost)
 	- What about loading/saving in this case???
   - Fix tab-completion for the work command (see registration for the work command in ActivityCommands.cs)
@@ -31,3 +30,4 @@
 - Add a compile script option in the game (when we have a UI)
 - print/tprint destinction (script output versus player terminal output)
 - Move base-cost of scripts (1.6 in ScriptRamAnalyzer) to the balance class
+- A tutorial

@@ -31,6 +31,7 @@ public sealed class ActivityFormulas
         {
             ClassActivity classActivity => CalculateClassRates(classActivity.Course, classActivity.Facility, classActivity.Mode),
             JobActivity jobActivity => CalculateJobRates(jobActivity.Rank, jobActivity.Mode),
+            CrimeActivity => throw new NotSupportedException("A crime has no constant rates: it pays when an attempt ends."),
             _ => throw new NotSupportedException($"Unknown activity type {activity.GetType().Name}.")
         };
     }
@@ -54,6 +55,7 @@ public sealed class ActivityFormulas
 
         return new ActivityRates(-cost, experience);
     }
+
     /// <summary>Calculates the rates of working at a rank. Salary, experience and reputation are all rewards.</summary>
     public ActivityRates CalculateJobRates(JobRank rank, ActivityMode mode)
     {
@@ -69,6 +71,46 @@ public sealed class ActivityFormulas
             rank.SalaryPerSecond * balance.JobSalaryMultiplier * reward,
             experience,
             rank.ReputationPerSecond * balance.JobReputationMultiplier * reward);
+    }
+
+    /// <summary>
+    /// Calculates the chance that an attempt at a crime succeeds: the average of the skill
+    /// levels the crime asks for (weighted by how much each counts), against how hard the
+    /// crime is. Whether the player is focused makes no difference.
+    /// </summary>
+    public double CalculateCrimeSuccessChance(Crime crime, PlayerSkills skills)
+    {
+        ArgumentNullException.ThrowIfNull(crime);
+        ArgumentNullException.ThrowIfNull(skills);
+
+        var totalWeight = crime.SuccessWeights.Values.Sum();
+
+        if (totalWeight <= 0)
+            throw new InvalidOperationException($"The crime '{crime.Name}' has no success weights.");
+
+        var weightedLevel = crime.SuccessWeights.Sum(entry => entry.Value * GetLevel(skills, entry.Key)) / totalWeight;
+
+        return Math.Clamp(weightedLevel / (crime.Difficulty * balance.CrimeSkillScale), 0.0, 1.0);
+    }
+
+    /// <summary>
+    /// Calculates what one attempt at a crime gives. A failed attempt pays no money and only
+    /// part of the experience; not being focused reduces everything that is given.
+    /// </summary>
+    public CrimeRewards CalculateCrimeRewards(Crime crime, ActivityMode mode, bool succeeded)
+    {
+        ArgumentNullException.ThrowIfNull(crime);
+
+        var reward = CalculateRewardFactor(mode);
+        var experienceFactor = balance.CrimeExperienceMultiplier * reward * (succeeded ? 1.0 : balance.CrimeFailureExperienceFactor);
+
+        var experience = crime.Experience.ToDictionary(
+            skill => skill.Key,
+            skill => skill.Value * experienceFactor);
+
+        var money = succeeded ? crime.Money * balance.CrimeMoneyMultiplier * reward : 0.0;
+
+        return new CrimeRewards(money, experience);
     }
 
     /// <summary>Gets whether the player has the skill levels and reputation a rank asks for.</summary>

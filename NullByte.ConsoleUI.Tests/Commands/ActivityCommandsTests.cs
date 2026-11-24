@@ -58,13 +58,25 @@ public sealed class ActivityCommandsTests : IDisposable
                 ])
             ])
         ],
-        crimes: []);
+        crimes:
+        [
+            // chance = weighted average skill level / (difficulty * 100), so at level 1:
+            // sure-thing is certain, coin-flip is 50%, long-shot is 1%. mixed counts strength three times as much as agility.
+            new Crime("sure-thing", 2, 100, 0.01, Amounts((SkillKind.Strength, 4), (SkillKind.Agility, 2)), Amounts((SkillKind.Strength, 1))),
+            new Crime("coin-flip", 4, 500, 0.02, Amounts((SkillKind.Dexterity, 8)), Amounts((SkillKind.Dexterity, 1))),
+            new Crime("long-shot", 10, 1000, 1.0, Amounts((SkillKind.Charisma, 10)), Amounts((SkillKind.Charisma, 1))),
+            new Crime("mixed", 4, 200, 0.05, Amounts((SkillKind.Strength, 1)), Amounts((SkillKind.Strength, 3), (SkillKind.Agility, 1)))
+        ]);
 
     private static JobRank Rank(string title, double salary, double reputation, double requiredReputation, int hackingLevel, double hackingXp)
         => new(title, salary, reputation, requiredReputation,
         hackingLevel > 0 ? new Dictionary<SkillKind, int> { [SkillKind.Hacking] = hackingLevel } : new Dictionary<SkillKind, int>(),
         new Dictionary<SkillKind, double> { [SkillKind.Hacking] = hackingXp });
 
+    private static IReadOnlyDictionary<SkillKind, double> Amounts(params (SkillKind Skill, double Amount)[] amounts)
+        => amounts.ToDictionary(a => a.Skill, a => a.Amount);
+
+    private readonly ScriptedRandom random = new();
     private readonly BalanceConfig balance = new();
     private readonly GameState state = InitialGameStateFactory.Create();
     private readonly ActivityTestTerminal terminal = new();
@@ -78,7 +90,7 @@ public sealed class ActivityCommandsTests : IDisposable
         var formulas = new ActivityFormulas(balance);
 
         service = new ActivityService(state, Catalog, formulas);
-        system = new ActivitySystem(state, formulas, service);
+        system = new ActivitySystem(state, formulas, service, random);
 
         var registry = new CommandRegistry();
         new ActivityCommands(service, state.Player, new SkillFormulas(balance), terminal).Register(registry);
@@ -88,6 +100,136 @@ public sealed class ActivityCommandsTests : IDisposable
     private Task<bool> Run(string commandLine) => dispatcher.DispatchAsync(commandLine);
     private void GiveHackingLevel(int level)
     => state.Player.Skills.AddExperience(SkillKind.Hacking, new SkillFormulas(balance).CalculateExperienceForLevel(SkillKind.Hacking, level));
+
+    [Fact]
+    public async Task Crime_without_arguments_lists_the_crimes_with_the_odds_and_the_rewards()
+    {
+        await Run("crime");
+
+        Assert.Contains("sure-thing", terminal.Text);
+        Assert.Contains("100%", terminal.Text);
+        Assert.Contains("coin-flip", terminal.Text);
+        Assert.Contains("50%", terminal.Text);
+        Assert.Contains("long-shot", terminal.Text);
+        Assert.Contains("1%", terminal.Text);
+        Assert.Contains("+$100.00, +4.00 strength xp, +2.00 agility xp", terminal.Text);
+        Assert.Contains("Usage: crime <name> [-b]", terminal.Text);
+        Assert.Null(service.Current);
+    }
+
+    [Fact]
+    public async Task A_crime_in_the_background_returns_at_once_and_does_not_print_every_attempt()
+    {
+        await Run("crime coin-flip -b");
+
+        Assert.Contains("Committing coin-flip (4s per attempt, 50% chance, +$400.00, +6.40 dexterity xp on success).", terminal.Text);
+        Assert.Equal(ActivityMode.Background, service.Current!.Mode);
+        Assert.Null(terminal.Panel);
+
+        system.Update(TimeSpan.FromSeconds(12));                   // three attempts
+
+        Assert.DoesNotContain("coin-flip: success", terminal.Text);
+        Assert.Equal(3, service.Current!.Attempts);
+    }
+
+    [Fact]
+    public async Task A_focused_crime_shows_a_bar_that_fills_and_starts_over_and_a_line_for_every_attempt()
+    {
+        var command = Run("crime sure-thing");
+
+        Assert.False(command.IsCompleted);
+        Assert.Equal("Committing sure-thing", terminal.Panel!.Title);
+        Assert.Equal(0.0, terminal.Panel.Progress()!.Value, precision: 6);
+
+        system.Update(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(0.5, terminal.Panel.Progress()!.Value, precision: 6);
+
+        system.Update(TimeSpan.FromSeconds(1));                    // the attempt ends and the next one begins
+
+        Assert.Equal(0.0, terminal.Panel.Progress()!.Value, precision: 6);
+        Assert.Contains("sure-thing: success (100% chance): +$100.00, +4.00 strength xp, +2.00 agility xp", terminal.Text);
+        Assert.Contains("1/1 succeeded", terminal.Panel.Detail());
+
+        terminal.Press(ConsoleKey.S);
+        await command.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+
+        Assert.Null(service.Current);
+        Assert.Contains("Stopped. Committing sure-thing: 2s, +$100.00, +4.00 strength xp, +2.00 agility xp, 1 of 1 succeeded.", terminal.Text);
+    }
+
+    [Fact]
+    public async Task A_failed_attempt_is_shown_as_such()
+    {
+        random.Enqueue(0.9);
+        var command = Run("crime coin-flip");
+
+        system.Update(TimeSpan.FromSeconds(4));
+
+        Assert.Contains("coin-flip: failed (50% chance): no money, +2.00 dexterity xp", terminal.Text);
+
+        terminal.Press(ConsoleKey.S);
+        await command.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task Sending_a_crime_to_the_background_stops_the_attempt_lines_but_not_the_crime()
+    {
+        var command = Run("crime sure-thing");
+        system.Update(TimeSpan.FromSeconds(2));
+
+        terminal.Press(ConsoleKey.B);
+        await command.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        var linesBefore = terminal.Text.Split('\n').Count(l => l.StartsWith("sure-thing: success", StringComparison.Ordinal));
+
+        system.Update(TimeSpan.FromSeconds(4));                    // two more attempts, in the background
+
+        var linesAfter = terminal.Text.Split('\n').Count(l => l.StartsWith("sure-thing: success", StringComparison.Ordinal));
+        Assert.Equal(1, linesBefore);
+        Assert.Equal(1, linesAfter);
+        Assert.Equal(3, service.Current!.Attempts);
+    }
+
+    [Fact]
+    public async Task Focus_brings_a_background_crime_back_to_a_progress_bar()
+    {
+        await Run("crime sure-thing -b");
+        system.Update(TimeSpan.FromSeconds(1));
+
+        var command = Run("focus");
+
+        Assert.Equal(0.5, terminal.Panel!.Progress()!.Value, precision: 6);       // the attempt in progress carries on
+
+        terminal.Press(ConsoleKey.S);
+        await command.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+    }
+
+    [Theory]
+    [InlineData("crime nope", "Unknown crime 'nope'")]
+    [InlineData("crime sure-thing coin-flip", "Usage: crime [name] [-b]")]
+    [InlineData("crime sure-thing -x", "Unknown option '-x'")]
+    public async Task Problems_with_a_crime_are_explained_and_nothing_starts(string commandLine, string expected)
+    {
+        await Run(commandLine);
+
+        Assert.Contains(expected, terminal.Text);
+        Assert.Null(service.Current);
+    }
+
+    [Fact]
+    public async Task Activity_shows_the_attempts_the_chance_and_the_reward_of_a_crime()
+    {
+        await Run("crime coin-flip -b");
+        system.Update(TimeSpan.FromSeconds(12));                                 // three attempts, 19.2 xp: dexterity level 2
+
+        await Run("activity");
+
+        Assert.Contains("Committing coin-flip", terminal.Text);
+        Assert.Contains("Attempts: 3 (3 succeeded)", terminal.Text);
+        Assert.Contains("Chance now: 100%", terminal.Text);                      // was 50% at level 1
+        Assert.Contains("On success: +$400.00, +6.40 dexterity xp", terminal.Text);
+        Assert.DoesNotContain("Now: ", terminal.Text);
+    }
 
     [Fact]
     public async Task Work_without_arguments_lists_the_companies_with_their_entry_requirements()

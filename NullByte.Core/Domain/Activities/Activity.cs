@@ -51,11 +51,19 @@ public abstract class Activity
     /// <summary>Reputation gained so far.</summary>
     public double ReputationGained => Progress.ReputationGained;
 
+    /// <summary>Attempts made so far (crimes).</summary>
+    public int Attempts => Progress.Attempts;
+
+    /// <summary>Attempts that succeeded so far (crimes).</summary>
+    public int Successes => Progress.Successes;
+
     internal void RecordProgress(
         TimeSpan elapsed,
         double money,
         IReadOnlyDictionary<SkillKind, double> experience,
-        double reputation = 0)
+        double reputation = 0,
+        int attempts = 0,
+        int successes = 0)
     {
         var current = progress;
         var totals = new Dictionary<SkillKind, double>(current.ExperienceGained);
@@ -63,6 +71,12 @@ public abstract class Activity
         foreach (var (skill, amount) in experience)
             totals[skill] = totals.GetValueOrDefault(skill) + amount;
 
-        Volatile.Write(ref progress, new ActivityProgress(current.Elapsed + elapsed, current.NetMoney + money, totals, current.ReputationGained + reputation));
+        Volatile.Write(ref progress, new ActivityProgress(
+            current.Elapsed + elapsed,
+            current.NetMoney + money,
+            totals,
+            current.ReputationGained + reputation,
+            current.Attempts + attempts,
+            current.Successes + successes));
     }
 }

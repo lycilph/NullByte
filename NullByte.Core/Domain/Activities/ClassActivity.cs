@@ -5,8 +5,7 @@
 /// </summary>
 public sealed class ClassActivity : Activity
 {
-    public ClassActivity(Course course, TrainingFacility facility, ActivityMode mode)
-        : base(mode)
+    public ClassActivity(Course course, TrainingFacility facility, ActivityMode mode) : base(mode)
     {
         Course = course ?? throw new ArgumentNullException(nameof(course));
         Facility = facility ?? throw new ArgumentNullException(nameof(facility));

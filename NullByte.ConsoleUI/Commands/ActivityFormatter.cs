@@ -1,6 +1,7 @@
 ﻿using NullByte.Core.Domain;
 using NullByte.Core.Domain.Activities;
 using NullByte.Core.Formulas;
+using NullByte.Core.Services;
 
 namespace NullByte.ConsoleUI.Commands;
 
@@ -84,11 +85,20 @@ public static class ActivityFormatter
     /// <summary>Formats what an activity has earned so far, as one line for the live panel.</summary>
     public static string FormatProgress(ActivityProgress progress)
     {
-        var line = $"{FormatDuration(progress.Elapsed)} | {FormatSignedMoney(progress.NetMoney)} | {FormatExperience(progress.ExperienceGained)}";
+        var parts = new List<string>
+        {
+            FormatDuration(progress.Elapsed),
+            FormatSignedMoney(progress.NetMoney),
+            FormatExperience(progress.ExperienceGained)
+        };
 
-        return progress.ReputationGained > 0
-            ? $"{line} | {FormatReputation(progress.ReputationGained)}"
-            : line;
+        if (progress.ReputationGained > 0)
+            parts.Add(FormatReputation(progress.ReputationGained));
+
+        if (progress.Attempts > 0)
+            parts.Add($"{progress.Successes}/{progress.Attempts} succeeded");
+
+        return string.Join(" | ", parts);
     }
 
     /// <summary>Formats the result of an activity that has ended.</summary>
@@ -96,13 +106,38 @@ public static class ActivityFormatter
     {
         var progress = activity.Progress;
 
-        var line = $"{activity.Description}: {FormatDuration(progress.Elapsed)}, " +
-                   $"{FormatSignedMoney(progress.NetMoney)}, {FormatExperience(progress.ExperienceGained)}";
+        var parts = new List<string>
+        {
+            FormatDuration(progress.Elapsed),
+            FormatSignedMoney(progress.NetMoney),
+            FormatExperience(progress.ExperienceGained)
+        };
 
-        return progress.ReputationGained > 0
-            ? $"{line}, {FormatReputation(progress.ReputationGained)}."
-            : $"{line}.";
+        if (progress.ReputationGained > 0)
+            parts.Add(FormatReputation(progress.ReputationGained));
+
+        if (progress.Attempts > 0)
+            parts.Add($"{progress.Successes} of {progress.Attempts} succeeded");
+
+        return $"{activity.Description}: {string.Join(", ", parts)}.";
     }
+
+    /// <summary>Formats a chance as a whole percentage: <c>20%</c>, or <c>&lt;1%</c> for a chance that is small but not nil.</summary>
+    public static string FormatChance(double chance)
+    {
+        // Built by hand: {chance:P0} puts a space before the % in some cultures.
+        var percent = (int)Math.Round(chance * 100);
+
+        return chance > 0 && percent == 0 ? "<1%" : $"{percent}%";
+    }
+
+    /// <summary>Formats what an attempt at a crime gives: <c>+$300.00, +2.00 dexterity xp</c>, or <c>no money, ...</c> for a failure.</summary>
+    public static string FormatCrimeRewards(CrimeRewards rewards)
+        => $"{(rewards.Money > 0 ? FormatSignedMoney(rewards.Money) : "no money")}, {FormatExperience(rewards.Experience)}";
+
+    /// <summary>Formats how an attempt at a crime went, as one line.</summary>
+    public static string FormatAttempt(CrimeAttempt attempt)
+        => $"{attempt.Activity.Crime.Name}: {(attempt.Succeeded ? "success" : "failed")} ({FormatChance(attempt.Chance)} chance): {FormatCrimeRewards(attempt.Rewards)}";
 
     /// <summary>The short word shown in the prompt while the player is busy: <c>studying</c>.</summary>
     public static string PromptTag(Activity activity) => activity switch
@@ -110,6 +145,7 @@ public static class ActivityFormatter
         ClassActivity { Facility.Kind: FacilityKind.University } => "studying",
         ClassActivity => "training",
         JobActivity => "working",
+        CrimeActivity => "crime",
         _ => "busy"
     };
 }

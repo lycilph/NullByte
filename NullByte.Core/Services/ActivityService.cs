@@ -40,6 +40,12 @@ public sealed class ActivityService
     /// Raised on the game thread when the player is promoted while working. Handlers must not throw.
     /// </summary>
     public event Action<JobPromotion>? JobPromoted;
+    
+    /// <summary>
+    /// Raised on the game thread whenever an attempt at a crime ends, however it went.
+    /// Handlers must not throw.
+    /// </summary>
+    public event Action<CrimeAttempt>? CrimeAttempted;
 
     /// <summary>Gets everything that can be done.</summary>
     public ActivityCatalog Catalog => catalog;
@@ -50,7 +56,11 @@ public sealed class ActivityService
     /// <summary>Gets the player's jobs and reputation.</summary>
     public Employment Employment => gameState.Employment;
 
-    /// <summary>Gets what an activity gives and costs every second, as it stands right now.</summary>
+    /// <summary>
+    /// Gets what an activity gives and costs every second, as it stands right now.
+    /// Not available for crimes, which pay when an attempt ends: see <see cref="GetCrimeChance"/>
+    /// and <see cref="GetCrimeRewards"/>.
+    /// </summary>
     public ActivityRates GetRates(Activity activity) => formulas.CalculateRates(activity);
 
     /// <summary>Gets the share of its rewards an activity gives in a mode.</summary>
@@ -189,6 +199,41 @@ public sealed class ActivityService
     }
 
     /// <summary>
+    /// Starts committing a crime.
+    /// </summary>
+    /// <param name="crimeName">The crime to commit.</param>
+    /// <param name="repeat">
+    /// Whether to start a new attempt when one ends. If not, the activity ends after one attempt
+    /// (<see cref="ActivityEndReason.Completed"/>).
+    /// </param>
+    /// <param name="mode">Whether to start focused or in the background.</param>
+    public ActivityStartResult StartCrime(
+        string crimeName,
+        bool repeat = true,
+        ActivityMode mode = ActivityMode.Focused)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(crimeName);
+
+        if (Current is { } running)
+            return ActivityStartResult.Failed($"You are already busy: {running.Description}. Stop that first.");
+
+        if (!catalog.TryGetCrime(crimeName, out var crime))
+            return ActivityStartResult.Failed($"Unknown crime '{crimeName}'. Available: {string.Join(", ", catalog.Crimes.Select(c => c.Name))}.");
+
+        var activity = new CrimeActivity(crime, repeat, mode);
+        gameState.Activity.Current = activity;
+
+        return new ActivityStartResult(true, string.Empty, activity);
+    }
+
+    /// <summary>Gets the chance that the player's next attempt at a crime succeeds, as they are now.</summary>
+    public double GetCrimeChance(Crime crime) => formulas.CalculateCrimeSuccessChance(crime, gameState.Player.Skills);
+
+    /// <summary>Gets what an attempt at a crime gives, in a mode.</summary>
+    public CrimeRewards GetCrimeRewards(Crime crime, ActivityMode mode, bool succeeded)
+        => formulas.CalculateCrimeRewards(crime, mode, succeeded);
+
+    /// <summary>
     /// Stops the current activity.
     /// </summary>
     /// <returns>The activity that was stopped, or null if there was none.</returns>
@@ -231,6 +276,9 @@ public sealed class ActivityService
         employment.SetJob(job.Company.Name, new Job(job.Career.Name, job.RankIndex));
         JobPromoted?.Invoke(new JobPromotion(job));
     }
+
+    /// <summary>Tells the listeners that an attempt at a crime has ended.</summary>
+    internal void RaiseCrimeAttempted(CrimeAttempt attempt) => CrimeAttempted?.Invoke(attempt);
 
     /// <summary>Ends the current activity for the given reason and tells the listeners.</summary>
     internal Activity? End(ActivityEndReason reason)

@@ -13,6 +13,189 @@ public sealed class ActivitySystemTests
     private static readonly TimeSpan TenSeconds = TimeSpan.FromSeconds(10);
 
     [Fact]
+    public void A_crime_pays_when_the_attempt_ends_not_before()
+    {
+        var money = world.Player.Money;
+        var crime = (CrimeActivity)world.Service.StartCrime("sure-thing").Activity!;
+        CrimeAttempt? attempt = null;
+        world.Service.CrimeAttempted += a => attempt = a;
+
+        world.System.Update(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(money, world.Player.Money);
+        Assert.Equal(0.5, crime.CycleProgress, precision: 6);
+        Assert.Null(attempt);
+
+        world.System.Update(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(money + 100, world.Player.Money, precision: 6);
+        Assert.Equal(4, world.Player.Skills.GetExperience(SkillKind.Strength), precision: 6);
+        Assert.Equal(2, world.Player.Skills.GetExperience(SkillKind.Agility), precision: 6);
+        Assert.Equal(0, crime.CycleProgress, precision: 6);
+        Assert.NotNull(attempt);
+        Assert.True(attempt!.Succeeded);
+        Assert.Equal(1.0, attempt.Chance, precision: 9);
+        Assert.Same(crime, attempt.Activity);
+    }
+
+    [Fact]
+    public void The_roll_must_be_below_the_chance_to_succeed()
+    {
+        var crime = world.Service.StartCrime("coin-flip").Activity!;            // a chance of 50% at level 1
+        world.Random.Enqueue(0.49, 0.5);
+        var outcomes = new List<bool>();
+        world.Service.CrimeAttempted += a => outcomes.Add(a.Succeeded);
+
+        world.System.Update(TimeSpan.FromSeconds(4));
+        world.System.Update(TimeSpan.FromSeconds(4));
+
+        Assert.Equal(new[] { true, false }, outcomes);
+        Assert.Equal(2, crime.Attempts);
+        Assert.Equal(1, crime.Successes);
+    }
+
+    [Fact]
+    public void A_failed_attempt_pays_no_money_and_gives_a_quarter_of_the_experience()
+    {
+        var money = world.Player.Money;
+        world.Service.StartCrime("coin-flip");
+        world.Random.Enqueue(0.9);
+        CrimeAttempt? attempt = null;
+        world.Service.CrimeAttempted += a => attempt = a;
+
+        world.System.Update(TimeSpan.FromSeconds(4));
+
+        Assert.Equal(money, world.Player.Money);
+        Assert.Equal(2, world.Player.Skills.GetExperience(SkillKind.Dexterity), precision: 6);
+        Assert.False(attempt!.Succeeded);
+        Assert.Equal(0, attempt.Rewards.Money);
+        Assert.NotNull(world.Service.Current);                                   // it goes on
+    }
+
+    [Fact]
+    public void In_the_background_the_rewards_are_reduced_but_not_the_chance()
+    {
+        var money = world.Player.Money;
+        world.Service.StartCrime("sure-thing", mode: ActivityMode.Background);
+        CrimeAttempt? attempt = null;
+        world.Service.CrimeAttempted += a => attempt = a;
+
+        world.System.Update(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(money + 80, world.Player.Money, precision: 6);
+        Assert.Equal(3.2, world.Player.Skills.GetExperience(SkillKind.Strength), precision: 6);
+        Assert.Equal(1.6, world.Player.Skills.GetExperience(SkillKind.Agility), precision: 6);
+        Assert.Equal(1.0, attempt!.Chance, precision: 9);
+    }
+
+    [Fact]
+    public void The_mode_at_the_end_of_an_attempt_decides_its_rewards()
+    {
+        var money = world.Player.Money;
+        world.Service.StartCrime("sure-thing");
+
+        world.System.Update(TimeSpan.FromSeconds(2));                            // focused: $100
+        world.Service.SetMode(ActivityMode.Background);
+        world.System.Update(TimeSpan.FromSeconds(2));                            // background: $80
+
+        Assert.Equal(money + 180, world.Player.Money, precision: 6);
+    }
+
+    [Fact]
+    public void Several_attempts_can_end_in_one_update_and_the_left_over_time_carries_on()
+    {
+        var money = world.Player.Money;
+        var crime = (CrimeActivity)world.Service.StartCrime("sure-thing").Activity!;
+
+        world.System.Update(TimeSpan.FromSeconds(7));                            // 3 attempts of 2 s, and 1 s into the 4th
+
+        Assert.Equal(3, crime.Attempts);
+        Assert.Equal(money + 300, world.Player.Money, precision: 6);
+        Assert.Equal(0.5, crime.CycleProgress, precision: 6);
+
+        world.System.Update(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(4, crime.Attempts);
+    }
+
+    [Fact]
+    public void Every_attempt_is_rolled_with_the_skills_the_player_has_by_then()
+    {
+        // Dexterity is 15.8 xp: level 1, and the 8 xp of a success takes it to level 2.
+        var needed = new SkillFormulas(world.Balance).CalculateExperienceForLevel(SkillKind.Dexterity, 2);
+        world.Player.Skills.AddExperience(SkillKind.Dexterity, needed - 1);
+        world.Service.StartCrime("coin-flip");
+        var chances = new List<double>();
+        world.Service.CrimeAttempted += a => chances.Add(a.Chance);
+
+        world.System.Update(TimeSpan.FromSeconds(8));                            // two attempts in one update
+
+        Assert.Equal(2, chances.Count);
+        Assert.Equal(0.5, chances[0], precision: 9);
+        Assert.Equal(1.0, chances[1], precision: 9);
+    }
+
+    [Fact]
+    public void A_crime_that_is_not_repeated_ends_after_one_attempt_and_spends_only_that_time()
+    {
+        var money = world.Player.Money;
+        var crime = (CrimeActivity)world.Service.StartCrime("sure-thing", repeat: false).Activity!;
+        ActivityEndInfo? ended = null;
+        world.Service.ActivityEnded += info => ended = info;
+
+        world.System.Update(TimeSpan.FromSeconds(5));
+
+        Assert.Null(world.Service.Current);
+        Assert.Equal(money + 100, world.Player.Money, precision: 6);
+        Assert.Equal(1, crime.Attempts);
+        Assert.Equal(TimeSpan.FromSeconds(2), crime.Elapsed);
+        Assert.NotNull(ended);
+        Assert.Same(crime, ended!.Activity);
+        Assert.Equal(ActivityEndReason.Completed, ended.Reason);
+    }
+
+    [Fact]
+    public void The_crime_remembers_its_attempts_and_what_they_gave()
+    {
+        var crime = world.Service.StartCrime("sure-thing").Activity!;
+
+        world.System.Update(TimeSpan.FromSeconds(6));
+
+        var progress = crime.Progress;
+        Assert.Equal(3, progress.Attempts);
+        Assert.Equal(3, progress.Successes);
+        Assert.Equal(300, progress.NetMoney, precision: 6);
+        Assert.Equal(12, progress.ExperienceGained[SkillKind.Strength], precision: 6);
+        Assert.Equal(TimeSpan.FromSeconds(6), progress.Elapsed);
+    }
+
+    [Fact]
+    public void A_crime_never_ends_for_lack_of_money_and_earns_no_reputation()
+    {
+        world.Player.TrySpendMoney(world.Player.Money);
+        world.Service.StartCrime("sure-thing");
+
+        world.System.Update(TimeSpan.FromHours(1));
+
+        Assert.NotNull(world.Service.Current);
+        Assert.Equal(1800 * 100, world.Player.Money, precision: 3);
+        Assert.Empty(world.State.Employment.Reputation);
+    }
+
+    [Fact]
+    public void The_totals_are_up_to_date_when_the_attempts_are_announced()
+    {
+        var crime = world.Service.StartCrime("sure-thing").Activity!;
+        var seen = new List<int>();
+        world.Service.CrimeAttempted += a => seen.Add(a.Activity.Attempts);
+
+        world.System.Update(TimeSpan.FromSeconds(6));                            // three attempts in one update
+
+        Assert.Equal(new[] { 3, 3, 3 }, seen);
+        Assert.Equal(3, crime.Attempts);
+    }
+
+    [Fact]
     public void A_job_pays_a_salary_and_gives_experience_and_reputation_to_the_company()
     {
         var money = world.Player.Money;

@@ -8,7 +8,7 @@ namespace NullByte.ConsoleUI.Commands.Groups;
 
 /// <summary>
 /// The commands for what the player does besides hacking: <c>study</c>, <c>train</c>,
-/// <c>work</c>, <c>stop</c>, <c>focus</c>, <c>activity</c> and <c>skills</c>.
+/// <c>work</c>, <c>crime</c>, <c>stop</c>, <c>focus</c>, <c>activity</c> and <c>skills</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -39,6 +39,7 @@ public sealed class ActivityCommands : ICommandGroup
 
         service.ActivityEnded += OnActivityEnded;
         service.JobPromoted += OnJobPromoted;
+        service.CrimeAttempted += OnCrimeAttempted;
     }
 
     public void Register(CommandRegistry registry)
@@ -75,6 +76,16 @@ public sealed class ActivityCommands : ICommandGroup
                 new ArgumentCompletion { ArgumentIndex = 0, Values = service.Catalog.Companies.Select(c => c.Name).ToList() },
                 new ArgumentCompletion { ArgumentIndex = 1, Values = service.Catalog.Companies.SelectMany(c => c.Careers).Select(c => c.Name).Distinct().ToList() }
             ]
+        });
+
+        registry.Register(new CommandDefinition(
+           "crime",
+           "crime [name] [-b]",
+           "Commit a crime, again and again until you stop (no arguments: list them).",
+           CrimeAsync)
+        {
+            MinArgs = 0, MaxArgs = 2,
+            Completions = [new ArgumentCompletion { ArgumentIndex = 0, Values = service.Catalog.Crimes.Select(c => c.Name).ToList() }]
         });
 
         registry.Register(new CommandDefinition(
@@ -140,6 +151,31 @@ public sealed class ActivityCommands : ICommandGroup
         await BeginAsync(service.StartWork(request.Target, request.Detail, mode), mode);
     }
 
+    private async Task CrimeAsync(IReadOnlyList<string> arguments)
+    {
+        if (!ActivityArguments.TryParse(arguments, out var request, out var error))
+        {
+            terminal.WriteLine(error);
+            return;
+        }
+
+        if (request.Detail is not null)
+        {
+            terminal.WriteLine("Usage: crime [name] [-b]");
+            return;
+        }
+
+        if (request.Target is null)
+        {
+            ListCrimes();
+            return;
+        }
+
+        var mode = request.Background ? ActivityMode.Background : ActivityMode.Focused;
+
+        await BeginAsync(service.StartCrime(request.Target, repeat: true, mode), mode);
+    }
+
     // What happens after any activity was started: say so, then hold the console or let it run on the side.
     private async Task BeginAsync(ActivityStartResult result, ActivityMode mode)
     {
@@ -154,7 +190,9 @@ public sealed class ActivityCommands : ICommandGroup
         if (result.Notice.Length > 0)
             terminal.WriteLine(result.Notice);
 
-        terminal.WriteLine($"{activity.Description} ({ActivityFormatter.FormatRates(service.GetRates(activity))}).");
+        terminal.WriteLine(activity is CrimeActivity crime
+            ? $"{DescribeCrime(crime)}."
+            : $"{activity.Description} ({ActivityFormatter.FormatRates(service.GetRates(activity))}).");
 
         if (mode == ActivityMode.Background)
             terminal.WriteLine(BackgroundNotice());
@@ -201,7 +239,12 @@ public sealed class ActivityCommands : ICommandGroup
         terminal.WriteLine(activity.Mode == ActivityMode.Focused
             ? "Mode: focused"
             : $"Mode: in the background (rewards reduced by {RewardReductionText()})");
-        terminal.WriteLine($"Now: {ActivityFormatter.FormatRates(service.GetRates(activity))}");
+
+        if (activity is CrimeActivity crime)
+            WriteCrimeDetails(crime);
+        else
+            terminal.WriteLine($"Now: {ActivityFormatter.FormatRates(service.GetRates(activity))}");
+
         terminal.WriteLine($"So far: {ActivityFormatter.FormatProgress(progress)}");
 
         return Task.CompletedTask;
@@ -216,6 +259,18 @@ public sealed class ActivityCommands : ICommandGroup
             ? "Next rank: you are at the top."
             : $"Next rank: {job.Career.Ranks[job.RankIndex + 1].Title}, needs {ActivityFormatter.FormatRequirements(job.Career.Ranks[job.RankIndex + 1])}");
     }
+
+    private void WriteCrimeDetails(CrimeActivity crime)
+    {
+        terminal.WriteLine($"Attempts: {crime.Attempts} ({crime.Successes} succeeded)");
+        terminal.WriteLine($"Chance now: {ActivityFormatter.FormatChance(service.GetCrimeChance(crime.Crime))}");
+        terminal.WriteLine($"On success: {ActivityFormatter.FormatCrimeRewards(service.GetCrimeRewards(crime.Crime, crime.Mode, succeeded: true))}");
+    }
+
+    private string DescribeCrime(CrimeActivity crime)
+        => $"{crime.Description} ({ActivityFormatter.FormatDuration(TimeSpan.FromSeconds(crime.Crime.DurationSeconds))} per attempt, " +
+           $"{ActivityFormatter.FormatChance(service.GetCrimeChance(crime.Crime))} chance, " +
+           $"{ActivityFormatter.FormatCrimeRewards(service.GetCrimeRewards(crime.Crime, crime.Mode, succeeded: true))} on success)";
 
     private Task ShowSkillsAsync(IReadOnlyList<string> arguments)
     {
@@ -245,9 +300,14 @@ public sealed class ActivityCommands : ICommandGroup
                 decision.TrySetResult(FocusDecision.Ended);
         }
 
+        // A crime has attempts of a known length, so it shows a bar that fills and starts over.
+        Func<double?> progress = activity is CrimeActivity crimeActivity
+            ? () => crimeActivity.CycleProgress
+            : () => null;
+
         var panel = new LivePanel(
             activity.Description,
-            Progress: () => null,
+            Progress: progress,
             Detail: () => ActivityFormatter.FormatProgress(activity.Progress),
             Hotkeys:
             [
@@ -303,6 +363,30 @@ public sealed class ActivityCommands : ICommandGroup
 
         terminal.WriteLine($"Promoted! You are now {job.Rank.Title} at {job.Company.Name} ({job.Career.Name}): " +
                            $"{ActivityFormatter.FormatRates(service.GetRates(job))}.");
+    }
+
+    // Raised on the game thread. A line for every attempt would bury the console while the player is doing something else.
+    private void OnCrimeAttempted(CrimeAttempt attempt)
+    {
+        if (attempt.Activity.Mode == ActivityMode.Focused)
+            terminal.WriteLine(ActivityFormatter.FormatAttempt(attempt));
+    }
+
+    private void ListCrimes()
+    {
+        terminal.WriteLine("Crimes (with your chance of success now):");
+
+        foreach (var crime in service.Catalog.Crimes)
+        {
+            var duration = ActivityFormatter.FormatDuration(TimeSpan.FromSeconds(crime.DurationSeconds));
+            var chance = ActivityFormatter.FormatChance(service.GetCrimeChance(crime));
+            var rewards = ActivityFormatter.FormatCrimeRewards(service.GetCrimeRewards(crime, ActivityMode.Focused, succeeded: true));
+
+            terminal.WriteLine($"  {crime.Name,-18} {duration,6} {chance,5}  {rewards}");
+        }
+
+        terminal.WriteLine();
+        terminal.WriteLine("Usage: crime <name> [-b]   (repeats until you stop)");
     }
 
     private void ListCompanies()

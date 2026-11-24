@@ -209,6 +209,29 @@ public sealed record BalanceConfig
     /// </summary>
     public double JobReputationMultiplier { get; init; } = 1.0;
 
+    /// <summary>
+    /// The weighted average skill level at which a crime of difficulty 1 is certain to
+    /// succeed. A crime of difficulty d is certain at a level of d times this.
+    /// </summary>
+    public double CrimeSkillScale { get; init; } = 100.0;
+
+    /// <summary>
+    /// The share of a crime's experience a failed attempt still gives. A failure pays no money.
+    /// </summary>
+    public double CrimeFailureExperienceFactor { get; init; } = 0.25;
+
+    /// <summary>
+    /// Global multiplier applied to the money crimes pay.
+    /// Reserved for later progression systems.
+    /// </summary>
+    public double CrimeMoneyMultiplier { get; init; } = 1.0;
+
+    /// <summary>
+    /// Global multiplier applied to the experience crimes give.
+    /// Reserved for later progression systems.
+    /// </summary>
+    public double CrimeExperienceMultiplier { get; init; } = 1.0;
+
     // Growth
 
     /// <summary>

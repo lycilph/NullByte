@@ -1,4 +1,12 @@
 <Solution>
+  <Folder Name="/AI/">
+    <File Path="ai_context.md" />
+    <File Path="ARCHITECTURE.md" />
+    <File Path="codebase.md" />
+    <File Path="CURRENT_STATUS.md" />
+    <File Path="DESIGN.md" />
+    <File Path="how-to.md" />
+  </Folder>
   <Folder Name="/Docs/">
     <File Path="AIPrompts.md" />
     <File Path="ImplementationNotes.md" />

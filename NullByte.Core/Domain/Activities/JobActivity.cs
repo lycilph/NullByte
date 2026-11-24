@@ -12,8 +12,7 @@ public sealed class JobActivity : Activity
 {
     private int rankIndex;
 
-    public JobActivity(Company company, CareerPath career, int rankIndex, ActivityMode mode)
-        : base(mode)
+    public JobActivity(Company company, CareerPath career, int rankIndex, ActivityMode mode) : base(mode)
     {
         Company = company ?? throw new ArgumentNullException(nameof(company));
         Career = career ?? throw new ArgumentNullException(nameof(career));
