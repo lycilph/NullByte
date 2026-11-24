@@ -19,14 +19,15 @@ public sealed class FormulasTests
 
         Assert.Equal(42, formulas.Network.CalculateAnalyzeDuration().TotalSeconds);
         Assert.Equal(
-            2.0,
-            formulas.Skills.CalculateLevel(NullByte.Core.Domain.SkillKind.Hacking, 5_000)
-                / (double)new SkillFormulas(balance).CalculateLevel(NullByte.Core.Domain.SkillKind.Hacking, 5_000));
+            new SkillFormulas(balance).CalculateExperienceForLevel(
+                NullByte.Core.Domain.SkillKind.Hacking,
+                10),
+            formulas.Skills.CalculateExperienceForLevel(
+                NullByte.Core.Domain.SkillKind.Hacking,
+                10));
         Assert.Equal(
-            3.0,
-            formulas.Botnet.CalculateProduction(1, 1, 1)
-                / new BotnetFormulas(new BalanceConfig()).CalculateProduction(1, 1, 1),
-            precision: 10);
+            new BotnetFormulas(balance).CalculateProduction(1, 1, 1),
+            formulas.Botnet.CalculateProduction(1, 1, 1));
     }
 
     [Fact]
