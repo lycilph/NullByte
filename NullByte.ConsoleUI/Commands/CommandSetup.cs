@@ -19,20 +19,20 @@ public static class CommandSetup
         AppSettings? settings = null)
     {
         var registry = new CommandRegistry();
-
         var workingDirectory = new WorkingDirectory(session.State);
+        var formulas = session.Services.Formulas;
 
         List<ICommandGroup> groups =
         [
             new DebugCommands(session.State.Player, session.Clock, registry, terminal, externalEditorStatus),
             new SystemCommands(registry, terminal, hostRequests, settings),
-            new PlayerCommands(session.State.Player, session.Services.Network, session.Services.HackingFormulas, terminal),
-            new NetworkCommands(session.Clock, session.Services.Network, session.Services.NetworkFormulas, terminal),
+            new PlayerCommands(session.State.Player, session.Services.Network, formulas.Hacking, terminal),
+            new NetworkCommands(session.Clock, session.Services.Network, formulas.Network, terminal),
             new FileCommands(session.State.FileSystem, session.Services.Network, workingDirectory, terminal),
             new ScriptCommands(session.Services.Network, session.Services.Scripts, workingDirectory, terminal),
-            new ActionCommands(session.State.Player, session.Clock, session.Services.HackingFormulas, session.Services.Actions, session.Services.Network, terminal),
-            new BotnetCommands(session.State.Botnet, session.Services.Botnet, session.Services.BotnetFormulas, terminal),
-            new ActivityCommands(session.Services.Activities, session.State.Player, session.Services.Skills, terminal)
+            new ActionCommands(session.State.Player, session.Clock, formulas.Hacking, session.Services.Actions, session.Services.Network, terminal),
+            new BotnetCommands(session.State.Botnet, session.Services.Botnet, formulas.Botnet, terminal),
+            new ActivityCommands(session.Services.Activities, session.State.Player, formulas.Skills, terminal)
         ];
         
         // Hosts that cannot save (and tests) simply leave these out.
