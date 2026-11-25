@@ -178,6 +178,17 @@ public sealed class SettingsValidatorTests
             exception.Errors);
     }
 
+    [Fact]
+    public void Validate_WithNullStartup_Throws()
+    {
+        var settings = new AppSettings { Startup = null! };
+
+        var exception = Assert.Throws<SettingsValidationException>(
+            () => SettingsValidator.Validate(settings));
+
+        Assert.Contains("Startup settings cannot be null.", exception.Errors);
+    }
+
     private static void AssertInvalidGameSpeed(double multiplier)
     {
         var settings = new AppSettings

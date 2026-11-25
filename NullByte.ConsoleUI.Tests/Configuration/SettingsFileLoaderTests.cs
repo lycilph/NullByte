@@ -16,6 +16,7 @@ public sealed class SettingsFileLoaderTests
         Assert.False(settings.Editor.Enabled);
         Assert.Null(settings.Editor.Port);
         Assert.Equal(1.0, settings.Development.GameSpeedMultiplier);
+        Assert.True(settings.Startup.ShowBootSequence);
     }
 
     [Fact]
@@ -148,6 +149,8 @@ public sealed class SettingsFileLoaderTests
         Assert.Contains("\"saveDirectory\"", json);
         Assert.Contains("\"editor\"", json);
         Assert.Contains("\"development\"", json);
+        Assert.Contains("\"startup\"", json);
+        Assert.Contains("\"showBootSequence\": true", json);
         Assert.Contains("\"gameSpeedMultiplier\"", json);
 
         Assert.DoesNotContain("\"SaveDirectory\"", json);

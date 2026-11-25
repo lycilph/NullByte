@@ -16,6 +16,7 @@ public sealed class SettingsLoaderTests
         Assert.Equal(expected, result.Settings.SaveDirectory);
         Assert.False(result.Settings.Editor.Enabled);
         Assert.Equal(1.0, result.Settings.Development.GameSpeedMultiplier);
+        Assert.True(result.Settings.Startup.ShowBootSequence);
         Assert.False(result.StartNewGame);
     }
 

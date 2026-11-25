@@ -1,8 +1,7 @@
 {
   "profiles": {
     "NullByte.ConsoleUI": {
-      "commandName": "Project",
-      "commandLineArgs": "--vscode"
+      "commandName": "Project"
     }
   }
 }
