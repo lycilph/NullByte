@@ -33,7 +33,7 @@ public sealed class CompletionCatalogTests
 
         Assert.Contains("algorithms", courses.Candidates);
         Assert.DoesNotContain("strength", courses.Candidates);
-        Assert.Contains("university", universities.Candidates);
+        Assert.Contains("rothman-university", universities.Candidates);
         Assert.DoesNotContain("gym", universities.Candidates);
     }
 
@@ -48,7 +48,7 @@ public sealed class CompletionCatalogTests
 
         Assert.Contains("strength", courses.Candidates);
         Assert.DoesNotContain("algorithms", courses.Candidates);
-        Assert.Contains("gym", gyms.Candidates);
+        Assert.Contains("iron-gym", gyms.Candidates);
         Assert.DoesNotContain("university", gyms.Candidates);
     }
 

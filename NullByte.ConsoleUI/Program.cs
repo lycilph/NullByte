@@ -1,10 +1,11 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using NullByte.ConsoleUI.Configuration;
-using NullByte.ConsoleUI.Terminal;
 using NullByte.ConsoleUI.Startup;
+using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Configuration;
 using NullByte.Core.Persistence;
+using NullByte.Core.Services;
 using NullByte.Editor;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.LanguageService;
@@ -25,6 +26,8 @@ public class Program
         if (applicationOptions.WriteDefaultSettings)
         {
             WriteDefaultSettings();
+            Console.Write("Press any key to continue...");
+            Console.ReadKey();
             return;
         }
 
@@ -41,10 +44,13 @@ public class Program
             new FileSaveStore(settings.SaveDirectory),
             new SaveGameSerializer());
 
+        var scriptCompiler = new ScriptCompiler();
+
         var sessionOptions = new GameSessionOptions
         {
             Output = terminal,
-            Balance = new BalanceConfig { GameSpeedMultiplier = settings.Development.GameSpeedMultiplier }
+            Balance = new BalanceConfig { GameSpeedMultiplier = settings.Development.GameSpeedMultiplier },
+            ScriptCompiler = scriptCompiler
         };
 
         await using var host = new GameHost(
@@ -53,19 +59,82 @@ public class Program
             sessionOptions,
             settings);
 
-        if (settings.Startup.ShowBootSequence)
-        {
-            Console.Clear();
-            await new BootSequence(Console.Out).RunAsync();
-        }
+        EditorServer? editor = settings.Editor.Enabled
+            ? CreateEditorServer(host, settings.Editor, scriptCompiler)
+            : null;
 
-        var terminalTask = terminal.RunAsync();
-        EditorServer? editor = null;
+        var editorWarmUp = editor?.StartWarmUp();
+        var warmUpEntries = new List<(string Name, TimeSpan Duration, Exception? Error)>();
+        var totalWarmUpDuration = TimeSpan.Zero;
+
+        async Task WarmUpAsync(CancellationToken cancellationToken)
+        {
+            var totalTimer = Stopwatch.StartNew();
+
+            Task<(string Name, TimeSpan Duration, Exception? Error)> compilerTask = 
+                ObserveWarmUpAsync(scriptCompiler.WarmUpAsync(), "Script Compiler", cancellationToken);
+            Task<(string Name, TimeSpan Duration, Exception? Error)>? editorTask = editorWarmUp is null
+                ? null : ObserveWarmUpAsync(editorWarmUp, "Editor language service", cancellationToken);
+            
+            var completed = editorTask is null
+                ? [await compilerTask]
+                : await Task.WhenAll(compilerTask, editorTask);
+
+            totalTimer.Stop();
+            warmUpEntries = completed.ToList();
+            totalWarmUpDuration = totalTimer.Elapsed;
+
+            var failures = warmUpEntries
+                .Where(entry => entry.Error is not null)
+                .Select(entry => entry.Error!)
+                .ToArray();
+
+            if (failures.Length > 0)
+                throw new AggregateException("One or more startup warm-up tasks failed.", failures);
+        }
 
         try
         {
-            if (settings.Editor.Enabled)
-                editor = await StartEditorAsync(host, terminal, settings.Editor);
+            if (settings.Startup.ShowBootSequence)
+            {
+                Console.Clear();
+                await new BootSequence(Console.Out).RunAsync(warmUp: WarmUpAsync);
+            }
+            else
+            {
+                Console.WriteLine("Warming up");
+                await WarmUpAsync(CancellationToken.None);
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Console.Error.WriteLine(FormatWarmUpSummary(warmUpEntries, totalWarmUpDuration));
+            Console.Error.WriteLine();
+            Console.Error.WriteLine("Startup aborted because a required warm-up task failed.");
+            Console.Error.WriteLine(exception.GetBaseException().Message);
+
+            if (editor is not null)
+            {
+                try
+                {
+                    await editor.DisposeAsync();
+                }
+                catch (Exception cleanupException)
+                {
+                    Console.Error.WriteLine("Could not cleanly stop the editor service: " + cleanupException.Message);
+                }
+            }
+
+            return;
+        }
+
+        var terminalTask = terminal.RunAsync();
+        terminal.WriteLine(FormatWarmUpSummary(warmUpEntries, totalWarmUpDuration));
+
+        try
+        {
+            if (editor is not null)
+                await StartEditorAsync(host, terminal, editor);
 
             await host.StartAsync(resumeAutosave: !applicationOptions.StartNewGame);
             await host.RunAsync();
@@ -85,6 +154,42 @@ public class Program
 
         Console.WriteLine("Everything stopped, bye");
         await Task.Delay(500);
+    }
+
+    private static async Task<(string Name, TimeSpan Duration, Exception? Error)> ObserveWarmUpAsync(
+        Task warmUpTask,
+        string message,
+        CancellationToken cancellationToken)
+    {
+        var timer = Stopwatch.StartNew();
+        try
+        {
+            await warmUpTask.WaitAsync(cancellationToken);
+            return (message, timer.Elapsed, null);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return (message, timer.Elapsed, exception);
+        }
+    }
+
+    private static string FormatWarmUpSummary(
+        IReadOnlyList<(string Name, TimeSpan Duration, Exception? Error)> entries,
+        TimeSpan totalDuration)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine();
+        sb.AppendLine("STARTUP DIAGNOSTICS");
+        foreach (var entry in entries)
+        {
+            var status = entry.Error is null
+                ? $"{entry.Duration.TotalSeconds:F1}s"
+                : $"FAILED ({entry.Error.Message})";
+            sb.AppendLine($"{entry.Name,-26} {status}");
+        }
+
+        sb.AppendLine($"{"Total warm-up time",-26} {totalDuration.TotalSeconds:F1}s");
+        return sb.ToString();
     }
 
     private static ApplicationOptions? LoadApplicationOptions(string[] args)
@@ -142,60 +247,40 @@ public class Program
         }
     }
 
-    private static async Task<EditorServer?> StartEditorAsync(GameHost host, ThreadSafeConsoleTerminal terminal, EditorSettings settings)
+    private static EditorServer CreateEditorServer(GameHost host, EditorSettings settings, IScriptCompiler scriptCompiler)
     {
-        EditorServer? editor = null;
+        var requestedPort = settings.Port;
+        var options = new EditorServerOptions(
+            Port: requestedPort ?? EditorServerOptions.DefaultPort,
+            FallbackToFreePort: requestedPort is null,
+            ConnectionFilePath: settings.ConnectionFilePath);
 
+        return new EditorServer(
+            () => host.Session is { } session
+                ? new EditorBackend(session.State, session.GameThread, session.Services.Scripts)
+                : null,
+            scriptCompiler,
+            new ScriptLanguageService(),
+            options);
+    }
+
+    private static async Task StartEditorAsync(GameHost host, ThreadSafeConsoleTerminal terminal, EditorServer editor)
+    {
         try
         {
-            var requestedPort = settings.Port;
-
-            var options = new EditorServerOptions(
-                Port: requestedPort ?? EditorServerOptions.DefaultPort,
-                // If no port was explicitly configured, try the
-                // default first and then let the OS choose one.
-                FallbackToFreePort: requestedPort is null,
-                ConnectionFilePath: settings.ConnectionFilePath);
-
-            editor = new EditorServer(
-                () =>
-                    host.Session is { } session
-                        ? new EditorBackend(session.State, session.GameThread, session.Services.Scripts)
-                        : null,
-                new ScriptCompiler(),
-                new ScriptLanguageService(),
-                options);
-
             await editor.StartAsync();
 
             host.ExternalEditorStatus = editor;
             host.SessionChanged += editor.OnGameChanged;
-
             editor.OnGameChanged();
-
-            var warmUpTimer = Stopwatch.StartNew();
-
-            _ = editor.WarmUp.ContinueWith(
-                task => terminal.WriteLine(task.IsCompletedSuccessfully
-                    ? $"VS Code language features ready ({warmUpTimer.Elapsed.TotalSeconds:F1}s)."
-                    : "VS Code language features failed to start: " + task.Exception?.GetBaseException().Message),
-                TaskScheduler.Default);
 
             terminal.WriteLine(
                 $"VS Code integration listening on {editor.Url} "
-                + $"(connection file: "
-                + $"{editor.ConnectionFilePath})");
-
-            return editor;
+                + $"(connection file: {editor.ConnectionFilePath})");
         }
         catch (Exception exception)
         {
             terminal.WriteLine("Could not start the VS Code integration: " + exception.Message);
-
-            if (editor is not null)
-                await editor.DisposeAsync();
-
-            return null;
         }
     }
 }

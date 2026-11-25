@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
-using NullByte.Core.Persistence;
 using NullByte.Core.Scripting;
 using System.Text;
 
@@ -52,6 +51,18 @@ public sealed class ScriptCompiler : IScriptCompiler
     {
         ArgumentNullException.ThrowIfNull(references);
         this.references = references;
+    }
+
+    public async Task WarmUpAsync()
+    {
+        var result = await Task.Run(() => Compile("{}", "warmup"));
+        if (!result.Succeeded)
+        {
+            var diagnostics = string.Join(
+                Environment.NewLine,
+                result.Diagnostics.Select(diagnostic => $"{diagnostic.Id}: {diagnostic.Message}"));
+            throw new InvalidOperationException("Script compiler warm-up failed:" + Environment.NewLine + diagnostics);
+        }
     }
 
     public ScriptCompilationResult Compile(string source, string filename, IScriptSourceProvider? sources = null)

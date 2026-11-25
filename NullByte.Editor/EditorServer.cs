@@ -31,8 +31,11 @@ public sealed class EditorServer(
     private readonly EditorToken token = EditorToken.Create();
     private WebApplication? app;
     private GameState? watched;
+    private readonly Lazy<Task> warmUpTask = new(
+        () => Task.Run(() => languageService.WarmUpAsync()),
+        LazyThreadSafetyMode.ExecutionAndPublication);
 
-    public Task WarmUp { get; private set; } = Task.CompletedTask;
+    public Task WarmUp => warmUpTask.Value;
     public int Port { get; private set; }
     public string Url => $"ws://127.0.0.1:{Port}/ws";
     public string ConnectionFilePath { get; } = options.ConnectionFilePath ?? EditorConnectionFile.DefaultPath;
@@ -50,12 +53,11 @@ public sealed class EditorServer(
 
         EditorConnectionFile.Write(ConnectionFilePath, Url, token.Value);
 
-        WarmUp = Task.Run(async () =>
-        {
-            compiler.Compile("{}", "warmup");
-            await languageService.WarmUpAsync();
-        });
+        await StartWarmUp();
     }
+
+    /// <summary>Starts the editor language-service warm-up without starting the editor listener.</summary>
+    public Task StartWarmUp() => warmUpTask.Value;
 
     private async Task StartListeningAsync(int port)
     {

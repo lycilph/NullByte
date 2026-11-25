@@ -27,6 +27,7 @@ public sealed record GameSessionOptions
     public IRandomSource? Random { get; init; }                                 // tests pass a fixed source
     public INullByteApiFactory? ApiFactory { get; init; }                       // tests pass a fake api factory
     public ActivityCatalog? ActivityCatalog { get; init; }                      // tests pass a small catalog; null = the one that ships with the game
+    public IScriptCompiler? ScriptCompiler { get; init; }                       // tests can provide a compiler; null = create the default compiler
 
     public GameSessionOptions WithSave(RestoredGame restored)
     {
@@ -90,11 +91,6 @@ public sealed class GameSession : IAsyncDisposable
     {
         try
         {
-            // Warm up the script compiler (should i await this somewhere???)
-            #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            Task.Run(() => compiler.Compile("{}", "warmup"));
-            #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-
             loop.Start();              // throws if already started
             await loop.Started;        // faults if the game thread failed to initialise
             await RestartSavedProcessesAsync();
@@ -187,7 +183,7 @@ public sealed class GameSession : IAsyncDisposable
         var activityCatalog = options.ActivityCatalog ?? ActivityCatalogFactory.CreateDefault();
         var activityService = new ActivityService(state, activityCatalog, formulas.Activities);
 
-        var scriptCompiler = new ScriptCompiler();
+        var scriptCompiler = options.ScriptCompiler ?? new ScriptCompiler();
         var scriptLoader = new ScriptAssemblyLoader();
         var scriptRunner = new ScriptRunner(scriptLoader);
         var scriptProcessManager = new ScriptProcessManager();

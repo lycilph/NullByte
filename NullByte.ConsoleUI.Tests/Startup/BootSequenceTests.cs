@@ -80,4 +80,45 @@ public sealed class BootSequenceTests
 
         Assert.DoesNotContain("SYSTEM READY", output.ToString());
     }
+
+    [Fact]
+    public async Task RunAsync_WhenWarmUpIsStillRunning_BlinksReadyingBeforeReady()
+    {
+        using var output = new StringWriter();
+        var warmUp = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var blinkDelays = 0;
+        var sequence = new BootSequence(
+            output,
+            (duration, _) =>
+            {
+                if (duration == TimeSpan.FromMilliseconds(500) && ++blinkDelays == 2)
+                    warmUp.SetResult();
+
+                return Task.CompletedTask;
+            },
+            new Random(42));
+
+        await sequence.RunAsync(TestContext.Current.CancellationToken, warmUp: _ => warmUp.Task);
+
+        var text = output.ToString();
+        var readyingIndex = text.IndexOf("SYSTEM READYING", StringComparison.Ordinal);
+        var readyIndex = text.LastIndexOf("SYSTEM READY", StringComparison.Ordinal);
+
+        Assert.True(readyingIndex >= 0);
+        Assert.True(readyIndex > readyingIndex);
+        Assert.Equal(2, blinkDelays);
+        Assert.Contains("\r  SYSTEM READY     ", text);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenWarmUpIsAlreadyComplete_DoesNotShowReadying()
+    {
+        using var output = new StringWriter();
+        var sequence = new BootSequence(output, (_, _) => Task.CompletedTask, new Random(42));
+
+        await sequence.RunAsync(TestContext.Current.CancellationToken, warmUp: _ => Task.CompletedTask);
+
+        Assert.DoesNotContain("SYSTEM READYING", output.ToString());
+        Assert.Contains("SYSTEM READY", output.ToString());
+    }
 }
