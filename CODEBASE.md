@@ -152,7 +152,7 @@ Running scripts retain their compiled snapshot; later source changes do not muta
 - command groups for action, activity, botnet, debug, file, network, persistence, player, script and system operations.
 - terminal parsing, completion, history, hotkeys and live panels.
 - configuration under `Configuration/`.
-- the presentation-only startup sequence under `Startup/`; it runs before the interactive terminal takes ownership of the console.
+- the startup sequence under `Startup/`; it renders boot progress while required compiler and (when enabled) editor language-service warm-ups run, and completes before the interactive terminal takes ownership of the console.
 
 Host-level operations such as load/reset are requested through the host rather than disposing/replacing the session from inside the currently executing command.
 

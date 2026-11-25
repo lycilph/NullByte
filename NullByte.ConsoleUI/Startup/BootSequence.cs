@@ -2,7 +2,7 @@ namespace NullByte.ConsoleUI.Startup;
 
 /// <summary>
 /// Renders the fictional NullByte system boot sequence before the interactive terminal starts.
-/// This is presentation only; it does not report actual application initialization progress.
+/// Renders startup progress and waits for required initialization before the terminal starts.
 /// </summary>
 public sealed class BootSequence
 {
@@ -43,17 +43,17 @@ public sealed class BootSequence
         var warmUpTask = warmUp?.Invoke(cancellationToken);
 
         await output.WriteLineAsync(@"
-      ___           ___           ___       ___       ___           ___           ___           ___     
-     /\__\         /\__\         /\__\     /\__\     /\  \         |\__\         /\  \         /\  \    
-    /::|  |       /:/  /        /:/  /    /:/  /    /::\  \        |:|  |        \:\  \       /::\  \   
-   /:|:|  |      /:/  /        /:/  /    /:/  /    /:/\:\  \       |:|  |         \:\  \     /:/\:\  \  
-  /:/|:|  |__   /:/  /  ___   /:/  /    /:/  /    /::\~\:\__\      |:|__|__       /::\  \   /::\~\:\  \ 
- /:/ |:| /\__\ /:/__/  /\__\ /:/__/    /:/__/    /:/\:\ \:|__|     /::::\__\     /:/\:\__\ /:/\:\ \:\__\
- \/__|:|/:/  / \:\  \ /:/  / \:\  \    \:\  \    \:\~\:/:/  /    /:/~~/~       /:/  \/__/ \:\~\:\ \/__/
-     |:/:/  /   \:\  /:/  /   \:\  \    \:\  \    \:\ \::/  /    /:/  /        /:/  /       \:\ \:\__\  
-     |::/  /     \:/:/  /     \:\  \    \:\  \    \:/:/  /     \/__/         \/__/         \:\ \/__/  
-     /:/  /       \::/  /       \:\__\    \:\__\    \::/__/                                   \:\__\    
-     \/__/         \/__/         \/__/     \/__/     ~~                                        \:\__\");
+        ___           ___           ___       ___       ___           ___           ___           ___     
+       /\__\         /\__\         /\__\     /\__\     /\  \         |\__\         /\  \         /\  \    
+      /::|  |       /:/  /        /:/  /    /:/  /    /::\  \        |:|  |        \:\  \       /::\  \   
+     /:|:|  |      /:/  /        /:/  /    /:/  /    /:/\:\  \       |:|  |         \:\  \     /:/\:\  \  
+    /:/|:|  |__   /:/  /  ___   /:/  /    /:/  /    /::\~\:\__\      |:|__|__       /::\  \   /::\~\:\  \ 
+   /:/ |:| /\__\ /:/__/  /\__\ /:/__/    /:/__/    /:/\:\ \:|__|     /::::\__\     /:/\:\__\ /:/\:\ \:\__\
+   \/__|:|/:/  / \:\  \ /:/  / \:\  \    \:\  \    \:\~\:\/:/  /    /:/~~/~       /:/  \/__/ \:\~\:\ \/__/
+       |:/:/  /   \:\  /:/  /   \:\  \    \:\  \    \:\ \::/  /    /:/  /        /:/  /       \:\ \:\__\  
+       |::/  /     \:\/:/  /     \:\  \    \:\  \    \:\/:/  /     \/__/         \/__/         \:\ \/__/  
+       /:/  /       \::/  /       \:\__\    \:\__\    \::/__/                                   \:\__\    
+       \/__/         \/__/         \/__/     \/__/     ~~                                        \/__/    ");
         await output.WriteLineAsync();
         await output.WriteLineAsync("  NULLBYTE SYSTEMS  /  INTERACTIVE ENVIRONMENT");
         await output.WriteLineAsync("  ------------------------------------------------------------------------------------------------");
@@ -121,7 +121,10 @@ public sealed class BootSequence
             await output.WriteAsync(showStatus ? "\r  SYSTEM READYING" : "\r                 ");
             await output.FlushAsync(cancellationToken);
             showStatus = !showStatus;
-            await delay(ReadyingBlinkInterval, cancellationToken);
+
+            // Do not wait for the remainder of a blink interval after warm-up completes.
+            var blinkDelay = delay(ReadyingBlinkInterval, cancellationToken);
+            await Task.WhenAny(warmUpTask, blinkDelay);
         }
 
         await warmUpTask;

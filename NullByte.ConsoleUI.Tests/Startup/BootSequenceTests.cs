@@ -111,6 +111,32 @@ public sealed class BootSequenceTests
     }
 
     [Fact]
+    public async Task RunAsync_WhenWarmUpCompletesDuringBlink_DoesNotWaitForBlinkInterval()
+    {
+        using var output = new StringWriter();
+        var warmUp = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var blinkDelay = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var sequence = new BootSequence(
+            output,
+            (duration, _) => duration == TimeSpan.FromMilliseconds(500)
+                ? blinkDelay.Task
+                : Task.CompletedTask,
+            new Random(42));
+
+        var run = sequence.RunAsync(TestContext.Current.CancellationToken, warmUp: _ => warmUp.Task);
+
+        // The boot sequence reaches its readying status and begins a blink delay.
+        while (!output.ToString().Contains("SYSTEM READYING", StringComparison.Ordinal))
+            await Task.Yield();
+
+        warmUp.SetResult();
+        await run.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+
+        Assert.Contains("SYSTEM READY", output.ToString());
+        Assert.False(blinkDelay.Task.IsCompleted);
+    }
+
+    [Fact]
     public async Task RunAsync_WhenWarmUpIsAlreadyComplete_DoesNotShowReadying()
     {
         using var output = new StringWriter();
