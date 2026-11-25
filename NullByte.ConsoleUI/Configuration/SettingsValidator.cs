@@ -11,6 +11,7 @@ public static class SettingsValidator
         ValidateSaveDirectory(settings, errors);
         ValidateEditor(settings, errors);
         ValidateDevelopment(settings, errors);
+        ValidateStartup(settings, errors);
 
         if (errors.Count > 0)
             throw new SettingsValidationException(errors);
@@ -49,5 +50,11 @@ public static class SettingsValidator
 
         if (!double.IsFinite(gameSpeed) || gameSpeed <= 0.0)
             errors.Add("Development.GameSpeedMultiplier must be a finite number greater than 0.");
+    }
+
+    private static void ValidateStartup(AppSettings settings, ICollection<string> errors)
+    {
+        if (settings.Startup is null)
+            errors.Add("Startup settings cannot be null.");
     }
 }

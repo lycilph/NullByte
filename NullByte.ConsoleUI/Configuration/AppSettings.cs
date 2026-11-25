@@ -7,6 +7,8 @@ public sealed record AppSettings
     public EditorSettings Editor { get; init; } = new();
 
     public DevelopmentSettings Development { get; init; } = new();
+
+    public StartupSettings Startup { get; init; } = new();
 }
 
 public sealed record EditorSettings
@@ -21,4 +23,9 @@ public sealed record EditorSettings
 public sealed record DevelopmentSettings
 {
     public double GameSpeedMultiplier { get; init; } = 1.0;
+}
+
+public sealed record StartupSettings
+{
+    public bool ShowBootSequence { get; init; } = true;
 }

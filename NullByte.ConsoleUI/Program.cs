@@ -2,6 +2,7 @@
 using System.Text;
 using NullByte.ConsoleUI.Configuration;
 using NullByte.ConsoleUI.Terminal;
+using NullByte.ConsoleUI.Startup;
 using NullByte.Core.Configuration;
 using NullByte.Core.Persistence;
 using NullByte.Editor;
@@ -51,6 +52,12 @@ public class Program
             saves,
             sessionOptions,
             settings);
+
+        if (settings.Startup.ShowBootSequence)
+        {
+            Console.Clear();
+            await new BootSequence(Console.Out).RunAsync();
+        }
 
         var terminalTask = terminal.RunAsync();
         EditorServer? editor = null;
