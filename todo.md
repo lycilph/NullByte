@@ -1,24 +1,19 @@
 ﻿# In progress
 
-- Add the backdoor command (Claude)
-	- Time = same as hack, level required = same as hack, effect: the player can always connect directly to the server
-
-- Test projects clean up (chatgpt)
+- Test projects clean up
   - Consolidate startup/fixture/infrastructure code in a shared class
   - Use Mocks where appropriate
-	
-- Test projects clean up (chatgpt)
-  - Look at the tests themselves
 
 # Todo
 
+- study: the free tier should NOT get the x3 multiplier, or should only be available at the x1 university
+	
+- Test projects clean up
+  - Look at the tests themselves
+
 - Clean up
   - Skill/Hacking formulas
-  - session.Services.Activities.ActivityEnded += _ => terminal.SetPrompt(BuildPrompt(session.State)); (in gamehost)
-	- What about loading/saving in this case???
   - Fix tab-completion for the work command (see registration for the work command in ActivityCommands.cs)
-  - study: the free tier should NOT get the x3 multiplier, or should only be available at the x1 university
-- Remove/delete the ActivityState class? 
   
 
 # Future ideas
