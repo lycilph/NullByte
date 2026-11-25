@@ -160,6 +160,38 @@ public sealed class ServerActions
             Duration: duration);
     }
 
+    /// <summary>
+    /// Installs a backdoor on a server, after which the player can connect to it directly from anywhere.
+    /// Requires the same root access and hacking level as hacking it.
+    /// </summary>
+    public async Task<BackdoorResult> BackdoorAsync(
+        string hostname,
+        CancellationToken cancellationToken = default)
+    {
+        var server = ResolveTarget(hostname);
+
+        if (server.HasBackdoor)
+            return BackdoorResult.Failed($"Backdoor failed: {server.Hostname} already has a backdoor.");
+
+        if (!server.HasRootAccess)
+            return BackdoorResult.Failed("Backdoor failed: root access required.");
+
+        var player = gameState.Player;
+        var hackingLevel = formulas.CalculateHackingLevel(player.HackingExperience);
+        if (hackingLevel < server.RequiredHackingLevel)
+            return BackdoorResult.Failed("Backdoor failed: hacking level too low.");
+
+        var duration = formulas.CalculateBackdoorDuration(player, server);
+        await scheduler.DelayAsync(duration, cancellationToken);
+
+        server.InstallBackdoor();
+
+        return new BackdoorResult(
+            Succeeded: true,
+            FailureMessage: string.Empty,
+            Duration: duration);
+    }
+
     public NukeResult Nuke(string hostname)
     {
         var server = ResolveTarget(hostname);
@@ -170,7 +202,7 @@ public sealed class ServerActions
             return NukeResult.Failed($"Nuke failed: You already have root access to {hostname}");
 
         if (!server.TryGainRootAccess(hackingLevel))
-            return NukeResult.Failed($"Nuke failed: hacking level too low");
+            return NukeResult.Failed($"Nuke failed: hacking level too low (required {server.RequiredHackingLevel}, yours {hackingLevel}).");
 
         return NukeResult.Success();
     }

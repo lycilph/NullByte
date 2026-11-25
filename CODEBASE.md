@@ -94,7 +94,7 @@ The API should adapt to shared Core services, not duplicate gameplay rules.
 - `Persistence/SaveGameMapper.cs` — live state ↔ save model.
 - `Persistence/SaveGameSerializer.cs` — serialization.
 - `Persistence/SaveMigration.cs` — migration abstraction.
-- `Persistence/Migrations/` — version-to-version migrations, currently through V3→V4.
+- `Persistence/Migrations/` — version-to-version migrations, currently through V4→V5.
 - `Data/initial-network.json` — initial network data.
 - `Data/activities.json` — activity definitions.
 - `InitialGameStateFactory.cs` — initial world construction.

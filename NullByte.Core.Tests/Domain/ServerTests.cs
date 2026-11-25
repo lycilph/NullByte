@@ -35,6 +35,33 @@ public sealed class ServerTests
     }
 
     [Fact]
+    public void NewServer_HasNoBackdoor()
+    {
+        var server = CreateServer();
+
+        Assert.False(server.HasBackdoor);
+    }
+
+    [Fact]
+    public void Constructor_CanCreateAServerThatAlreadyHasABackdoor()
+    {
+        var server = new Server("n00dles", 100_000, 50_000, 5, 1, 5, 10, 20, 8, hasBackdoor: true);
+
+        Assert.True(server.HasBackdoor);
+    }
+
+    [Fact]
+    public void InstallBackdoor_SetsBackdoorWithoutGrantingRootAccess()
+    {
+        var server = CreateServer(hasRootAccess: false);
+
+        server.InstallBackdoor();
+
+        Assert.True(server.HasBackdoor);
+        Assert.False(server.HasRootAccess);
+    }
+
+    [Fact]
     public void Constructor_InitializesServer()
     {
         var server = CreateServer();

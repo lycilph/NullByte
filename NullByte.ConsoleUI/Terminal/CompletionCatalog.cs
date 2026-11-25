@@ -54,13 +54,20 @@ public sealed class CompletionCatalog : ICompletionProvider
                 .Select(server => server.Hostname)
                 .ToArray();
 
+        // Mirrors NetworkService.Connect: adjacent servers, plus any backdoored server, as long as it is discovered.
         var connectableServers =
             network
                 .GetNeighbors(player.CurrentHostname)
+                .Concat(network.Servers.Where(server => server.HasBackdoor))
                 .Where(server =>
                     player.DiscoveredHostnames.Contains(
-                        server.Hostname))
+                        server.Hostname) &&
+                    !string.Equals(
+                        server.Hostname,
+                        player.CurrentHostname,
+                        StringComparison.OrdinalIgnoreCase))
                 .Select(server => server.Hostname)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
         var files =

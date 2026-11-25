@@ -19,6 +19,13 @@ public sealed class ActionCommands(Player player, IGameClock clock, HackingFormu
 
         registry.Register(
             new CommandDefinition(
+                "backdoor",
+                "backdoor",
+                "Install a backdoor on the current server, so you can connect to it directly from anywhere.",
+                BackdoorAsync));
+
+        registry.Register(
+            new CommandDefinition(
                 "hack",
                 "hack",
                 "Attempt to steal money.",
@@ -39,28 +46,44 @@ public sealed class ActionCommands(Player player, IGameClock clock, HackingFormu
                 WeakenAsync));
     }
 
-    private async Task NukeAsync(IReadOnlyList<string> arguments)
+    private Task NukeAsync(IReadOnlyList<string> arguments)
     {
         var server = networkService.GetCurrentServer();
-        if (server.HasRootAccess)
-        {
-            terminal.WriteLine($"You already have root access to {server.Hostname}.");
-            return;
-        }
+        var result = serverActions.Nuke(server.Hostname);
 
-        var hackingLevel = hackingFormulas.CalculateHackingLevel(player.HackingExperience);
-        if (!server.TryGainRootAccess(hackingLevel))
+        terminal.WriteLine(result.Succeeded
+            ? $"Root access gained on {server.Hostname}."
+            : result.FailureMessage);
+
+        return Task.CompletedTask;
+    }
+
+    private async Task BackdoorAsync(IReadOnlyList<string> arguments)
+    {
+        var server = networkService.GetCurrentServer();
+
+        var duration = hackingFormulas.CalculateBackdoorDuration(player, server);
+        var startedAt = clock.Elapsed;
+        terminal.StartProgress($"Installing backdoor on {server.Hostname}",
+            () =>
+            {
+                var elapsed = clock.Elapsed - startedAt;
+                return Math.Clamp(elapsed.TotalSeconds / duration.TotalSeconds, 0.0, 1.0);
+            });
+
+        BackdoorResult result;
+        try { result = await serverActions.BackdoorAsync(server.Hostname, terminal.StoppingToken); }
+        finally { terminal.StopProgress(); }
+
+        if (result.Succeeded)
         {
-            terminal.WriteLine($"Cannot gain root access to {server.Hostname}.");
-            terminal.WriteLine($"Required hacking level: {server.RequiredHackingLevel}");
-            terminal.WriteLine($"Your hacking level: {hackingLevel}");
+            terminal.WriteLine($"Backdoor installed on {server.Hostname}. You can now connect to it directly.");
+            terminal.WriteLine($"Completed in {result.Duration.TotalSeconds:F1} game seconds.");
         }
         else
         {
-            terminal.WriteLine($"Root access gained on {server.Hostname}.");
+            terminal.WriteLine(result.FailureMessage);
         }
-
-        return;
     }
 
     private async Task HackAsync(IReadOnlyList<string> arguments)

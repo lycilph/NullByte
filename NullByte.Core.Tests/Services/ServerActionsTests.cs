@@ -460,6 +460,172 @@ public sealed class ServerActionsTests
         Assert.Equal(0, fixture.Scheduler.PendingCount);
     }
 
+    [Fact]
+    public async Task BackdoorAsync_DoesNotCompleteBeforeDuration()
+    {
+        var fixture = CreateFixture(randomValue: 0);
+
+        var duration = fixture.Formulas.CalculateBackdoorDuration(fixture.Player, fixture.Target);
+        var action = fixture.Actions.BackdoorAsync(fixture.Target.Hostname, TestContext.Current.CancellationToken);
+
+        fixture.Clock.Advance(duration - TimeSpan.FromTicks(1));
+        fixture.Scheduler.Update();
+
+        Assert.False(action.IsCompleted);
+        Assert.False(fixture.Target.HasBackdoor);
+
+        fixture.Clock.Advance(TimeSpan.FromTicks(1));
+        fixture.Scheduler.Update();
+
+        var result = await action;
+
+        Assert.True(result.Succeeded);
+        Assert.True(fixture.Target.HasBackdoor);
+    }
+
+    [Fact]
+    public async Task BackdoorAsync_TakesAsLongAsHacking()
+    {
+        var fixture = CreateFixture(randomValue: 0);
+
+        var hackDuration = fixture.Formulas.CalculateHackDuration(fixture.Player, fixture.Target);
+        var action = fixture.Actions.BackdoorAsync(fixture.Target.Hostname, TestContext.Current.CancellationToken);
+
+        fixture.Clock.Advance(hackDuration);
+        fixture.Scheduler.Update();
+
+        var result = await action;
+
+        Assert.Equal(hackDuration, result.Duration);
+    }
+
+    [Fact]
+    public async Task BackdoorAsync_DoesNotChangeMoneySecurityOrExperience()
+    {
+        var fixture = CreateFixture(randomValue: 0);
+
+        var initialServerMoney = fixture.Target.Money;
+        var initialPlayerMoney = fixture.Player.Money;
+        var initialSecurity = fixture.Target.Security;
+        var initialExperience = fixture.Player.HackingExperience;
+
+        var action = fixture.Actions.BackdoorAsync(fixture.Target.Hostname, TestContext.Current.CancellationToken);
+        fixture.Clock.Advance(fixture.Formulas.CalculateBackdoorDuration(fixture.Player, fixture.Target));
+        fixture.Scheduler.Update();
+        await action;
+
+        Assert.Equal(initialServerMoney, fixture.Target.Money);
+        Assert.Equal(initialPlayerMoney, fixture.Player.Money);
+        Assert.Equal(initialSecurity, fixture.Target.Security);
+        Assert.Equal(initialExperience, fixture.Player.HackingExperience);
+    }
+
+    [Fact]
+    public async Task BackdoorAsync_WithoutRootAccess_FailsWithMessage()
+    {
+        var fixture = CreateFixture(randomValue: 0, hasRootAccess: false);
+
+        var result = await fixture.Actions.BackdoorAsync(fixture.Target.Hostname, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.False(string.IsNullOrWhiteSpace(result.FailureMessage));
+        Assert.False(fixture.Target.HasBackdoor);
+        Assert.Equal(0, fixture.Scheduler.PendingCount);
+    }
+
+    [Fact]
+    public async Task BackdoorAsync_WhenHackingLevelIsTooLow_FailsWithMessage()
+    {
+        var fixture = CreateFixture(
+            randomValue: 0,
+            playerLevel: 5,
+            requiredHackingLevel: 10);
+
+        var result = await fixture.Actions.BackdoorAsync(fixture.Target.Hostname, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.False(string.IsNullOrWhiteSpace(result.FailureMessage));
+        Assert.False(fixture.Target.HasBackdoor);
+        Assert.Equal(0, fixture.Scheduler.PendingCount);
+    }
+
+    [Fact]
+    public async Task BackdoorAsync_WhenAlreadyInstalled_FailsWithoutScheduling()
+    {
+        var fixture = CreateFixture(randomValue: 0);
+        fixture.Target.InstallBackdoor();
+
+        var result = await fixture.Actions.BackdoorAsync(fixture.Target.Hostname, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("already has a backdoor", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, fixture.Scheduler.PendingCount);
+    }
+
+    [Fact]
+    public async Task BackdoorAsync_WhenCanceled_DoesNotInstallBackdoor()
+    {
+        var fixture = CreateFixture(randomValue: 0);
+
+        using var cancellationSource = new CancellationTokenSource();
+
+        var action = fixture.Actions.BackdoorAsync(fixture.Target.Hostname, cancellationSource.Token);
+        cancellationSource.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await action);
+
+        Assert.False(fixture.Target.HasBackdoor);
+    }
+
+    [Fact]
+    public async Task BackdoorAsync_WithUnknownHostname_ThrowsBeforeScheduling()
+    {
+        var fixture = CreateFixture(randomValue: 0);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => fixture.Actions.BackdoorAsync("unknown-server", TestContext.Current.CancellationToken));
+
+        Assert.Equal(0, fixture.Scheduler.PendingCount);
+    }
+
+    [Fact]
+    public void Nuke_WithSufficientHackingLevel_GrantsRootAccess()
+    {
+        var fixture = CreateFixture(randomValue: 0, hasRootAccess: false);
+
+        var result = fixture.Actions.Nuke(fixture.Target.Hostname);
+
+        Assert.True(result.Succeeded);
+        Assert.True(fixture.Target.HasRootAccess);
+    }
+
+    [Fact]
+    public void Nuke_WhenHackingLevelIsTooLow_FailsAndSaysWhatWasRequired()
+    {
+        var fixture = CreateFixture(
+            randomValue: 0,
+            playerLevel: 5,
+            requiredHackingLevel: 10,
+            hasRootAccess: false);
+
+        var result = fixture.Actions.Nuke(fixture.Target.Hostname);
+
+        Assert.False(result.Succeeded);
+        Assert.False(fixture.Target.HasRootAccess);
+        Assert.Contains("required 10", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Nuke_WhenAlreadyRooted_Fails()
+    {
+        var fixture = CreateFixture(randomValue: 0, hasRootAccess: true);
+
+        var result = fixture.Actions.Nuke(fixture.Target.Hostname);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("already have root access", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static async Task CompleteHackAsync(Fixture fixture, Task<HackResult> action)
     {
         var duration = fixture.Formulas.CalculateHackDuration(fixture.Player, fixture.Target);
