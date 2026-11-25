@@ -23,6 +23,60 @@ public sealed class CompletionCatalogTests
     }
 
     [Fact]
+    public void Study_OffersUniversityCoursesAndUniversities()
+    {
+        var fixture = CreateFixture();
+        fixture.Catalog.Refresh();
+
+        var courses = fixture.Catalog.Complete("study ", 6);
+        var universities = fixture.Catalog.Complete("study algorithms ", 17);
+
+        Assert.Contains("algorithms", courses.Candidates);
+        Assert.DoesNotContain("strength", courses.Candidates);
+        Assert.Contains("university", universities.Candidates);
+        Assert.DoesNotContain("gym", universities.Candidates);
+    }
+
+    [Fact]
+    public void Train_OffersGymCoursesAndGyms()
+    {
+        var fixture = CreateFixture();
+        fixture.Catalog.Refresh();
+
+        var courses = fixture.Catalog.Complete("train ", 6);
+        var gyms = fixture.Catalog.Complete("train strength ", 15);
+
+        Assert.Contains("strength", courses.Candidates);
+        Assert.DoesNotContain("algorithms", courses.Candidates);
+        Assert.Contains("gym", gyms.Candidates);
+        Assert.DoesNotContain("university", gyms.Candidates);
+    }
+
+    [Fact]
+    public void Work_OffersCompaniesAndDistinctCareers()
+    {
+        var fixture = CreateFixture();
+        fixture.Catalog.Refresh();
+
+        var companies = fixture.Catalog.Complete("work ", 5);
+        var careers = fixture.Catalog.Complete("work testcorp ", 15);
+
+        Assert.NotEmpty(companies.Candidates);
+        Assert.NotEmpty(careers.Candidates);
+    }
+
+    [Fact]
+    public void Crime_OffersCrimes()
+    {
+        var fixture = CreateFixture();
+        fixture.Catalog.Refresh();
+
+        var result = fixture.Catalog.Complete("crime ", 6);
+
+        Assert.NotEmpty(result.Candidates);
+    }
+
+    [Fact]
     public void Commands_IncludeExitAndQuit()
     {
         var fixture = CreateFixture();
@@ -142,7 +196,7 @@ public sealed class CompletionCatalogTests
 
         return new Fixture(
             new NetworkService(gameState, scheduler, formulas),
-            new CompletionCatalog(registry, gameState, saveManager));
+            new CompletionCatalog(registry, gameState, session.Services.Activities.Catalog, saveManager));
     }
 
     private sealed record Fixture(NetworkService Network, CompletionCatalog Catalog);

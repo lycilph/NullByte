@@ -51,7 +51,11 @@ public sealed class ActivityCommands : ICommandGroup
             arguments => StartCourseAsync(FacilityKind.University, arguments))
         {
             MinArgs = 0, MaxArgs = 3,
-            Completions = CompletionsFor(FacilityKind.University)
+            Completions =
+            [
+                new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.UniversityCourse },
+                new ArgumentCompletion { ArgumentIndex = 1, Kind = CompletionKind.University }
+            ]
         });
 
         registry.Register(new CommandDefinition(
@@ -61,7 +65,11 @@ public sealed class ActivityCommands : ICommandGroup
             arguments => StartCourseAsync(FacilityKind.Gym, arguments))
         {
             MinArgs = 0, MaxArgs = 3,
-            Completions = CompletionsFor(FacilityKind.Gym)
+            Completions =
+            [
+                new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.GymCourse },
+                new ArgumentCompletion { ArgumentIndex = 1, Kind = CompletionKind.Gym }
+            ]
         });
 
         registry.Register(new CommandDefinition(
@@ -73,8 +81,8 @@ public sealed class ActivityCommands : ICommandGroup
             MinArgs = 0, MaxArgs = 3,
             Completions =
             [
-                new ArgumentCompletion { ArgumentIndex = 0, Values = service.Catalog.Companies.Select(c => c.Name).ToList() },
-                new ArgumentCompletion { ArgumentIndex = 1, Values = service.Catalog.Companies.SelectMany(c => c.Careers).Select(c => c.Name).Distinct().ToList() }
+                new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.Company },
+                new ArgumentCompletion { ArgumentIndex = 1, Kind = CompletionKind.Career }
             ]
         });
 
@@ -85,7 +93,7 @@ public sealed class ActivityCommands : ICommandGroup
            CrimeAsync)
         {
             MinArgs = 0, MaxArgs = 2,
-            Completions = [new ArgumentCompletion { ArgumentIndex = 0, Values = service.Catalog.Crimes.Select(c => c.Name).ToList() }]
+            Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.Crime }]
         });
 
         registry.Register(new CommandDefinition(
@@ -455,19 +463,6 @@ public sealed class ActivityCommands : ICommandGroup
         terminal.WriteLine($"Usage: {usage}");
     }
 
-    private IReadOnlyList<ArgumentCompletion> CompletionsFor(FacilityKind kind) =>
-    [
-        new ArgumentCompletion
-        {
-            ArgumentIndex = 0,
-            Values = service.Catalog.Courses.Where(c => c.Kind == kind).Select(c => c.Name).ToList()
-        },
-        new ArgumentCompletion
-        {
-            ArgumentIndex = 1,
-            Values = service.Catalog.Facilities.Where(f => f.Kind == kind).Select(f => f.Name).ToList()
-        }
-    ];
 
     // "20%": built by hand, because {x:P0} puts a space before the % in some cultures.
     private string RewardReductionText()

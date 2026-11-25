@@ -22,5 +22,19 @@ public enum CompletionKind
     /// <summary>Existing save game.</summary>
     SaveGame,
     /// <summary>Existing botnet node numbers.</summary>
-    BotnetNode
+    BotnetNode,
+    /// <summary>University courses.</summary>
+    UniversityCourse,
+    /// <summary>Universities.</summary>
+    University,
+    /// <summary>Gym courses.</summary>
+    GymCourse,
+    /// <summary>Gyms.</summary>
+    Gym,
+    /// <summary>Companies.</summary>
+    Company,
+    /// <summary>Careers offered by companies.</summary>
+    Career,
+    /// <summary>Crimes.</summary>
+    Crime
 }

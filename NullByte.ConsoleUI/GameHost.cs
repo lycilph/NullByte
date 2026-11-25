@@ -269,7 +269,7 @@ public sealed class GameHost(
 
         var registry = CommandSetup.Create(session, terminal, hostRequests, saveManager, ExternalEditorStatus, settings);
         var dispatcher = new CommandDispatcher(registry, terminal);
-        var completion = new CompletionCatalog(registry, session.State, saveManager);
+        var completion = new CompletionCatalog(registry, session.State, session.Services.Activities.Catalog, saveManager);
         terminal.SetCompletionProvider(completion);
 
         await session.StartAsync();

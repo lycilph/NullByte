@@ -9,10 +9,9 @@
 - Test projects clean up
   - Look at the tests themselves
 
-- Clean up
-  - Skill/Hacking formulas
-  - Fix tab-completion for the work command (see registration for the work command in ActivityCommands.cs)
-  
+- Clean up - Skill/Hacking formulas
+
+- Make the vscode (and game) compiler stuff warm up during the boot sequence animation
 
 # Future ideas
 

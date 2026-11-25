@@ -1,5 +1,6 @@
 ﻿using NullByte.ConsoleUI.Commands;
 using NullByte.Core.Domain;
+using NullByte.Core.Domain.Activities;
 using NullByte.Shell.Persistence;
 
 namespace NullByte.ConsoleUI.Terminal;
@@ -16,18 +17,21 @@ public sealed class CompletionCatalog : ICompletionProvider
 {
     private readonly CommandRegistry registry;
     private readonly GameState gameState;
+    private readonly ActivityCatalog activityCatalog;
     private readonly SaveManager saveManager;
 
     private volatile CompletionSnapshot snapshot = CompletionSnapshot.Empty;
 
-    public CompletionCatalog(CommandRegistry registry, GameState gameState, SaveManager saveManager)
+    public CompletionCatalog(CommandRegistry registry, GameState gameState, ActivityCatalog activityCatalog, SaveManager saveManager)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(gameState);
+        ArgumentNullException.ThrowIfNull(activityCatalog);
         ArgumentNullException.ThrowIfNull(saveManager);
 
         this.registry = registry;
         this.gameState = gameState;
+        this.activityCatalog = activityCatalog;
         this.saveManager = saveManager;
     }
 
@@ -100,7 +104,14 @@ public sealed class CompletionCatalog : ICompletionProvider
                 [CompletionKind.Filename] = files,
                 [CompletionKind.Directory] = directories,
                 [CompletionKind.SaveGame] = saves,
-                [CompletionKind.BotnetNode] = botnetNodes
+                [CompletionKind.BotnetNode] = botnetNodes,
+                [CompletionKind.UniversityCourse] = activityCatalog.Courses.Where(c => c.Kind == FacilityKind.University).Select(c => c.Name).ToArray(),
+                [CompletionKind.University] = activityCatalog.Facilities.Where(f => f.Kind == FacilityKind.University).Select(f => f.Name).ToArray(),
+                [CompletionKind.GymCourse] = activityCatalog.Courses.Where(c => c.Kind == FacilityKind.Gym).Select(c => c.Name).ToArray(),
+                [CompletionKind.Gym] = activityCatalog.Facilities.Where(f => f.Kind == FacilityKind.Gym).Select(f => f.Name).ToArray(),
+                [CompletionKind.Company] = activityCatalog.Companies.Select(c => c.Name).ToArray(),
+                [CompletionKind.Career] = activityCatalog.Companies.SelectMany(c => c.Careers).Select(c => c.Name).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+                [CompletionKind.Crime] = activityCatalog.Crimes.Select(c => c.Name).ToArray()
             };
 
         snapshot = new CompletionSnapshot(commands, values, player.CurrentDirectory);
