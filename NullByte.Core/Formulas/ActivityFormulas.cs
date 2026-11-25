@@ -44,8 +44,14 @@ public sealed class ActivityFormulas
 
         var cost = course.CostPerSecond * facility.CostMultiplier * balance.ClassCostMultiplier;
 
+        // Free courses remain available at every facility, but facility upgrades only
+        // improve paid courses. Global balance and activity-mode factors still apply.
+        var facilityExperienceMultiplier = course.CostPerSecond > 0
+            ? facility.ExperienceMultiplier
+            : 1.0;
+
         var experienceFactor =
-            facility.ExperienceMultiplier
+            facilityExperienceMultiplier
             * balance.ClassExperienceMultiplier
             * CalculateRewardFactor(mode);
 

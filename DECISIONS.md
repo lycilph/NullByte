@@ -97,3 +97,11 @@ This is a lightweight record of decisions that are important enough to preserve.
 **Why:** The repository itself is the source of truth. Documentation should provide navigation, constraints and rationale without duplicating implementation details.
 
 **Consequence:** Update documentation when structure or important decisions change, but prefer targeted source inspection for implementation details.
+
+## 12. Facility experience bonuses apply only to paid courses
+
+**Decision:** A course with a zero per-second cost does not receive a training facility's experience multiplier. Paid courses continue to receive it. Global class-experience balance and focused/background reward factors apply to both.
+
+**Why:** Higher-tier facilities are a paid progression upgrade with better rewards. Applying their experience bonus to free courses would let players bypass that progression advantage without paying for the course.
+
+**Consequence:** Enforce this rule in Core's activity-rate calculation so every client and activity entry point observes the same behavior. Free courses remain available at higher-tier facilities, but their facility experience multiplier is treated as 1.

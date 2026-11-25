@@ -5,8 +5,6 @@
   - Use Mocks where appropriate
 
 # Todo
-
-- study: the free tier should NOT get the x3 multiplier, or should only be available at the x1 university
 	
 - Test projects clean up
   - Look at the tests themselves

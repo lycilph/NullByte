@@ -227,6 +227,29 @@ public sealed class ActivityFormulasTests
         Assert.Equal(2, formulas.FindHighestQualifyingRank(career, SkillsAtHackingLevel(10), 100));
     }
 
+    private static readonly Course FreeCourse = new("free-course", FacilityKind.University, 0,
+        new Dictionary<SkillKind, double> { [SkillKind.Charisma] = 1 });
+
+    [Fact]
+    public void A_free_class_does_not_benefit_from_a_facility_experience_multiplier()
+    {
+        var rates = new ActivityFormulas(new BalanceConfig()).CalculateClassRates(FreeCourse, Fancy, ActivityMode.Focused);
+
+        Assert.Equal(0, rates.MoneyPerSecond);
+        Assert.Equal(1, rates.ExperiencePerSecond[SkillKind.Charisma]);
+    }
+
+    [Fact]
+    public void Global_and_background_multipliers_still_apply_to_free_classes()
+    {
+        var balance = new BalanceConfig { ClassExperienceMultiplier = 3, UnfocusedRewardFactor = 0.5 };
+
+        var rates = new ActivityFormulas(balance).CalculateClassRates(FreeCourse, Fancy, ActivityMode.Background);
+
+        Assert.Equal(0, rates.MoneyPerSecond);
+        Assert.Equal(1.5, rates.ExperiencePerSecond[SkillKind.Charisma], precision: 9);
+    }
+
     [Fact]
     public void Focused_class_gives_full_experience_and_costs_money()
     {

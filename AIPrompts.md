@@ -1,5 +1,4 @@
-﻿
-You are an expert developer and architect
+﻿You are an expert developer and architect
 I want to work on <feature>
 Please investigate the current implementation using the GitHub integration and our project documentation.
 Before starting ask any clarifying questions to make sure we agree on the goal

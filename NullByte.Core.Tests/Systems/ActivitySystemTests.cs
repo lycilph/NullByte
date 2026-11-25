@@ -441,6 +441,16 @@ public sealed class ActivitySystemTests
     }
 
     [Fact]
+    public void A_free_course_at_a_fancy_facility_does_not_receive_its_experience_bonus()
+    {
+        world.Service.StartCourse(FacilityKind.University, "free-course", facilityName: "fancy-university");
+
+        world.System.Update(TenSeconds);
+
+        Assert.Equal(10, world.Player.Skills.GetExperience(SkillKind.Charisma), precision: 6);
+    }
+
+    [Fact]
     public void A_free_course_never_ends_for_lack_of_money()
     {
         world.Player.TrySpendMoney(world.Player.Money);
