@@ -1,7 +1,7 @@
 ﻿using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Services;
 
-namespace NullByte.ConsoleUI.Tests;
+namespace NullByte.ConsoleUI.Tests.Infrastructure;
 
 internal sealed class FakeTerminal : IGameTerminal, IGameOutput
 {
