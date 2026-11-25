@@ -9,6 +9,7 @@ using NullByte.Core.Time;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Loading;
 using NullByte.Scripting.Runtime;
+using NullByte.ConsoleUI.Tests.Infrastructure;
 
 namespace NullByte.ConsoleUI.Tests;
 
@@ -21,17 +22,12 @@ internal sealed class ThrowingApiFactory : INullByteApiFactory
 
 internal sealed class ScriptCommandsFixture
 {
-    private readonly RecordingTerminal terminal = new();
+    private readonly FakeTerminal terminal = new();
     private readonly CommandDispatcher dispatcher;
 
     public ScriptCommandsFixture()
     {
-        var network = new Network();
-        network.AddServer(new Server(
-            "home", maximumMoney: 0, startingMoney: 0, baseDifficulty: 1, minimumSecurity: 1,
-            startingSecurity: 1, requiredHackingLevel: 1, growthParameter: 0, maximumRam: 8, hasRootAccess: true));
-
-        var state = new GameState(new Player("home", 0, 0), network);
+        var state = TestGameFactory.CreateGame();
         var networkService = new NetworkService(
             state, new GameScheduler(new FakeGameClock()), new NetworkFormulas(new BalanceConfig()));
         var scriptService = new ScriptService(

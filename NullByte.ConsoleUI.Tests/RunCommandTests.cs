@@ -7,6 +7,7 @@ using NullByte.Core.Scripting.Activities;
 using NullByte.Core.Services;
 using NullByte.Scripting.Runtime;
 using NullByte.Shell;
+using NullByte.ConsoleUI.Tests.Infrastructure;
 
 namespace NullByte.ConsoleUI.Tests;
 
@@ -185,42 +186,20 @@ public sealed class RunCommandTests
 
     private sealed class Harness
     {
-        private readonly CommandDispatcher dispatcher;
-        private readonly FakeTerminal terminal = new();
+        private readonly ConsoleTestHarness console;
 
         public Harness()
         {
-            var balance = new BalanceConfig();
-
-            Home = new Server(
-                hostname: "home",
-                maximumMoney: 0,
-                startingMoney: 0,
-                baseDifficulty: 1,
-                minimumSecurity: 1,
-                startingSecurity: 1,
-                requiredHackingLevel: 1,
-                growthParameter: 0,
-                maximumRam: 8,
-                hasRootAccess: true);
-
-            var network = new Network();
-            network.AddServer(Home);
-
-            GameState = new GameState(new Player("home"), network);
-
+            var terminal = new FakeTerminal();
             ScriptApi = new TestNullByteApi(terminal);
             var apiFactory = new TestNullByteApiFactory(ScriptApi);
-
-            var session = GameSession.Create(new GameSessionOptions() { Balance = balance, State = GameState, ApiFactory = apiFactory, Output = terminal });
-            var hostRequests = new HostRequestMailbox();
-            var registry = CommandSetup.Create(session, terminal, hostRequests);
-            dispatcher = new CommandDispatcher(registry, terminal);
-
-            ScriptService = session.Services.Scripts;
+            GameState = TestGameFactory.CreateGame();
+            console = ConsoleTestSetup.CreateHarness(
+                GameState,
+                apiFactory: apiFactory,
+                terminal: terminal);
+            ScriptService = console.Session.Services.Scripts;
         }
-
-        public Server Home { get; }
 
         public GameState GameState { get; }
 
@@ -228,17 +207,14 @@ public sealed class RunCommandTests
 
         public TestNullByteApi ScriptApi { get; }
 
-        public string Output => string.Join(Environment.NewLine, terminal.Lines);
+        public string Output => console.Output;
 
         public void WriteScript(string fileName, string source)
         {
-            GameState.FileSystem.WriteFile(Home.Hostname, fileName, source);
+            GameState.FileSystem.WriteFile("home", fileName, source);
         }
 
-        public Task RunAsync(string commandLine)
-        {
-            return dispatcher.DispatchAsync(commandLine);
-        }
+        public Task RunAsync(string commandLine) => console.RunAsync(commandLine);
     }
 
     private sealed class TestNullByteApiFactory(TestNullByteApi api) : INullByteApiFactory

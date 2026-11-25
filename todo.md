@@ -6,6 +6,9 @@
 - Test projects clean up (chatgpt)
   - Consolidate startup/fixture/infrastructure code in a shared class
   - Use Mocks where appropriate
+	
+- Test projects clean up (chatgpt)
+  - Look at the tests themselves
 
 # Todo
 

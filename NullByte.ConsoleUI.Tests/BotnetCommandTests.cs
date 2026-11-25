@@ -1,8 +1,7 @@
 ﻿using NullByte.ConsoleUI.Commands;
-using NullByte.ConsoleUI.Terminal;
+using NullByte.ConsoleUI.Tests.Infrastructure;
 using NullByte.Core.Configuration;
 using NullByte.Core.Domain;
-using NullByte.Core.Services;
 using NullByte.Shell;
 
 namespace NullByte.ConsoleUI.Tests;
@@ -136,40 +135,18 @@ public sealed class BotnetCommandTests
 
     private sealed class Harness
     {
-        private readonly CommandDispatcher dispatcher;
-        private readonly FakeTerminal terminal = new();
+        private readonly ConsoleTestHarness console;
 
         public Harness(double money, BalanceConfig? balance = null)
         {
-            balance ??= new BalanceConfig();
-
-            var home = new Server(
-                hostname: "home",
-                maximumMoney: 0,
-                startingMoney: 0,
-                baseDifficulty: 1,
-                minimumSecurity: 1,
-                startingSecurity: 1,
-                requiredHackingLevel: 1,
-                growthParameter: 0,
-                maximumRam: 8,
-                hasRootAccess: true);
-
-            var network = new Network();
-            network.AddServer(home);
-
-            GameState = new GameState(new Player("home", startingMoney: money), network);
-
-            var session = GameSession.Create(new GameSessionOptions() { Balance = balance, State = GameState, Output = terminal});
-            var hostRequests = new HostRequestMailbox();
-            var registry = CommandSetup.Create(session, terminal, hostRequests);
-            dispatcher = new CommandDispatcher(registry, terminal);
+            GameState = TestGameFactory.CreateGame(money);
+            console = ConsoleTestSetup.CreateHarness(GameState, balance: balance);
         }
 
         public GameState GameState { get; }
 
-        public string Output => string.Join(Environment.NewLine, terminal.Lines);
+        public string Output => console.Output;
 
-        public Task RunAsync(string commandLine) => dispatcher.DispatchAsync(commandLine);
+        public Task RunAsync(string commandLine) => console.RunAsync(commandLine);
     }
 }

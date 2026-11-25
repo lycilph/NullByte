@@ -3,47 +3,22 @@ using NullByte.ConsoleUI.Commands.Groups;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Configuration;
 using NullByte.Core.Domain;
+using NullByte.ConsoleUI.Tests.Infrastructure;
 using NullByte.Core.Formulas;
 using NullByte.Core.Services;
 using NullByte.Core.Time;
 
 namespace NullByte.ConsoleUI.Tests;
 
-internal sealed class RecordingTerminal : IGameTerminal
-{
-    public List<string> Lines { get; } = [];
-
-    public CancellationToken StoppingToken => CancellationToken.None;
-
-    public void WriteLine(string message) => Lines.Add(message);
-    public void WriteLine() => Lines.Add("");
-
-    public void SuspendProcessing() { }
-    public void ResumeProcessing() { }
-    public void StartProgress(string msg, Func<double> progress) { }
-    public void StopProgress() { }
-    public void SetPrompt(string prompt) { }
-    public void SetInputEnabled(bool enabled) { }
-    public void Clear() { }
-
-    public IAsyncEnumerable<string> ReadCommandsAsync(CancellationToken cancellationToken = default)
-        => throw new NotSupportedException();
-
-    public IDisposable ShowLivePanel(LivePanel panel) => throw new NotSupportedException();
-}
-
 internal sealed class FileCommandsFixture
 {
-    private readonly RecordingTerminal terminal = new();
+    private readonly FakeTerminal terminal = new();
     private readonly CommandDispatcher dispatcher;
 
     public FileCommandsFixture()
     {
-        var network = new Network();
-        network.AddServer(NewServer("home"));
-        network.AddServer(NewServer("n00dles"));
-
-        var state = new GameState(new Player("home", 0, 0), network);
+        var state = TestGameFactory.CreateGame(
+            additionalServers: [TestGameFactory.CreateServer("n00dles")]);
         var networkService = new NetworkService(
             state, new GameScheduler(new FakeGameClock()), new NetworkFormulas(new BalanceConfig()));
 
@@ -66,9 +41,6 @@ internal sealed class FileCommandsFixture
         return terminal.Lines.ToArray();
     }
 
-    private static Server NewServer(string hostname) => new(
-        hostname, maximumMoney: 0, startingMoney: 0, baseDifficulty: 1, minimumSecurity: 1,
-        startingSecurity: 1, requiredHackingLevel: 1, growthParameter: 0, maximumRam: 8);
 }
 
 public class FileCommandsTests
