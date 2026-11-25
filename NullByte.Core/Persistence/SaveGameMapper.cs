@@ -183,7 +183,8 @@ public static class SaveGameMapper
         RequiredHackingLevel = server.RequiredHackingLevel,
         GrowthParameter = server.GrowthParameter,
         MaximumRam = server.MaximumRam,
-        HasRootAccess = server.HasRootAccess
+        HasRootAccess = server.HasRootAccess,
+        HasBackdoor = server.HasBackdoor
     };
 
     /// <param name="save">The save to restore.</param>
@@ -227,7 +228,8 @@ public static class SaveGameMapper
                 requiredHackingLevel: server.RequiredHackingLevel,
                 growthParameter: server.GrowthParameter,
                 maximumRam: server.MaximumRam,
-                hasRootAccess: server.HasRootAccess));
+                hasRootAccess: server.HasRootAccess,
+                hasBackdoor: server.HasBackdoor));
         }
 
         foreach (var connection in save.Connections)

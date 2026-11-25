@@ -87,6 +87,7 @@ public sealed class NetworkService
             "",
             server.Hostname,
             server.HasRootAccess,
+            server.HasBackdoor,
             server.RequiredHackingLevel,
             server.Money,
             server.MaximumMoney,
@@ -98,8 +99,8 @@ public sealed class NetworkService
     }
 
     /// <summary>
-    /// Attempts to connect the player to a discovered server
-    /// directly adjacent to the current server.
+    /// Attempts to connect the player to a discovered server that is directly
+    /// adjacent to the current server, or that has a backdoor.
     /// </summary>
     public NetworkConnectionResult Connect(string serverName)
     {
@@ -111,7 +112,8 @@ public sealed class NetworkService
             return NetworkConnectionResult.Failure($"Already connected to {targetServer.Hostname}.");
         if (!gameState.Player.DiscoveredHostnames.Contains(targetServer.Hostname))
             return NetworkConnectionResult.Failure($"Server '{targetServer.Hostname}' has not been discovered.");
-        if (!gameState.Network.AreConnected(gameState.Player.CurrentHostname, targetServer.Hostname))
+        // A backdoor lets the player connect directly, so only other servers have to be adjacent.
+        if (!targetServer.HasBackdoor && !gameState.Network.AreConnected(gameState.Player.CurrentHostname, targetServer.Hostname))
             return NetworkConnectionResult.Failure($"Server '{targetServer.Hostname}' is not directly connected to the current server.");
 
         SetCurrentServer(targetServer.Hostname);

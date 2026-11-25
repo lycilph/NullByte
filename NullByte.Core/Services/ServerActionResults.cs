@@ -84,6 +84,22 @@ public sealed record WeakenResult(
 }
 
 /// <summary>
+/// Describes the outcome of a completed backdoor operation.
+/// </summary>
+/// <param name="Succeeded"></param>
+/// <param name="FailureMessage"></param>
+/// <param name="Duration">
+/// The amount of game time taken by the operation.
+/// </param>
+public sealed record BackdoorResult(
+    bool Succeeded,
+    string FailureMessage,
+    TimeSpan Duration)
+{
+    public static BackdoorResult Failed(string msg) => new(false, msg, TimeSpan.Zero);
+}
+
+/// <summary>
 /// Describes the outcome of a completed nuke operation.
 /// </summary>
 public sealed record NukeResult(

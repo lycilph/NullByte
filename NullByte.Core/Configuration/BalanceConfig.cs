@@ -108,6 +108,11 @@ public sealed record BalanceConfig
     public double WeakenDurationMultiplier { get; init; } = 4.0;
 
     /// <summary>
+    /// Backdoor duration relative to calculated hacking duration.
+    /// </summary>
+    public double BackdoorDurationMultiplier { get; init; } = 1.0;
+
+    /// <summary>
     /// Analyze duration in seconds.
     /// </summary>
     public double AnalyzeDuration { get; init; } = 1.0;

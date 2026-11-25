@@ -1,5 +1,6 @@
 ﻿using NullByte.ConsoleUI.Commands;
 using NullByte.ConsoleUI.Terminal;
+using NullByte.Core.Domain;
 using NullByte.Core.Formulas;
 using NullByte.Core.Persistence;
 using NullByte.Core.Services;
@@ -98,10 +99,36 @@ public sealed class CompletionCatalogTests
         Assert.Contains("home", result.Candidates);
     }
 
-    private static Fixture CreateFixture()
+    [Fact]
+    public void Connect_OffersBackdooredServersThatAreNotNeighbors()
+    {
+        var home = new Server("home", 0, 0, 1, 1, 1, 1, 1, 8, hasRootAccess: true);
+        var near = new Server("near", 1000, 500, 3, 1, 3, 1, 30, 4);
+        var far = new Server("far", 1000, 500, 3, 1, 3, 1, 30, 4, hasBackdoor: true);
+
+        var network = new Network();
+        network.AddServer(home);
+        network.AddServer(near);
+        network.AddServer(far);
+        network.Connect("home", "near");
+        network.Connect("near", "far");
+
+        var player = new Player("home");
+        player.DiscoverServer("near");
+        player.DiscoverServer("far");
+
+        var fixture = CreateFixture(new GameState(player, network));
+        fixture.Catalog.Refresh();
+
+        var result = fixture.Catalog.Complete("connect ", 8);
+
+        Assert.Equal(new[] { "far", "near" }, result.Candidates);
+    }
+
+    private static Fixture CreateFixture(GameState? state = null)
     {
         var terminal = new FakeTerminal();
-        var gameState = InitialGameStateFactory.Create();
+        var gameState = state ?? InitialGameStateFactory.Create();
         var session = GameSession.Create(new GameSessionOptions() { Output = terminal });
         var hostRequests = new HostRequestMailbox();
         var registry = CommandSetup.Create(session, terminal, hostRequests);

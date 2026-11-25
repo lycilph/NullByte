@@ -87,6 +87,7 @@ public sealed class NetworkCommands(IGameClock clock, NetworkService networkServ
         {
             terminal.WriteLine($"Server: {result.Hostname}");
             terminal.WriteLine($"Root access: {(result.HasRootAccess ? "Yes" : "No")}");
+            terminal.WriteLine($"Backdoor: {(result.HasBackdoor ? "Yes" : "No")}");
             terminal.WriteLine($"Required hacking level: {result.RequiredHackingLevel}");
             terminal.WriteLine($"Money: ${result.Money:N2} / ${result.MaximumMoney:N2}");
             terminal.WriteLine($"Security: {result.Security:F2} / {result.MinimumSecurity:F2}");

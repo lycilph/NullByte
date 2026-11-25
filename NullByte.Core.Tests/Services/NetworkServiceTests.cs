@@ -199,6 +199,52 @@ public sealed class NetworkServiceTests
     }
 
     [Fact]
+    public void Connect_BackdooredNonAdjacentServerSucceeds()
+    {
+        var fixture = CreateFixture();
+
+        fixture.Service.Scan(fixture.Home.Hostname);
+        fixture.Service.Connect(fixture.N00dles.Hostname);
+        fixture.Service.Scan(fixture.N00dles.Hostname);
+        fixture.SigmaCosmetics.InstallBackdoor();
+
+        // Sigma is discovered but not adjacent to home: only the backdoor lets the player connect.
+        fixture.Service.GoHome();
+
+        var result = fixture.Service.Connect(fixture.SigmaCosmetics.Hostname);
+
+        Assert.True(result.Succeeded);
+        Assert.Same(fixture.SigmaCosmetics, result.Server);
+        Assert.Null(result.Error);
+        Assert.Equal(fixture.SigmaCosmetics.Hostname, fixture.Player.CurrentHostname);
+    }
+
+    [Fact]
+    public void Connect_BackdooredButUndiscoveredServerFails()
+    {
+        var fixture = CreateFixture();
+        fixture.SigmaCosmetics.InstallBackdoor();
+
+        var result = fixture.Service.Connect(fixture.SigmaCosmetics.Hostname);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("not been discovered", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(fixture.Home.Hostname, fixture.Player.CurrentHostname);
+    }
+
+    [Fact]
+    public void Connect_BackdooredCurrentServerStillFails()
+    {
+        var fixture = CreateFixture();
+        fixture.Home.InstallBackdoor();
+
+        var result = fixture.Service.Connect(fixture.Home.Hostname);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("Already connected", result.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Connect_IsCaseInsensitive()
     {
         var fixture = CreateFixture();

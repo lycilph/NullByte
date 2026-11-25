@@ -201,7 +201,7 @@ Save files are versioned and upgraded through explicit migrations.
 
 Live CLR execution state is reconstructed when loading rather than serialized as running objects.
 
-The current format is V4, with migrations through `V3ToV4Migration`.
+The current format is V5, with migrations through `V4ToV5Migration`.
 
 ## Configuration
 

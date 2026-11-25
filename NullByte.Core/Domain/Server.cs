@@ -22,7 +22,8 @@ public sealed class Server
         int requiredHackingLevel,
         double growthParameter,
         double maximumRam,
-        bool hasRootAccess = false)
+        bool hasRootAccess = false,
+        bool hasBackdoor = false)
     {
         if (string.IsNullOrWhiteSpace(hostname))
             throw new ArgumentException("Host name cannot be empty.", nameof(hostname));
@@ -59,6 +60,7 @@ public sealed class Server
         MaximumRam = maximumRam;
 
         HasRootAccess = hasRootAccess;
+        HasBackdoor = hasBackdoor;
     }
 
     public string Hostname { get; }
@@ -70,6 +72,11 @@ public sealed class Server
     public int RequiredHackingLevel { get; }
     public double GrowthParameter { get; }
     public bool HasRootAccess { get; private set; }
+
+    /// <summary>
+    /// Whether the player has installed a backdoor, which lets them connect directly to this server from anywhere.
+    /// </summary>
+    public bool HasBackdoor { get; private set; }
     public double MaximumRam { get; }
     public double UsedRam => usedRam;
     public double AvailableRam => MaximumRam - usedRam;
@@ -89,6 +96,11 @@ public sealed class Server
     internal void GrantRootAccess()
     {
         HasRootAccess = true;
+    }
+
+    internal void InstallBackdoor()
+    {
+        HasBackdoor = true;
     }
 
     internal double RemoveMoney(double amount)

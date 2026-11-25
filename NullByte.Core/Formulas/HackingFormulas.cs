@@ -149,6 +149,16 @@ public sealed class HackingFormulas
     }
 
     /// <summary>
+    /// Calculates the duration of installing a backdoor.
+    /// </summary>
+    public TimeSpan CalculateBackdoorDuration(Player player, Server server)
+    {
+        return MultiplyDuration(
+            CalculateHackDuration(player, server),
+            balance.BackdoorDurationMultiplier);
+    }
+
+    /// <summary>
     /// Calculates the amount by which a grow operation multiplies
     /// server money.
     /// </summary>

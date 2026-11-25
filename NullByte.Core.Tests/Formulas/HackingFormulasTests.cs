@@ -994,6 +994,34 @@ public sealed class HackingFormulasTests
                 cores: cores));
     }
 
+    [Fact]
+    public void CalculateBackdoorDuration_ReturnsHackDurationTimesBackdoorMultiplier()
+    {
+        var formulas = CreateFormulas();
+        var player = CreatePlayerWithLevel(20);
+        var server = CreateServer();
+
+        var hackDuration = formulas.CalculateHackDuration(player, server);
+        var backdoorDuration = formulas.CalculateBackdoorDuration(player, server);
+
+        Assert.Equal(
+            hackDuration.TotalSeconds * balance.BackdoorDurationMultiplier,
+            backdoorDuration.TotalSeconds,
+            precision: 10);
+    }
+
+    [Fact]
+    public void CalculateBackdoorDuration_IsTheSameAsHackingByDefault()
+    {
+        var formulas = CreateFormulas();
+        var player = CreatePlayerWithLevel(20);
+        var server = CreateServer();
+
+        Assert.Equal(
+            formulas.CalculateHackDuration(player, server),
+            formulas.CalculateBackdoorDuration(player, server));
+    }
+
     private HackingFormulas CreateFormulas()
     {
         return new HackingFormulas(balance);

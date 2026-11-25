@@ -22,7 +22,7 @@ The central fantasy is the same as Bitburner: you start by typing commands, get 
 - A player with money and a hacking level (with XP).
 - Botnet: buy nodes, upgrade level, RAM and cores, generate passive income.
 - A small hand-authored network of servers (home plus roughly 10 to 15), each with hacking requirement, security, money and growth.
-- Server actions: `scan`, `connect`, `nuke` (gain root), `hack`, `grow`, `weaken`, with variable duration and thread count.
+- Server actions: `scan`, `connect`, `nuke` (gain root), `backdoor` (connect directly from anywhere), `hack`, `grow`, `weaken`, with variable duration and thread count.
 - Scripts: write, compile, run, kill and list scripts, with RAM cost, threads and arguments.
 - Home RAM as the limiting resource for scripts.
 - A console that blocks input while a manual hack/grow/weaken runs.

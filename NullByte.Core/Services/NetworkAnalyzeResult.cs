@@ -5,6 +5,7 @@ public sealed record NetworkAnalyzeResult(
     string FailureMessage,
     string Hostname,
     bool HasRootAccess,
+    bool HasBackdoor,
     int RequiredHackingLevel,
     double Money,
     double MaximumMoney,
@@ -14,5 +15,5 @@ public sealed record NetworkAnalyzeResult(
     double UsedRam,
     double MaximumRam)
 {
-    public static NetworkAnalyzeResult Failed(string msg) => new(false, msg, "", false, 0, 0, 0, 0, 0, 0, 0, 0);
+    public static NetworkAnalyzeResult Failed(string msg) => new(false, msg, "", false, false, 0, 0, 0, 0, 0, 0, 0, 0);
 }
