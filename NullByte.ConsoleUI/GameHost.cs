@@ -41,7 +41,8 @@ public sealed class GameHost(
         GameSession Session,
         CommandDispatcher Dispatcher,
         CompletionCatalog Completion,
-        AutosaveService Autosave);
+        AutosaveService Autosave,
+        Action<ActivityEndInfo> ActivityEndedHandler);
 
     public async Task StartAsync(bool resumeAutosave)
     {
@@ -144,6 +145,7 @@ public sealed class GameHost(
         if (current is null)
             return;
 
+        DetachActivityEndedHandler(current);
         await current.Autosave.DisposeAsync();
 
         if (shutdownRequested && current.Session.GameThread.IsRunning)
@@ -195,6 +197,7 @@ public sealed class GameHost(
                 return;
             }
 
+            DetachActivityEndedHandler(old);
             await old.Session.DisposeAsync();
 
             game = await StartGameAsync(restored: null);
@@ -224,6 +227,7 @@ public sealed class GameHost(
 
             var old = game!;
             await old.Autosave.DisposeAsync();
+            DetachActivityEndedHandler(old);
             await old.Session.DisposeAsync();
 
             game = await StartGameAsync(restored);
@@ -287,11 +291,18 @@ public sealed class GameHost(
         }
 
         // An activity that ends by itself (the player ran out of money) changes the prompt too.
-        session.Services.Activities.ActivityEnded += _ => terminal.SetPrompt(BuildPrompt(session.State));
+        Action<ActivityEndInfo> activityEndedHandler =
+            _ => terminal.SetPrompt(BuildPrompt(session.State));
+        session.Services.Activities.ActivityEnded += activityEndedHandler;
 
         var autosave = new AutosaveService(saveManager, session, terminal, autosaveInterval);
 
-        return new Game(session, dispatcher, completion, autosave);
+        return new Game(session, dispatcher, completion, autosave, activityEndedHandler);
+    }
+
+    private static void DetachActivityEndedHandler(Game game)
+    {
+        game.Session.Services.Activities.ActivityEnded -= game.ActivityEndedHandler;
     }
 
     private void WriteStartupMessage()
