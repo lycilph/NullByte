@@ -69,8 +69,12 @@ public sealed class Player
     internal void BindNetwork(Network value)
     {
         ArgumentNullException.ThrowIfNull(value);
-        if (network is not null && !ReferenceEquals(network, value))
-            throw new InvalidOperationException("The player is already bound to a different network.");
+        if (network is not null)
+        {
+            if (!ReferenceEquals(network, value))
+                throw new InvalidOperationException("The player is already bound to a different network.");
+            return;
+        }
 
         var home = value.GetServer(homeHostname);
         var current = value.GetServer(currentHostname);
