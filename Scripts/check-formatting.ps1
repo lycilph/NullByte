@@ -20,8 +20,10 @@ if ($files.Count -eq 0) {
 Write-Host "Checking formatting:"
 $files | ForEach-Object { Write-Host "  $_" }
 
-#dotnet format NullByte.slnx --verify-no-changes --no-restore --severity warn --include $files
-dotnet format NullByte.slnx --no-restore --severity warn --include $files
+dotnet format NullByte.slnx --verify-no-changes --no-restore --severity warn --include $files
+
+# Use this to fix the errors found
+#dotnet format NullByte.slnx --no-restore --severity warn --include $files
 
 if ($LASTEXITCODE -ne 0) {
     throw "Formatting verification failed."
