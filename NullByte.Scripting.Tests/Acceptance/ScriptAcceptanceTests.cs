@@ -91,7 +91,7 @@ public sealed class ScriptAcceptanceTests
             botnetFormulas,
             scriptOperations,
             output,
-            home.Hostname);
+            home.Id);
 
         const string source =
             """
