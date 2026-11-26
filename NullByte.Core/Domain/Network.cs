@@ -13,7 +13,7 @@ public sealed class Network
 
     // Hostname -> hostnames of the directly connected servers. This remains hostname-based
     // until the internal-reference migration in the next implementation step.
-    private readonly Dictionary<string, HashSet<string>> connections = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<ServerId, HashSet<ServerId>> connections = [];
 
     /// <summary>
     /// Gets all servers in the network.
@@ -34,7 +34,7 @@ public sealed class Network
             throw new InvalidOperationException($"A server with hostname '{server.Hostname}' already exists.");
 
         serversById.Add(server.Id, server);
-        connections.Add(server.Hostname, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+        connections.Add(server.Id, []);
     }
 
     /// <summary>
@@ -48,8 +48,8 @@ public sealed class Network
         if (ReferenceEquals(first, second))
             throw new InvalidOperationException("A server cannot be connected to itself.");
 
-        connections[first.Hostname].Add(second.Hostname);
-        connections[second.Hostname].Add(first.Hostname);
+        connections[first.Id].Add(second.Id);
+        connections[second.Id].Add(first.Id);
     }
 
     /// <summary>
@@ -104,8 +104,8 @@ public sealed class Network
     {
         var server = GetServer(hostname);
 
-        return connections[server.Hostname]
-            .Select(neighbor => serversByHostname[neighbor])
+        return connections[server.Id]
+            .Select(neighbor => serversById[neighbor])
             .OrderBy(server => server.Hostname, StringComparer.Ordinal)
             .ToArray();
     }
@@ -118,7 +118,7 @@ public sealed class Network
         var first = GetServer(firstHostname);
         var second = GetServer(secondHostname);
 
-        return connections[first.Hostname].Contains(second.Hostname);
+        return connections[first.Id].Contains(second.Id);
     }
 
     public IReadOnlyList<(string First, string Second)> GetConnections()
@@ -127,8 +127,9 @@ public sealed class Network
 
         foreach (var connection in connections)
         {
+            var hostname = serversById[connection.Key].Hostname;
             foreach (var target in connection.Value)
-                result.Add((connection.Key, target));
+                result.Add((hostname, serversById[target].Hostname));
         }
 
         return result;
