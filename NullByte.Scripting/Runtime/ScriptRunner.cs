@@ -19,10 +19,9 @@ public sealed class ScriptRunner(ScriptAssemblyLoader assemblyLoader)
         ArgumentNullException.ThrowIfNull(api);
 
         var loaded = assemblyLoader.Load(script);
-        LoadContextCreated?.Invoke(loaded.LoadContext);
-
         try
         {
+            LoadContextCreated?.Invoke(loaded.LoadContext);
             // Separate method: the script instance only lives in that method's
             // state machine, so nothing here keeps the assembly alive after it finishes.
             await RunInstanceAsync(loaded.Assembly, api, args.ToArray());
