@@ -44,14 +44,16 @@ The editor workflow has been expanded with:
 
 ## M12 — Sandbox and safety
 
-Planned work includes making player scripts safer and more contained:
+<badge>Completed</badge>
 
-- allow-listed references / banned API analysis;
-- prevention of blocking APIs;
-- protection against synchronous infinite loops;
-- containment of script failures.
+Player scripts now have a practical, compile-time safety layer:
 
-The goal is to make arbitrary player-authored C# useful without allowing it to compromise the game process.
+- allow-listed .NET metadata references, with semantic analysis for banned host APIs;
+- diagnostics for common synchronous blocking APIs;
+- diagnostics for loops that do not contain an asynchronous yield;
+- containment of script exceptions, including process failure state, RAM release, collectible load-context cleanup and isolation of lifecycle observers.
+
+The intended security level is a practical hobby-game sandbox: protection against accidental mistakes and common attempts to reach the host environment, not a hardened boundary against a determined attacker. The loop check is a syntactic safeguard rather than a formal proof of cooperation, and script cancellation remains cooperative at asynchronous yield points. This does not provide process isolation or a hard execution-time limit.
 
 ## M13 — Progression and balance
 
