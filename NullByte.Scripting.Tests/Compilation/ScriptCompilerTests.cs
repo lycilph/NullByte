@@ -155,6 +155,37 @@ public sealed class ScriptCompilerTests
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == diagnosticId);
     }
 
+    [Theory]
+    [InlineData("Task.Delay(TimeSpan.FromMilliseconds(1)).Wait();")]
+    [InlineData("Task.WaitAll(Task.Delay(1));")]
+    [InlineData("var task = Task.FromResult(42); var value = task.Result;")]
+    [InlineData("var valueTask = new ValueTask<int>(42); var value = valueTask.Result;")]
+    [InlineData("System.Threading.Monitor.Wait(new object());")]
+    [InlineData("new System.Threading.SemaphoreSlim(0).Wait();")]
+    [InlineData("new System.Threading.ManualResetEventSlim().Wait();")]
+    [InlineData("new System.Threading.CountdownEvent(1).Wait();")]
+    [InlineData("new System.Threading.Barrier(1).SignalAndWait();")]
+    [InlineData("System.Threading.SpinWait.SpinUntil(() => true);")]
+    [InlineData("Task.Delay(1).GetAwaiter().GetResult();")]
+    public void Compile_WithSynchronousBlockingApiUsage_Fails(string source)
+    {
+        var result = compiler.Compile(source, "blocking-api.cx");
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Script);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1008");
+    }
+
+    [Fact]
+    public void Compile_WithAsynchronousWaiting_Succeeds()
+    {
+        const string source = "await Task.Delay(TimeSpan.FromMilliseconds(1)); await nb.Sleep(TimeSpan.FromSeconds(1));";
+
+        var result = compiler.Compile(source, "async-waiting.cx");
+
+        AssertCompilationSucceeded(result);
+    }
+
     [Fact]
     public void Compile_WithBannedNamespaceUsingButNoApiUsage_Succeeds()
     {
