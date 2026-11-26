@@ -164,7 +164,7 @@ public sealed class GameSession : IAsyncDisposable
 
     public static GameSession Create(GameSessionOptions options)
     {
-        var clock = options.Clock 
+        var clock = options.Clock
             ?? new RealGameClock(options.InitialGameTime) { SpeedMultiplier = options.Balance.GameSpeedMultiplier };
 
         var synchronizationContext = new GameSynchronizationContext();
@@ -187,7 +187,7 @@ public sealed class GameSession : IAsyncDisposable
         var scriptLoader = new ScriptAssemblyLoader();
         var scriptRunner = new ScriptRunner(scriptLoader);
         var scriptProcessManager = new ScriptProcessManager();
-        var apiFactory = options.ApiFactory 
+        var apiFactory = options.ApiFactory
             ?? new NullByteApiFactory(
                 state,
                 scheduler,
