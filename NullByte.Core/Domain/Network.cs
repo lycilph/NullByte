@@ -40,15 +40,21 @@ public sealed class Network
     /// Creates a bidirectional connection between two servers.
     /// </summary>
     public void Connect(string firstHostname, string secondHostname)
-    {
-        var first = GetServer(firstHostname);
-        var second = GetServer(secondHostname);
+        => Connect(GetServer(firstHostname).Id, GetServer(secondHostname).Id);
 
-        if (ReferenceEquals(first, second))
+    /// <summary>
+    /// Creates a bidirectional connection between two server identities.
+    /// </summary>
+    public void Connect(ServerId first, ServerId second)
+    {
+        var firstServer = GetServer(first);
+        var secondServer = GetServer(second);
+
+        if (ReferenceEquals(firstServer, secondServer))
             throw new InvalidOperationException("A server cannot be connected to itself.");
 
-        connections[first.Id].Add(second.Id);
-        connections[second.Id].Add(first.Id);
+        connections[first].Add(second);
+        connections[second].Add(first);
     }
 
     /// <summary>
