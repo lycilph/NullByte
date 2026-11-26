@@ -16,7 +16,7 @@ public sealed class FormulaSet
         ArgumentNullException.ThrowIfNull(balance);
 
         Skills = new SkillFormulas(balance);
-        Hacking = new HackingFormulas(balance);
+        ServerOperations = new ServerOperationFormulas(balance, Skills);
         Botnet = new BotnetFormulas(balance);
         Network = new NetworkFormulas(balance);
         Activities = new ActivityFormulas(balance);
@@ -24,7 +24,7 @@ public sealed class FormulaSet
 
     public SkillFormulas Skills { get; }
 
-    public HackingFormulas Hacking { get; }
+    public ServerOperationFormulas ServerOperations { get; }
 
     public BotnetFormulas Botnet { get; }
 

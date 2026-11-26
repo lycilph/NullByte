@@ -35,13 +35,13 @@ public sealed class FormulaSetTests
     {
         var formulas = new FormulaSet(new BalanceConfig());
 
-        Assert.NotSame(formulas.Skills, formulas.Hacking);
+        Assert.NotSame(formulas.Skills, formulas.ServerOperations);
         Assert.NotSame(formulas.Skills, formulas.Activities);
         Assert.NotSame(formulas.Skills, formulas.Botnet);
         Assert.NotSame(formulas.Skills, formulas.Network);
-        Assert.NotSame(formulas.Hacking, formulas.Activities);
-        Assert.NotSame(formulas.Hacking, formulas.Botnet);
-        Assert.NotSame(formulas.Hacking, formulas.Network);
+        Assert.NotSame(formulas.ServerOperations, formulas.Activities);
+        Assert.NotSame(formulas.ServerOperations, formulas.Botnet);
+        Assert.NotSame(formulas.ServerOperations, formulas.Network);
         Assert.NotSame(formulas.Activities, formulas.Botnet);
         Assert.NotSame(formulas.Activities, formulas.Network);
         Assert.NotSame(formulas.Botnet, formulas.Network);

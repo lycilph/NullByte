@@ -158,7 +158,7 @@ public sealed class NullByteApiTests
         var fixture = new Fixture();
         var api = fixture.CreateApi(TestContext.Current.CancellationToken);
 
-        var level = fixture.HackingFormulas.CalculateHackingLevel(fixture.GameState.Player.HackingExperience);
+        var level = fixture.SkillFormulas.CalculateLevel(SkillKind.Hacking, fixture.GameState.Player.HackingExperience);
 
         Assert.Equal(level, api.GetHackingLevel());
     }
@@ -525,12 +525,11 @@ public sealed class NullByteApiTests
             scheduler = new GameScheduler(clock);
 
             var balance = new BalanceConfig();
-            HackingFormulas = new HackingFormulas(balance);
+            SkillFormulas = new SkillFormulas(balance);
+            ServerOperationFormulas = new ServerOperationFormulas(balance, SkillFormulas);
             BotnetFormulas = new BotnetFormulas(balance);
             var networkFormulas = new NetworkFormulas(balance);
             var activityFormulas = new ActivityFormulas(balance);
-            SkillFormulas = new SkillFormulas(balance);
-
             networkService = new NetworkService(GameState, scheduler, networkFormulas);
             botnetService = new BotnetService(GameState, BotnetFormulas);
             activityService = new ActivityService(GameState, ActivityCatalogFactory.CreateDefault(), activityFormulas);
@@ -540,7 +539,8 @@ public sealed class NullByteApiTests
             serverActions = new ServerActions(
                 GameState,
                 scheduler,
-                HackingFormulas,
+                ServerOperationFormulas,
+                SkillFormulas,
                 new SeededRandomSource(1));
 
             Output = new TestScriptOutput();
@@ -549,7 +549,7 @@ public sealed class NullByteApiTests
         public GameState GameState { get; }
         public Server Target { get; }
         public Server NukeTarget { get; }
-        public HackingFormulas HackingFormulas { get; }
+        public ServerOperationFormulas ServerOperationFormulas { get; }
         public BotnetFormulas BotnetFormulas { get; }
         public SkillFormulas SkillFormulas { get; }
         public IScriptOperations ScriptOperations { get; }
@@ -564,7 +564,7 @@ public sealed class NullByteApiTests
                 botnetService,
                 serverActions,
                 activityService,
-                HackingFormulas,
+                SkillFormulas,
                 BotnetFormulas,
                 SkillFormulas,
                 ScriptOperations,

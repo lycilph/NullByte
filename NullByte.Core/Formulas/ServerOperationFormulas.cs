@@ -4,33 +4,24 @@ using NullByte.Core.Domain;
 namespace NullByte.Core.Formulas;
 
 /// <summary>
-/// Calculates hacking-related game mechanics.
+/// Calculates server-operation game mechanics.
 ///
 /// This class contains no mutable game state and does not modify
 /// players or servers.
 /// </summary>
-public sealed class HackingFormulas
+public sealed class ServerOperationFormulas
 {
     private readonly BalanceConfig balance;
     private readonly SkillFormulas skills;
 
-    public HackingFormulas(BalanceConfig balance)
+    public ServerOperationFormulas(BalanceConfig balance, SkillFormulas skills)
     {
         this.balance = balance
             ?? throw new ArgumentNullException(nameof(balance));
 
-        skills = new SkillFormulas(balance);
+        this.skills = skills
+            ?? throw new ArgumentNullException(nameof(skills));
     }
-
-    /// <summary>
-    /// Calculates the player's hacking level from accumulated
-    /// hacking experience.
-    /// </summary>
-    public int CalculateHackingLevel(double experience)
-        => skills.CalculateLevel(SkillKind.Hacking, experience);
-
-    public double CalculateExperienceForHackingLevel(int level)
-        => skills.CalculateExperienceForLevel(SkillKind.Hacking, level);
 
     /// <summary>
     /// Calculates the probability that a single hacking attempt
@@ -44,7 +35,7 @@ public sealed class HackingFormulas
         if (!server.HasRootAccess || server.Security >= 100.0)
             return 0.0;
 
-        var hackingLevel = CalculateHackingLevel(player.HackingExperience);
+        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
 
         var difficultyMultiplier = (100.0 - server.Security) / 100.0;
 
@@ -76,7 +67,7 @@ public sealed class HackingFormulas
         if (server.Security >= 100.0)
             return 0.0;
 
-        var hackingLevel = CalculateHackingLevel(player.HackingExperience);
+        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
 
         var difficultyMultiplier = (100.0 - server.Security) / 100.0;
 
@@ -113,7 +104,7 @@ public sealed class HackingFormulas
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(server);
 
-        var hackingLevel = CalculateHackingLevel(player.HackingExperience);
+        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
 
         var difficulty = server.RequiredHackingLevel * server.Security;
 

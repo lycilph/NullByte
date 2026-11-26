@@ -64,7 +64,7 @@ New gameplay rules go here (or in formulas/systems), not in adapters. See `ARCHI
 
 ### Formulas
 
-The formula areas contain deterministic calculations for hacking, networking, skills, botnets, activities and crimes.
+The formula areas contain deterministic calculations for server operations, networking, skills, botnets, activities and crimes.
 
 When changing balance, first locate the existing formula rather than embedding a new calculation in a caller.
 

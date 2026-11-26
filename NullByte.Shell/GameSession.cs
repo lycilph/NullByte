@@ -177,7 +177,7 @@ public sealed class GameSession : IAsyncDisposable
         var formulas = new FormulaSet(options.Balance);
 
         var networkService = new NetworkService(state, scheduler, formulas.Network);
-        var serverActions = new ServerActions(state, scheduler, formulas.Hacking, randomSource);
+        var serverActions = new ServerActions(state, scheduler, formulas.ServerOperations, formulas.Skills, randomSource);
         var botnetService = new BotnetService(state, formulas.Botnet);
 
         var activityCatalog = options.ActivityCatalog ?? ActivityCatalogFactory.CreateDefault();

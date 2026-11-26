@@ -8,20 +8,6 @@ public sealed class SkillFormulasTests
 {
     private readonly BalanceConfig balance = new();
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(10)]
-    [InlineData(1_000)]
-    [InlineData(250_000)]
-    [InlineData(1e9)]
-    public void Hacking_level_matches_HackingFormulas(double experience)
-    {
-        var skills = new SkillFormulas(balance);
-        var hacking = new HackingFormulas(balance);
-
-        Assert.Equal(hacking.CalculateHackingLevel(experience), skills.CalculateLevel(SkillKind.Hacking, experience));
-    }
-
     [Fact]
     public void Level_is_never_below_one()
     {

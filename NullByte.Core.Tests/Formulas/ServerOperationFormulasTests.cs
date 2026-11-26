@@ -4,88 +4,9 @@ using NullByte.Core.Formulas;
 
 namespace NullByte.Core.Tests.Formulas;
 
-public sealed class HackingFormulasTests
+public sealed class ServerOperationFormulasTests
 {
     private readonly BalanceConfig balance = new();
-
-    [Theory]
-    [InlineData(0, 1)]
-    [InlineData(1, 1)]
-    [InlineData(100, 1)]
-    public void CalculateHackingLevel_WithLowExperience_ReturnsAtLeastOne(
-        double experience,
-        int expectedLevel)
-    {
-        var formulas = CreateFormulas();
-
-        var level = formulas.CalculateHackingLevel(experience);
-
-        Assert.True(level >= expectedLevel);
-    }
-
-    [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
-    [InlineData(10)]
-    [InlineData(25)]
-    [InlineData(50)]
-    [InlineData(100)]
-    public void CalculateHackingLevel_WithExperienceForLevel_ReturnsExpectedLevel(
-        int expectedLevel)
-    {
-        var formulas = CreateFormulas();
-
-        var experience = ExperienceForLevel(expectedLevel);
-
-        var actualLevel = formulas.CalculateHackingLevel(experience);
-
-        Assert.Equal(expectedLevel, actualLevel);
-    }
-
-    [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
-    [InlineData(10)]
-    [InlineData(25)]
-    [InlineData(50)]
-    [InlineData(100)]
-    [InlineData(200)]
-    [InlineData(299)]
-    public void CalculateExperienceForHackingLevel_RoundTrips(
-    int level)
-    {
-        var formulas = CreateFormulas();
-
-        var experience = formulas.CalculateExperienceForHackingLevel(level);
-
-        Assert.Equal(level, formulas.CalculateHackingLevel(experience));
-    }
-
-    [Fact]
-    public void CalculateExperienceForHackingLevel_UsesSkillMultiplier()
-    {
-        var modifiedBalance = balance with { HackingSkillMultiplier = 2.0 };
-
-        var formulas = new HackingFormulas(modifiedBalance);
-
-        var experience = formulas.CalculateExperienceForHackingLevel(100);
-
-        Assert.Equal(100, formulas.CalculateHackingLevel(experience));
-    }
-
-    [Theory]
-    [InlineData(-1)]
-    [InlineData(double.NaN)]
-    [InlineData(double.PositiveInfinity)]
-    [InlineData(double.NegativeInfinity)]
-    public void CalculateHackingLevel_WithInvalidExperience_Throws(
-        double experience)
-    {
-        var formulas = CreateFormulas();
-
-        Assert.Throws<ArgumentOutOfRangeException>(
-            () => formulas.CalculateHackingLevel(experience));
-    }
 
     [Fact]
     public void CalculateHackChance_FollowsBitburnerFormula()
@@ -1022,9 +943,9 @@ public sealed class HackingFormulasTests
             formulas.CalculateBackdoorDuration(player, server));
     }
 
-    private HackingFormulas CreateFormulas()
+    private ServerOperationFormulas CreateFormulas()
     {
-        return new HackingFormulas(balance);
+        return new ServerOperationFormulas(balance, new SkillFormulas(balance));
     }
 
     private Player CreatePlayerWithLevel(int level)
@@ -1078,9 +999,9 @@ public sealed class HackingFormulasTests
          * Move upward until the production formula reaches the
          * requested level.
          */
-        var formulas = CreateFormulas();
+        var skills = new SkillFormulas(balance);
 
-        while (formulas.CalculateHackingLevel(experience) < level)
+        while (skills.CalculateLevel(SkillKind.Hacking, experience) < level)
         {
             var increment = Math.Max(
                 1e-9,
@@ -1096,7 +1017,7 @@ public sealed class HackingFormulasTests
          * future balance change fail clearly.
          */
         var calculatedLevel =
-            formulas.CalculateHackingLevel(experience);
+            skills.CalculateLevel(SkillKind.Hacking, experience);
 
         if (calculatedLevel != level)
         {

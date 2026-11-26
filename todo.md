@@ -3,15 +3,11 @@
 - Test projects clean up
   - Consolidate startup/fixture/infrastructure code in a shared class
   - Use Mocks where appropriate
+  - Look at the tests themselves
 
 # Todo
 	
-- Test projects clean up
-  - Look at the tests themselves
-
-- Clean up - Skill/Hacking formulas
-
-- Make the vscode (and game) compiler stuff warm up during the boot sequence animation
+- Make a "help" argument to print the available command line arguments
 
 # Future ideas
 

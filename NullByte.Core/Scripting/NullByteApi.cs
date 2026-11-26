@@ -16,7 +16,7 @@ public sealed class NullByteApi : INullByteApi
     private readonly GameScheduler scheduler;
     private readonly NetworkService networkService;
     private readonly ServerActions serverActions;
-    private readonly HackingFormulas hackingFormulas;
+    private readonly SkillFormulas skillFormulas;
     private readonly IScriptOperations scriptOperations;
     private readonly IGameOutput output;
 
@@ -31,9 +31,8 @@ public sealed class NullByteApi : INullByteApi
         BotnetService botnetService,
         ServerActions serverActions,
         ActivityService activityService,
-        HackingFormulas hackingFormulas,
-        BotnetFormulas botnetFormulas,
         SkillFormulas skillFormulas,
+        BotnetFormulas botnetFormulas,
         IScriptOperations scriptOperations,
         IGameOutput output,
         string processHostname,
@@ -46,7 +45,6 @@ public sealed class NullByteApi : INullByteApi
         ArgumentNullException.ThrowIfNull(botnetService);
         ArgumentNullException.ThrowIfNull(serverActions);
         ArgumentNullException.ThrowIfNull(activityService);
-        ArgumentNullException.ThrowIfNull(hackingFormulas);
         ArgumentNullException.ThrowIfNull(botnetFormulas);
         ArgumentNullException.ThrowIfNull(skillFormulas);
         ArgumentNullException.ThrowIfNull(scriptOperations);
@@ -58,7 +56,7 @@ public sealed class NullByteApi : INullByteApi
         this.networkService = networkService;
         this.serverActions = serverActions;
         this.output = output;
-        this.hackingFormulas = hackingFormulas;
+        this.skillFormulas = skillFormulas;
         this.scriptOperations = scriptOperations;
         this.cancellationToken = cancellationToken;
         this.processHostname = processHostname;
@@ -92,7 +90,7 @@ public sealed class NullByteApi : INullByteApi
         => networkService.Scan(GetTargetHostname(hostname)).Select(s => s.Hostname).ToList();
 
     public double GetHackingLevel()
-        => hackingFormulas.CalculateHackingLevel(gameState.Player.HackingExperience);
+        => skillFormulas.CalculateLevel(SkillKind.Hacking, gameState.Player.HackingExperience);
 
     public double GetServerMoneyAvailable(string hostname = "") => GetServer(GetTargetHostname(hostname)).Money;
     public double GetServerMaxMoney(string hostname = "") => GetServer(GetTargetHostname(hostname)).MaximumMoney;

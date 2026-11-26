@@ -15,12 +15,13 @@ public sealed class ServerActionsSimulationTests
         const int hackCount = 1_000;
 
         var balance = new BalanceConfig();
-        var formulas = new HackingFormulas(balance);
+        var skills = new SkillFormulas(balance);
+        var formulas = new ServerOperationFormulas(balance, skills);
 
         var player = new Player(
             homeHostname: "home",
             startingMoney: 0,
-            startingHackingExperience: formulas.CalculateExperienceForHackingLevel(10));
+            startingHackingExperience: skills.CalculateExperienceForLevel(SkillKind.Hacking, 10));
 
         var home = new Server(
             hostname: "home",
@@ -62,6 +63,7 @@ public sealed class ServerActionsSimulationTests
             gameState,
             scheduler,
             formulas,
+            skills,
             randomSource);
 
         var successes = 0;

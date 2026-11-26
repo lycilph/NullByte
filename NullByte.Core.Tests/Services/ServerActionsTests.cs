@@ -668,9 +668,10 @@ public sealed class ServerActionsTests
         bool hasRootAccess = true)
     {
         var balance = new BalanceConfig();
-        var formulas = new HackingFormulas(balance);
+        var skills = new SkillFormulas(balance);
+        var formulas = new ServerOperationFormulas(balance, skills);
 
-        var experience = formulas.CalculateExperienceForHackingLevel(playerLevel);
+        var experience = skills.CalculateExperienceForLevel(SkillKind.Hacking, playerLevel);
 
         var player = new Player(
             homeHostname: "home",
@@ -715,6 +716,7 @@ public sealed class ServerActionsTests
             gameState,
             scheduler,
             formulas,
+            skills,
             randomSource);
 
         return new Fixture(
@@ -731,6 +733,6 @@ public sealed class ServerActionsTests
         Server Target,
         FakeGameClock Clock,
         GameScheduler Scheduler,
-        HackingFormulas Formulas,
+        ServerOperationFormulas Formulas,
         ServerActions Actions);
 }
