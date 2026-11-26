@@ -12,6 +12,7 @@ internal static class ScriptSecurityAnalyzer
 {
     private const string SecurityDiagnosticId = "NB1007";
     private const string BlockingDiagnosticId = "NB1008";
+    private const string CooperativeLoopDiagnosticId = "NB1009";
 
     private static readonly (string Namespace, string Message)[] BannedNamespaces =
     [
@@ -55,6 +56,24 @@ internal static class ScriptSecurityAnalyzer
             var model = compilation.GetSemanticModel(tree);
             var reported = new HashSet<(int Start, int Length, string Id)>();
 
+            foreach (var loop in tree.GetRoot().DescendantNodes().OfType<StatementSyntax>()
+                .Where(IsLoopStatement))
+            {
+                if (ContainsAwait(loop))
+                    continue;
+
+                var span = loop.GetLocation().GetMappedLineSpan();
+                yield return new ScriptDiagnostic(
+                    CooperativeLoopDiagnosticId,
+                    "Loops must await an asynchronous operation so scripts can yield control. Use an asynchronous game API or await nb.Sleep(...).",
+                    ScriptDiagnosticSeverity.Error,
+                    span.StartLinePosition.Line + 1,
+                    span.StartLinePosition.Character + 1,
+                    tree.FilePath,
+                    span.EndLinePosition.Line + 1,
+                    span.EndLinePosition.Character + 1);
+            }
+
             foreach (var node in tree.GetRoot().DescendantNodes())
             {
                 var symbol = GetReferencedSymbol(model, node);
@@ -79,6 +98,20 @@ internal static class ScriptSecurityAnalyzer
             }
         }
     }
+
+    private static bool IsLoopStatement(StatementSyntax statement) => statement is
+        WhileStatementSyntax or
+        DoStatementSyntax or
+        ForStatementSyntax or
+        ForEachStatementSyntax or
+        ForEachVariableStatementSyntax;
+
+    private static bool ContainsAwait(StatementSyntax loop) =>
+        loop.DescendantNodes(descendIntoChildren: node =>
+                node == loop ||
+                node is not (AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax))
+            .OfType<AwaitExpressionSyntax>()
+            .Any();
 
     private static ISymbol? GetReferencedSymbol(SemanticModel model, SyntaxNode node) => node switch
     {
