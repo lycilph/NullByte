@@ -1,5 +1,6 @@
 ﻿using NullByte.Core.Domain;
 using NullByte.Core.Scripting;
+using NullByte.Core.Domain;
 using NullByte.Core.Scripting.Activities;
 using NullByte.Core.Services;
 using NullByte.Scripting.Compilation;
@@ -441,7 +442,7 @@ public sealed class ScriptServiceTests
 
     private sealed class TestNullByteApiFactory(TestNullByteApi api) : INullByteApiFactory
     {
-        public INullByteApi Create(IScriptOperations scriptOperations, string hostname, int threads, CancellationToken cancellationToken) => api;
+        public INullByteApi Create(IScriptOperations scriptOperations, ServerId hostServerId, int threads, CancellationToken cancellationToken) => api;
     }
 
     private sealed class TestNullByteApi : INullByteApi
