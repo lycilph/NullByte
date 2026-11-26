@@ -6,7 +6,7 @@ using NullByte.Core.Time;
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
-public sealed class ActionCommands(Player player, IGameClock clock, HackingFormulas hackingFormulas, ServerActions serverActions, NetworkService networkService, IGameTerminal terminal) : ICommandGroup
+public sealed class ActionCommands(Player player, IGameClock clock, ServerOperationFormulas serverOperationFormulas, ServerActions serverActions, NetworkService networkService, IGameTerminal terminal) : ICommandGroup
 {
     public void Register(CommandRegistry registry)
     {
@@ -62,7 +62,7 @@ public sealed class ActionCommands(Player player, IGameClock clock, HackingFormu
     {
         var server = networkService.GetCurrentServer();
 
-        var duration = hackingFormulas.CalculateBackdoorDuration(player, server);
+        var duration = serverOperationFormulas.CalculateBackdoorDuration(player, server);
         var startedAt = clock.Elapsed;
         terminal.StartProgress($"Installing backdoor on {server.Hostname}",
             () =>
@@ -90,7 +90,7 @@ public sealed class ActionCommands(Player player, IGameClock clock, HackingFormu
     {
         var server = networkService.GetCurrentServer();
 
-        var duration = hackingFormulas.CalculateHackDuration(player, server);
+        var duration = serverOperationFormulas.CalculateHackDuration(player, server);
         var startedAt = clock.Elapsed;
         terminal.StartProgress($"Hacking {server.Hostname}",
             () =>
@@ -117,7 +117,7 @@ public sealed class ActionCommands(Player player, IGameClock clock, HackingFormu
     {
         var server = networkService.GetCurrentServer();
 
-        var duration = hackingFormulas.CalculateGrowDuration(player, server);
+        var duration = serverOperationFormulas.CalculateGrowDuration(player, server);
         var startedAt = clock.Elapsed;
         terminal.StartProgress($"Growing {server.Hostname}",
             () =>
@@ -147,7 +147,7 @@ public sealed class ActionCommands(Player player, IGameClock clock, HackingFormu
     {
         var server = networkService.GetCurrentServer();
 
-        var duration = hackingFormulas.CalculateWeakenDuration(player, server);
+        var duration = serverOperationFormulas.CalculateWeakenDuration(player, server);
         var startedAt = clock.Elapsed;
         terminal.StartProgress($"Weakening {server.Hostname}",
             () =>

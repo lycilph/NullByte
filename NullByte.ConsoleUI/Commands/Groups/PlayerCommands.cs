@@ -4,7 +4,7 @@ using NullByte.Core.Services;
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
-public sealed class PlayerCommands(Player player, NetworkService networkService, HackingFormulas hackingFormulas, IGameOutput output) : ICommandGroup
+public sealed class PlayerCommands(Player player, NetworkService networkService, SkillFormulas skillFormulas, IGameOutput output) : ICommandGroup
 {
     public void Register(CommandRegistry registry)
     {
@@ -31,7 +31,7 @@ public sealed class PlayerCommands(Player player, NetworkService networkService,
     private async Task StatusAsync(IReadOnlyList<string> arguments)
     {
         var server = networkService.GetCurrentServer();
-        var hackingLevel = hackingFormulas.CalculateHackingLevel(player.HackingExperience);
+        var hackingLevel = skillFormulas.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
 
         output.WriteLine("Status");
         output.WriteLine($"Money: ${player.Money:N2}");

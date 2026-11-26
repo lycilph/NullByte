@@ -9,6 +9,8 @@
 	
 - Make a "help" argument to print the available command line arguments
 
+- Github CI builds/tests?
+
 # Future ideas
 
 - Make botnet and cloud servers unlockable

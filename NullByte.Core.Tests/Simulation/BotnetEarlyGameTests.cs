@@ -27,16 +27,17 @@ public sealed class BotnetEarlyGameTests
 
         var clock = new FakeGameClock();
         var scheduler = new GameScheduler(clock);
-        var hackingFormulas = new HackingFormulas(balance);
+        var skillFormulas = new SkillFormulas(balance);
+        var serverOperationFormulas = new ServerOperationFormulas(balance, skillFormulas);
         var botnetFormulas = new BotnetFormulas(balance);
-        var actions = new ServerActions(gameState, scheduler, hackingFormulas, new SeededRandomSource(1337));
+        var actions = new ServerActions(gameState, scheduler, serverOperationFormulas, skillFormulas, new SeededRandomSource(1337));
         var service = new BotnetService(gameState, botnetFormulas);
         var system = new BotnetSystem(gameState, botnetFormulas);
 
         while (clock.Elapsed < PlayTime)
         {
-            var target = ChooseHackTarget(gameState, hackingFormulas);
-            var duration = hackingFormulas.CalculateHackDuration(player, target);
+            var target = ChooseHackTarget(gameState, serverOperationFormulas, skillFormulas);
+            var duration = serverOperationFormulas.CalculateHackDuration(player, target);
 
             var hack = actions.HackAsync(target.Hostname, 1, TestContext.Current.CancellationToken);
 
@@ -78,10 +79,10 @@ public sealed class BotnetEarlyGameTests
     /// the player can already hack, taking root on any that have become
     /// available, as a player would with nuke.
     /// </summary>
-    private static Server ChooseHackTarget(GameState gameState, HackingFormulas formulas)
+    private static Server ChooseHackTarget(GameState gameState, ServerOperationFormulas formulas, SkillFormulas skills)
     {
         var player = gameState.Player;
-        var level = formulas.CalculateHackingLevel(player.HackingExperience);
+        var level = skills.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
 
         Server? best = null;
         var bestValue = double.MinValue;
