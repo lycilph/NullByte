@@ -133,7 +133,7 @@ internal sealed class CoreTestWorld
             BotnetFormulas,
             scriptOperations,
             Output,
-            Server.Id,
+            GetServer(hostname).Id,
             threads,
             cancellationToken);
 }
