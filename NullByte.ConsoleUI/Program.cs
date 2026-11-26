@@ -18,6 +18,12 @@ public class Program
 {
     static async Task Main(string[] args)
     {
+        if (CommandLineHelp.IsRequested(args))
+        {
+            Console.Write(CommandLineHelp.GetUsageText());
+            return;
+        }
+
         var applicationOptions = LoadApplicationOptions(args);
         if (applicationOptions is null)
         {

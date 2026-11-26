@@ -27,17 +27,17 @@ public sealed class BotnetEarlyGameTests
 
         var clock = new FakeGameClock();
         var scheduler = new GameScheduler(clock);
-        var skillFormulas = new SkillFormulas(balance);
-        var serverOperationFormulas = new ServerOperationFormulas(balance, skillFormulas);
+        var skillsFormulas = new SkillFormulas(balance);
+        var serverOperationsFormulas = new ServerOperationFormulas(balance, skillsFormulas);
         var botnetFormulas = new BotnetFormulas(balance);
-        var actions = new ServerActions(gameState, scheduler, serverOperationFormulas, skillFormulas, new SeededRandomSource(1337));
+        var actions = new ServerActions(gameState, scheduler, serverOperationsFormulas, skillsFormulas, new SeededRandomSource(1337));
         var service = new BotnetService(gameState, botnetFormulas);
         var system = new BotnetSystem(gameState, botnetFormulas);
 
         while (clock.Elapsed < PlayTime)
         {
-            var target = ChooseHackTarget(gameState, serverOperationFormulas, skillFormulas);
-            var duration = serverOperationFormulas.CalculateHackDuration(player, target);
+            var target = ChooseHackTarget(gameState, serverOperationsFormulas, skillsFormulas);
+            var duration = serverOperationsFormulas.CalculateHackDuration(player, target);
 
             var hack = actions.HackAsync(target.Hostname, 1, TestContext.Current.CancellationToken);
 
@@ -79,7 +79,7 @@ public sealed class BotnetEarlyGameTests
     /// the player can already hack, taking root on any that have become
     /// available, as a player would with nuke.
     /// </summary>
-    private static Server ChooseHackTarget(GameState gameState, ServerOperationFormulas formulas, SkillFormulas skills)
+    private static Server ChooseHackTarget(GameState gameState, ServerOperationFormulas ops, SkillFormulas skills)
     {
         var player = gameState.Player;
         var level = skills.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
@@ -92,9 +92,9 @@ public sealed class BotnetEarlyGameTests
             if (server.Hostname == player.HomeHostname || !server.TryGainRootAccess(level))
                 continue;
 
-            var chance = formulas.CalculateHackChance(player, server);
-            var amount = formulas.CalculateHackAmount(player, server);
-            var seconds = formulas.CalculateHackDuration(player, server).TotalSeconds;
+            var chance = ops.CalculateHackChance(player, server);
+            var amount = ops.CalculateHackAmount(player, server);
+            var seconds = ops.CalculateHackDuration(player, server).TotalSeconds;
             var value = chance * amount / seconds;
 
             if (value > bestValue)
