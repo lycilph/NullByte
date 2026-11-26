@@ -42,18 +42,15 @@ The editor workflow has been expanded with:
 - launching VS Code from the game;
 - full-range diagnostic underlining in the VS Code extension, including source-mapped spans for included files.
 
-## M12 — Sandbox and safety
+### M12 — Sandbox and safety
 
 **Status: Completed**
 
-Player scripts now have a practical, compile-time safety layer:
+- Allow-listed .NET references and semantic analysis of banned host APIs.
+- Diagnostics for common synchronous blocking APIs and non-cooperative loops.
+- Containment of script failures, including process state, RAM cleanup, load-context unloading and lifecycle observer isolation.
 
-- allow-listed .NET metadata references, with semantic analysis for banned host APIs;
-- diagnostics for common synchronous blocking APIs;
-- diagnostics for loops that do not contain an asynchronous yield;
-- containment of script exceptions, including process failure state, RAM release, collectible load-context cleanup and isolation of lifecycle observers.
-
-The intended security level is a practical hobby-game sandbox: protection against accidental mistakes and common attempts to reach the host environment, not a hardened boundary against a determined attacker. The loop check is a syntactic safeguard rather than a formal proof of cooperation, and script cancellation remains cooperative at asynchronous yield points. This does not provide process isolation or a hard execution-time limit.
+See [Script sandbox and safety](ARCHITECTURE.md#script-sandbox-and-safety) for the security model and its limitations.
 
 ## M13 — Progression and balance
 
