@@ -47,8 +47,8 @@ public sealed class NetworkService
 
     public bool IsServerKnown(string hostname)
     {
-        var server = gameState.Network.GetServer(hostname);
-        return gameState.Player.DiscoveredServerIds.Contains(server.Id);
+        return gameState.Network.TryGetServer(hostname, out var server) &&
+               gameState.Player.DiscoveredServerIds.Contains(server.Id);
     }
 
     /// <summary>
