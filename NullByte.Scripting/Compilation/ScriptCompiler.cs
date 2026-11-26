@@ -120,6 +120,11 @@ public sealed class ScriptCompiler : IScriptCompiler
             references,
             CompilationOptions);
 
+        diagnostics.AddRange(ScriptSecurityAnalyzer.Analyze(compilation, [generatedTree, ..includeTrees]));
+
+        if (diagnostics.Any(diagnostic => diagnostic.Severity == ScriptDiagnosticSeverity.Error))
+            return ScriptCompilationResult.Failure(diagnostics);
+
         var ramCost = ScriptRamAnalyzer.Calculate(compilation, [generatedTree, .. includeTrees]);
 
         using var assemblyStream = new MemoryStream();
