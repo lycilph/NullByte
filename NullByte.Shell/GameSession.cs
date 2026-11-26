@@ -131,8 +131,8 @@ public sealed class GameSession : IAsyncDisposable
         foreach (var result in results.Where(result => !result.Start.Succeeded))
         {
             output.WriteLine(
-                $"  Could not restart {result.Saved.Filename} " +        // no "(pid N)" any more
-                $"on {result.Saved.Hostname}: {result.Start.FailureMessage}");
+                $"  Could not restart {result.Saved.Filename} " +
+                $"on {State.Network.GetServer(ServerId.Parse(result.Saved.ServerId)).Hostname}: {result.Start.FailureMessage}");
         }
     }
 
