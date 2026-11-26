@@ -12,6 +12,8 @@ public sealed class GameState
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(network);
 
+        player.BindNetwork(network);
+
         if (!network.TryGetServer(player.HomeHostname, out _))
         {
             throw new ArgumentException(
