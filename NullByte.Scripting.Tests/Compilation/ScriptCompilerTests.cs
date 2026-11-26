@@ -128,6 +128,43 @@ public sealed class ScriptCompilerTests
         Assert.NotNull(result.Script);
     }
 
+    [Theory]
+    [InlineData("using System.IO; var value = File.ReadAllText(\\\"file.txt\\\");")]
+    [InlineData("var value = System.IO.File.ReadAllText(\\\"file.txt\\\");")]
+    [InlineData("var value = System.Environment.GetEnvironmentVariable(\\\"HOME\\\");")]
+    [InlineData("var process = new System.Diagnostics.Process();")]
+    [InlineData("var type = typeof(string).Assembly.GetType(\\\"System.String\\\");")]
+    [InlineData("var client = new System.Net.Http.HttpClient();")]
+    [InlineData("var thread = new System.Threading.Thread(() => { });")]
+    public void Compile_WithBannedApiUsage_Fails(string source)
+    {
+        var result = compiler.Compile(source, "security.cx");
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Script);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1007");
+    }
+
+    [Fact]
+    public void Compile_WithBannedNamespaceUsingButNoApiUsage_Succeeds()
+    {
+        const string source = "using System.IO; var value = 42; nb.Print(value);";
+
+        var result = compiler.Compile(source, "unused-namespace.cx");
+
+        AssertCompilationSucceeded(result);
+    }
+
+    [Fact]
+    public void Compile_WithTaskAwait_Succeeds()
+    {
+        const string source = "await Task.Delay(TimeSpan.FromMilliseconds(1));";
+
+        var result = compiler.Compile(source, "task.cx");
+
+        AssertCompilationSucceeded(result);
+    }
+
     [Fact]
     public void Compile_WithUsingDirective_Succeeds()
     {
