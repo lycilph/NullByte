@@ -202,6 +202,7 @@ public static class SaveGameMapper
             return RestoreCore(save, catalog ?? ActivityCatalogFactory.CreateDefault());
         }
         catch (Exception exception) when (exception is ArgumentException
+                                              or FormatException
                                               or InvalidOperationException
                                               or KeyNotFoundException
                                               or InvalidDataException)
