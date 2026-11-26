@@ -211,6 +211,82 @@ public sealed class ScriptServiceTests
     }
 
     [Fact]
+    public async Task FailedScript_RecordsFailureAndReleasesRam()
+    {
+        var fixture = new Fixture();
+        fixture.WriteScript(
+            "failure.cx",
+            """
+            throw new InvalidOperationException("Contained failure.");
+            """);
+
+        var failed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        ScriptProcess? failedProcess = null;
+        fixture.Service.ProcessFailed += (process, _) =>
+        {
+            failedProcess = process;
+            failed.TrySetResult();
+        };
+
+        var result = await fixture.Service.Start(fixture.Home.Hostname, "failure.cx", []);
+
+        Assert.True(result.Succeeded, result.FailureMessage);
+        await failed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await failedProcess!.Execution!;
+
+        Assert.Equal(ScriptProcessState.Failed, failedProcess.State);
+        Assert.Equal("Contained failure.", failedProcess.Failure?.Message);
+        Assert.True(failedProcess.RamReleased);
+        Assert.Equal(0, fixture.Home.UsedRam);
+    }
+
+    [Fact]
+    public async Task CompletedScript_ThrowingObserverDoesNotChangeProcessOutcome()
+    {
+        var fixture = new Fixture();
+        fixture.WriteScript("complete.cx", """nb.Print("Completed");""");
+
+        var completed = new TaskCompletionSource<ScriptProcess>(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Service.ProcessCompleted += _ => throw new InvalidOperationException("Observer failed.");
+        fixture.Service.ProcessCompleted += process => completed.TrySetResult(process);
+
+        var result = await fixture.Service.Start(fixture.Home.Hostname, "complete.cx", []);
+
+        Assert.True(result.Succeeded, result.FailureMessage);
+        var process = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await process.Execution!;
+
+        Assert.Equal(ScriptProcessState.Completed, process.State);
+        Assert.Null(process.Failure);
+        Assert.True(process.RamReleased);
+        Assert.Equal(0, fixture.Home.UsedRam);
+    }
+
+    [Fact]
+    public async Task FailedScript_ThrowingObserverDoesNotPreventOtherObservers()
+    {
+        var fixture = new Fixture();
+        fixture.WriteScript(
+            "failure.cx",
+            """throw new InvalidOperationException("Script failed.");""");
+
+        var failed = new TaskCompletionSource<ScriptProcess>(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Service.ProcessFailed += (_, _) => throw new InvalidOperationException("Observer failed.");
+        fixture.Service.ProcessFailed += (process, _) => failed.TrySetResult(process);
+
+        var result = await fixture.Service.Start(fixture.Home.Hostname, "failure.cx", []);
+
+        Assert.True(result.Succeeded, result.FailureMessage);
+        var process = await failed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await process.Execution!;
+
+        Assert.Equal(ScriptProcessState.Failed, process.State);
+        Assert.Equal("Script failed.", process.Failure?.Message);
+        Assert.True(process.RamReleased);
+        Assert.Equal(0, fixture.Home.UsedRam);
+    }
+
+    [Fact]
     public async Task FailedScript_AllowsAnotherScriptToStart()
     {
         var fixture = new Fixture();
