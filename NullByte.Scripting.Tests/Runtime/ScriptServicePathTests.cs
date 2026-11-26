@@ -1,6 +1,5 @@
 ﻿using NullByte.Core.Domain;
 using NullByte.Core.Scripting;
-using NullByte.Core.Domain;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Loading;
 using NullByte.Scripting.Runtime;
@@ -10,7 +9,7 @@ namespace NullByte.Scripting.Tests;
 internal sealed class ThrowingApiFactory : INullByteApiFactory
 {
     public INullByteApi Create(
-        IScriptOperations scriptOperations, string processHostname, int threads, CancellationToken cancellationToken)
+        IScriptOperations scriptOperations, ServerId processHostServerId, int threads, CancellationToken cancellationToken)
         => throw new NotSupportedException("These tests never get as far as running a script.");
 }
 
