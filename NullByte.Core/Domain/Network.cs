@@ -11,8 +11,7 @@ public sealed class Network
     private readonly Dictionary<string, Server> serversByHostname = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<ServerId, Server> serversById = new();
 
-    // Hostname -> hostnames of the directly connected servers. This remains hostname-based
-    // until the internal-reference migration in the next implementation step.
+    // Direct connections are stored by immutable server identity.
     private readonly Dictionary<ServerId, HashSet<ServerId>> connections = [];
 
     /// <summary>
