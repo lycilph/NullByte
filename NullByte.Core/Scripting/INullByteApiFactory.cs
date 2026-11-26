@@ -1,6 +1,6 @@
 using NullByte.Core.Domain;
 
-﻿namespace NullByte.Core.Scripting;
+namespace NullByte.Core.Scripting;
 
 public interface INullByteApiFactory
 {
