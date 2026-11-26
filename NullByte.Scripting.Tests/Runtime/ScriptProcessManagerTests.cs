@@ -42,6 +42,21 @@ public sealed class ScriptProcessManagerTests
     }
 
     [Fact]
+    public void GetForHost_FiltersByStableServerIdentity()
+    {
+        var manager = new ScriptProcessManager();
+        var hostId = ServerId.New();
+        var otherHostId = ServerId.New();
+
+        var hosted = manager.Create("hosted.cx", hostId, [], 1, 1);
+        manager.Create("other.cx", otherHostId, [], 1, 1);
+
+        var result = Assert.Single(manager.GetForHost(hostId));
+
+        Assert.Same(hosted, result);
+    }
+
+    [Fact]
     public void TryGet_ReturnsProcess()
     {
         var manager = new ScriptProcessManager();
