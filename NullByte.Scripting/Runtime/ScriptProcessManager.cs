@@ -26,6 +26,8 @@ public sealed class ScriptProcessManager
     public ScriptProcess Create(string filename, ServerId hostServerId, IReadOnlyList<string> args, int threads, double ramCost)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filename);
+        if (!hostServerId.IsValid)
+            throw new ArgumentException("A valid host server ID is required.", nameof(hostServerId));
         ArgumentNullException.ThrowIfNull(args);
         ArgumentOutOfRangeException.ThrowIfLessThan(threads, 1);
 
