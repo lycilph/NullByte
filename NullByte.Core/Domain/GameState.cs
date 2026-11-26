@@ -14,7 +14,7 @@ public sealed class GameState
 
         player.BindNetwork(network);
 
-        if (!network.TryGetServer(player.HomeHostname, out _))
+        if (!network.TryGetServer(player.HomeServerId, out _))
         {
             throw new ArgumentException(
                 $"The player's home server " +
@@ -23,7 +23,7 @@ public sealed class GameState
                 nameof(player));
         }
 
-        if (!network.TryGetServer(player.CurrentHostname, out _))
+        if (!network.TryGetServer(player.CurrentServerId, out _))
         {
             throw new ArgumentException(
                 $"The player's current server " +
