@@ -59,42 +59,49 @@ public class Program
             sessionOptions,
             settings);
 
-        EditorServer? editor = settings.Editor.Enabled
-            ? CreateEditorServer(host, settings.Editor, scriptCompiler)
-            : null;
-
-        var editorWarmUp = editor?.StartWarmUp();
+        EditorServer? editor = null;
         var warmUpEntries = new List<(string Name, TimeSpan Duration, Exception? Error)>();
         var totalWarmUpDuration = TimeSpan.Zero;
 
         async Task WarmUpAsync(CancellationToken cancellationToken)
         {
             var totalTimer = Stopwatch.StartNew();
+            try
+            {
+                // Each wrapper starts its timer before invoking the operation. Both operations
+                // are invoked before awaiting either, so their work overlaps.
+                var compilerTask = ObserveWarmUpAsync("Script Compiler", scriptCompiler.WarmUpAsync, cancellationToken);
+                var editorTask = editor is null
+                    ? null
+                    : ObserveWarmUpAsync("Editor language service", editor.StartWarmUp, cancellationToken);
 
-            Task<(string Name, TimeSpan Duration, Exception? Error)> compilerTask = 
-                ObserveWarmUpAsync(scriptCompiler.WarmUpAsync(), "Script Compiler", cancellationToken);
-            Task<(string Name, TimeSpan Duration, Exception? Error)>? editorTask = editorWarmUp is null
-                ? null : ObserveWarmUpAsync(editorWarmUp, "Editor language service", cancellationToken);
-            
-            var completed = editorTask is null
-                ? [await compilerTask]
-                : await Task.WhenAll(compilerTask, editorTask);
+                (string Name, TimeSpan Duration, Exception? Error)[] completed = editorTask is null
+                    ? [await compilerTask]
+                    : await Task.WhenAll(compilerTask, editorTask);
 
-            totalTimer.Stop();
-            warmUpEntries = completed.ToList();
-            totalWarmUpDuration = totalTimer.Elapsed;
+                warmUpEntries = completed.ToList();
 
-            var failures = warmUpEntries
-                .Where(entry => entry.Error is not null)
-                .Select(entry => entry.Error!)
-                .ToArray();
+                var failures = warmUpEntries
+                    .Where(entry => entry.Error is not null)
+                    .Select(entry => entry.Error!)
+                    .ToArray();
 
-            if (failures.Length > 0)
-                throw new AggregateException("One or more startup warm-up tasks failed.", failures);
+                if (failures.Length > 0)
+                    throw new AggregateException("One or more startup warm-up tasks failed.", failures);
+            }
+            finally
+            {
+                totalWarmUpDuration = totalTimer.Elapsed;
+            }
         }
 
         try
         {
+            // Construction can load Roslyn/MEF components and throw synchronously. Keep it
+            // inside the startup failure boundary so the host is still disposed on failure.
+            if (settings.Editor.Enabled)
+                editor = CreateEditorServer(host, settings.Editor, scriptCompiler);
+
             if (settings.Startup.ShowBootSequence)
             {
                 Console.Clear();
@@ -106,7 +113,7 @@ public class Program
                 await WarmUpAsync(CancellationToken.None);
             }
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception)
         {
             Console.Error.WriteLine(FormatWarmUpSummary(warmUpEntries, totalWarmUpDuration));
             Console.Error.WriteLine();
@@ -117,6 +124,8 @@ public class Program
             {
                 try
                 {
+                    // DisposeAsync waits for any started editor warm-up before disposing
+                    // the workspace it uses.
                     await editor.DisposeAsync();
                 }
                 catch (Exception cleanupException)
@@ -157,19 +166,20 @@ public class Program
     }
 
     private static async Task<(string Name, TimeSpan Duration, Exception? Error)> ObserveWarmUpAsync(
-        Task warmUpTask,
-        string message,
+        string name,
+        Func<Task> startWarmUp,
         CancellationToken cancellationToken)
     {
         var timer = Stopwatch.StartNew();
         try
         {
-            await warmUpTask.WaitAsync(cancellationToken);
-            return (message, timer.Elapsed, null);
+            // Invoke inside the try: factories may throw before returning a Task.
+            await startWarmUp().WaitAsync(cancellationToken);
+            return (name, timer.Elapsed, null);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            return (message, timer.Elapsed, exception);
+            return (name, timer.Elapsed, exception);
         }
     }
 

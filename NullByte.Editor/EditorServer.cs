@@ -227,9 +227,27 @@ public sealed class EditorServer(
 
         Unwatch();
 
-        languageService.Dispose();
-
+        // Stop accepting requests before releasing the workspace. A warm-up may
+        // still be using that workspace if startup was interrupted.
         if (app is not null)
+        {
             await app.DisposeAsync();
+            app = null;
+        }
+
+        if (warmUpTask.IsValueCreated)
+        {
+            try
+            {
+                await warmUpTask.Value;
+            }
+            catch
+            {
+                // The startup path observes and reports the warm-up failure. Disposal
+                // only needs to ensure the task has stopped using the language service.
+            }
+        }
+
+        languageService.Dispose();
     }
 }
