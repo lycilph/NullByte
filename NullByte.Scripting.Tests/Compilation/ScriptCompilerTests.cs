@@ -129,11 +129,11 @@ public sealed class ScriptCompilerTests
     }
 
     [Theory]
-    [InlineData("using System.IO; var value = File.ReadAllText(\\\"file.txt\\\");")]
-    [InlineData("var value = System.IO.File.ReadAllText(\\\"file.txt\\\");")]
-    [InlineData("var value = System.Environment.GetEnvironmentVariable(\\\"HOME\\\");")]
+    [InlineData("using System.IO; var value = File.ReadAllText(\"file.txt\");")]
+    [InlineData("var value = System.IO.File.ReadAllText(\"file.txt\");")]
+    [InlineData("var value = System.Environment.GetEnvironmentVariable(\"HOME\");")]
     [InlineData("var process = new System.Diagnostics.Process();")]
-    [InlineData("var type = typeof(string).Assembly.GetType(\\\"System.String\\\");")]
+    [InlineData("var type = typeof(string).Assembly.GetType(\"System.String\");")]
     [InlineData("var client = new System.Net.Http.HttpClient();")]
     [InlineData("var thread = new System.Threading.Thread(() => { });")]
     public void Compile_WithBannedApiUsage_Fails(string source)
