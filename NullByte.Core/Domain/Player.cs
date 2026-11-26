@@ -46,9 +46,10 @@ public sealed class Player
         internal set
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
+            var serverId = network?.GetServer(value).Id;
             currentHostname = value;
-            if (network is not null)
-                CurrentServerId = network.GetServer(value).Id;
+            if (serverId.HasValue)
+                CurrentServerId = serverId.Value;
         }
     }
 
