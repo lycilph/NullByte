@@ -83,7 +83,7 @@ jobs:
         run: dotnet build NullByte.slnx --configuration Release --no-restore -p:EnableNETAnalyzers=true -p:AnalysisLevel=latest
 
       - name: Run tests
-        run: dotnet test NullByte.slnx --configuration Release --no-build --no-restore
+        run: dotnet test --solution NullByte.slnx --configuration Release --no-build --no-restore
 
   vscode-extension:
     name: VS Code extension build and tests
