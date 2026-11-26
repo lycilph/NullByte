@@ -295,7 +295,7 @@ public sealed class ScriptService : IScriptOperations, IScriptService
             if (process.State == ScriptProcessState.Running)
             {
                 process.State = ScriptProcessState.Completed;
-                ProcessCompleted?.Invoke(process);
+                NotifyProcessCompleted(process);
             }
         }
         catch (OperationCanceledException)
@@ -308,11 +308,49 @@ public sealed class ScriptService : IScriptOperations, IScriptService
             process.Failure = exception;
             process.State = ScriptProcessState.Failed;
 
-            ProcessFailed?.Invoke(process, exception);
+            NotifyProcessFailed(process, exception);
         }
         finally
         {
             ReleaseProcessRam(process);
+        }
+    }
+
+    private void NotifyProcessCompleted(ScriptProcess process)
+    {
+        var handlers = ProcessCompleted;
+        if (handlers is null)
+            return;
+
+        foreach (Action<ScriptProcess> handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                handler(process);
+            }
+            catch
+            {
+                // A host-side observer must not change the outcome of script execution.
+            }
+        }
+    }
+
+    private void NotifyProcessFailed(ScriptProcess process, Exception exception)
+    {
+        var handlers = ProcessFailed;
+        if (handlers is null)
+            return;
+
+        foreach (Action<ScriptProcess, Exception> handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                handler(process, exception);
+            }
+            catch
+            {
+                // A host-side observer must not prevent other observers from being notified.
+            }
         }
     }
 
