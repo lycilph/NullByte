@@ -3,122 +3,120 @@
 namespace NullByte.Core.Domain;
 
 /// <summary>
-/// Represents the player's persistent game state.
+/// Represents the player's persistent game state. Server relationships are retained by immutable IDs;
+/// hostnames are resolved through the attached network for player-facing access.
 /// </summary>
 [DebuggerDisplay("Home: {HomeHostname}, Money: {Money}, Experience: {HackingExperience}")]
 public sealed class Player
 {
     private readonly HashSet<string> discoveredHostnames = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<ServerId> discoveredServerIds = [];
+    private Network? network;
+    private string homeHostname;
+    private string currentHostname;
 
-    /// <summary>Raised on the game thread when a server is discovered for the first time. Handlers must not throw.</summary>
     public event Action<string>? ServerDiscovered;
 
-    public Player(
-        string homeHostname,
-        double startingMoney = 0,
-        double startingHackingExperience = 0)
+    public Player(string homeHostname, double startingMoney = 0, double startingHackingExperience = 0)
     {
-        if (string.IsNullOrWhiteSpace(homeHostname))
-            throw new ArgumentException("The home hostname cannot be empty.", nameof(homeHostname));
+        ArgumentException.ThrowIfNullOrWhiteSpace(homeHostname);
         if (!double.IsFinite(startingMoney) || startingMoney < 0)
             throw new ArgumentOutOfRangeException(nameof(startingMoney), "Starting money must be a finite, non-negative value.");
         if (!double.IsFinite(startingHackingExperience) || startingHackingExperience < 0)
             throw new ArgumentOutOfRangeException(nameof(startingHackingExperience), "Starting hacking experience must be a finite, non-negative value.");
 
-        HomeHostname = homeHostname;
-        CurrentHostname = homeHostname;
+        this.homeHostname = homeHostname;
+        currentHostname = homeHostname;
         Money = startingMoney;
         Skills.AddExperience(SkillKind.Hacking, startingHackingExperience);
-
         DiscoverServer(homeHostname);
     }
 
-    /// <summary>
-    /// Gets the identifier of the player's home server.
-    /// </summary>
-    public string HomeHostname { get; }
+    /// <summary>Gets the immutable identity of the player's home server.</summary>
+    public ServerId HomeServerId { get; private set; }
 
-    /// <summary>
-    /// Gets the identifier of the server the player
-    /// is currently connected to.
-    /// </summary>
-    public string CurrentHostname { get; internal set; }
+    /// <summary>Gets the immutable identity of the server the player is currently connected to.</summary>
+    public ServerId CurrentServerId { get; private set; }
 
-    /// <summary>
-    /// Gets the IDs of servers known to the player.
-    /// </summary>
-    public IReadOnlySet<string> DiscoveredHostnames => discoveredHostnames;
+    public string HomeHostname => network is null ? homeHostname : network.GetServer(HomeServerId).Hostname;
 
-    /// <summary>
-    /// Gets the directory the player is in on the current server ("" is the root).
-    /// Not part of the save: a loaded game starts at the root.
-    /// </summary>
+    public string CurrentHostname
+    {
+        get => network is null ? currentHostname : network.GetServer(CurrentServerId).Hostname;
+        internal set
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+            currentHostname = value;
+            if (network is not null)
+                CurrentServerId = network.GetServer(value).Id;
+        }
+    }
+
+    public IReadOnlySet<string> DiscoveredHostnames => network is null
+        ? discoveredHostnames
+        : discoveredServerIds.Select(id => network.GetServer(id).Hostname)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Gets the immutable identities of servers known to the player.</summary>
+    public IReadOnlySet<ServerId> DiscoveredServerIds => discoveredServerIds;
+
     public string CurrentDirectory { get; internal set; } = "";
-
-    /// <summary>
-    /// Gets the player's current money.
-    /// </summary>
     public double Money { get; private set; }
-
-    /// <summary>
-    /// Gets the player's experience in every skill.
-    /// </summary>
     public PlayerSkills Skills { get; } = new();
-
-    /// <summary>
-    /// Gets the player's accumulated hacking experience.
-    /// </summary>
     public double HackingExperience => Skills.GetExperience(SkillKind.Hacking);
 
-    /// <summary>
-    /// Adds hacking experience to the player.
-    /// </summary>
-    public void AddHackingExperience(double amount)
-        => Skills.AddExperience(SkillKind.Hacking, amount);
+    internal void BindNetwork(Network value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        if (network is not null && !ReferenceEquals(network, value))
+            throw new InvalidOperationException("The player is already bound to a different network.");
+
+        var home = value.GetServer(homeHostname);
+        var current = value.GetServer(currentHostname);
+        var discovered = discoveredHostnames.Select(hostname => value.GetServer(hostname).Id).ToArray();
+
+        network = value;
+        HomeServerId = home.Id;
+        CurrentServerId = current.Id;
+        discoveredServerIds.Clear();
+        foreach (var id in discovered)
+            discoveredServerIds.Add(id);
+    }
+
+    public void AddHackingExperience(double amount) => Skills.AddExperience(SkillKind.Hacking, amount);
 
     public void AddMoney(double amount)
     {
         if (!double.IsFinite(amount) || amount < 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(amount), "Money must be a finite, non-negative value.");
-        }
-
+            throw new ArgumentOutOfRangeException(nameof(amount), "Money must be a finite, non-negative value.");
         Money += amount;
     }
 
-    /// <summary>
-    /// Takes money from the player if they can afford it.
-    /// </summary>
-    /// <returns>
-    /// True if the money was spent; false if the player has too little,
-    /// in which case nothing changes.
-    /// </returns>
     public bool TrySpendMoney(double amount)
     {
         if (!double.IsFinite(amount) || amount < 0)
             throw new ArgumentOutOfRangeException(nameof(amount), "Money must be a finite, non-negative value.");
-
         if (amount > Money)
             return false;
-
         Money -= amount;
         return true;
     }
 
-    /// <summary>
-    /// Marks a server as discovered.
-    /// </summary>
-    /// <returns>
-    /// True if the server was newly discovered.
-    /// </returns>
     public bool DiscoverServer(string hostname)
     {
-        if (string.IsNullOrWhiteSpace(hostname))
-            throw new ArgumentException("The hostname cannot be empty.", nameof(hostname));
+        ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
 
-        if (!discoveredHostnames.Add(hostname))
-            return false;
+        if (network is null)
+        {
+            if (!discoveredHostnames.Add(hostname))
+                return false;
+        }
+        else
+        {
+            var id = network.GetServer(hostname).Id;
+            if (!discoveredServerIds.Add(id))
+                return false;
+        }
 
         ServerDiscovered?.Invoke(hostname);
         return true;
