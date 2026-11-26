@@ -36,8 +36,8 @@ public sealed class VirtualFileSystem
     private readonly Network network;
     private readonly TimeProvider timeProvider;
 
-    // Server hostnames are case-insensitive, matching the network's conventions. Paths are case-sensitive.
-    private readonly Dictionary<string, ServerFiles> serversByHostname = new(StringComparer.OrdinalIgnoreCase);
+    // Files are keyed by immutable server identity; hostnames are resolved at the API boundary.
+    private readonly Dictionary<ServerId, ServerFiles> serversById = [];
 
     /// <summary>Raised on the game thread after a file or directory changed. Handlers must not throw.</summary>
     public event Action<FileChange>? Changed;
@@ -53,17 +53,17 @@ public sealed class VirtualFileSystem
     /// <summary>Gets the paths of all files on a server, in any directory, sorted alphabetically.</summary>
     public IReadOnlyList<string> ListFiles(string hostname)
     {
-        ValidateServer(hostname);
+        var serverId = ResolveServerId(hostname);
 
-        return Find(hostname)?.Files.Keys.OrderBy(path => path, StringComparer.Ordinal).ToArray() ?? [];
+        return Find(serverId)?.Files.Keys.OrderBy(path => path, StringComparer.Ordinal).ToArray() ?? [];
     }
 
     /// <summary>Gets the paths of all directories on a server, sorted alphabetically.</summary>
     public IReadOnlyList<string> ListDirectories(string hostname)
     {
-        ValidateServer(hostname);
+        var serverId = ResolveServerId(hostname);
 
-        return Find(hostname)?.Directories.OrderBy(path => path, StringComparer.Ordinal).ToArray() ?? [];
+        return Find(serverId)?.Directories.OrderBy(path => path, StringComparer.Ordinal).ToArray() ?? [];
     }
 
     /// <summary>
@@ -72,10 +72,10 @@ public sealed class VirtualFileSystem
     /// </summary>
     public bool TryListDirectory(string hostname, string directory, out IReadOnlyList<FileSystemEntry> entries)
     {
-        ValidateServer(hostname);
+        var serverId = ResolveServerId(hostname);
         directory = VirtualPath.NormalizeDirectory(directory);
 
-        var server = Find(hostname);
+        var server = Find(serverId);
         if (directory.Length > 0 && (server is null || !server.Directories.Contains(directory)))
         {
             entries = [];
@@ -103,10 +103,10 @@ public sealed class VirtualFileSystem
 
     public bool DirectoryExists(string hostname, string path)
     {
-        ValidateServer(hostname);
+        var serverId = ResolveServerId(hostname);
         path = VirtualPath.NormalizeDirectory(path);
 
-        return path.Length == 0 || (Find(hostname)?.Directories.Contains(path) ?? false);
+        return path.Length == 0 || (Find(serverId)?.Directories.Contains(path) ?? false);
     }
 
     // ---- Files ----
@@ -114,10 +114,10 @@ public sealed class VirtualFileSystem
     /// <summary>Attempts to read a file from a server.</summary>
     public bool TryReadFile(string hostname, string filename, out string? content)
     {
-        ValidateServer(hostname);
+        var serverId = ResolveServerId(hostname);
         var path = VirtualPath.NormalizeFile(filename);
 
-        if (Find(hostname) is { } server && server.Files.TryGetValue(path, out var entry))
+        if (Find(serverId) is { } server && server.Files.TryGetValue(path, out var entry))
         {
             content = entry.Content;
             return true;
@@ -130,10 +130,10 @@ public sealed class VirtualFileSystem
     /// <summary>Attempts to get the creation and modification time of a file.</summary>
     public bool TryGetFileTimes(string hostname, string filename, out FileTimes times)
     {
-        ValidateServer(hostname);
+        var serverId = ResolveServerId(hostname);
         var path = VirtualPath.NormalizeFile(filename);
 
-        if (Find(hostname) is { } server && server.Files.TryGetValue(path, out var entry))
+        if (Find(serverId) is { } server && server.Files.TryGetValue(path, out var entry))
         {
             times = new FileTimes(entry.Created, entry.Modified);
             return true;
@@ -149,15 +149,15 @@ public sealed class VirtualFileSystem
     /// </summary>
     public void WriteFile(string hostname, string filename, string content)
     {
-        ValidateServer(hostname);
+        var serverId = ResolveServerId(hostname);
         var path = VirtualPath.NormalizeFile(filename);
         ArgumentNullException.ThrowIfNull(content);
 
-        var server = GetOrCreate(hostname);
+        var server = GetOrCreate(serverId);
         if (server.Directories.Contains(path))
             throw new InvalidOperationException($"'{path}' is a directory.");
 
-        EnsureParents(hostname, server, path);
+        EnsureParents(serverId, server, path);
 
         var now = Now();
         if (server.Files.TryGetValue(path, out var existing))
@@ -165,25 +165,25 @@ public sealed class VirtualFileSystem
             // Strictly increasing, so two writes in the same millisecond still look different to an editor.
             var modified = now > existing.Modified ? now : existing.Modified.AddMilliseconds(1);
             server.Files[path] = existing with { Content = content, Modified = modified };
-            Raise(hostname, path, FileChangeKind.Changed);
+            Raise(serverId, path, FileChangeKind.Changed);
         }
         else
         {
             server.Files[path] = new FileEntry(content, now, now);
-            Raise(hostname, path, FileChangeKind.Created);
+            Raise(serverId, path, FileChangeKind.Created);
         }
     }
 
     /// <summary>Deletes a file. Returns false if the file does not exist.</summary>
     public bool DeleteFile(string hostname, string filename)
     {
-        ValidateServer(hostname);
+        var serverId = ResolveServerId(hostname);
         var path = VirtualPath.NormalizeFile(filename);
 
-        if (Find(hostname) is not { } server || !server.Files.Remove(path))
+        if (Find(serverId) is not { } server || !server.Files.Remove(path))
             return false;
 
-        Raise(hostname, path, FileChangeKind.Deleted);
+        Raise(serverId, path, FileChangeKind.Deleted);
         return true;
     }
 
@@ -195,11 +195,11 @@ public sealed class VirtualFileSystem
     /// </summary>
     public bool MoveFile(string hostname, string sourceFilename, string destinationFilename)
     {
-        ValidateServer(hostname);
+        var serverId = ResolveServerId(hostname);
         var source = VirtualPath.NormalizeFile(sourceFilename);
         var destination = VirtualPath.NormalizeFile(destinationFilename);
 
-        if (Find(hostname) is not { } server || !server.Files.TryGetValue(source, out var entry))
+        if (Find(serverId) is not { } server || !server.Files.TryGetValue(source, out var entry))
             return false;
 
         // Paths are case-sensitive, so an identical path is the same file.
@@ -210,13 +210,13 @@ public sealed class VirtualFileSystem
             HasFileAncestor(server, destination))
             return false;
 
-        EnsureParents(hostname, server, destination);
+        EnsureParents(serverId, server, destination);
 
         server.Files.Add(destination, entry);   // keeps its times: a rename is not a modification
         server.Files.Remove(source);
 
-        Raise(hostname, source, FileChangeKind.Deleted);
-        Raise(hostname, destination, FileChangeKind.Created);
+        Raise(serverId, source, FileChangeKind.Deleted);
+        Raise(serverId, destination, FileChangeKind.Created);
         return true;
     }
 
@@ -259,21 +259,21 @@ public sealed class VirtualFileSystem
     /// </summary>
     public bool CreateDirectory(string hostname, string path)
     {
-        ValidateServer(hostname);
+        var serverId = ResolveServerId(hostname);
         path = VirtualPath.NormalizeDirectory(path);
 
         if (path.Length == 0)
             return false;   // the root always exists
 
-        var server = GetOrCreate(hostname);
+        var server = GetOrCreate(serverId);
         if (server.Files.ContainsKey(path))
             throw new InvalidOperationException($"'{path}' is a file.");
 
         if (server.Directories.Contains(path))
             return false;
 
-        EnsureParents(hostname, server, path);
-        AddDirectory(hostname, server, path);
+        EnsureParents(serverId, server, path);
+        AddDirectory(serverId, server, path);
         return true;
     }
 
@@ -283,13 +283,13 @@ public sealed class VirtualFileSystem
     /// </summary>
     public bool DeleteDirectory(string hostname, string path, bool recursive = false)
     {
-        ValidateServer(hostname);
+        var serverId = ResolveServerId(hostname);
         path = VirtualPath.NormalizeDirectory(path);
 
         if (path.Length == 0)
             throw new ArgumentException("The root directory cannot be deleted.", nameof(path));
 
-        if (Find(hostname) is not { } server || !server.Directories.Contains(path))
+        if (Find(serverId) is not { } server || !server.Directories.Contains(path))
             return false;
 
         var prefix = path + "/";
@@ -305,7 +305,7 @@ public sealed class VirtualFileSystem
             server.Directories.Remove(directory);
         server.Directories.Remove(path);
 
-        Raise(hostname, path, FileChangeKind.Deleted, isDirectory: true);   // one event for the whole subtree
+        Raise(serverId, path, FileChangeKind.Deleted, isDirectory: true);   // one event for the whole subtree
         return true;
     }
 
@@ -318,14 +318,14 @@ public sealed class VirtualFileSystem
     /// </summary>
     public bool MoveDirectory(string hostname, string sourcePath, string destinationPath)
     {
-        ValidateServer(hostname);
+        var serverId = ResolveServerId(hostname);
         var source = VirtualPath.NormalizeDirectory(sourcePath);
         var destination = VirtualPath.NormalizeDirectory(destinationPath);
 
         if (source.Length == 0 || destination.Length == 0)
             throw new ArgumentException("The root directory cannot be moved or replaced.");
 
-        if (Find(hostname) is not { } server || !server.Directories.Contains(source))
+        if (Find(serverId) is not { } server || !server.Directories.Contains(source))
             return false;
 
         if (source == destination)
@@ -346,7 +346,7 @@ public sealed class VirtualFileSystem
         foreach (var path in files.Select(f => f.Key).Concat(directories))
             VirtualPath.NormalizeDirectory(Moved(path));
 
-        EnsureParents(hostname, server, destination);
+        EnsureParents(serverId, server, destination);
 
         server.Directories.Remove(source);
         foreach (var directory in directories)
@@ -360,8 +360,8 @@ public sealed class VirtualFileSystem
         foreach (var file in files)
             server.Files.Add(Moved(file.Key), file.Value);   // keeps their times
 
-        Raise(hostname, source, FileChangeKind.Deleted, isDirectory: true);
-        Raise(hostname, destination, FileChangeKind.Created, isDirectory: true);
+        Raise(serverId, source, FileChangeKind.Deleted, isDirectory: true);
+        Raise(serverId, destination, FileChangeKind.Created, isDirectory: true);
         return true;
     }
 
@@ -381,18 +381,18 @@ public sealed class VirtualFileSystem
         DateTimeOffset created,
         DateTimeOffset modified)
     {
-        ValidateServer(hostname);
+        var serverId = ResolveServerId(hostname);
         var path = VirtualPath.NormalizeFile(filename);
         ArgumentNullException.ThrowIfNull(content);
 
         if (modified < created)
             throw new ArgumentException("The modification time cannot be earlier than the creation time.", nameof(modified));
 
-        var server = GetOrCreate(hostname);
+        var server = GetOrCreate(serverId);
         if (server.Directories.Contains(path))
             throw new InvalidOperationException($"'{path}' is a directory.");
 
-        EnsureParents(hostname, server, path, raiseEvents: false);
+        EnsureParents(serverId, server, path, raiseEvents: false);
         server.Files[path] = new FileEntry(content, created, modified);
     }
 
@@ -402,30 +402,30 @@ public sealed class VirtualFileSystem
     /// </summary>
     public void RestoreDirectory(string hostname, string path)
     {
-        ValidateServer(hostname);
+        var serverId = ResolveServerId(hostname);
         path = VirtualPath.NormalizeDirectory(path);
 
         if (path.Length == 0)
             return;
 
-        var server = GetOrCreate(hostname);
+        var server = GetOrCreate(serverId);
         if (server.Files.ContainsKey(path))
             throw new InvalidOperationException($"'{path}' is a file.");
 
-        EnsureParents(hostname, server, path, raiseEvents: false);
+        EnsureParents(serverId, server, path, raiseEvents: false);
         server.Directories.Add(path);
     }
 
     // ---- Helpers ----
 
-    private ServerFiles? Find(string hostname) => serversByHostname.GetValueOrDefault(hostname);
+    private ServerFiles? Find(ServerId serverId) => serversById.GetValueOrDefault(serverId);
 
-    private ServerFiles GetOrCreate(string hostname)
+    private ServerFiles GetOrCreate(ServerId serverId)
     {
-        if (!serversByHostname.TryGetValue(hostname, out var server))
+        if (!serversById.TryGetValue(serverId, out var server))
         {
             server = new ServerFiles();
-            serversByHostname.Add(hostname, server);
+            serversById.Add(serverId, server);
         }
 
         return server;
@@ -435,7 +435,7 @@ public sealed class VirtualFileSystem
         => VirtualPath.Ancestors(path).Any(server.Files.ContainsKey);
 
     /// <summary>Creates the missing directories above a path, outermost first. Throws if a file is in the way.</summary>
-    private void EnsureParents(string hostname, ServerFiles server, string path, bool raiseEvents = true)
+    private void EnsureParents(ServerId serverId, ServerFiles server, string path, bool raiseEvents = true)
     {
         var ancestors = VirtualPath.Ancestors(path).ToList();
 
@@ -448,28 +448,29 @@ public sealed class VirtualFileSystem
         foreach (var ancestor in ancestors)
         {
             if (server.Directories.Add(ancestor) && raiseEvents)
-                Raise(hostname, ancestor, FileChangeKind.Created, isDirectory: true);
+                Raise(serverId, ancestor, FileChangeKind.Created, isDirectory: true);
         }
     }
 
-    private void AddDirectory(string hostname, ServerFiles server, string path)
+    private void AddDirectory(ServerId serverId, ServerFiles server, string path)
     {
         if (server.Directories.Add(path))
-            Raise(hostname, path, FileChangeKind.Created, isDirectory: true);
+            Raise(serverId, path, FileChangeKind.Created, isDirectory: true);
     }
 
     // Whole milliseconds, because that is what editors compare.
     private DateTimeOffset Now()
         => DateTimeOffset.FromUnixTimeMilliseconds(timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
 
-    private void Raise(string hostname, string path, FileChangeKind kind, bool isDirectory = false)
-        => Changed?.Invoke(new FileChange(network.GetServer(hostname).Hostname, path, kind, isDirectory));
+    private void Raise(ServerId serverId, string path, FileChangeKind kind, bool isDirectory = false)
+        => Changed?.Invoke(new FileChange(network.GetServer(serverId).Hostname, path, kind, isDirectory));
 
-    private void ValidateServer(string hostname)
+    private ServerId ResolveServerId(string hostname)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
 
-        if (!network.TryGetServer(hostname, out _))
-            throw new KeyNotFoundException($"Server '{hostname}' does not exist.");
+        return network.TryGetServer(hostname, out var server)
+            ? server.Id
+            : throw new KeyNotFoundException($"Server '{hostname}' does not exist.");
     }
 }
