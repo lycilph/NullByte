@@ -2,6 +2,8 @@
 
 This is a lightweight record of decisions that are important enough to preserve. It is intentionally not a formal ADR system.
 
+The rules themselves are stated in `ARCHITECTURE.md`; this file records why they exist.
+
 ## 1. Core owns gameplay rules
 
 **Decision:** Gameplay rules live in `NullByte.Core`, primarily in domain services, formulas and systems.
@@ -98,7 +100,7 @@ This is a lightweight record of decisions that are important enough to preserve.
 
 **Consequence:** Update documentation when structure or important decisions change, but prefer targeted source inspection for implementation details.
 
-## 12. Facility experience bonuses apply only to paid courses
+## 13. Facility experience bonuses apply only to paid courses
 
 **Decision:** A course with a zero per-second cost does not receive a training facility's experience multiplier. Paid courses continue to receive it. Global class-experience balance and focused/background reward factors apply to both.
 

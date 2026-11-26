@@ -4,6 +4,8 @@
 
 NullByte is layered around a shared Core game model and services. UI, scripts and external tools are adapters over that shared gameplay implementation.
 
+This file is the canonical home for architectural rules. `DECISIONS.md` records why they exist, `CODEBASE.md` says where things live, and `DEVELOPMENT.md` describes the workflow.
+
 ## Dependency direction
 
 The intended direction is broadly:
@@ -201,7 +203,7 @@ Save files are versioned and upgraded through explicit migrations.
 
 Live CLR execution state is reconstructed when loading rather than serialized as running objects.
 
-The current format is V5, with migrations through `V4ToV5Migration`.
+Migrations live in `NullByte.Core/Persistence/Migrations/`; the highest-numbered migration there defines the current save version.
 
 ## Configuration
 

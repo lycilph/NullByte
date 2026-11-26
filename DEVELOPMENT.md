@@ -1,28 +1,46 @@
 # NullByte Development Guide
 
+Architectural rules live in `ARCHITECTURE.md`; this file covers the workflow, tooling and conventions.
+
+## Build, run and test
+
+```text
+dotnet build NullByte.slnx
+dotnet test NullByte.Core.Tests          # or any other NullByte.*.Tests project
+dotnet run --project NullByte.ConsoleUI  # run the game
+```
+
+- All .NET projects target `net10.0`, except the WPF shell `NullByte`, which targets `net10.0-windows`. Building the whole solution therefore needs Windows; on other platforms build the individual projects.
+- The VS Code extension is built separately from `NullByte.vscode/`: `npm run compile`, `npm test`, `npm run package`.
+
+## Conventions
+
+- Nullable reference types and implicit usings are enabled in every project.
+- Tests use xUnit v3. NSubstitute is available in `NullByte.Core.Tests` and `NullByte.Scripting.Tests`.
+- Test names follow `Method_Behavior` (for example `Post_FromWorkerThread_ExecutesOnGameThread`).
+- Test folders mirror the production project's folders. Shared helpers such as `GameThreadHarness` live in a `Helpers/` (or `Infrastructure/`) folder of the test project.
+- Production assemblies expose internals to their test project through `InternalsVisibleTo`.
+- Use `FakeGameClock` and other injected seams rather than real delays.
+
 ## Before changing code
 
-Start with:
+Follow the context-loading rule at the end of `CODEBASE.md`: `ARCHITECTURE.md`, the relevant part of `CODEBASE.md`, the implementation files, their tests, and `DECISIONS.md` if an architectural choice is involved.
 
-1. `ARCHITECTURE.md`
-2. The relevant section of `CODEBASE.md`
-3. Current implementation files
-4. Relevant tests
-5. `DECISIONS.md` when an architectural choice is involved
+Identify the smallest coherent working set:
 
-Do not begin by loading the entire repository into context unless the change genuinely crosses most of the architecture.
-
-## Working-set principle
-
-For a normal feature or bug fix, identify the smallest coherent working set:
-
-- the owning Core/domain/service code;
+- the owning Core domain/service code;
 - the adapter(s) affected by the feature;
 - the closest tests;
 - persistence/migration code only when state shape changes;
 - editor code only when the external-editor contract changes.
 
-The repository is the authoritative implementation. The documentation is a map.
+The repository is the authoritative implementation; the documentation is a map.
+
+## Where planned work lives
+
+- `ROADMAP.md` — milestones (player-visible capabilities).
+- `todo.md` — current tasks, upcoming cleanup and future ideas.
+- `NullByte Game Design Document.md` — detailed design. It is large; read only the relevant section.
 
 ## Feature workflow
 
@@ -36,7 +54,7 @@ Search for the nearest existing feature with similar behavior. Reuse its service
 
 ### 3. Design the smallest coherent change
 
-Keep gameplay rules in Core. Keep adapters thin. Avoid introducing a second mechanism for a problem the architecture already solves.
+Keep gameplay rules in Core and adapters thin. Avoid introducing a second mechanism for a problem the architecture already solves.
 
 ### 4. Implement incrementally
 
@@ -53,29 +71,16 @@ A useful order is:
 
 Add unit tests where the behavior is owned, then add integration coverage for important boundaries.
 
-Prefer fake clocks and deterministic seams over real delays.
-
 ### 6. Review the architecture
 
-Before considering the change complete, check for:
-
-- duplicated gameplay rules;
-- game-thread violations;
-- blocking waits;
-- direct mutable-state access from background work;
-- duplicated path handling;
-- ad-hoc persistence;
-- unnecessary new lifecycle mechanisms.
+Check the change against the warning signs in `ARCHITECTURE.md`.
 
 ### 7. Update documentation
 
-Update `CODEBASE.md` when structure or entry points change.
-
-Update `ARCHITECTURE.md` when boundaries or responsibilities change.
-
-Update `DECISIONS.md` when a significant architectural choice is made.
-
-Update `ROADMAP.md` when a milestone changes.
+- `CODEBASE.md` when structure or entry points change.
+- `ARCHITECTURE.md` when boundaries or responsibilities change.
+- `DECISIONS.md` when a significant architectural choice is made.
+- `ROADMAP.md` when a milestone changes.
 
 ## Common change patterns
 
@@ -101,8 +106,6 @@ Trace:
 VS Code → protocol → NullByte.Editor → game-thread boundary → Core/Scripting
 ```
 
-Do not put game rules in the editor protocol implementation.
-
 ### Persistence feature
 
 Trace:
@@ -111,7 +114,7 @@ Trace:
 GameState ↔ SaveGameMapper ↔ SaveGame ↔ serializer ↔ SaveManager ↔ store
 ```
 
-If the saved representation changes, consider migration and golden-file coverage.
+If the saved representation changes, add a migration and golden-file coverage.
 
 ### Activity feature
 
@@ -120,38 +123,23 @@ Prefer the existing ActivityService/System lifecycle. Decide explicitly whether 
 ## Testing principles
 
 - Test deterministic outcomes, not wall-clock timing.
-- Use `FakeGameClock` where timing matters.
 - Test save migrations against representative old saves.
 - Test scripting behavior at both analysis/compilation and runtime boundaries when applicable.
 - Test editor behavior through the editor service/protocol boundary where useful.
 - Keep unit tests close to the layer that owns the behavior.
 
-## Things to avoid
-
-- Implementing a gameplay rule in a UI command.
-- Implementing a gameplay rule only in `NullByteApi`.
-- Adding a separate editor-only implementation of a Core operation.
-- Using `Thread.Sleep`, `.Wait()` or `.Result` on the game thread.
-- Making tests depend on real elapsed time.
-- Serializing live execution objects.
-- Maintaining parallel file-system representations.
-- Creating a new activity framework for one activity.
-- Passing mutable GameState into background Roslyn/editor work.
-
 ## AI-assisted development workflow
-
-The preferred workflow for work assisted by ChatGPT is:
 
 1. Use the architecture documents to establish the relevant boundaries.
 2. Use `CODEBASE.md` to identify likely files.
-3. Inspect only those files and their tests from GitHub.
-4. Discuss/confirm the design when the change affects architecture or player-visible behavior.
+3. Inspect only those files and their tests (through the GitHub integration where available).
+4. Discuss and confirm the design when the change affects architecture or player-visible behavior.
 5. Implement the smallest coherent change.
 6. Run/review relevant tests.
 7. Inspect the resulting diff.
 8. Update documentation if needed.
 
-Avoid repeatedly attaching full Repomix exports. GitHub-backed targeted inspection keeps the context focused and makes the current repository state authoritative.
+Never commit without explicit approval. Avoid attaching full Repomix exports; targeted inspection keeps the context focused and the current repository state authoritative. `AIPrompts.md` has a starting prompt and Repomix exclusion settings.
 
 ## Completion checklist
 

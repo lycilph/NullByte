@@ -8,17 +8,22 @@ This file is a compact map of the repository. It answers **where to look first**
 
 ```text
 /
-├── CODEBASE.md
-├── ARCHITECTURE.md
-├── DECISIONS.md
-├── DEVELOPMENT.md
-├── ROADMAP.md
-├── src/
-├── tests/
-└── editor/
+├── NullByte.slnx            solution (groups projects into virtual src/ and test/ folders)
+├── NullByte.Core/           game domain and rules
+├── NullByte.Scripting/      Roslyn pipeline and script runtime
+├── NullByte.Shell/          session and persistence lifecycle
+├── NullByte.ConsoleUI/      console executable
+├── NullByte.Editor/         external-editor server
+├── NullByte.vscode/         VS Code extension (TypeScript)
+├── NullByte/                minimal WPF shell
+├── NullByte.*.Tests/        one test project per layer above (except vscode/WPF)
+└── *.md                     README, ARCHITECTURE, CODEBASE, DECISIONS, DEVELOPMENT,
+                             ROADMAP, todo, AIPrompts, Game Design Document
 ```
 
-The exact project and folder names are visible in the repository. The important architectural split is:
+All projects are siblings at the repository root. The `src/` and `test/` folders exist only inside `NullByte.slnx`, not on disk.
+
+The important architectural split is:
 
 | Area | Responsibility |
 |---|---|
@@ -29,7 +34,7 @@ The exact project and folder names are visible in the repository. The important 
 | `NullByte.Editor` | External-editor server, protocol and adapters |
 | `NullByte.vscode` | VS Code extension |
 | `NullByte` | Minimal WPF shell; currently not part of the playable runtime composition |
-| `tests/*` | Automated tests for the corresponding layers |
+| `NullByte.*.Tests` | Automated tests for the corresponding layers |
 
 ## Core
 
@@ -55,7 +60,7 @@ Look in `NullByte.Core/Services` for operations over the domain:
 - `BotnetService.cs` — botnet operations.
 - `WorkingDirectory.cs` — current-directory/path behavior.
 
-Gameplay rules should normally live here or in the associated domain/formula layer rather than in UI commands or the scripting API.
+New gameplay rules go here (or in formulas/systems), not in adapters. See `ARCHITECTURE.md`.
 
 ### Formulas
 
@@ -73,7 +78,7 @@ When changing balance, first locate the existing formula rather than embedding a
 - `Time/GameScheduler.cs` — scheduled game-time work.
 - `Systems/ActivitySystem.cs`, `BotnetSystem.cs` — recurring simulation systems.
 
-Mutable game state has one owner: the game thread. External callers cross that boundary; do not introduce locks around domain state as a substitute for the ownership model.
+Game-thread ownership rules are in `ARCHITECTURE.md`.
 
 ### Core scripting API
 
@@ -86,15 +91,13 @@ Look in `NullByte.Core/Scripting` for the public API exposed to player scripts:
 - process information/state
 - `RamCostAttribute.cs`
 
-The API should adapt to shared Core services, not duplicate gameplay rules.
-
 ### Persistence and world data
 
 - `Persistence/SaveGame.cs` — versioned save representation.
 - `Persistence/SaveGameMapper.cs` — live state ↔ save model.
 - `Persistence/SaveGameSerializer.cs` — serialization.
 - `Persistence/SaveMigration.cs` — migration abstraction.
-- `Persistence/Migrations/` — version-to-version migrations, currently through V4→V5.
+- `Persistence/Migrations/` — version-to-version migrations (`VnToVm`); the highest number is the current save version.
 - `Data/initial-network.json` — initial network data.
 - `Data/activities.json` — activity definitions.
 - `InitialGameStateFactory.cs` — initial world construction.
@@ -121,8 +124,6 @@ Look in `NullByte.Scripting/Runtime`:
 - `ScriptProcess.cs` — process state.
 - `ScriptProcessManager.cs` — running-process tracking.
 - `ServerSourceProvider.cs` — source lookup.
-
-Running scripts retain their compiled snapshot; later source changes do not mutate an already-running process.
 
 ### Loading and language services
 
@@ -154,7 +155,7 @@ Running scripts retain their compiled snapshot; later source changes do not muta
 - configuration under `Configuration/`.
 - the presentation-only startup sequence under `Startup/`; it runs before the interactive terminal takes ownership of the console.
 
-Host-level operations such as load/reset are requested through the host rather than disposing/replacing the session from inside the currently executing command.
+Load/reset/shutdown go through `HostRequestMailbox` (see `ARCHITECTURE.md`, Host lifecycle).
 
 ## External editor
 
