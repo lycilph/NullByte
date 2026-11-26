@@ -28,3 +28,7 @@ dotnet run --project NullByte.ConsoleUI
 Run `dotnet run --project NullByte.ConsoleUI -- --help` (or pass `help`) to list the available options. Help is printed before application settings are loaded.
 
 See `DEVELOPMENT.md` for tests, the VS Code extension and platform notes.
+
+## Misc stuff
+
+Run this in a powershell console (from the root folder) to find (and fix) formatting issues `.\Scripts\check-formatting.ps1`
