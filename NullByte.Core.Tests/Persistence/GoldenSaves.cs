@@ -827,6 +827,8 @@ internal static class GoldenSaves
   "savedAtUtc": "2026-11-17T10:30:00+00:00",
   "gameTime": "00:12:34.2500000",
   "player": {
+    "homeServerId": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e",
+    "currentServerId": "98a3870e-58cb-5079-93b5-bb06f209320b",
     "money": 0.30000000000000004,
     "skills": {
       "hacking": 0.3333333333333333,
@@ -836,8 +838,6 @@ internal static class GoldenSaves
       "agility": 0,
       "charisma": 0
     },
-    "homeServerId": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e",
-    "currentServerId": "98a3870e-58cb-5079-93b5-bb06f209320b",
     "discoveredServerIds": [
       "83d7acb2-037f-5621-bd1d-c708349ae12f",
       "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e",
@@ -846,6 +846,7 @@ internal static class GoldenSaves
   },
   "servers": [
     {
+      "id": "83d7acb2-037f-5621-bd1d-c708349ae12f",
       "hostname": "foodnstuff",
       "maximumMoney": 100000,
       "money": 60000,
@@ -856,10 +857,10 @@ internal static class GoldenSaves
       "growthParameter": 25,
       "maximumRam": 8,
       "hasRootAccess": false,
-      "hasBackdoor": false,
-      "id": "83d7acb2-037f-5621-bd1d-c708349ae12f"
+      "hasBackdoor": false
     },
     {
+      "id": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e",
       "hostname": "home",
       "maximumMoney": 0,
       "money": 0,
@@ -870,10 +871,10 @@ internal static class GoldenSaves
       "growthParameter": 1,
       "maximumRam": 8,
       "hasRootAccess": true,
-      "hasBackdoor": false,
-      "id": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e"
+      "hasBackdoor": false
     },
     {
+      "id": "98a3870e-58cb-5079-93b5-bb06f209320b",
       "hostname": "n00dles",
       "maximumMoney": 50000,
       "money": 24999.666666666668,
@@ -884,10 +885,10 @@ internal static class GoldenSaves
       "growthParameter": 30,
       "maximumRam": 4,
       "hasRootAccess": true,
-      "hasBackdoor": false,
-      "id": "98a3870e-58cb-5079-93b5-bb06f209320b"
+      "hasBackdoor": false
     },
     {
+      "id": "e68d08ef-e8d3-5b8b-9bd3-001535c25142",
       "hostname": "zero-day",
       "maximumMoney": 1000000,
       "money": 500000,
@@ -898,8 +899,7 @@ internal static class GoldenSaves
       "growthParameter": 10,
       "maximumRam": 16,
       "hasRootAccess": false,
-      "hasBackdoor": false,
-      "id": "e68d08ef-e8d3-5b8b-9bd3-001535c25142"
+      "hasBackdoor": false
     }
   ],
   "connections": [
@@ -959,42 +959,42 @@ internal static class GoldenSaves
   "directories": [],
   "files": [
     {
+      "serverId": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e",
       "name": "empty.cx",
       "content": "",
       "created": "2026-11-17T10:30:00+00:00",
-      "modified": "2026-11-17T10:30:00+00:00",
-      "serverId": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e"
+      "modified": "2026-11-17T10:30:00+00:00"
     },
     {
+      "serverId": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e",
       "name": "hack.cx",
       "content": "var t = args[0];\nnb.Print(\"héllo \\\"world\\\" ✓\");\n",
       "created": "2026-11-17T10:30:00+00:00",
-      "modified": "2026-11-17T10:30:00+00:00",
-      "serverId": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e"
+      "modified": "2026-11-17T10:30:00+00:00"
     },
     {
+      "serverId": "98a3870e-58cb-5079-93b5-bb06f209320b",
       "name": "hack.cx",
       "content": "await nb.Hack();",
       "created": "2026-11-17T10:30:00+00:00",
-      "modified": "2026-11-17T10:30:00+00:00",
-      "serverId": "98a3870e-58cb-5079-93b5-bb06f209320b"
+      "modified": "2026-11-17T10:30:00+00:00"
     }
   ],
   "processes": [
     {
       "filename": "weaken.cx",
+      "serverId": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e",
       "args": [],
-      "threads": 1,
-      "serverId": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e"
+      "threads": 1
     },
     {
       "filename": "hack.cx",
+      "serverId": "98a3870e-58cb-5079-93b5-bb06f209320b",
       "args": [
         "foodnstuff",
         "two words"
       ],
-      "threads": 2,
-      "serverId": "98a3870e-58cb-5079-93b5-bb06f209320b"
+      "threads": 2
     }
   ]
 }
