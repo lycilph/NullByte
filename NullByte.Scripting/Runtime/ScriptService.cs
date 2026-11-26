@@ -150,10 +150,10 @@ public sealed class ScriptService : IScriptOperations, IScriptService
         {
             // Create the process with its own cancellation source,
             // thread count and RAM allocation.
-            process = processManager.Create(filename, hostname, args.ToArray(), threads, ramCost);
+            process = processManager.Create(filename, server.Id, args.ToArray(), threads, ramCost);
 
             // Create a distinct API instance for this process.
-            var api = apiFactory.Create(this, process.Hostname, process.Threads, process.Cancellation.Token);
+            var api = apiFactory.Create(this, process.HostServerId, process.Threads, process.Cancellation.Token);
 
             // Start execution without waiting for the script to finish.
             process.Execution = RunAndObserveAsync(process, compiledScript, api);
@@ -196,13 +196,13 @@ public sealed class ScriptService : IScriptOperations, IScriptService
         var server = ResolveTarget(hostname);
 
         return processManager
-            .GetForHost(server.Hostname)
+            .GetForHost(server.Id)
             .Select(p => new ScriptProcessInfo(
                 p.Pid,
                 p.Filename,
                 p.Args,
                 p.Threads,
-                p.Hostname,
+                gameState.Network.GetServer(p.HostServerId).Hostname,
                 p.State))
             .ToList();
     }
@@ -216,7 +216,7 @@ public sealed class ScriptService : IScriptOperations, IScriptService
             .Select(process => new ProcessSave
             {
                 Filename = process.Filename,
-                Hostname = process.Hostname,
+                Hostname = gameState.Network.GetServer(process.HostServerId).Hostname,
                 Args = process.Args.ToArray(),
                 Threads = process.Threads
             })
@@ -232,7 +232,7 @@ public sealed class ScriptService : IScriptOperations, IScriptService
         var results = new List<ScriptRestoreResult>();
         foreach (var process in saved)
         {
-            var result = await Start(process.Hostname, process.Filename, process.Args, process.Threads);
+            var result = await Start(gameState.Network.GetServer(process.HostServerId).Hostname, process.Filename, process.Args, process.Threads);
             results.Add(new ScriptRestoreResult(process, result));
         }
 
@@ -356,7 +356,7 @@ public sealed class ScriptService : IScriptOperations, IScriptService
 
     private void ReleaseProcessRam(ScriptProcess process)
     {
-        var server = gameState.Network.GetServer(process.Hostname);
+        var server = gameState.Network.GetServer(process.HostServerId);
 
         // The process owns the amount reserved when it was started.
         // Release it exactly once.
