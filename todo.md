@@ -4,6 +4,8 @@
   - Consolidate startup/fixture/infrastructure code in a shared class
   - Use Mocks where appropriate
   - Look at the tests themselves
+	- Done: ConsoleUI.Tests, Core.Tests
+	- Missing: Editor.Tests, Scripting.Tests, Shell.Tests
 
 # Todo
 	
