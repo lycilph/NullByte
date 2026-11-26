@@ -133,6 +133,7 @@ public sealed class ScriptCompilerTests
     [InlineData("var thread = new System.Threading.Thread(() => { });")]
     [InlineData("var name = typeof(string).Assembly.GetName();")]
     [InlineData("var error = System.Runtime.InteropServices.Marshal.GetLastWin32Error();")]
+    [InlineData("var value = System.IO.File.ReadAllText(\"file.txt\");")]
     public void Compile_WithBannedApiUsage_Fails(string source)
     {
         var result = compiler.Compile(source, "security.cx");
@@ -145,7 +146,6 @@ public sealed class ScriptCompilerTests
     [Theory]
     [InlineData("var process = new System.Diagnostics.Process();", "CS0234")]
     [InlineData("var client = new System.Net.Http.HttpClient();", "CS0234")]
-    [InlineData("var value = System.IO.File.ReadAllText(\"file.txt\");", "CS0234")]
     public void Compile_WithUnavailableHostApiReference_Fails(string source, string diagnosticId)
     {
         var result = compiler.Compile(source, "unavailable-host-api.cx");
