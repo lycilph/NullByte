@@ -56,8 +56,7 @@ internal static class ScriptSecurityAnalyzer
             var model = compilation.GetSemanticModel(tree);
             var reported = new HashSet<(int Start, int Length, string Id)>();
 
-            foreach (var loop in tree.GetRoot().DescendantNodes().OfType<StatementSyntax>()
-                .Where(IsLoopStatement))
+            foreach (var loop in tree.GetRoot().DescendantNodes().OfType<StatementSyntax>().Where(IsLoopStatement))
             {
                 if (ContainsAwait(loop))
                     continue;
