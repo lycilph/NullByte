@@ -205,7 +205,7 @@ public class SaveGameTests
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(Normalize(GoldenSaves.V5), again);
+        Assert.Equal(Normalize(GoldenSaves.V6), again);
     }
 
     [Fact]
