@@ -97,7 +97,7 @@ public sealed class NullByteApi : INullByteApi
     public double GetServerSecurityLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).Security;
     public double GetServerMinSecurityLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).MinimumSecurity;
 
-    public double GetServerRequiredHackingLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).RequiredHackingLevel;
+    public int GetServerRequiredHackingLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).RequiredHackingLevel;
     public double GetServerMaxRam(string hostname = "") => GetServer(GetTargetHostname(hostname)).MaximumRam;
     public double GetServerUsedRam(string hostname = "") => GetServer(GetTargetHostname(hostname)).UsedRam;
     public bool HasRootAccess(string hostname = "") => GetServer(GetTargetHostname(hostname)).HasRootAccess;

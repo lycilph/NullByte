@@ -627,7 +627,7 @@ public sealed class ServerActionsTests
     {
         public Player Player => World.Player;
         public GameScheduler Scheduler => World.Scheduler;
-        public HackingFormulas Formulas => World.HackingFormulas;
+        public ServerOperationFormulas Formulas => World.HackingFormulas;
         public ServerActions Actions => World.ServerActions;
     }
 }

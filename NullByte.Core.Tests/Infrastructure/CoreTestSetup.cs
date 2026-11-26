@@ -61,13 +61,13 @@ internal sealed class CoreTestWorld
         Scheduler = new GameScheduler(Clock);
         Output = new RecordingOutput();
 
-        HackingFormulas = new HackingFormulas(balance);
+        SkillFormulas = new SkillFormulas(balance);
+        HackingFormulas = new ServerOperationFormulas(balance, SkillFormulas);
         BotnetFormulas = new BotnetFormulas(balance);
         NetworkFormulas = new NetworkFormulas(balance);
-        SkillFormulas = new SkillFormulas(balance);
         ActivityFormulas = new ActivityFormulas(balance);
 
-        serverActions = new(() => new ServerActions(State, Scheduler, HackingFormulas, Random));
+        serverActions = new(() => new ServerActions(State, Scheduler, HackingFormulas, SkillFormulas, Random));
         networkService = new(() => new NetworkService(State, Scheduler, NetworkFormulas));
         botnetService = new(() => new BotnetService(State, BotnetFormulas));
         activityService = new(() => new ActivityService(State, Catalog, ActivityFormulas));
@@ -86,7 +86,7 @@ internal sealed class CoreTestWorld
     public GameScheduler Scheduler { get; }
     public RecordingOutput Output { get; }
 
-    public HackingFormulas HackingFormulas { get; }
+    public ServerOperationFormulas HackingFormulas { get; }
     public BotnetFormulas BotnetFormulas { get; }
     public NetworkFormulas NetworkFormulas { get; }
     public SkillFormulas SkillFormulas { get; }
@@ -125,17 +125,16 @@ internal sealed class CoreTestWorld
         => new(
             State,
             Scheduler,
-            NetworkService,
-            BotnetService,
-            ServerActions,
-            ActivityService,
-            HackingFormulas,
-            BotnetFormulas,
+            networkService.Value,
+            botnetService.Value,
+            serverActions.Value,
+            activityService.Value,
             SkillFormulas,
+            BotnetFormulas,
             scriptOperations,
             Output,
             hostname,
-            threads,
+            threads, 
             cancellationToken);
 }
 
@@ -165,7 +164,7 @@ internal static class CoreTestSetup
                 network.Connect(home.Hostname, server.Hostname);
         }
 
-        var experience = new HackingFormulas(balance).CalculateExperienceForHackingLevel(options.HackingLevel);
+        var experience = new SkillFormulas(balance).CalculateExperienceForLevel(SkillKind.Hacking, options.HackingLevel);
         var player = new Player(home.Hostname, options.Money, experience);
 
         return new CoreTestWorld(

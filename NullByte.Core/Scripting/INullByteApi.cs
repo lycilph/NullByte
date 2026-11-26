@@ -63,7 +63,7 @@ public interface INullByteApi
 
     /// <summary>Gets the required hacking level of a server.</summary>
     [RamCost(0.1)]
-    double GetServerRequiredHackingLevel(string hostname = "");
+    int GetServerRequiredHackingLevel(string hostname = "");
 
     /// <summary>Gets the maximum ram of a server.</summary>
     [RamCost(0.1)]
