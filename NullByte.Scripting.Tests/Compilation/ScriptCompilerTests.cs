@@ -375,7 +375,7 @@ public sealed class ScriptCompilerTests
     [InlineData("\t")]
     public void Compile_WithInvalidFileName_Throws(string fileName)
     {
-        Assert.Throws<ArgumentException>(() => compiler.Compile("nb.Print(\"Hello\");",fileName));
+        Assert.Throws<ArgumentException>(() => compiler.Compile("nb.Print(\"Hello\");", fileName));
     }
 
     [Fact]
@@ -470,7 +470,7 @@ public sealed class ScriptCompilerTests
 
     private sealed class TestLoadContext : AssemblyLoadContext
     {
-        public TestLoadContext() : base(isCollectible: true) {}
+        public TestLoadContext() : base(isCollectible: true) { }
 
         protected override Assembly? Load(AssemblyName assemblyName) => null;
     }
