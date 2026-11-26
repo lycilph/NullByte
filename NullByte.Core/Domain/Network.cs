@@ -100,11 +100,14 @@ public sealed class Network
     /// <summary>
     /// Gets all servers directly connected to the specified server.
     /// </summary>
-    public IReadOnlyList<Server> GetNeighbors(string hostname)
-    {
-        var server = GetServer(hostname);
+    public IReadOnlyList<Server> GetNeighbors(string hostname) => GetNeighbors(GetServer(hostname).Id);
 
-        return connections[server.Id]
+    /// <summary>Gets all servers directly connected to the specified server identity.</summary>
+    public IReadOnlyList<Server> GetNeighbors(ServerId serverId)
+    {
+        _ = GetServer(serverId);
+
+        return connections[serverId]
             .Select(neighbor => serversById[neighbor])
             .OrderBy(server => server.Hostname, StringComparer.Ordinal)
             .ToArray();
@@ -114,11 +117,14 @@ public sealed class Network
     /// Determines whether two servers are directly connected.
     /// </summary>
     public bool AreConnected(string firstHostname, string secondHostname)
-    {
-        var first = GetServer(firstHostname);
-        var second = GetServer(secondHostname);
+        => AreConnected(GetServer(firstHostname).Id, GetServer(secondHostname).Id);
 
-        return connections[first.Id].Contains(second.Id);
+    /// <summary>Determines whether two server identities are directly connected.</summary>
+    public bool AreConnected(ServerId first, ServerId second)
+    {
+        _ = GetServer(first);
+        _ = GetServer(second);
+        return connections[first].Contains(second);
     }
 
     public IReadOnlyList<(string First, string Second)> GetConnections()
