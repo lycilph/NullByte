@@ -1,6 +1,7 @@
 ﻿
 using NullByte.Core.Domain;
 using NullByte.Core.Scripting;
+using NullByte.Core.Domain;
 using NullByte.Core.Simulation;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.LanguageService;
@@ -23,7 +24,7 @@ internal sealed class InlineGameThread : IGameThread
 
 internal sealed class FakeApiFactory : INullByteApiFactory
 {
-    public INullByteApi Create(IScriptOperations scriptOperations, string processHostname, int threads, CancellationToken cancellationToken)
+    public INullByteApi Create(IScriptOperations scriptOperations, ServerId processHostServerId, int threads, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
