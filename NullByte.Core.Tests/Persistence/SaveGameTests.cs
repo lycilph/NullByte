@@ -181,11 +181,11 @@ public class SaveGameTests
     [Fact]
     public void The_current_golden_file_loads_and_saves_back_unchanged()
     {
-        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V5));
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V6));
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(Normalize(GoldenSaves.V5), again);
+        Assert.Equal(Normalize(GoldenSaves.V6), again);
     }
 
     [Fact]
@@ -195,7 +195,7 @@ public class SaveGameTests
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(Normalize(GoldenSaves.V5), again);
+        Assert.Equal(Normalize(GoldenSaves.V6), again);
     }
 
     [Fact]
@@ -299,7 +299,7 @@ public class SaveGameTests
     }
 
     [Theory]
-    [InlineData("player.currentHostname", "\"nowhere\"")]
+    [InlineData("player.currentServerId", "\"00000000-0000-0000-0000-000000000000\"")]
     [InlineData("player.money", "-5")]
     [InlineData("botnet.nodes[0].ram", "3")]
     [InlineData("files[0].name", "\"../escape.cx\"")]
