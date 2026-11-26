@@ -113,6 +113,25 @@ public sealed class NetworkTests
     }
 
     [Fact]
+    public void GetNeighbors_ByServerIdReturnsDirectNeighbors()
+    {
+        var network = CreateLinearNetwork(out var home, out _, out _);
+
+        var neighbor = Assert.Single(network.GetNeighbors(home.Id));
+
+        Assert.Equal("n00dles", neighbor.Hostname);
+    }
+
+    [Fact]
+    public void AreConnected_ByServerIdReturnsConnectionState()
+    {
+        var network = CreateLinearNetwork(out var home, out var n00dles, out var sigmaCosmetics);
+
+        Assert.True(network.AreConnected(home.Id, n00dles.Id));
+        Assert.False(network.AreConnected(home.Id, sigmaCosmetics.Id));
+    }
+
+    [Fact]
     public void Connect_DuplicateConnectionDoesNotCreateDuplicateNeighbor()
     {
         var network = new Network();
