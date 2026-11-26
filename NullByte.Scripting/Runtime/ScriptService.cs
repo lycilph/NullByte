@@ -216,7 +216,7 @@ public sealed class ScriptService : IScriptOperations, IScriptService
             .Select(process => new ProcessSave
             {
                 Filename = process.Filename,
-                Hostname = gameState.Network.GetServer(process.HostServerId).Hostname,
+                ServerId = process.HostServerId.ToString(),
                 Args = process.Args.ToArray(),
                 Threads = process.Threads
             })
@@ -232,7 +232,8 @@ public sealed class ScriptService : IScriptOperations, IScriptService
         var results = new List<ScriptRestoreResult>();
         foreach (var process in saved)
         {
-            var result = await Start(process.Hostname, process.Filename, process.Args, process.Threads);
+            var server = gameState.Network.GetServer(ServerId.Parse(process.ServerId));
+            var result = await Start(server.Hostname, process.Filename, process.Args, process.Threads);
             results.Add(new ScriptRestoreResult(process, result));
         }
 
