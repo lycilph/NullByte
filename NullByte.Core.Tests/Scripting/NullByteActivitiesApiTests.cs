@@ -5,7 +5,7 @@ using NullByte.Core.Formulas;
 using NullByte.Core.Scripting;
 using NullByte.Core.Scripting.Activities;
 using NullByte.Core.Services;
-using NullByte.Core.Tests.Activities;
+using NullByte.Core.Tests.Infrastructure;
 
 namespace NullByte.Core.Tests.Scripting;
 

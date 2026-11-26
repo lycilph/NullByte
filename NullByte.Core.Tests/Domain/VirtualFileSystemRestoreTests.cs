@@ -1,5 +1,5 @@
 ﻿using NullByte.Core.Domain;
-using static NullByte.Core.Tests.Domain.FileSystemTestSupport;
+using static NullByte.Core.Tests.Infrastructure.TestFileSystem;
 
 namespace NullByte.Core.Tests.Domain;
 

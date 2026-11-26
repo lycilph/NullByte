@@ -1,7 +1,6 @@
 ﻿using NullByte.Core.Domain;
-using NullByte.Core.Formulas;
 using NullByte.Core.Services;
-using NullByte.Core.Time;
+using NullByte.Core.Tests.Infrastructure;
 
 namespace NullByte.Core.Tests.Services;
 
@@ -308,77 +307,29 @@ public sealed class NetworkServiceTests
 
     private static NetworkFixture CreateFixture()
     {
-        var home =
-            new Server(
-                hostname: "home",
-                maximumMoney: 0,
-                startingMoney: 0,
-                baseDifficulty: 5,
-                minimumSecurity: 1,
-                startingSecurity: 1,
-                requiredHackingLevel: 1,
-                growthParameter: 1.1,
-                maximumRam: 32,
-                hasRootAccess: true);
+        var home = TestServers.Home();
+        var n00dles = TestServers.Create(
+            "n00dles", maximumMoney: 50_000, startingMoney: 25_000, startingSecurity: 5);
+        var foodNStuff = TestServers.Create(
+            "foodnstuff", maximumMoney: 100_000, startingMoney: 60_000, minimumSecurity: 2, startingSecurity: 8);
+        var sigmaCosmetics = TestServers.Create(
+            "sigma-cosmetics", maximumMoney: 150_000, startingMoney: 75_000, minimumSecurity: 3, startingSecurity: 10);
 
-        var n00dles =
-            new Server(
-                hostname: "n00dles",
-                maximumMoney: 50_000,
-                startingMoney: 25_000,
-                baseDifficulty: 5,
-                minimumSecurity: 1,
-                startingSecurity: 5,
-                requiredHackingLevel: 1,
-                growthParameter: 1.1,
-                maximumRam: 32);
-
-        var foodNStuff =
-            new Server(
-                hostname: "foodnstuff",
-                maximumMoney: 100_000,
-                minimumSecurity: 2,
-                startingMoney: 60_000,
-                baseDifficulty: 5,
-                startingSecurity: 8,
-                requiredHackingLevel: 1,
-                growthParameter: 1.1,
-                maximumRam: 32);
-
-        var sigmaCosmetics =
-            new Server(
-                hostname: "sigma-cosmetics",
-                maximumMoney: 150_000,
-                baseDifficulty: 5,
-                minimumSecurity: 3,
-                startingMoney: 75_000,
-                startingSecurity: 10,
-                requiredHackingLevel: 1,
-                growthParameter: 1.1,
-                maximumRam: 32);
-
-        var network =
-            new Network();
-
-        network.AddServer(home);
-        network.AddServer(n00dles);
-        network.AddServer(foodNStuff);
-        network.AddServer(sigmaCosmetics);
-
-        network.Connect(home.Hostname, n00dles.Hostname);
-        network.Connect(home.Hostname, foodNStuff.Hostname);
-        network.Connect(n00dles.Hostname, sigmaCosmetics.Hostname);
-
-        var scheduler = new GameScheduler(new FakeGameClock());
-        var networkFormulas = new NetworkFormulas(new Configuration.BalanceConfig());
-
-        var player = new Player(homeHostname: home.Hostname);
-        var gameState = new GameState(player, network);
-        var service = new NetworkService(gameState, scheduler, networkFormulas);
+        // home - n00dles - sigma-cosmetics, and home - foodnstuff.
+        var world = CoreTestSetup.CreateWorld(new CoreTestOptions
+        {
+            Servers = [home, n00dles, foodNStuff, sigmaCosmetics],
+            Connections =
+            [
+                (home.Hostname, n00dles.Hostname),
+                (home.Hostname, foodNStuff.Hostname),
+                (n00dles.Hostname, sigmaCosmetics.Hostname)
+            ]
+        });
 
         return new NetworkFixture(
-            Player: player,
-            Service: service,
+            Player: world.Player,
+            Service: world.NetworkService,
             Home: home,
             N00dles: n00dles,
             FoodNStuff: foodNStuff,

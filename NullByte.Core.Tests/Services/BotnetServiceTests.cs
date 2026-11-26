@@ -1,7 +1,7 @@
 ﻿using NullByte.Core.Configuration;
 using NullByte.Core.Domain;
-using NullByte.Core.Formulas;
 using NullByte.Core.Services;
+using NullByte.Core.Tests.Infrastructure;
 
 namespace NullByte.Core.Tests.Services;
 
@@ -167,24 +167,8 @@ public sealed class BotnetServiceTests
 
     private static (GameState State, BotnetService Service) Create(double money, BalanceConfig? balance = null)
     {
-        var home = new Server(
-            hostname: "home",
-            maximumMoney: 0,
-            startingMoney: 0,
-            baseDifficulty: 5,
-            minimumSecurity: 1,
-            startingSecurity: 1,
-            requiredHackingLevel: 1,
-            growthParameter: 0,
-            maximumRam: 8,
-            hasRootAccess: true);
+        var world = CoreTestSetup.CreateWorld(new CoreTestOptions { Money = money, Balance = balance });
 
-        var network = new Network();
-        network.AddServer(home);
-
-        var state = new GameState(new Player("home", startingMoney: money), network);
-        var service = new BotnetService(state, new BotnetFormulas(balance ?? new BalanceConfig()));
-
-        return (state, service);
+        return (world.State, world.BotnetService);
     }
 }

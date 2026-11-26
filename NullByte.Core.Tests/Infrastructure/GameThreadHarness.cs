@@ -1,6 +1,6 @@
 ﻿using NullByte.Core.Threading;
 
-namespace NullByte.Core.Tests.Helpers;
+namespace NullByte.Core.Tests.Infrastructure;
 
 /// <summary>
 /// Runs a test body on a dedicated thread that is bound to a

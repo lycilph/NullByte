@@ -1,4 +1,4 @@
-﻿using NullByte.Core.Tests.Helpers;
+﻿using NullByte.Core.Tests.Infrastructure;
 using NullByte.Core.Time;
 
 namespace NullByte.Core.Tests.Time;

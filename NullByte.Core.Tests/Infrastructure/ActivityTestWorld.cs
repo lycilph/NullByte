@@ -7,7 +7,7 @@ using NullByte.Core.Services;
 using NullByte.Core.Systems;
 using NullByte.Core.World;
 
-namespace NullByte.Core.Tests.Activities;
+namespace NullByte.Core.Tests.Infrastructure;
 
 /// <summary>
 /// A small, deterministic world for the activity tests: round numbers, so the expected values are easy to check by hand.
