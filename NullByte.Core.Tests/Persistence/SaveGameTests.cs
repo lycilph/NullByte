@@ -209,6 +209,25 @@ public class SaveGameTests
     }
 
     [Fact]
+    public void The_version_5_migration_assigns_stable_ids_and_rewrites_server_references()
+    {
+        var save = JsonNode.Parse(GoldenSaves.V5)!.AsObject();
+
+        new V5ToV6Migration().Migrate(save);
+
+        Assert.Equal(6, save["version"]?.GetValue<int>() ?? 5); // SaveMigrator normally writes the version after migration.
+        var servers = save["servers"]!.AsArray();
+        Assert.All(servers, server => Assert.False(string.IsNullOrWhiteSpace(server!["id"]?.GetValue<string>())));
+
+        Assert.Equal(HomeServerId, save["player"]!["homeServerId"]!.GetValue<string>());
+        Assert.Equal(N00dlesServerId, save["player"]!["currentServerId"]!.GetValue<string>());
+        Assert.Equal(HomeServerId, save["processes"]![0]!["serverId"]!.GetValue<string>());
+        Assert.Equal(N00dlesServerId, save["processes"]![1]!["serverId"]!.GetValue<string>());
+        Assert.Null(save["player"]!["homeHostname"]);
+        Assert.Null(save["processes"]![0]!["hostname"]);
+    }
+
+    [Fact]
     public void The_version_5_migration_leaves_every_server_without_a_backdoor()
     {
         var save = JsonNode.Parse(GoldenSaves.V4)!.AsObject();
