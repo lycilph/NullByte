@@ -10,7 +10,8 @@ namespace NullByte.Scripting.Compilation;
 /// </summary>
 internal static class ScriptSecurityAnalyzer
 {
-    private const string DiagnosticId = "NB1007";
+    private const string SecurityDiagnosticId = "NB1007";
+    private const string BlockingDiagnosticId = "NB1008";
 
     private static readonly (string Namespace, string Message)[] BannedNamespaces =
     [
@@ -29,27 +30,45 @@ internal static class ScriptSecurityAnalyzer
         ("System.Threading.WaitHandle", "Direct synchronization with host wait handles is not available to scripts.")
     ];
 
+    private static readonly (string Namespace, string TypeMetadataName, string MemberName)[] BlockingMembers =
+    [
+        ("System.Threading.Tasks", "Task", "Wait"),
+        ("System.Threading.Tasks", "Task", "WaitAll"),
+        ("System.Threading.Tasks", "Task", "WaitAny"),
+        ("System.Threading.Tasks", "Task`1", "Result"),
+        ("System.Threading.Tasks", "ValueTask`1", "Result"),
+        ("System.Threading", "Monitor", "Wait"),
+        ("System.Threading", "SemaphoreSlim", "Wait"),
+        ("System.Threading", "ManualResetEventSlim", "Wait"),
+        ("System.Threading", "CountdownEvent", "Wait"),
+        ("System.Threading", "Barrier", "SignalAndWait"),
+        ("System.Threading", "SpinWait", "SpinUntil"),
+        ("System.Threading", "WaitHandle", "WaitOne"),
+        ("System.Threading", "WaitHandle", "WaitAny"),
+        ("System.Threading", "WaitHandle", "WaitAll")
+    ];
+
     public static IEnumerable<ScriptDiagnostic> Analyze(CSharpCompilation compilation, IEnumerable<SyntaxTree> trees)
     {
         foreach (var tree in trees)
         {
             var model = compilation.GetSemanticModel(tree);
-            var reported = new HashSet<(int Start, int Length, string Message)>();
+            var reported = new HashSet<(int Start, int Length, string Id)>();
 
             foreach (var node in tree.GetRoot().DescendantNodes())
             {
                 var symbol = GetReferencedSymbol(model, node);
-                if (symbol is null || !TryGetBannedMessage(symbol, out var message))
+                if (symbol is null || !TryGetDiagnostic(symbol, out var diagnosticId, out var message))
                     continue;
 
                 var location = node.GetLocation();
-                var key = (location.SourceSpan.Start, location.SourceSpan.Length, message);
+                var key = (location.SourceSpan.Start, location.SourceSpan.Length, diagnosticId);
                 if (!reported.Add(key))
                     continue;
 
                 var span = location.GetMappedLineSpan();
                 yield return new ScriptDiagnostic(
-                    DiagnosticId,
+                    diagnosticId,
                     message,
                     ScriptDiagnosticSeverity.Error,
                     span.StartLinePosition.Line + 1,
@@ -70,7 +89,7 @@ internal static class ScriptSecurityAnalyzer
         _ => null
     };
 
-    private static bool TryGetBannedMessage(ISymbol symbol, out string message)
+    private static bool TryGetDiagnostic(ISymbol symbol, out string diagnosticId, out string message)
     {
         for (var current = symbol; current is not null; current = current.ContainingSymbol)
         {
@@ -84,7 +103,24 @@ internal static class ScriptSecurityAnalyzer
                     string.Equals(typeName, rule.TypeName, StringComparison.Ordinal));
                 if (bannedType != default)
                 {
+                    diagnosticId = SecurityDiagnosticId;
                     message = bannedType.Message;
+                    return true;
+                }
+
+                if (IsBlockingMember(symbol, type))
+                {
+                    diagnosticId = BlockingDiagnosticId;
+                    message = "Synchronous waiting is not available to scripts. Use the asynchronous game API instead.";
+                    return true;
+                }
+
+                if (symbol.Name == "GetResult" &&
+                    type.ContainingNamespace?.ToDisplayString() == "System.Runtime.CompilerServices" &&
+                    type.MetadataName.Contains("Awaiter", StringComparison.Ordinal))
+                {
+                    diagnosticId = BlockingDiagnosticId;
+                    message = "Synchronous waiting through GetAwaiter().GetResult() is not available to scripts. Use await instead.";
                     return true;
                 }
             }
@@ -97,13 +133,25 @@ internal static class ScriptSecurityAnalyzer
                     namespaceName.StartsWith(rule.Namespace + ".", StringComparison.Ordinal));
                 if (bannedNamespace != default)
                 {
+                    diagnosticId = SecurityDiagnosticId;
                     message = bannedNamespace.Message;
                     return true;
                 }
             }
         }
 
+        diagnosticId = string.Empty;
         message = string.Empty;
         return false;
+    }
+
+    private static bool IsBlockingMember(ISymbol symbol, INamedTypeSymbol type)
+    {
+        var originalType = type.OriginalDefinition;
+        var typeNamespace = originalType.ContainingNamespace?.ToDisplayString();
+        return BlockingMembers.Any(rule =>
+            string.Equals(typeNamespace, rule.Namespace, StringComparison.Ordinal) &&
+            string.Equals(originalType.MetadataName, rule.TypeMetadataName, StringComparison.Ordinal) &&
+            string.Equals(symbol.Name, rule.MemberName, StringComparison.Ordinal));
     }
 }
