@@ -1,4 +1,5 @@
 ﻿using NullByte.Core.Scripting;
+using NullByte.Core.Domain;
 using NullByte.Scripting.Runtime;
 
 namespace NullByte.Scripting.Tests.Runtime;
@@ -12,7 +13,7 @@ public sealed class ScriptProcessManagerTests
 
         var first = manager.Create(
             "hack.cx",
-            "home",
+            ServerId.New(),
             [], 1, 1);
 
         var second = manager.Create(
@@ -35,7 +36,7 @@ public sealed class ScriptProcessManagerTests
             ["n00dles", "extra"], 1, 1);
 
         Assert.Equal("hack.cx", process.Filename);
-        Assert.Equal("home", process.Hostname);
+        Assert.True(process.HostServerId.IsValid);
         Assert.Equal(["n00dles", "extra"], process.Args);
         Assert.Equal(ScriptProcessState.Running, process.State);
     }
