@@ -1,4 +1,5 @@
 ﻿using NullByte.Core.Scripting;
+using NullByte.Core.Domain;
 
 namespace NullByte.Scripting.Runtime;
 
@@ -22,10 +23,9 @@ public sealed class ScriptProcessManager
     /// <summary>
     /// Creates and registers a new process.
     /// </summary>
-    public ScriptProcess Create(string filename, string hostname, IReadOnlyList<string> args, int threads, double ramCost)
+    public ScriptProcess Create(string filename, ServerId hostServerId, IReadOnlyList<string> args, int threads, double ramCost)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filename);
-        ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
         ArgumentNullException.ThrowIfNull(args);
         ArgumentOutOfRangeException.ThrowIfLessThan(threads, 1);
 
@@ -37,7 +37,7 @@ public sealed class ScriptProcessManager
         var process = new ScriptProcess(
             pid,
             filename,
-            hostname,
+            hostServerId,
             args,
             threads,
             ramCost,
@@ -53,9 +53,9 @@ public sealed class ScriptProcessManager
     /// </summary>
     public bool TryGet(int pid, out ScriptProcess? process) => processes.TryGetValue(pid, out process);
 
-    public IReadOnlyList<ScriptProcess> GetForHost(string hostname)
+    public IReadOnlyList<ScriptProcess> GetForHost(ServerId hostServerId)
         => processes.Values
-        .Where(p => string.Equals(p.Hostname, hostname, StringComparison.OrdinalIgnoreCase))
+        .Where(p => p.HostServerId == hostServerId)
         .OrderBy(p => p.Pid)
         .ToList();
 
