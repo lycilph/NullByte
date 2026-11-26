@@ -3,20 +3,22 @@
 namespace NullByte.Core.Domain;
 
 /// <summary>
-/// Represents the servers and topology of the game network. A server is identified
-/// by its hostname everywhere (case-insensitive), exactly as the player types it.
+/// Represents the servers and topology of the game network. Servers have immutable IDs
+/// and are also indexed by their player-facing hostname (case-insensitive).
 /// </summary>
 public sealed class Network
 {
-    private readonly Dictionary<string, Server> servers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Server> serversByHostname = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<ServerId, Server> serversById = new();
 
-    // Hostname -> hostnames of the directly connected servers.
+    // Hostname -> hostnames of the directly connected servers. This remains hostname-based
+    // until the internal-reference migration in the next implementation step.
     private readonly Dictionary<string, HashSet<string>> connections = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets all servers in the network.
     /// </summary>
-    public IReadOnlyCollection<Server> Servers => servers.Values;
+    public IReadOnlyCollection<Server> Servers => serversByHostname.Values;
 
     /// <summary>
     /// Adds a server to the network.
@@ -25,9 +27,13 @@ public sealed class Network
     {
         ArgumentNullException.ThrowIfNull(server);
 
-        if (!servers.TryAdd(server.Hostname, server))
+        if (serversById.ContainsKey(server.Id))
+            throw new InvalidOperationException($"A server with ID '{server.Id}' is already registered.");
+
+        if (!serversByHostname.TryAdd(server.Hostname, server))
             throw new InvalidOperationException($"A server with hostname '{server.Hostname}' already exists.");
 
+        serversById.Add(server.Id, server);
         connections.Add(server.Hostname, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
     }
 
@@ -54,9 +60,19 @@ public sealed class Network
         if (string.IsNullOrWhiteSpace(hostname))
             throw new ArgumentException("The hostname cannot be empty.", nameof(hostname));
 
-        return servers.TryGetValue(hostname, out var server)
+        return serversByHostname.TryGetValue(hostname, out var server)
             ? server
             : throw new KeyNotFoundException($"Server '{hostname}' does not exist.");
+    }
+
+    /// <summary>
+    /// Gets a server by its immutable ID.
+    /// </summary>
+    public Server GetServer(ServerId id)
+    {
+        return serversById.TryGetValue(id, out var server)
+            ? server
+            : throw new KeyNotFoundException($"Server with ID '{id}' does not exist.");
     }
 
     /// <summary>
@@ -70,7 +86,15 @@ public sealed class Network
             return false;
         }
 
-        return servers.TryGetValue(hostname, out server);
+        return serversByHostname.TryGetValue(hostname, out server);
+    }
+
+    /// <summary>
+    /// Attempts to get a server by its immutable ID.
+    /// </summary>
+    public bool TryGetServer(ServerId id, [NotNullWhen(true)] out Server? server)
+    {
+        return serversById.TryGetValue(id, out server);
     }
 
     /// <summary>
@@ -81,8 +105,8 @@ public sealed class Network
         var server = GetServer(hostname);
 
         return connections[server.Hostname]
-            .Select(neighbor => servers[neighbor])
-            .OrderBy(server => server.Hostname, StringComparer.Ordinal) // Order alphabetically by hostname
+            .Select(neighbor => serversByHostname[neighbor])
+            .OrderBy(server => server.Hostname, StringComparer.Ordinal)
             .ToArray();
     }
 
