@@ -1,4 +1,4 @@
-﻿using NullByte.Core.Scripting;
+using NullByte.Core.Scripting;
 using NullByte.Core.Domain;
 
 namespace NullByte.Scripting.Runtime;
@@ -19,9 +19,9 @@ public sealed class ScriptProcess
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pid, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(threads, 1);
-        
+
         ArgumentException.ThrowIfNullOrWhiteSpace(filename);
-        
+
         ArgumentNullException.ThrowIfNull(args);
         ArgumentNullException.ThrowIfNull(cancellation);
 
