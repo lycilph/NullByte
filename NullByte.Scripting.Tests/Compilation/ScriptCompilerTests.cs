@@ -128,6 +128,131 @@ public sealed class ScriptCompilerTests
         Assert.NotNull(result.Script);
     }
 
+    [Theory]
+    [InlineData("while (true) { nb.Print(\"loop\"); }")]
+    [InlineData("for (;;) { nb.Print(\"loop\"); }")]
+    [InlineData("do { nb.Print(\"loop\"); } while (true);")]
+    [InlineData("foreach (var value in new[] { 1, 2, 3 }) { nb.Print(value); }")]
+    public void Compile_WithLoopWithoutAwait_Fails(string source)
+    {
+        var result = compiler.Compile(source, "synchronous-loop.cx");
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Script);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1009");
+    }
+
+    [Fact]
+    public void Compile_WithLoopAwaitingInBody_Succeeds()
+    {
+        const string source = """
+            while (true)
+            {
+                await nb.Sleep(TimeSpan.FromMilliseconds(1));
+            }
+            """;
+
+        var result = compiler.Compile(source, "cooperative-loop.cx");
+
+        AssertCompilationSucceeded(result);
+    }
+
+    [Fact]
+    public void Compile_WithAwaitOnlyInsideLocalFunction_DoesNotMakeLoopCooperative()
+    {
+        const string source = """
+            async Task WaitAsync() => await Task.Delay(1);
+
+            while (true)
+            {
+                WaitAsync();
+            }
+            """;
+
+        var result = compiler.Compile(source, "nested-await.cx");
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1009");
+    }
+
+    [Theory]
+    [InlineData("var value = System.Environment.GetEnvironmentVariable(\"HOME\");")]
+    [InlineData("var thread = new System.Threading.Thread(() => { });")]
+    [InlineData("var name = typeof(string).Assembly.GetName();")]
+    [InlineData("var error = System.Runtime.InteropServices.Marshal.GetLastWin32Error();")]
+    [InlineData("var value = System.IO.File.ReadAllText(\"file.txt\");")]
+    public void Compile_WithBannedApiUsage_Fails(string source)
+    {
+        var result = compiler.Compile(source, "security.cx");
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Script);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1007");
+    }
+
+    [Theory]
+    [InlineData("var process = new System.Diagnostics.Process();", "CS0234")]
+    [InlineData("var client = new System.Net.Http.HttpClient();", "CS0234")]
+    public void Compile_WithUnavailableHostApiReference_Fails(string source, string diagnosticId)
+    {
+        var result = compiler.Compile(source, "unavailable-host-api.cx");
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Script);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == diagnosticId);
+    }
+
+    [Theory]
+    [InlineData("Task.Delay(TimeSpan.FromMilliseconds(1)).Wait();")]
+    [InlineData("Task.WaitAll(Task.Delay(1));")]
+    [InlineData("var task = Task.FromResult(42); var value = task.Result;")]
+    [InlineData("var valueTask = new ValueTask<int>(42); var value = valueTask.Result;")]
+    [InlineData("System.Threading.Monitor.Wait(new object());")]
+    [InlineData("new System.Threading.SemaphoreSlim(0).Wait();")]
+    [InlineData("new System.Threading.ManualResetEventSlim().Wait();")]
+    [InlineData("new System.Threading.CountdownEvent(1).Wait();")]
+    [InlineData("new System.Threading.Barrier(1).SignalAndWait();")]
+    [InlineData("System.Threading.SpinWait.SpinUntil(() => true);")]
+    [InlineData("Task.Delay(1).GetAwaiter().GetResult();")]
+    public void Compile_WithSynchronousBlockingApiUsage_Fails(string source)
+    {
+        var result = compiler.Compile(source, "blocking-api.cx");
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Script);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1008");
+    }
+
+    [Fact]
+    public void Compile_WithAsynchronousWaiting_Succeeds()
+    {
+        const string source = "await Task.Delay(TimeSpan.FromMilliseconds(1)); await nb.Sleep(TimeSpan.FromSeconds(1));";
+
+        var result = compiler.Compile(source, "async-waiting.cx");
+
+        AssertCompilationSucceeded(result);
+    }
+
+    [Fact]
+    public void Compile_WithBannedNamespaceUsingButNoApiUsage_Succeeds()
+    {
+        const string source = "using System.IO; var value = 42; nb.Print(value);";
+
+        var result = compiler.Compile(source, "unused-namespace.cx");
+
+        AssertCompilationSucceeded(result);
+    }
+
+    [Fact]
+    public void Compile_WithTaskAwait_Succeeds()
+    {
+        const string source = "await Task.Delay(TimeSpan.FromMilliseconds(1));";
+
+        var result = compiler.Compile(source, "task.cx");
+
+        AssertCompilationSucceeded(result);
+    }
+
     [Fact]
     public void Compile_WithUsingDirective_Succeeds()
     {
@@ -338,7 +463,7 @@ public sealed class ScriptCompilerTests
     [InlineData("\t")]
     public void Compile_WithInvalidFileName_Throws(string fileName)
     {
-        Assert.Throws<ArgumentException>(() => compiler.Compile("nb.Print(\"Hello\");",fileName));
+        Assert.Throws<ArgumentException>(() => compiler.Compile("nb.Print(\"Hello\");", fileName));
     }
 
     [Fact]
@@ -433,7 +558,7 @@ public sealed class ScriptCompilerTests
 
     private sealed class TestLoadContext : AssemblyLoadContext
     {
-        public TestLoadContext() : base(isCollectible: true) {}
+        public TestLoadContext() : base(isCollectible: true) { }
 
         protected override Assembly? Load(AssemblyName assemblyName) => null;
     }

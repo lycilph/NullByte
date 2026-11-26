@@ -107,3 +107,11 @@ The rules themselves are stated in `ARCHITECTURE.md`; this file records why they
 **Why:** Higher-tier facilities are a paid progression upgrade with better rewards. Applying their experience bonus to free courses would let players bypass that progression advantage without paying for the course.
 
 **Consequence:** Enforce this rule in Core's activity-rate calculation so every client and activity entry point observes the same behavior. Free courses remain available at higher-tier facilities, but their facility experience multiplier is treated as 1.
+
+## 14. Script execution uses a practical sandbox, not hardened isolation
+
+**Decision:** Player scripts receive compile-time restrictions and runtime failure containment, but execute in-process without a hard execution-time limit or operating-system isolation.
+
+**Why:** The goal is to prevent common mistakes and ordinary attempts to access the host environment without introducing the complexity and overhead of a hardened sandbox. The game is a hobby project, not a platform for executing hostile code.
+
+**Consequence:** Keep the reference allow-list, banned-API diagnostics, blocking-call checks, cooperative-loop guard and process-failure cleanup as defense-in-depth guardrails. Document their limitations clearly. Do not describe the scripting runtime as safe for determined attackers or arbitrary untrusted code.

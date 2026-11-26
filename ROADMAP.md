@@ -2,37 +2,44 @@
 
 This roadmap records the current development direction. Milestones are intended to represent coherent player-visible capabilities rather than arbitrary amounts of code.
 
-## Completed
 
-### M0–M3 — Foundation
+## M0–M3 — Foundation
+**Status: Completed**
 
 Core game model, initial world/network, simulation infrastructure, console shell and foundational gameplay were established.
 
-### M4 — Botnet
+## M4 — Botnet
+**Status: Completed**
 
 Botnet concepts, state, services and simulation were introduced.
 
-### M5–M6 — C# scripting
+## M5–M6 — C# scripting
+**Status: Completed**
 
 The C# scripting pipeline was established around Roslyn, including compilation, runtime execution, RAM analysis and the in-game script API.
 
-### M7 — Persistence and lifecycle
+## M7 — Persistence and lifecycle
+**Status: Completed**
 
 Save/load, autosave, versioned save data and migration infrastructure were established. Runtime execution is reconstructed rather than serialized as live objects.
 
-### M8 — VS Code integration
+## M8 — VS Code integration
+**Status: Completed**
 
 The external editor workflow was introduced, including the VS Code extension, virtual filesystem and language-service/editor features.
 
-### M9 — Includes
+## M9 — Includes
+**Status: Completed**
 
 Script includes and their source-resolution pipeline were added.
 
-### M10 — Activities
+## M10 — Activities
+**Status: Completed**
 
 Study/training, jobs and crimes were introduced using a shared activity lifecycle with focused/background modes and persistence.
 
-### M11 — Editor workflow
+## M11 — Editor workflow
+**Status: Completed**
 
 The editor workflow has been expanded with:
 
@@ -43,15 +50,13 @@ The editor workflow has been expanded with:
 - full-range diagnostic underlining in the VS Code extension, including source-mapped spans for included files.
 
 ## M12 — Sandbox and safety
+**Status: Completed**
 
-Planned work includes making player scripts safer and more contained:
+- Allow-listed .NET references and semantic analysis of banned host APIs.
+- Diagnostics for common synchronous blocking APIs and non-cooperative loops.
+- Containment of script failures, including process state, RAM cleanup, load-context unloading and lifecycle observer isolation.
 
-- allow-listed references / banned API analysis;
-- prevention of blocking APIs;
-- protection against synchronous infinite loops;
-- containment of script failures.
-
-The goal is to make arbitrary player-authored C# useful without allowing it to compromise the game process.
+See [Script sandbox and safety](ARCHITECTURE.md#script-sandbox-and-safety) for the security model and its limitations.
 
 ## M13 — Progression and balance
 

@@ -147,6 +147,29 @@ Roslyn/editor work should operate on immutable source snapshots rather than live
 
 A running script keeps the compiled snapshot it started with. Editing a source file later affects future compilations, not the already-running process.
 
+### Script sandbox and safety
+
+Player scripts run as compiled .NET code inside the game process. The scripting layer applies practical safeguards at compilation and runtime, but it is not a hardened security boundary.
+
+The safeguards include:
+
+- allow-listed metadata references to limit which framework assemblies scripts can compile against;
+- semantic diagnostics for selected APIs that could access the host environment;
+- diagnostics for common synchronous blocking APIs;
+- a syntactic check that rejects loops without an asynchronous yield in their loop body;
+- runtime failure handling that records the process failure, releases reserved RAM, unloads the collectible script load context and isolates lifecycle observers from one another.
+
+The intended threat model is accidental mistakes and common attempts to access the host environment in a hobby game. It does not attempt to contain a determined attacker.
+
+Important limitations:
+
+- The banned-API list and reference allow-list reduce exposure; they do not prove that every reachable API is safe.
+- The loop check is syntactic. It does not prove that every path through a loop yields, nor does it prevent expensive but finite computations.
+- Script cancellation is cooperative and takes effect at asynchronous yield points. Arbitrary synchronous code cannot be safely interrupted by the current runtime.
+- There is no separate process boundary or hard execution-time limit.
+
+Treat these measures as guardrails for ordinary gameplay scripts, not as a substitute for operating-system-level isolation when running untrusted code.
+
 ## External editor architecture
 
 The VS Code extension communicates with the game through a WebSocket/JSON protocol:

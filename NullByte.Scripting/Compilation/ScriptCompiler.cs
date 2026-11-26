@@ -116,9 +116,14 @@ public sealed class ScriptCompiler : IScriptCompiler
 
         var compilation = CSharpCompilation.Create(
             $"NullByte.Script.{Guid.NewGuid():N}",
-            [usingsTree, generatedTree, ..includeTrees],
+            [usingsTree, generatedTree, .. includeTrees],
             references,
             CompilationOptions);
+
+        diagnostics.AddRange(ScriptSecurityAnalyzer.Analyze(compilation, [generatedTree, .. includeTrees]));
+
+        if (diagnostics.Any(diagnostic => diagnostic.Severity == ScriptDiagnosticSeverity.Error))
+            return ScriptCompilationResult.Failure(diagnostics);
 
         var ramCost = ScriptRamAnalyzer.Calculate(compilation, [generatedTree, .. includeTrees]);
 
@@ -146,7 +151,7 @@ public sealed class ScriptCompiler : IScriptCompiler
     internal static IReadOnlyList<MetadataReference> CreateScriptReferences()
     {
         var references = new Dictionary<string, MetadataReference>(StringComparer.OrdinalIgnoreCase);
-        
+
         var trustedPlatformAssemblies = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string;
         if (string.IsNullOrWhiteSpace(trustedPlatformAssemblies))
             throw new InvalidOperationException("The trusted platform assemblies could not be determined.");
