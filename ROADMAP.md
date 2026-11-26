@@ -44,7 +44,7 @@ The editor workflow has been expanded with:
 
 ## M12 — Sandbox and safety
 
-<badge>Completed</badge>
+**Status: Completed**
 
 Player scripts now have a practical, compile-time safety layer:
 
