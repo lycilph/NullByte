@@ -1,5 +1,6 @@
 ﻿using NullByte.Core.Domain;
 using NullByte.Core.Scripting;
+using NullByte.Core.Domain;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Loading;
 using NullByte.Scripting.Runtime;
@@ -66,7 +67,7 @@ public class ScriptServicePathTests
     [Fact]
     public void ScriptRunning_treats_differently_spelled_paths_as_the_same_script()
     {
-        processes.Create("tools/a.cx", ServerId.New(), [], 1, 0);
+        processes.Create("tools/a.cx", state.Network.GetServer("home").Id, [], 1, 0);
 
         Assert.True(service.ScriptRunning("tools/a.cx", "home"));
         Assert.True(service.ScriptRunning("/tools/a.cx", "home"));
