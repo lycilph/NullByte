@@ -36,7 +36,7 @@ public sealed class Player
     public ServerId HomeServerId { get; private set; }
 
     /// <summary>Gets the immutable identity of the server the player is currently connected to.</summary>
-    public ServerId CurrentServerId { get; private set; }
+    public ServerId CurrentServerId { get; internal set; }
 
     public string HomeHostname => network is null ? homeHostname : network.GetServer(HomeServerId).Hostname;
 
@@ -105,18 +105,25 @@ public sealed class Player
     public bool DiscoverServer(string hostname)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
-
         if (network is null)
         {
             if (!discoveredHostnames.Add(hostname))
                 return false;
+            ServerDiscovered?.Invoke(hostname);
+            return true;
         }
-        else
-        {
-            var id = network.GetServer(hostname).Id;
-            if (!discoveredServerIds.Add(id))
-                return false;
-        }
+
+        return DiscoverServer(network.GetServer(hostname).Id);
+    }
+
+    internal bool DiscoverServer(ServerId serverId)
+    {
+        if (network is null)
+            throw new InvalidOperationException("The player must be bound to a network before discovering a server by ID.");
+
+        var hostname = network.GetServer(serverId).Hostname;
+        if (!discoveredServerIds.Add(serverId))
+            return false;
 
         ServerDiscovered?.Invoke(hostname);
         return true;
