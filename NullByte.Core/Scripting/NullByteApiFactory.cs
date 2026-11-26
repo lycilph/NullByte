@@ -15,7 +15,7 @@ public sealed class NullByteApiFactory(
     FormulaSet formulas,
     IGameOutput output) : INullByteApiFactory
 {
-    public INullByteApi Create(IScriptOperations scriptOperations, string processHostname, int threads, CancellationToken cancellationToken)
+    public INullByteApi Create(IScriptOperations scriptOperations, ServerId processHostServerId, int threads, CancellationToken cancellationToken)
     {
         return new NullByteApi(
             gameState,
@@ -28,7 +28,7 @@ public sealed class NullByteApiFactory(
             formulas.Botnet,
             scriptOperations,
             output,
-            processHostname,
+            processHostServerId,
             threads,
             cancellationToken);
     }
