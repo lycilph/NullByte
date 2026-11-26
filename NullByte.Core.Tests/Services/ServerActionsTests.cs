@@ -171,7 +171,7 @@ public sealed class ServerActionsTests
         var multiThreadAction =
             multiThreadFixture.Actions.HackAsync(
                 multiThreadFixture.Target.Hostname,
-                threads: 5, 
+                threads: 5,
                 TestContext.Current.CancellationToken);
 
         await CompleteHackAsync(singleThreadFixture, singleThreadAction);

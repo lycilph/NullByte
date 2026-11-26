@@ -134,7 +134,7 @@ internal sealed class CoreTestWorld
             scriptOperations,
             Output,
             hostname,
-            threads, 
+            threads,
             cancellationToken);
 }
 

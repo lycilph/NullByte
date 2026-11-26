@@ -98,7 +98,7 @@ public sealed class NullByteApiTests
         var fixture = new ApiFixture();
 
         var level = fixture.World.SkillFormulas.CalculateLevel(SkillKind.Hacking, fixture.World.Player.HackingExperience);
-            
+
 
         Assert.Equal(level, fixture.Api.GetHackingLevel());
     }
