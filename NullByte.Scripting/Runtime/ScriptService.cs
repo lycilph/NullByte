@@ -232,7 +232,7 @@ public sealed class ScriptService : IScriptOperations, IScriptService
         var results = new List<ScriptRestoreResult>();
         foreach (var process in saved)
         {
-            var result = await Start(gameState.Network.GetServer(process.HostServerId).Hostname, process.Filename, process.Args, process.Threads);
+            var result = await Start(process.Hostname, process.Filename, process.Args, process.Threads);
             results.Add(new ScriptRestoreResult(process, result));
         }
 
@@ -248,7 +248,7 @@ public sealed class ScriptService : IScriptOperations, IScriptService
 
         // Paths are case-sensitive, just like the file system.
         return processManager
-            .GetForHost(server.Hostname)
+            .GetForHost(server.Id)
             .Any(p => string.Equals(path, p.Filename, StringComparison.Ordinal));
     }
 
