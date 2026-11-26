@@ -129,6 +129,53 @@ public sealed class ScriptCompilerTests
     }
 
     [Theory]
+    [InlineData("while (true) { nb.Print(\"loop\"); }")]
+    [InlineData("for (;;) { nb.Print(\"loop\"); }")]
+    [InlineData("do { nb.Print(\"loop\"); } while (true);")]
+    [InlineData("foreach (var value in new[] { 1, 2, 3 }) { nb.Print(value); }")]
+    public void Compile_WithLoopWithoutAwait_Fails(string source)
+    {
+        var result = compiler.Compile(source, "synchronous-loop.cx");
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Script);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1009");
+    }
+
+    [Fact]
+    public void Compile_WithLoopAwaitingInBody_Succeeds()
+    {
+        const string source = """
+            while (true)
+            {
+                await nb.Sleep(TimeSpan.FromMilliseconds(1));
+            }
+            """;
+
+        var result = compiler.Compile(source, "cooperative-loop.cx");
+
+        AssertCompilationSucceeded(result);
+    }
+
+    [Fact]
+    public void Compile_WithAwaitOnlyInsideLocalFunction_DoesNotMakeLoopCooperative()
+    {
+        const string source = """
+            async Task WaitAsync() => await Task.Delay(1);
+
+            while (true)
+            {
+                WaitAsync();
+            }
+            """;
+
+        var result = compiler.Compile(source, "nested-await.cx");
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1009");
+    }
+
+    [Theory]
     [InlineData("var value = System.Environment.GetEnvironmentVariable(\"HOME\");")]
     [InlineData("var thread = new System.Threading.Thread(() => { });")]
     [InlineData("var name = typeof(string).Assembly.GetName();")]
