@@ -75,7 +75,7 @@ public sealed class NullByteApi : INullByteApi
 
     public Task Sleep(TimeSpan duration) => scheduler.DelayAsync(duration, cancellationToken);
 
-    public Task<HackResult> Hack(string hostname = "") 
+    public Task<HackResult> Hack(string hostname = "")
         => serverActions.HackAsync(GetTargetHostname(hostname), processThreads, cancellationToken);
 
     public Task<GrowResult> Grow(string hostname = "")
@@ -97,13 +97,13 @@ public sealed class NullByteApi : INullByteApi
     public double GetServerSecurityLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).Security;
     public double GetServerMinSecurityLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).MinimumSecurity;
 
-    public double GetServerRequiredHackingLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).RequiredHackingLevel;
+    public int GetServerRequiredHackingLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).RequiredHackingLevel;
     public double GetServerMaxRam(string hostname = "") => GetServer(GetTargetHostname(hostname)).MaximumRam;
     public double GetServerUsedRam(string hostname = "") => GetServer(GetTargetHostname(hostname)).UsedRam;
     public bool HasRootAccess(string hostname = "") => GetServer(GetTargetHostname(hostname)).HasRootAccess;
 
     public IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "") => scriptOperations.ProcessesRunning(GetTargetHostname(hostname));
-    
+
     public async Task<int> RunAsync(string filename, params string[] args) => await scriptOperations.StartSimple(processHostname, filename, args, processThreads);
     public async Task<int> ExecAsync(string filename, string hostname, params string[] args) => await scriptOperations.StartSimple(hostname, filename, args, processThreads);
 
@@ -111,7 +111,7 @@ public sealed class NullByteApi : INullByteApi
     public int KillAll() => scriptOperations.KillAll();
     public bool ScriptRunning(string filename, string hostname = "") => scriptOperations.ScriptRunning(filename, GetTargetHostname(hostname));
     public double GetScriptRam(string filename, string hostname = "") => scriptOperations.GetScriptRam(filename, GetTargetHostname(hostname));
-    
+
     private string GetTargetHostname(string hostname) => string.IsNullOrWhiteSpace(hostname) ? processHostname : hostname;
 
     private Server GetServer(string hostname)

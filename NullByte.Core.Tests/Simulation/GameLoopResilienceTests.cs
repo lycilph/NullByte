@@ -1,6 +1,4 @@
-﻿using NullByte.Core.Simulation;
-using NullByte.Core.Threading;
-using NullByte.Core.Time;
+using NullByte.Core.Tests.Infrastructure;
 
 namespace NullByte.Core.Tests.Simulation;
 
@@ -10,30 +8,28 @@ namespace NullByte.Core.Tests.Simulation;
 /// </summary>
 public sealed class GameLoopResilienceTests
 {
-    private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
-
     [Fact]
-    public async Task CallbackFailure_WithHandler_ReportsExceptionAndKeepsRunning()
+    public async Task CallbackFailure_WithHandler_ReportsTheOriginalExceptionAndKeepsRunning()
     {
-        await using var gameLoop = CreateGameLoop(out _, out _);
+        await using var host = new GameLoopHost();
+        var loop = host.Loop;
 
-        var reported = new TaskCompletionSource<Exception>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
+        var reported = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
+        loop.UnhandledException += exception => reported.TrySetResult(exception);
 
-        gameLoop.UnhandledException += exception => reported.TrySetResult(exception);
+        await host.StartAsync();
 
-        gameLoop.Start();
-        await gameLoop.Started.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        loop.Post(_ => throw new InvalidOperationException("Script crashed."));
 
-        gameLoop.Post(_ => throw new InvalidOperationException("Script crashed."));
+        var exception = await GameLoopHost.WithinTimeout(reported.Task);
 
-        var exception = await reported.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
-
+        // Reported as the original exception, not wrapped in an AggregateException.
+        Assert.IsType<InvalidOperationException>(exception);
         Assert.Equal("Script crashed.", exception.Message);
-        Assert.True(gameLoop.IsRunning);
-        Assert.False(gameLoop.Completion.IsCompleted);
+        Assert.True(loop.IsRunning);
+        Assert.False(loop.Completion.IsCompleted);
 
-        var result = await gameLoop.InvokeAsync(() => Task.FromResult(42)).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        var result = await GameLoopHost.WithinTimeout(loop.InvokeAsync(() => Task.FromResult(42)));
 
         Assert.Equal(42, result);
     }
@@ -41,13 +37,13 @@ public sealed class GameLoopResilienceTests
     [Fact]
     public async Task CallbackFailure_WithHandler_ReportsEveryFailure()
     {
-        await using var gameLoop = CreateGameLoop(out _, out _);
+        await using var host = new GameLoopHost();
+        var loop = host.Loop;
 
         var messages = new List<string>();
-        var allReported = new TaskCompletionSource(
-            TaskCreationOptions.RunContinuationsAsynchronously);
+        var allReported = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        gameLoop.UnhandledException += exception =>
+        loop.UnhandledException += exception =>
         {
             // Raised on the game thread, so no locking is needed here.
             messages.Add(exception.Message);
@@ -56,66 +52,65 @@ public sealed class GameLoopResilienceTests
                 allReported.TrySetResult();
         };
 
-        gameLoop.Start();
-        await gameLoop.Started.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        await host.StartAsync();
 
-        gameLoop.Post(_ => throw new InvalidOperationException("first"));
-        gameLoop.Post(_ => throw new InvalidOperationException("second"));
+        loop.Post(_ => throw new InvalidOperationException("first"));
+        loop.Post(_ => throw new InvalidOperationException("second"));
 
-        await allReported.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        await GameLoopHost.WithinTimeout(allReported.Task);
 
         Assert.Equal(["first", "second"], messages);
-        Assert.True(gameLoop.IsRunning);
+        Assert.True(loop.IsRunning);
     }
 
     [Fact]
-    public async Task CallbackFailure_WhenHandlerThrows_DoesNotFaultLoop()
+    public async Task CallbackFailure_WhenTheHandlerThrows_DoesNotFaultTheLoop()
     {
-        await using var gameLoop = CreateGameLoop(out _, out _);
+        await using var host = new GameLoopHost();
+        var loop = host.Loop;
 
-        gameLoop.UnhandledException += _ => throw new InvalidOperationException("Bad handler.");
+        loop.UnhandledException += _ => throw new InvalidOperationException("Bad handler.");
 
-        gameLoop.Start();
-        await gameLoop.Started.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        await host.StartAsync();
 
-        gameLoop.Post(_ => throw new InvalidOperationException("Script crashed."));
+        loop.Post(_ => throw new InvalidOperationException("Script crashed."));
 
-        var result = await gameLoop.InvokeAsync(() => Task.FromResult(7)).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        var result = await GameLoopHost.WithinTimeout(loop.InvokeAsync(() => Task.FromResult(7)));
 
         Assert.Equal(7, result);
-        Assert.True(gameLoop.IsRunning);
+        Assert.True(loop.IsRunning);
     }
 
     [Fact]
-    public async Task AsyncVoidFailure_WithHandler_IsReportedAndLoopSurvives()
+    public async Task AsyncVoidFailure_WithHandler_IsReportedAndTheLoopSurvives()
     {
-        await using var gameLoop = CreateGameLoop(out _, out _);
+        await using var host = new GameLoopHost();
+        var loop = host.Loop;
 
-        var reported = new TaskCompletionSource<Exception>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
+        var reported = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
+        loop.UnhandledException += exception => reported.TrySetResult(exception);
 
-        gameLoop.UnhandledException += exception => reported.TrySetResult(exception);
-
-        gameLoop.Start();
-        await gameLoop.Started.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        await host.StartAsync();
 
         // async void rethrows on the captured context, i.e. on the game thread.
-        await gameLoop.InvokeAsync(() =>
+        await GameLoopHost.WithinTimeout(loop.InvokeAsync(() =>
         {
             ThrowFromAsyncVoid();
             return Task.CompletedTask;
-        }).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        }));
 
-        var exception = await reported.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        var exception = await GameLoopHost.WithinTimeout(reported.Task);
 
         Assert.Equal("async void crash", exception.Message);
-        Assert.True(gameLoop.IsRunning);
+        Assert.True(loop.IsRunning);
     }
 
     [Fact]
     public async Task SelfPostingCallback_DoesNotStarveOtherWork()
     {
-        await using var gameLoop = CreateGameLoop(out var context, out _);
+        await using var host = new GameLoopHost();
+        var loop = host.Loop;
+        var context = host.Context;
 
         var stop = false;
         var runs = 0;
@@ -128,15 +123,14 @@ public sealed class GameLoopResilienceTests
                 context.Post(Spin, state: null);
         }
 
-        gameLoop.Start();
-        await gameLoop.Started.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        await host.StartAsync();
 
-        gameLoop.Post(Spin);
+        loop.Post(Spin);
 
         try
         {
             // Would never return if the loop drained the spinning callback to exhaustion.
-            var result = await gameLoop.InvokeAsync(() => Task.FromResult(1)).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+            var result = await GameLoopHost.WithinTimeout(loop.InvokeAsync(() => Task.FromResult(1)));
 
             Assert.Equal(1, result);
             Assert.True(Volatile.Read(ref runs) > 0);
@@ -150,16 +144,17 @@ public sealed class GameLoopResilienceTests
     [Fact]
     public async Task ZeroDelayLoop_DoesNotStarveOtherWork()
     {
-        await using var gameLoop = CreateGameLoop(out _, out GameScheduler scheduler);
+        await using var host = new GameLoopHost();
+        var loop = host.Loop;
+        var scheduler = host.Scheduler;
 
-        gameLoop.Start();
-        await gameLoop.Started.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        await host.StartAsync();
 
         using var cancellation = new CancellationTokenSource();
         var iterations = 0;
 
         // A script that sleeps for zero time in a loop.
-        _ = gameLoop.InvokeAsync(async () =>
+        _ = loop.InvokeAsync(async () =>
         {
             while (!cancellation.IsCancellationRequested)
             {
@@ -170,27 +165,15 @@ public sealed class GameLoopResilienceTests
 
         try
         {
-            var result = await gameLoop.InvokeAsync(() => Task.FromResult(3)).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+            var result = await GameLoopHost.WithinTimeout(loop.InvokeAsync(() => Task.FromResult(3)));
 
             Assert.Equal(3, result);
-            Assert.True(
-                SpinWait.SpinUntil(
-                    () => Volatile.Read(ref iterations) >= 3,
-                    Timeout));
+            Assert.True(SpinWait.SpinUntil(() => Volatile.Read(ref iterations) >= 3, GameLoopHost.Timeout));
         }
         finally
         {
             await cancellation.CancelAsync();
         }
-    }
-
-    private static GameLoop CreateGameLoop(out GameSynchronizationContext context, out GameScheduler scheduler)
-    {
-        var clock = new RealGameClock();
-        context = new GameSynchronizationContext();
-        scheduler = new GameScheduler(clock);
-
-        return new GameLoop(clock, context, scheduler);
     }
 
     private static async void ThrowFromAsyncVoid()

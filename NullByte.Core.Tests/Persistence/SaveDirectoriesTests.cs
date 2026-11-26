@@ -2,7 +2,7 @@
 using NullByte.Core.Domain;
 using NullByte.Core.Persistence;
 using NullByte.Core.Persistence.Migrations;
-using static NullByte.Core.Tests.Domain.FileSystemTestSupport;
+using static NullByte.Core.Tests.Infrastructure.TestFileSystem;
 
 namespace NullByte.Core.Tests.Persistence;
 

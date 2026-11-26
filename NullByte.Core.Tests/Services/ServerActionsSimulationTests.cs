@@ -1,9 +1,5 @@
-﻿using NullByte.Core.Configuration;
-using NullByte.Core.Domain;
-using NullByte.Core.Formulas;
-using NullByte.Core.Randomness;
-using NullByte.Core.Services;
-using NullByte.Core.Time;
+﻿using NullByte.Core.Randomness;
+using NullByte.Core.Tests.Infrastructure;
 
 namespace NullByte.Core.Tests.Services;
 
@@ -14,57 +10,25 @@ public sealed class ServerActionsSimulationTests
     {
         const int hackCount = 1_000;
 
-        var balance = new BalanceConfig();
-        var skills = new SkillFormulas(balance);
-        var formulas = new ServerOperationFormulas(balance, skills);
-
-        var player = new Player(
-            homeHostname: "home",
-            startingMoney: 0,
-            startingHackingExperience: skills.CalculateExperienceForLevel(SkillKind.Hacking, 10));
-
-        var home = new Server(
-            hostname: "home",
-            maximumMoney: 0,
-            startingMoney: 0,
-            baseDifficulty: 5,
-            minimumSecurity: 1,
-            startingSecurity: 1,
-            requiredHackingLevel: 1,
-            growthParameter: 0,
-            maximumRam: 8,
-            hasRootAccess: true);
-
-        var target = new Server(
-            hostname: "target",
+        var target = TestServers.Create(
+            "target",
             maximumMoney: 1_000_000,
-            startingMoney: 1_000_000,
-            baseDifficulty: 5,
-            minimumSecurity: 1,
             startingSecurity: 2,
             requiredHackingLevel: 10,
             growthParameter: 20,
-            maximumRam: 8,
             hasRootAccess: true);
 
-        var network = new Network();
+        var world = CoreTestSetup.CreateWorld(new CoreTestOptions
+        {
+            HackingLevel = 10,
+            Servers = [TestServers.Home(), target],
+            Random = new SeededRandomSource(1337)
+        });
 
-        network.AddServer(home);
-        network.AddServer(target);
-        network.Connect(home.Hostname, target.Hostname);
-
-        var gameState = new GameState(player, network);
-
-        var clock = new FakeGameClock();
-        var scheduler = new GameScheduler(clock);
-        var randomSource = new SeededRandomSource(1337);
-
-        var actions = new ServerActions(
-            gameState,
-            scheduler,
-            formulas,
-            skills,
-            randomSource);
+        var player = world.Player;
+        var formulas = world.HackingFormulas;
+        var scheduler = world.Scheduler;
+        var actions = world.ServerActions;
 
         var successes = 0;
         var failures = 0;
@@ -78,8 +42,7 @@ public sealed class ServerActionsSimulationTests
             Assert.False(action.IsCompleted);
             Assert.Equal(1, scheduler.PendingCount);
 
-            clock.Advance(duration);
-            scheduler.Update();
+            world.Advance(duration);
 
             var result = await action;
 

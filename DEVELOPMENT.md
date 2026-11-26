@@ -18,7 +18,7 @@ dotnet run --project NullByte.ConsoleUI  # run the game
 - Nullable reference types and implicit usings are enabled in every project.
 - Tests use xUnit v3. NSubstitute is available in `NullByte.Core.Tests` and `NullByte.Scripting.Tests`.
 - Test names follow `Method_Behavior` (for example `Post_FromWorkerThread_ExecutesOnGameThread`).
-- Test folders mirror the production project's folders. Shared helpers such as `GameThreadHarness` live in a `Helpers/` (or `Infrastructure/`) folder of the test project.
+- Test folders mirror the production project's folders. Shared helpers such as `GameThreadHarness` live in the test project's `Infrastructure/` folder.
 - Production assemblies expose internals to their test project through `InternalsVisibleTo`.
 - Use `FakeGameClock` and other injected seams rather than real delays.
 
@@ -127,7 +127,7 @@ Prefer the existing ActivityService/System lifecycle. Decide explicitly whether 
 - Test scripting behavior at both analysis/compilation and runtime boundaries when applicable.
 - Test editor behavior through the editor service/protocol boundary where useful.
 - Keep unit tests close to the layer that owns the behavior.
-- Put shared test setup in the project's `Infrastructure/` folder instead of building sessions and fixtures inside test classes. Console tests start from `ConsoleTestSetup.CreateHarness`.
+- Put shared test setup in the project's `Infrastructure/` folder instead of building sessions and fixtures inside test classes. Console tests start from `ConsoleTestSetup.CreateHarness`; Core tests start from `CoreTestSetup.CreateWorld` (with `TestServers` for domain-level tests and `GameLoopHost` for the real-thread game loop tests).
 - Use NSubstitute for collaborators a test only needs to stub or verify (for example `INullByteApi` or `ISaveStore`). Keep hand-written fakes (`FakeTerminal`, `FakeGameClock`, `ScriptedRandom`, in-memory stores) where the test asserts on their recorded state.
 - Do not touch the real file system or wait on real time in a test unless that is the behavior under test; use `TemporaryDirectory`, `FakeTimeProvider` or a fake clock.
 - Name command tests as sentences (`Rm_deletes_a_file_but_explains_directories`) and unit tests as `Subject_Condition_Result`.

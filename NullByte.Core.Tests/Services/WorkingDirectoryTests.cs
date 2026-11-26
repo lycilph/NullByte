@@ -3,7 +3,7 @@ using NullByte.Core.Domain;
 using NullByte.Core.Formulas;
 using NullByte.Core.Services;
 using NullByte.Core.Time;
-using static NullByte.Core.Tests.Domain.FileSystemTestSupport;
+using static NullByte.Core.Tests.Infrastructure.TestFileSystem;
 
 namespace NullByte.Core.Tests;
 

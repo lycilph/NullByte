@@ -395,7 +395,7 @@ public sealed class ScriptServiceTests
         public double GetServerSecurityLevel(string hostname) => throw new NotSupportedException();
         public double GetServerMinSecurityLevel(string hostname) => throw new NotSupportedException();
         public double GetHackingLevel() => throw new NotSupportedException();
-        public double GetServerRequiredHackingLevel(string hostname) => throw new NotSupportedException();
+        public int GetServerRequiredHackingLevel(string hostname) => throw new NotSupportedException();
         public double GetServerMaxRam(string hostname) => throw new NotSupportedException();
         public double GetServerUsedRam(string hostname) => throw new NotSupportedException();
         public bool HasRootAccess(string hostname) => throw new NotSupportedException();

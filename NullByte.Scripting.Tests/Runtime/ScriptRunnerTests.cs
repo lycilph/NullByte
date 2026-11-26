@@ -326,7 +326,7 @@ public sealed class ScriptRunnerTests
             throw new NotSupportedException("Player state is not used by these runner tests.");
         }
 
-        public double GetServerRequiredHackingLevel(string hostname)
+        public int GetServerRequiredHackingLevel(string hostname)
         {
             throw new NotSupportedException("Server state is not used by these runner tests.");
         }

@@ -1,6 +1,6 @@
 ﻿using NullByte.Core.Domain.Activities;
 using NullByte.Core.Services;
-using NullByte.Core.Tests.Activities;
+using NullByte.Core.Tests.Infrastructure;
 
 namespace NullByte.Core.Tests.Services;
 
