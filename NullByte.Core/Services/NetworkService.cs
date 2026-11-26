@@ -109,7 +109,7 @@ public sealed class NetworkService
             return NetworkConnectionResult.Failure("A server name is required.");
         if (!gameState.Network.TryGetServer(serverName, out var targetServer))
             return NetworkConnectionResult.Failure($"Unknown server: {serverName}");
-        if (string.Equals(targetServer!.Hostname, gameState.Player.CurrentHostname,StringComparison.OrdinalIgnoreCase))
+        if (targetServer!.Id == gameState.Player.CurrentServerId)
             return NetworkConnectionResult.Failure($"Already connected to {targetServer.Hostname}.");
         if (!gameState.Player.DiscoveredServerIds.Contains(targetServer.Id))
             return NetworkConnectionResult.Failure($"Server '{targetServer.Hostname}' has not been discovered.");
