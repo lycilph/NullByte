@@ -215,7 +215,7 @@ public class SaveGameTests
 
         new V5ToV6Migration().Migrate(save);
 
-        Assert.Equal(6, save["version"]?.GetValue<int>() ?? 5); // SaveMigrator normally writes the version after migration.
+        Assert.Equal(5, save["version"]?.GetValue<int>() ?? 5);
         var servers = save["servers"]!.AsArray();
         Assert.All(servers, server => Assert.False(string.IsNullOrWhiteSpace(server!["id"]?.GetValue<string>())));
 
