@@ -9,25 +9,19 @@ public sealed class NetworkTests
     {
         var network = new Network();
         var server = CreateServer("home");
-
         network.AddServer(server);
-
         Assert.Single(network.Servers);
-
         Assert.Same(server, network.GetServer(server.Hostname));
+        Assert.Same(server, network.GetServer(server.Id));
     }
 
     [Fact]
     public void AddServer_DuplicateHostnameThrows()
     {
         var network = new Network();
-
         network.AddServer(CreateServer("n00dles"));
-
         var duplicate = CreateServer("n00dles");
-
-        var exception =Assert.Throws<InvalidOperationException>(() => network.AddServer(duplicate));
-
+        var exception = Assert.Throws<InvalidOperationException>(() => network.AddServer(duplicate));
         Assert.Contains("n00dles", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Single(network.Servers);
     }
@@ -36,75 +30,84 @@ public sealed class NetworkTests
     public void AddServer_DuplicateHostnameIsCaseInsensitive()
     {
         var network = new Network();
+        network.AddServer(CreateServer("N00DLES"));
+        Assert.Throws<InvalidOperationException>(() => network.AddServer(CreateServer("n00dles")));
+    }
 
-        network.AddServer(CreateServer(hostname: "N00DLES"));
+    [Fact]
+    public void AddServer_DuplicateIdThrows()
+    {
+        var network = new Network();
+        var id = ServerId.New();
+        network.AddServer(CreateServer("first", id));
+        var duplicate = CreateServer("second", id);
 
-        Assert.Throws<InvalidOperationException>(() => network.AddServer(CreateServer(hostname: "n00dles")));
+        var exception = Assert.Throws<InvalidOperationException>(() => network.AddServer(duplicate));
+
+        Assert.Contains(id.ToString(), exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(network.Servers);
     }
 
     [Fact]
     public void GetServer_ReturnsServerByHostnameCaseInsensitively()
     {
         var network = new Network();
-
-        var server = CreateServer(hostname: "n00dles");
-
+        var server = CreateServer("n00dles");
         network.AddServer(server);
+        Assert.Same(server, network.GetServer("N00DLES"));
+    }
 
-        var result = network.GetServer("N00DLES");
-
-        Assert.Same(server, result);
+    [Fact]
+    public void GetServer_ReturnsServerById()
+    {
+        var network = new Network();
+        var server = CreateServer("n00dles");
+        network.AddServer(server);
+        Assert.Same(server, network.GetServer(server.Id));
     }
 
     [Fact]
     public void GetServer_UnknownHostnameThrows()
     {
         var network = new Network();
-
         var exception = Assert.Throws<KeyNotFoundException>(() => network.GetServer("does-not-exist"));
+        Assert.Contains("does-not-exist", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
 
-        Assert.Contains("does-not-exist", exception.Message,StringComparison.OrdinalIgnoreCase);
+    [Fact]
+    public void GetServer_UnknownIdThrows()
+    {
+        var network = new Network();
+        Assert.Throws<KeyNotFoundException>(() => network.GetServer(ServerId.New()));
     }
 
     [Fact]
     public void TryGetServer_UnknownHostnameReturnsFalse()
     {
         var network = new Network();
-
-        var found = network.TryGetServer("does-not-exist",out var server);
-
+        var found = network.TryGetServer("does-not-exist", out var server);
         Assert.False(found);
         Assert.Null(server);
     }
 
     [Fact]
-    public void TryFindServer_FindsServerByHostname()
+    public void TryGetServer_UnknownIdReturnsFalse()
     {
         var network = new Network();
-
-        var server = CreateServer(hostname: "n00dles");
-
-        network.AddServer(server);
-
-        var found = network.TryGetServer("N00DLES", out var result);
-
-        Assert.True(found);
-        Assert.Same(server, result);
+        var found = network.TryGetServer(ServerId.New(), out var server);
+        Assert.False(found);
+        Assert.Null(server);
     }
 
     [Fact]
     public void Connect_CreatesBidirectionalConnection()
     {
         var network = new Network();
-
-        var home = CreateServer(hostname: "home");
-        var n00dles = CreateServer(hostname: "n00dles");
-
+        var home = CreateServer("home");
+        var n00dles = CreateServer("n00dles");
         network.AddServer(home);
         network.AddServer(n00dles);
-
         network.Connect(home.Hostname, n00dles.Hostname);
-
         Assert.True(network.AreConnected(home.Hostname, n00dles.Hostname));
         Assert.True(network.AreConnected(n00dles.Hostname, home.Hostname));
     }
@@ -113,20 +116,13 @@ public sealed class NetworkTests
     public void Connect_DuplicateConnectionDoesNotCreateDuplicateNeighbor()
     {
         var network = new Network();
-
-        var home = CreateServer(hostname: "home");
-        var n00dles = CreateServer(hostname: "n00dles");
-
+        var home = CreateServer("home");
+        var n00dles = CreateServer("n00dles");
         network.AddServer(home);
         network.AddServer(n00dles);
-
         network.Connect(home.Hostname, n00dles.Hostname);
         network.Connect(home.Hostname, n00dles.Hostname);
-
-        var neighbors = network.GetNeighbors(home.Hostname);
-
-        var neighbor = Assert.Single(neighbors);
-
+        var neighbor = Assert.Single(network.GetNeighbors(home.Hostname));
         Assert.Same(n00dles, neighbor);
     }
 
@@ -134,130 +130,74 @@ public sealed class NetworkTests
     public void Connect_ServerToItselfThrows()
     {
         var network = new Network();
-
-        var home = CreateServer(hostname: "home");
-
+        var home = CreateServer("home");
         network.AddServer(home);
-
-        var exception =
-            Assert.Throws<InvalidOperationException>(
-                () => network.Connect(home.Hostname, home.Hostname));
-
-        Assert.Contains(
-            "cannot be connected to itself",
-            exception.Message,
-            StringComparison.OrdinalIgnoreCase);
+        var exception = Assert.Throws<InvalidOperationException>(() => network.Connect(home.Hostname, home.Hostname));
+        Assert.Contains("cannot be connected to itself", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public void Connect_UnknownServerThrows()
     {
         var network = new Network();
-
-        var home = CreateServer(hostname: "home");
-
+        var home = CreateServer("home");
         network.AddServer(home);
-
-        Assert.Throws<KeyNotFoundException>(
-            () => network.Connect(home.Hostname, "does-not-exist"));
+        Assert.Throws<KeyNotFoundException>(() => network.Connect(home.Hostname, "does-not-exist"));
     }
 
     [Fact]
     public void GetNeighbors_ReturnsDirectNeighborsOnly()
     {
-        var network =
-            CreateLinearNetwork(
-                out var home,
-                out var n00dles,
-                out var sigmaCosmetics);
-
+        var network = CreateLinearNetwork(out _, out var n00dles, out var sigmaCosmetics);
         var neighbors = network.GetNeighbors(n00dles.Hostname);
-
         Assert.Equal(2, neighbors.Count);
-        Assert.Contains(home, neighbors);
+        Assert.Contains(neighbors, server => server.Hostname == "home");
         Assert.Contains(sigmaCosmetics, neighbors);
     }
 
     [Fact]
     public void GetNeighbors_DoesNotReturnIndirectNeighbors()
     {
-        var network =
-            CreateLinearNetwork(
-                out var home,
-                out _,
-                out var sigmaCosmetics);
-
-        var neighbors = network.GetNeighbors(home.Hostname);
-
-        Assert.DoesNotContain(sigmaCosmetics, neighbors);
+        var network = CreateLinearNetwork(out var home, out _, out var sigmaCosmetics);
+        Assert.DoesNotContain(sigmaCosmetics, network.GetNeighbors(home.Hostname));
     }
 
     [Fact]
     public void GetNeighbors_UnconnectedServerReturnsEmptyCollection()
     {
         var network = new Network();
-
-        var home = CreateServer(hostname: "home");
-
+        var home = CreateServer("home");
         network.AddServer(home);
-
-        var neighbors = network.GetNeighbors(home.Hostname);
-
-        Assert.Empty(neighbors);
+        Assert.Empty(network.GetNeighbors(home.Hostname));
     }
 
     [Fact]
     public void AreConnected_UnconnectedServersReturnsFalse()
     {
         var network = new Network();
-
-        var first = CreateServer(hostname: "first");
-
-        var second = CreateServer(hostname: "second");
-
+        var first = CreateServer("first");
+        var second = CreateServer("second");
         network.AddServer(first);
         network.AddServer(second);
-
         Assert.False(network.AreConnected(first.Hostname, second.Hostname));
     }
 
-    private static Server CreateServer(string hostname)
+    private static Server CreateServer(string hostname, ServerId? id = null)
     {
-        return new Server(
-            hostname,
-            maximumMoney: 100_000,
-            startingMoney: 50_000,
-            baseDifficulty: 5,
-            minimumSecurity: 1,
-            startingSecurity: 5,
-            requiredHackingLevel: 1,
-            growthParameter: 1.1,
-            maximumRam: 32);
+        return new Server(hostname, 100_000, 50_000, 5, 1, 5, 1, 1.1, 32, id: id);
     }
 
-    private static Network CreateLinearNetwork(
-        out Server home,
-        out Server n00dles,
-        out Server sigmaCosmetics)
+    private static Network CreateLinearNetwork(out Server home, out Server n00dles, out Server sigmaCosmetics)
     {
         var network = new Network();
-
-        home = CreateServer(hostname: "home");
-        n00dles = CreateServer(hostname: "n00dles");
-        sigmaCosmetics = CreateServer(hostname: "sigma-cosmetics");
-
+        home = CreateServer("home");
+        n00dles = CreateServer("n00dles");
+        sigmaCosmetics = CreateServer("sigma-cosmetics");
         network.AddServer(home);
         network.AddServer(n00dles);
         network.AddServer(sigmaCosmetics);
-
-        network.Connect(
-            home.Hostname,
-            n00dles.Hostname);
-
-        network.Connect(
-            n00dles.Hostname,
-            sigmaCosmetics.Hostname);
-
+        network.Connect(home.Hostname, n00dles.Hostname);
+        network.Connect(n00dles.Hostname, sigmaCosmetics.Hostname);
         return network;
     }
 }
