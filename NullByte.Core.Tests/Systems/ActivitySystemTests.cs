@@ -476,14 +476,14 @@ public sealed class ActivitySystemTests
     [Fact]
     public void Studying_raises_the_hacking_level()
     {
-        var before = new HackingFormulas(world.Balance).CalculateHackingLevel(world.Player.HackingExperience);
+        var before = new SkillFormulas(world.Balance).CalculateLevel(SkillKind.Hacking, world.Player.HackingExperience);
         world.Service.StartCourse(FacilityKind.University, "free-course");     // charisma only
         world.Service.Stop();
         world.Service.StartCourse(FacilityKind.University, "algorithms");
 
         world.System.Update(TimeSpan.FromSeconds(90));                          // 180 xp for $900
 
-        var after = new HackingFormulas(world.Balance).CalculateHackingLevel(world.Player.HackingExperience);
+        var after = new SkillFormulas(world.Balance).CalculateLevel(SkillKind.Hacking, world.Player.HackingExperience);
         Assert.True(after > before);
     }
 }

@@ -18,16 +18,16 @@ public sealed class ScriptAcceptanceTests
     public async Task PlayerScript_CompilesAndHacksRealServer()
     {
         var balance = new BalanceConfig();
-        var formulas = new HackingFormulas(balance);
+        var skillFormulas = new SkillFormulas(balance);
+        var formulas = new ServerOperationFormulas(balance, skillFormulas);
         var botnetFormulas = new BotnetFormulas(balance);
         var networkFormulas = new NetworkFormulas(balance);
         var activityFormulas = new ActivityFormulas(balance);
-        var skillFormulas = new SkillFormulas(balance);
 
         var player = new Player(
             homeHostname: "home",
             startingMoney: 1_000,
-            startingHackingExperience: formulas.CalculateExperienceForHackingLevel(1));
+            startingHackingExperience: skillFormulas.CalculateExperienceForLevel(SkillKind.Hacking, 1));
 
         var home = new Server(
             hostname: "home",
@@ -71,6 +71,7 @@ public sealed class ScriptAcceptanceTests
             gameState,
             scheduler,
             formulas,
+            skillFormulas,
             randomSource);
         var activityService = new ActivityService(gameState, ActivityCatalogFactory.CreateDefault(), activityFormulas);
 
@@ -86,9 +87,8 @@ public sealed class ScriptAcceptanceTests
             botnetService,
             actions,
             activityService,
-            formulas,
-            botnetFormulas,
             skillFormulas,
+            botnetFormulas,
             scriptOperations,
             output,
             home.Hostname);

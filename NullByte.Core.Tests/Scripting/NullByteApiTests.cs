@@ -566,7 +566,6 @@ public sealed class NullByteApiTests
                 activityService,
                 SkillFormulas,
                 BotnetFormulas,
-                SkillFormulas,
                 ScriptOperations,
                 Output,
                 hostname,

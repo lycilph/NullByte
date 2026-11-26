@@ -26,11 +26,11 @@ public static class CommandSetup
         [
             new DebugCommands(session.State.Player, session.Clock, registry, terminal, externalEditorStatus),
             new SystemCommands(registry, terminal, hostRequests, settings),
-            new PlayerCommands(session.State.Player, session.Services.Network, formulas.Hacking, terminal),
+            new PlayerCommands(session.State.Player, session.Services.Network, formulas.Skills, terminal),
             new NetworkCommands(session.Clock, session.Services.Network, formulas.Network, terminal),
             new FileCommands(session.State.FileSystem, session.Services.Network, workingDirectory, terminal),
             new ScriptCommands(session.Services.Network, session.Services.Scripts, workingDirectory, terminal),
-            new ActionCommands(session.State.Player, session.Clock, formulas.Hacking, session.Services.Actions, session.Services.Network, terminal),
+            new ActionCommands(session.State.Player, session.Clock, formulas.ServerOperations, session.Services.Actions, session.Services.Network, terminal),
             new BotnetCommands(session.State.Botnet, session.Services.Botnet, formulas.Botnet, terminal),
             new ActivityCommands(session.Services.Activities, session.State.Player, formulas.Skills, terminal)
         ];

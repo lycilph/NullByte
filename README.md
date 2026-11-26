@@ -23,4 +23,8 @@ dotnet build NullByte.slnx
 dotnet run --project NullByte.ConsoleUI
 ```
 
+## Command-line options
+
+Run `dotnet run --project NullByte.ConsoleUI -- --help` (or pass `help`) to list the available options. Help is printed before application settings are loaded.
+
 See `DEVELOPMENT.md` for tests, the VS Code extension and platform notes.
