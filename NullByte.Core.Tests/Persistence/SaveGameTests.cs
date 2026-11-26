@@ -11,20 +11,25 @@ public class SaveGameTests
     private static readonly TimeSpan GameTime = TimeSpan.FromSeconds(754.25);
     private static readonly SaveGameSerializer Serializer = new();
 
+    private const string FoodnstuffServerId = "83d7acb2-037f-5621-bd1d-c708349ae12f";
+    private const string HomeServerId = "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e";
+    private const string N00dlesServerId = "98a3870e-58cb-5079-93b5-bb06f209320b";
+    private const string ZeroDayServerId = "e68d08ef-e8d3-5b8b-9bd3-001535c25142";
+
     private static readonly ProcessSave[] Processes =
     [
-        new() { Filename = "weaken.cx", Hostname = "home", Args = [], Threads = 1 },
-        new() { Filename = "hack.cx", Hostname = "n00dles", Args = ["foodnstuff", "two words"], Threads = 2 }
+        new() { Filename = "weaken.cx", ServerId = HomeServerId, Args = [], Threads = 1 },
+        new() { Filename = "hack.cx", ServerId = N00dlesServerId, Args = ["foodnstuff", "two words"], Threads = 2 }
     ];
 
     /// <summary>A small game that has been played a bit: every kind of state the save has to carry.</summary>
     internal static GameState CreateState()
     {
         var network = new Network();
-        network.AddServer(new Server("home", 0, 0, 1, 1, 1, 1, 1, 8, hasRootAccess: true));
-        network.AddServer(new Server("n00dles", 50_000, 25_000, 3, 1, 3, 1, 30, 4));
-        network.AddServer(new Server("foodnstuff", 100_000, 60_000, 5, 2, 5, 5, 25, 8));
-        network.AddServer(new Server("zero-day", 1_000_000, 500_000, 40, 7.54, 66.5, 50, 10, 16));
+        network.AddServer(new Server("home", 0, 0, 1, 1, 1, 1, 1, 8, hasRootAccess: true, id: ServerId.Parse(HomeServerId)));
+        network.AddServer(new Server("n00dles", 50_000, 25_000, 3, 1, 3, 1, 30, 4, id: ServerId.Parse(N00dlesServerId)));
+        network.AddServer(new Server("foodnstuff", 100_000, 60_000, 5, 2, 5, 5, 25, 8, id: ServerId.Parse(FoodnstuffServerId)));
+        network.AddServer(new Server("zero-day", 1_000_000, 500_000, 40, 7.54, 66.5, 50, 10, 16, id: ServerId.Parse(ZeroDayServerId)));
 
         // Deliberately not made in alphabetical order.
         network.Connect("home", "n00dles");
@@ -168,7 +173,7 @@ public class SaveGameTests
     {
         // If this fails you changed the save format. Bump SaveGame.CurrentVersion, add a migration,
         // and keep the old golden text as a test for that migration. Do not just edit the golden text.
-        string expected = Normalize(GoldenSaves.V5);
+        string expected = Normalize(GoldenSaves.V6);
         string actual = Describe(CreateState());
         Assert.Equal(expected, actual);
     }
@@ -298,7 +303,7 @@ public class SaveGameTests
     [InlineData("player.money", "-5")]
     [InlineData("botnet.nodes[0].ram", "3")]
     [InlineData("files[0].name", "\"../escape.cx\"")]
-    [InlineData("processes[0].hostname", "\"nowhere\"")]
+    [InlineData("processes[0].serverId", "\"00000000-0000-0000-0000-000000000000\"")]
     [InlineData("processes[0].threads", "0")]
     [InlineData("gameTime", "\"-00:00:01\"")]
     public void Data_the_game_would_reject_is_refused_before_anything_is_started(string path, string value)
