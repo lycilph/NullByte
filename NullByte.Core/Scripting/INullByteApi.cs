@@ -26,17 +26,17 @@ public interface INullByteApi
     Task<HackResult> Hack(string hostname = "");
 
     /// <summary>Increases the available money on a server.</summary>
-    [RamCost(1.7)] 
+    [RamCost(1.7)]
     Task<GrowResult> Grow(string hostname = "");
 
     /// <summary>Reduces the security level of a server.</summary>
-    [RamCost(1.7)] 
+    [RamCost(1.7)]
     Task<WeakenResult> Weaken(string hostname = "");
 
     /// <summary>Gives the player root access to a server.</summary>
-    [RamCost(0.05)] 
+    [RamCost(0.05)]
     NukeResult Nuke(string hostname = "");
-    
+
     /// <summary>Scan the network and returns the neighbors of a server.</summary>
     [RamCost(0.2)]
     IReadOnlyList<string> Scan(string hostname = "");
@@ -80,7 +80,7 @@ public interface INullByteApi
     /// <summary>List running scripts on a server.</summary>
     [RamCost(0.2)]
     IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "");
-    
+
     /// <summary>
     /// Starts a script on the server running the current script.
     /// Returns the new process ID, or 0 if the script could not be started.
