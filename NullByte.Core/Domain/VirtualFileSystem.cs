@@ -226,8 +226,8 @@ public sealed class VirtualFileSystem
     /// <returns>True only if all files were copied</returns>
     public bool CopyFiles(string source, string destination, IReadOnlyList<string> files)
     {
-        ValidateServer(source);
-        ValidateServer(destination);
+        _ = ResolveServerId(source);
+        _ = ResolveServerId(destination);
 
         var result = true;
         foreach (var file in files)
