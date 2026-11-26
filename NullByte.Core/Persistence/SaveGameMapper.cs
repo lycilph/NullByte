@@ -85,8 +85,8 @@ public static class SaveGameMapper
                     FromServerId = state.Network.GetServer(connection.First).Id.ToString(),
                     ToServerId = state.Network.GetServer(connection.Second).Id.ToString()
                 })
-                .OrderBy(connection => connection.From, StringComparer.Ordinal)
-                .ThenBy(connection => connection.To, StringComparer.Ordinal)
+                .OrderBy(connection => connection.FromServerId, StringComparer.Ordinal)
+                .ThenBy(connection => connection.ToServerId, StringComparer.Ordinal)
                 .ToArray(),
 
             Botnet = new BotnetSave
@@ -248,15 +248,16 @@ public static class SaveGameMapper
 
         RestoreSkills(player.Skills, savedPlayer.Skills, "The player");
 
+        // The GameState constructor binds the player to the network, allowing discovered servers
+        // to be retained by immutable identity.
+        var state = new GameState(player, network);
+
         foreach (var id in savedPlayer.DiscoveredServerIds)
         {
             var serverId = ServerId.Parse(id);
             RequireServer(network, serverId, "A discovered server");
             player.DiscoverServer(serverId);
         }
-
-        // The GameState constructor checks that the home and current servers exist.
-        var state = new GameState(player, network);
 
         state.Botnet.Restore(
             save.Botnet.Nodes.Select(node => new BotnetNode(node.Level, node.Ram, node.Cores)),
