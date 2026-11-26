@@ -1,6 +1,6 @@
 ﻿using NullByte.Core.Randomness;
 
-namespace NullByte.ConsoleUI.Tests.Commands;
+namespace NullByte.ConsoleUI.Tests.Infrastructure;
 
 /// <summary>
 /// A random source whose rolls the test decides: queued values come out first, then <see cref="Default"/>.

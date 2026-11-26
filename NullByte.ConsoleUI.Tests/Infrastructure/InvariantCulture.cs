@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 
-namespace NullByte.ConsoleUI.Tests;
+namespace NullByte.ConsoleUI.Tests.Infrastructure;
 
 /// <summary>
 /// Makes the current thread use the invariant culture until disposed, so that tests which

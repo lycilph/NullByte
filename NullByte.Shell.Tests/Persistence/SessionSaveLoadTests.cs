@@ -1,52 +1,18 @@
 ﻿using NullByte.Core.Persistence;
 using NullByte.Core.Scripting;
-using NullByte.Core.Services;
-using NullByte.Shell;
 using NullByte.Shell.Persistence;
+using NullByte.Shell.Tests.Infrastructure;
 
-namespace NullByte.ConsoleUI.Tests.Persistence;
+namespace NullByte.Shell.Tests.Persistence;
 
-public class SessionSaveLoadTests
+public sealed class SessionSaveLoadTests
 {
     private const string LoopScript = "while (true) { await nb.Sleep(TimeSpan.FromSeconds(1)); }";
 
     private static readonly SaveGameSerializer Serializer = new();
 
-    private sealed class TestOutput : IGameOutput
-    {
-        private readonly List<string> lines = [];
-
-        public IReadOnlyList<string> Lines { get { lock (lines) return lines.ToArray(); } }
-
-        public void WriteLine(string message) { lock (lines) lines.Add(message); }
-        public void WriteLine() => WriteLine("");
-    }
-
-    private sealed class MemoryStore : ISaveStore
-    {
-        private readonly Dictionary<string, string> slots = [];
-
-        public Task WriteAsync(string slot, string json, CancellationToken cancellationToken = default)
-        {
-            lock (slots) slots[slot] = json;
-            return Task.CompletedTask;
-        }
-
-        public Task<string?> ReadAsync(string slot, CancellationToken cancellationToken = default)
-        {
-            lock (slots) return Task.FromResult(slots.GetValueOrDefault(slot));
-        }
-
-        public Task<IReadOnlyList<SaveSlotInfo>> ListAsync(CancellationToken cancellationToken = default)
-        {
-            lock (slots) return Task.FromResult<IReadOnlyList<SaveSlotInfo>>(slots.Keys.Select(k => new SaveSlotInfo(k, DateTimeOffset.UnixEpoch)).ToList());
-        }
-
-        public Task DeleteAsync(string slot, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-    }
-
     /// <summary>Plays a little: a script running with two threads on home, args and all.</summary>
-    private static async Task<(GameSession Session, SaveGame Save, double UsedRam)> StartPlayedGameAsync(TestOutput output)
+    private static async Task<(GameSession Session, SaveGame Save, double UsedRam)> StartPlayedGameAsync(RecordingOutput output)
     {
         var session = GameSession.Create(new GameSessionOptions { Output = output });
         await session.StartAsync();
@@ -71,7 +37,7 @@ public class SessionSaveLoadTests
     [Fact]
     public async Task A_running_script_comes_back_with_the_same_threads_arguments_and_ram()
     {
-        var output = new TestOutput();
+        var output = new RecordingOutput();
         var (first, save, usedRam) = await StartPlayedGameAsync(output);
         await using var keepAlive = first;
 
@@ -97,7 +63,7 @@ public class SessionSaveLoadTests
     [Fact]
     public async Task The_clock_continues_from_the_saved_game_time()
     {
-        var output = new TestOutput();
+        var output = new RecordingOutput();
         var (first, save, _) = await StartPlayedGameAsync(output);
         await using var keepAlive = first;
 
@@ -113,7 +79,7 @@ public class SessionSaveLoadTests
     [Fact]
     public async Task A_script_that_cannot_restart_is_reported_and_the_game_still_loads()
     {
-        var output = new TestOutput();
+        var output = new RecordingOutput();
         var (first, save, _) = await StartPlayedGameAsync(output);
         await using var keepAlive = first;
 
@@ -134,65 +100,16 @@ public class SessionSaveLoadTests
     [Fact]
     public async Task Save_and_load_through_the_manager_round_trips_a_slot()
     {
-        var output = new TestOutput();
+        var output = new RecordingOutput();
         var (first, _, _) = await StartPlayedGameAsync(output);
         await using var keepAlive = first;
 
-        var manager = new SaveManager(new MemoryStore(), Serializer);
+        var manager = new SaveManager(new InMemorySaveStore(), Serializer);
         await manager.SaveAsync(first, "slot1", TestContext.Current.CancellationToken);
 
         var restored = await manager.LoadAsync("slot1", TestContext.Current.CancellationToken);
         Assert.NotNull(restored);
         Assert.Equal(new[] { "loop.cx" }, restored!.State.FileSystem.ListFiles("home"));
         Assert.Null(await manager.LoadAsync("missing", TestContext.Current.CancellationToken));
-    }
-
-    [Fact]
-    public async Task Autosave_writes_the_autosave_slot_on_its_interval()
-    {
-        var output = new TestOutput();
-        var (first, _, _) = await StartPlayedGameAsync(output);
-        await using var keepAlive = first;
-
-        var store = new MemoryStore();
-        var manager = new SaveManager(store, Serializer);
-
-        await using (new AutosaveService(manager, first, output, TimeSpan.FromMilliseconds(50)))
-        {
-            for (var i = 0; i < 100 && await store.ReadAsync(AutosaveService.Slot, TestContext.Current.CancellationToken) is null; i++)
-                await Task.Delay(50, TestContext.Current.CancellationToken);
-        }
-
-        Assert.NotNull(await store.ReadAsync(AutosaveService.Slot, TestContext.Current.CancellationToken));
-        Assert.Contains(output.Lines, line => line == "Game autosaved.");
-    }
-
-    [Fact]
-    public async Task The_file_store_keeps_the_previous_save_as_a_backup_and_rejects_unsafe_names()
-    {
-        var directory = Path.Combine(Path.GetTempPath(), "nullbyte-tests-" + Guid.NewGuid().ToString("N"));
-        try
-        {
-            var store = new FileSaveStore(directory);
-
-            Assert.Empty(await store.ListAsync(TestContext.Current.CancellationToken));
-            Assert.Null(await store.ReadAsync("one", TestContext.Current.CancellationToken));
-
-            await store.WriteAsync("one", "first", TestContext.Current.CancellationToken);
-            await store.WriteAsync("one", "second", TestContext.Current.CancellationToken);
-
-            Assert.Equal("second", await store.ReadAsync("one", TestContext.Current.CancellationToken));
-            Assert.Equal("first", await File.ReadAllTextAsync(Path.Combine(directory, "one.json.bak"), TestContext.Current.CancellationToken));
-            Assert.Equal(new[] { "one" }, (await store.ListAsync(TestContext.Current.CancellationToken)).Select(slot => slot.Name));
-            Assert.Empty(Directory.GetFiles(directory, "*.tmp"));
-
-            await Assert.ThrowsAsync<ArgumentException>(() => store.WriteAsync("../outside", "x", TestContext.Current.CancellationToken));
-            await Assert.ThrowsAsync<ArgumentException>(() => store.WriteAsync("", "x", TestContext.Current.CancellationToken));
-        }
-        finally
-        {
-            if (Directory.Exists(directory))
-                Directory.Delete(directory, recursive: true);
-        }
     }
 }

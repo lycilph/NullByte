@@ -1,61 +1,48 @@
-﻿using NullByte.ConsoleUI.Commands;
-using NullByte.ConsoleUI.Tests.Infrastructure;
+﻿using NullByte.ConsoleUI.Tests.Infrastructure;
 using NullByte.Core.Configuration;
-using NullByte.Core.Domain;
-using NullByte.Shell;
 
 namespace NullByte.ConsoleUI.Tests;
 
 public sealed class BotnetCommandTests
 {
-    [Fact]
-    public void BotnetCommand_IsRegistered()
-    {
-        var terminal = new FakeTerminal();
-        var session = GameSession.Create(new GameSessionOptions() { Output = terminal });
-        var hostRequests = new HostRequestMailbox();
-        var registry = CommandSetup.Create(session, terminal, hostRequests);
-
-        Assert.True(registry.TryGet("botnet", out var command));
-        Assert.NotNull(command);
-        Assert.False(command!.Debug);
-    }
+    private static ConsoleTestHarness CreateGame(double money, BalanceConfig? balance = null)
+        => ConsoleTestSetup.CreateHarness(new ConsoleTestOptions { Money = money, Balance = balance });
 
     [Theory]
     [InlineData("botnet")]
     [InlineData("botnet status")]
-    public async Task Status_WithoutNodes_ShowsAnEmptyBotnet(string commandLine)
+    public async Task Status_without_nodes_shows_an_empty_botnet(string commandLine)
     {
-        var harness = new Harness(money: 0);
+        var game = CreateGame(money: 0);
 
-        await harness.RunAsync(commandLine);
+        await game.RunAsync(commandLine);
 
-        Assert.Contains("Nodes: 0", harness.Output);
-        Assert.Contains("Next node costs", harness.Output);
+        Assert.Contains("Nodes: 0", game.Output);
+        Assert.Contains("Next node costs", game.Output);
     }
 
     [Fact]
-    public async Task Buy_WithEnoughMoney_BuysTheNode()
+    public async Task Buying_with_enough_money_buys_the_node()
     {
-        var harness = new Harness(money: 1_500);
+        var game = CreateGame(money: 1_500);
 
-        await harness.RunAsync("botnet buy");
+        await game.RunAsync("botnet buy");
 
-        Assert.Equal(1, harness.GameState.Botnet.NodeCount);
-        Assert.Equal(500.0, harness.GameState.Player.Money);
-        Assert.Contains("Bought botnet node #1", harness.Output);
+        Assert.Equal(1, game.State.Botnet.NodeCount);
+        Assert.Equal(500.0, game.State.Player.Money);
+        Assert.Contains("Bought botnet node #1", game.Output);
     }
 
     [Fact]
-    public async Task Buy_WithTooLittleMoney_SaysSoAndBuysNothing()
+    public async Task Buying_with_too_little_money_says_so_and_buys_nothing()
     {
-        var harness = new Harness(money: 10);
+        var game = CreateGame(money: 10);
 
-        await harness.RunAsync("botnet buy");
+        await game.RunAsync("botnet buy");
 
-        Assert.Equal(0, harness.GameState.Botnet.NodeCount);
-        Assert.Equal(10.0, harness.GameState.Player.Money);
-        Assert.Contains("Not enough money", harness.Output);
+        Assert.Equal(0, game.State.Botnet.NodeCount);
+        Assert.Equal(10.0, game.State.Player.Money);
+        Assert.Contains("Not enough money", game.Output);
     }
 
     [Theory]
@@ -64,36 +51,36 @@ public sealed class BotnetCommandTests
     [InlineData("core", 1, 1, 2)]
     [InlineData("cores", 1, 1, 2)]
     [InlineData("LEVEL", 2, 1, 1)]
-    public async Task Upgrade_UsesNodeNumbersCountedFromOne(string kind, int level, int ram, int cores)
+    public async Task Upgrades_use_node_numbers_counted_from_one(string kind, int level, int ram, int cores)
     {
-        var harness = new Harness(money: 10_000_000);
-        harness.GameState.Botnet.AddNode();
-        harness.GameState.Botnet.AddNode();
+        var game = CreateGame(money: 10_000_000);
+        game.State.Botnet.AddNode();
+        game.State.Botnet.AddNode();
 
-        await harness.RunAsync($"botnet upgrade 2 {kind}");
+        await game.RunAsync($"botnet upgrade 2 {kind}");
 
-        var untouched = harness.GameState.Botnet.Nodes[0];
-        var upgraded = harness.GameState.Botnet.Nodes[1];
+        var untouched = game.State.Botnet.Nodes[0];
+        var upgraded = game.State.Botnet.Nodes[1];
 
         Assert.Equal(1, untouched.Level);
         Assert.Equal(level, upgraded.Level);
         Assert.Equal(ram, upgraded.Ram);
         Assert.Equal(cores, upgraded.Cores);
-        Assert.Contains("Upgraded node #2", harness.Output);
+        Assert.Contains("Upgraded node #2", game.Output);
     }
 
     [Theory]
     [InlineData("botnet upgrade 9 level")]
     [InlineData("botnet upgrade 0 level")]
-    public async Task Upgrade_OfAMissingNode_SaysSo(string commandLine)
+    public async Task Upgrading_a_missing_node_says_so(string commandLine)
     {
-        var harness = new Harness(money: 10_000_000);
-        harness.GameState.Botnet.AddNode();
+        var game = CreateGame(money: 10_000_000);
+        game.State.Botnet.AddNode();
 
-        await harness.RunAsync(commandLine);
+        await game.RunAsync(commandLine);
 
-        Assert.Contains("no such botnet node", harness.Output);
-        Assert.Equal(10_000_000.0, harness.GameState.Player.Money);
+        Assert.Contains("no such botnet node", game.Output);
+        Assert.Equal(10_000_000.0, game.State.Player.Money);
     }
 
     [Theory]
@@ -105,48 +92,29 @@ public sealed class BotnetCommandTests
     [InlineData("botnet buy now")]
     [InlineData("botnet status extra")]
     [InlineData("botnet frobnicate")]
-    public async Task InvalidInput_ShowsUsageAndChangesNothing(string commandLine)
+    public async Task Invalid_input_shows_the_usage_and_changes_nothing(string commandLine)
     {
-        var harness = new Harness(money: 10_000_000);
-        harness.GameState.Botnet.AddNode();
+        var game = CreateGame(money: 10_000_000);
+        game.State.Botnet.AddNode();
 
-        await harness.RunAsync(commandLine);
+        await game.RunAsync(commandLine);
 
-        Assert.Contains("Usage:", harness.Output);
-        Assert.Equal(10_000_000.0, harness.GameState.Player.Money);
-        Assert.Equal(1, harness.GameState.Botnet.NodeCount);
-        Assert.Equal(1, harness.GameState.Botnet.Nodes[0].Level);
+        Assert.Contains("Usage:", game.Output);
+        Assert.Equal(10_000_000.0, game.State.Player.Money);
+        Assert.Equal(1, game.State.Botnet.NodeCount);
+        Assert.Equal(1, game.State.Botnet.Nodes[0].Level);
     }
 
     [Fact]
-    public async Task Status_ListsEachNodeAndMarksMaxedUpgrades()
+    public async Task Status_lists_each_node_and_marks_maxed_upgrades()
     {
-        var harness = new Harness(
-            money: 0,
-            new BalanceConfig { BotnetMaxLevel = 1 });
-        harness.GameState.Botnet.AddNode();
-        harness.GameState.Botnet.AddNode();
+        var game = CreateGame(money: 0, new BalanceConfig { BotnetMaxLevel = 1 });
+        game.State.Botnet.AddNode();
+        game.State.Botnet.AddNode();
 
-        await harness.RunAsync("botnet status");
+        await game.RunAsync("botnet status");
 
-        Assert.Contains("Nodes: 2", harness.Output);
-        Assert.Contains("max", harness.Output);
-    }
-
-    private sealed class Harness
-    {
-        private readonly ConsoleTestHarness console;
-
-        public Harness(double money, BalanceConfig? balance = null)
-        {
-            GameState = TestGameFactory.CreateGame(money);
-            console = ConsoleTestSetup.CreateHarness(GameState, balance: balance);
-        }
-
-        public GameState GameState { get; }
-
-        public string Output => console.Output;
-
-        public Task RunAsync(string commandLine) => console.RunAsync(commandLine);
+        Assert.Contains("Nodes: 2", game.Output);
+        Assert.Contains("max", game.Output);
     }
 }

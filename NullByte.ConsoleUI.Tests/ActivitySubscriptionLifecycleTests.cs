@@ -1,6 +1,7 @@
 using System.Reflection;
 using NullByte.ConsoleUI.Configuration;
 using NullByte.ConsoleUI.Terminal;
+using NullByte.ConsoleUI.Tests.Infrastructure;
 using NullByte.Core.Persistence;
 using NullByte.Core.Services;
 using NullByte.Shell;
@@ -13,7 +14,7 @@ public class ActivitySubscriptionLifecycleTests
     [Fact]
     public async Task Load_detaches_the_old_sessions_activity_handler()
     {
-        var store = new MemoryStore();
+        var store = new InMemorySaveStore();
         await using var terminal = new ThreadSafeConsoleTerminal();
         var saves = new SaveManager(store, new SaveGameSerializer());
         await SeedSaveAsync(terminal, saves);
@@ -35,7 +36,7 @@ public class ActivitySubscriptionLifecycleTests
     [Fact]
     public async Task Reset_detaches_the_old_sessions_activity_handler()
     {
-        var store = new MemoryStore();
+        var store = new InMemorySaveStore();
         await using var terminal = new ThreadSafeConsoleTerminal();
         var saves = new SaveManager(store, new SaveGameSerializer());
 
@@ -56,7 +57,7 @@ public class ActivitySubscriptionLifecycleTests
     [Fact]
     public async Task Dispose_detaches_the_current_sessions_activity_handler()
     {
-        var store = new MemoryStore();
+        var store = new InMemorySaveStore();
         await using var terminal = new ThreadSafeConsoleTerminal();
         var saves = new SaveManager(store, new SaveGameSerializer());
         var host = CreateHost(terminal, saves);
@@ -74,7 +75,7 @@ public class ActivitySubscriptionLifecycleTests
     [Fact]
     public async Task Failed_load_keeps_the_current_sessions_activity_handler()
     {
-        var store = new MemoryStore();
+        var store = new InMemorySaveStore();
         await using var terminal = new ThreadSafeConsoleTerminal();
         var saves = new SaveManager(store, new SaveGameSerializer());
 
@@ -92,7 +93,7 @@ public class ActivitySubscriptionLifecycleTests
     [Fact]
     public async Task Failed_reset_keeps_the_current_sessions_activity_handler()
     {
-        var store = new MemoryStore { FailDelete = true };
+        var store = new InMemorySaveStore { FailDelete = true };
         await using var terminal = new ThreadSafeConsoleTerminal();
         var saves = new SaveManager(store, new SaveGameSerializer());
 
@@ -158,34 +159,5 @@ public class ActivitySubscriptionLifecycleTests
 
         return (Task)(method.Invoke(host, arguments)
             ?? throw new InvalidOperationException($"GameHost.{methodName} returned no task."));
-    }
-
-    private sealed class MemoryStore : ISaveStore
-    {
-        private readonly Dictionary<string, string> slots = [];
-
-        public bool FailDelete { get; init; }
-
-        public Task WriteAsync(string slot, string json, CancellationToken cancellationToken = default)
-        {
-            slots[slot] = json;
-            return Task.CompletedTask;
-        }
-
-        public Task<string?> ReadAsync(string slot, CancellationToken cancellationToken = default)
-            => Task.FromResult(slots.GetValueOrDefault(slot));
-
-        public Task<IReadOnlyList<SaveSlotInfo>> ListAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<SaveSlotInfo>>(
-                slots.Keys.Select(name => new SaveSlotInfo(name, DateTimeOffset.UnixEpoch)).ToArray());
-
-        public Task DeleteAsync(string slot, CancellationToken cancellationToken = default)
-        {
-            if (FailDelete)
-                throw new IOException("The test store rejected deletion.");
-
-            slots.Remove(slot);
-            return Task.CompletedTask;
-        }
     }
 }

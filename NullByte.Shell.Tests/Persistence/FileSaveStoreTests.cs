@@ -85,4 +85,32 @@ public sealed class FileSaveStoreTests : IDisposable
         Assert.False(File.Exists(autosavePath));
         Assert.True(File.Exists(namedSavePath));
     }
+
+    [Fact]
+    public async Task WriteAsync_KeepsThePreviousSaveAsABackup()
+    {
+        var sut = new FileSaveStore(directory);
+
+        Assert.Empty(await sut.ListAsync(TestContext.Current.CancellationToken));
+        Assert.Null(await sut.ReadAsync("one", TestContext.Current.CancellationToken));
+
+        await sut.WriteAsync("one", "first", TestContext.Current.CancellationToken);
+        await sut.WriteAsync("one", "second", TestContext.Current.CancellationToken);
+
+        Assert.Equal("second", await sut.ReadAsync("one", TestContext.Current.CancellationToken));
+        Assert.Equal("first", await File.ReadAllTextAsync(Path.Combine(directory, "one.json.bak"), TestContext.Current.CancellationToken));
+        Assert.Equal(new[] { "one" }, (await sut.ListAsync(TestContext.Current.CancellationToken)).Select(slot => slot.Name));
+        Assert.Empty(Directory.GetFiles(directory, "*.tmp"));
+    }
+
+    [Theory]
+    [InlineData("../outside")]
+    [InlineData("")]
+    public async Task WriteAsync_RejectsUnsafeSlotNames(string slot)
+    {
+        var sut = new FileSaveStore(directory);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => sut.WriteAsync(slot, "x", TestContext.Current.CancellationToken));
+    }
 }

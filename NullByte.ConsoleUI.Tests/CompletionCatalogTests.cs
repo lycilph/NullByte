@@ -1,4 +1,5 @@
-﻿using NullByte.ConsoleUI.Commands;
+﻿using NSubstitute;
+using NullByte.ConsoleUI.Commands;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.ConsoleUI.Tests.Infrastructure;
 using NullByte.Core.Domain;
@@ -7,7 +8,6 @@ using NullByte.Core.Persistence;
 using NullByte.Core.Services;
 using NullByte.Core.Time;
 using NullByte.Core.World;
-using NullByte.Shell;
 using NullByte.Shell.Persistence;
 
 namespace NullByte.ConsoleUI.Tests;
@@ -182,21 +182,24 @@ public sealed class CompletionCatalogTests
 
     private static Fixture CreateFixture(GameState? state = null)
     {
-        var terminal = new FakeTerminal();
         var gameState = state ?? InitialGameStateFactory.Create();
-        var session = GameSession.Create(new GameSessionOptions() { Output = terminal });
-        var hostRequests = new HostRequestMailbox();
-        var registry = CommandSetup.Create(session, terminal, hostRequests);
+
+        // The catalog reads command names and completions from the registry and the activities from the game's
+        // catalog, so a default game provides both.
+        var game = ConsoleTestSetup.CreateHarness();
         var scheduler = new GameScheduler(new FakeGameClock());
         var formulas = new NetworkFormulas(new Core.Configuration.BalanceConfig());
 
-        var fileSaveStore = new FileSaveStore("Saves");
-        var saveSerializer = new SaveGameSerializer();
-        var saveManager = new SaveManager(fileSaveStore, saveSerializer);
+        // No save slots on disk, and nothing in this test touches the file system.
+        var saveStore = Substitute.For<ISaveStore>();
+        saveStore
+            .ListAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<SaveSlotInfo>>([]));
+        var saveManager = new SaveManager(saveStore, new SaveGameSerializer());
 
         return new Fixture(
             new NetworkService(gameState, scheduler, formulas),
-            new CompletionCatalog(registry, gameState, session.Services.Activities.Catalog, saveManager));
+            new CompletionCatalog(game.Registry, gameState, game.Session.Services.Activities.Catalog, saveManager));
     }
 
     private sealed record Fixture(NetworkService Network, CompletionCatalog Catalog);

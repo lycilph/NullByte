@@ -1,369 +1,129 @@
-﻿using NullByte.ConsoleUI.Commands;
-using NullByte.ConsoleUI.Terminal;
-using NullByte.Core.Configuration;
-using NullByte.Core.Domain;
-using NullByte.Core.Scripting;
-using NullByte.Core.Scripting.Activities;
-using NullByte.Core.Services;
-using NullByte.Scripting.Runtime;
-using NullByte.Shell;
+﻿using NSubstitute;
 using NullByte.ConsoleUI.Tests.Infrastructure;
+using NullByte.Core.Scripting;
+using NullByte.Scripting.Runtime;
 
 namespace NullByte.ConsoleUI.Tests;
 
 public sealed class RunCommandTests
 {
     [Fact]
-    public void RunCommand_IsRegistered()
+    public async Task Run_without_a_script_shows_the_usage()
     {
-        var terminal = new FakeTerminal();
-        var session = GameSession.Create(new GameSessionOptions() { Output = terminal });
-        var hostRequests = new HostRequestMailbox();
-        var registry = CommandSetup.Create(session, terminal, hostRequests);
+        var game = new ScriptGame();
 
-        Assert.True(registry.TryGet("run", out var command));
-        Assert.NotNull(command);
-        Assert.False(command!.Debug);
-        Assert.Equal("run <filename> [-t <threads>] [args...]", command.Usage);
+        await game.Console.RunAsync("run");
+
+        Assert.Contains("Usage: run <filename> [-t <threads>] [args...]", game.Output);
     }
 
     [Fact]
-    public async Task Run_WithoutScript_ShowsUsage()
+    public async Task Run_with_a_missing_script_shows_file_not_found()
     {
-        var harness = new Harness();
+        var game = new ScriptGame();
 
-        await harness.RunAsync("run");
+        await game.Console.RunAsync("run missing.cx");
 
-        Assert.Contains("Usage: run <filename> [-t <threads>] [args...]", harness.Output);
+        Assert.Contains("File not found: missing.cx", game.Output);
     }
 
     [Fact]
-    public async Task Run_WithMissingScript_ShowsFileNotFound()
+    public async Task Run_with_a_valid_script_starts_the_script()
     {
-        var harness = new Harness();
+        var game = new ScriptGame();
+        game.WriteScript("hello.cx", """nb.Print("Hello from script");""");
 
-        await harness.RunAsync("run missing.cx");
+        await game.Console.RunAsync("run hello.cx");
 
-        Assert.Contains("File not found: missing.cx", harness.Output);
+        Assert.Contains("Executing hello.cx.", game.Output);
+        Assert.Contains("Hello from script", game.Output);
     }
 
     [Fact]
-    public async Task Run_WithValidScript_StartsScript()
+    public async Task Run_passes_the_arguments_to_the_script()
     {
-        var harness = new Harness();
-
-        harness.WriteScript(
-            "hello.cx",
-            """
-            nb.Print("Hello from script");
-            """);
-
-        await harness.RunAsync("run hello.cx");
-
-        Assert.Contains("Executing hello.cx.", harness.Output);
-        Assert.Contains("Hello from script", harness.Output);
-    }
-
-    [Fact]
-    public async Task Run_PassesArgumentsToScript()
-    {
-        var harness = new Harness();
-
-        harness.WriteScript(
+        var game = new ScriptGame();
+        game.WriteScript(
             "args.cx",
             """
             nb.Print($"Target: {args[0]}");
             nb.Print($"Mode: {args[1]}");
             """);
 
-        await harness.RunAsync("run args.cx n00dles aggressive");
+        await game.Console.RunAsync("run args.cx n00dles aggressive");
 
-        Assert.Contains("Target: n00dles", harness.Output);
-        Assert.Contains("Mode: aggressive", harness.Output);
+        Assert.Contains("Target: n00dles", game.Output);
+        Assert.Contains("Mode: aggressive", game.Output);
     }
 
     [Fact]
-    public async Task Run_WithQuotedArgument_PreservesArgument()
+    public async Task Run_keeps_a_quoted_argument_together()
     {
-        var harness = new Harness();
+        var game = new ScriptGame();
+        game.WriteScript("args.cx", "nb.Print(args[0]);");
 
-        harness.WriteScript(
-            "args.cx",
-            """
-            nb.Print(args[0]);
-            """);
+        await game.Console.RunAsync("""run args.cx "hello world""");
 
-        await harness.RunAsync("""run args.cx "hello world""");
-
-        Assert.Contains("hello world", harness.Output);
+        Assert.Contains("hello world", game.Output);
     }
 
     [Fact]
-    public async Task Run_WithCompilationError_PrintsDiagnostic()
+    public async Task A_compilation_error_prints_the_diagnostic_and_nothing_else()
     {
-        var harness = new Harness();
+        var game = new ScriptGame();
+        game.WriteScript("broken.cx", "nb.Print(missingValue);");
 
-        harness.WriteScript(
-            "broken.cx",
-            """
-            nb.Print(missingValue);
-            """);
+        await game.Console.RunAsync("run broken.cx");
 
-        await harness.RunAsync("run broken.cx");
-
-        Assert.Contains("broken.cx(1,", harness.Output);
-        Assert.Contains("error CS0103", harness.Output);
-        Assert.Contains("missingValue", harness.Output);
-        Assert.DoesNotContain("Started broken.cx.", harness.Output);
+        Assert.Contains("broken.cx(1,", game.Output);
+        Assert.Contains("error CS0103", game.Output);
+        Assert.Contains("missingValue", game.Output);
+        Assert.DoesNotContain("Started broken.cx.", game.Output);
+        Assert.DoesNotContain("Compilation failed", game.Output);
     }
 
     [Fact]
-    public async Task Run_WithCompilationError_DoesNotPrintGenericFailure()
+    public async Task Run_returns_without_waiting_for_a_script_that_is_still_active()
     {
-        var harness = new Harness();
-
-        harness.WriteScript(
-            "broken.cx",
-            """
-            nb.Print(missingValue);
-            """);
-
-        await harness.RunAsync("run broken.cx");
-
-        Assert.Contains("error CS0103", harness.Output);
-        Assert.DoesNotContain("Compilation failed", harness.Output);
-    }
-
-    [Fact]
-    public async Task Run_WithActiveScript_ReturnsWithoutWaitingForCompletion()
-    {
-        var harness = new Harness();
-
-        harness.WriteScript(
+        var game = new ScriptGame();
+        game.WriteScript(
             "waiting.cx",
             """
-        nb.Print("Before sleep");
-        await nb.Sleep(TimeSpan.FromHours(1));
-        nb.Print("After sleep");
-        """);
+            nb.Print("Before sleep");
+            await nb.Sleep(TimeSpan.FromHours(1));
+            nb.Print("After sleep");
+            """);
 
-        await harness.RunAsync("run waiting.cx");
+        await game.Console.RunAsync("run waiting.cx");
 
         try
         {
-            await harness.ScriptApi.WaitUntilSleepingAsync();
+            await game.WaitUntilSleepingAsync();
 
-            Assert.Contains("Executing waiting.cx.", harness.Output);
-            Assert.Contains("Before sleep", harness.Output);
-            Assert.DoesNotContain("After sleep", harness.Output);
-            Assert.True(harness.ScriptService.HasRunningProcesses);
+            Assert.Contains("Executing waiting.cx.", game.Output);
+            Assert.Contains("Before sleep", game.Output);
+            Assert.DoesNotContain("After sleep", game.Output);
+            Assert.True(game.ScriptService.HasRunningProcesses);
         }
         finally
         {
-            harness.ScriptApi.CompleteSleep();
+            game.CompleteSleep();
 
-            await WaitUntilAsync(() => !harness.ScriptService.HasRunningProcesses);
+            await WaitUntilAsync(() => !game.ScriptService.HasRunningProcesses);
         }
 
-        Assert.Contains("After sleep", harness.Output);
+        Assert.Contains("After sleep", game.Output);
     }
 
     [Fact]
-    public async Task Run_UsesCurrentServerFileSystem()
+    public async Task Run_uses_the_file_system_of_the_current_server()
     {
-        var harness = new Harness();
+        var game = new ScriptGame();
+        game.WriteScript("local.cx", """nb.Print("Local script");""");
 
-        harness.WriteScript(
-            "local.cx",
-            """
-            nb.Print("Local script");
-            """);
+        await game.Console.RunAsync("run local.cx");
 
-        await harness.RunAsync("run local.cx");
-
-        Assert.Contains("Local script", harness.Output);
-    }
-
-    private sealed class Harness
-    {
-        private readonly ConsoleTestHarness console;
-
-        public Harness()
-        {
-            var terminal = new FakeTerminal();
-            ScriptApi = new TestNullByteApi(terminal);
-            var apiFactory = new TestNullByteApiFactory(ScriptApi);
-            GameState = TestGameFactory.CreateGame();
-            console = ConsoleTestSetup.CreateHarness(
-                GameState,
-                apiFactory: apiFactory,
-                terminal: terminal);
-            ScriptService = console.Session.Services.Scripts;
-        }
-
-        public GameState GameState { get; }
-
-        public ScriptService ScriptService { get; }
-
-        public TestNullByteApi ScriptApi { get; }
-
-        public string Output => console.Output;
-
-        public void WriteScript(string fileName, string source)
-        {
-            GameState.FileSystem.WriteFile("home", fileName, source);
-        }
-
-        public Task RunAsync(string commandLine) => console.RunAsync(commandLine);
-    }
-
-    private sealed class TestNullByteApiFactory(TestNullByteApi api) : INullByteApiFactory
-    {
-        public INullByteApi Create(IScriptOperations scriptOperations, string hostname, int threads, CancellationToken cancellationToken) => api;
-    }
-
-    private sealed class TestNullByteApi : INullByteApi
-    {
-        private readonly IGameTerminal terminal;
-        private readonly TaskCompletionSource sleepRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly TaskCompletionSource sleepCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly CancellationToken cancellationToken = new();
-
-        public INullByteFilesApi Files => throw new NotSupportedException();
-        public INullByteBotnetApi Botnet => throw new NotSupportedException();
-        public INullByteActivitiesApi Activities => throw new NotSupportedException();
-
-        public TestNullByteApi(IGameTerminal terminal)
-        {
-            this.terminal = terminal;
-        }
-
-        public void Print(object? value)
-        {
-            terminal.WriteLine(value?.ToString() ?? string.Empty);
-        }
-
-        public Task Sleep(TimeSpan duration)
-        {
-            sleepRequested.TrySetResult();
-
-            return sleepCompletion.Task.WaitAsync(cancellationToken);
-        }
-
-        public Task WaitUntilSleepingAsync()
-        {
-            return sleepRequested.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        }
-
-        public void CompleteSleep()
-        {
-            sleepCompletion.TrySetResult();
-        }
-
-        public Task<HackResult> Hack(string hostname)
-        {
-            throw new NotSupportedException();
-        }
-
-        public Task<GrowResult> Grow(string hostname)
-        {
-            throw new NotSupportedException();
-        }
-
-        public Task<WeakenResult> Weaken(string hostname)
-        {
-            throw new NotSupportedException();
-        }
-
-        public double GetServerMoneyAvailable(string hostname)
-        {
-            throw new NotSupportedException();
-        }
-
-        public double GetServerMaxMoney(string hostname)
-        {
-            throw new NotSupportedException();
-        }
-
-        public double GetServerSecurityLevel(string hostname)
-        {
-            throw new NotSupportedException();
-        }
-
-        public double GetServerMinSecurityLevel(string hostname)
-        {
-            throw new NotSupportedException();
-        }
-
-        public double GetHackingLevel()
-        {
-            throw new NotSupportedException();
-        }
-
-        public double GetServerRequiredHackingLevel(string hostname)
-        {
-            throw new NotSupportedException();
-        }
-
-        public double GetServerMaxRam(string hostname)
-        {
-            throw new NotSupportedException();
-        }
-
-        public double GetServerUsedRam(string hostname)
-        {
-            throw new NotSupportedException();
-        }
-
-        public bool HasRootAccess(string hostname)
-        {
-            throw new NotSupportedException();
-        }
-
-        public NukeResult Nuke(string hostname)
-        {
-            throw new NotSupportedException();
-        }
-
-        public IReadOnlyList<string> Scan(string hostname)
-        {
-            throw new NotSupportedException();
-        }
-
-        public IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "")
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<int> RunAsync(string filename, params string[] args)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<int> ExecAsync(string filename, string hostname, params string[] args)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool Kill(int pid)
-        {
-            throw new NotImplementedException();
-        }
-
-        public int KillAll()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool ScriptRunning(string filename, string hostname = "")
-        {
-            throw new NotImplementedException();
-        }
-
-        public double GetScriptRam(string filename, string hostname = "")
-        {
-            throw new NotImplementedException();
-        }
+        Assert.Contains("Local script", game.Output);
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition)
@@ -371,8 +131,50 @@ public sealed class RunCommandTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         while (!condition())
-        {
             await Task.Delay(10, timeout.Token);
+    }
+
+    /// <summary>
+    /// A console game whose scripts get a substitute for the script API: <c>nb.Print</c> writes to the terminal
+    /// and <c>nb.Sleep</c> waits until the test lets it go.
+    /// </summary>
+    private sealed class ScriptGame
+    {
+        private readonly TaskCompletionSource sleepRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource sleepCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public ScriptGame()
+        {
+            var terminal = new FakeTerminal();
+
+            var api = Substitute.For<INullByteApi>();
+            api.When(a => a.Print(Arg.Any<object?>()))
+                .Do(call => terminal.WriteLine(call.Arg<object?>()?.ToString() ?? string.Empty));
+            api.Sleep(Arg.Any<TimeSpan>()).Returns(_ =>
+            {
+                sleepRequested.TrySetResult();
+                return sleepCompletion.Task;
+            });
+
+            var apiFactory = Substitute.For<INullByteApiFactory>();
+            apiFactory
+                .Create(Arg.Any<IScriptOperations>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(api);
+
+            Console = ConsoleTestSetup.CreateHarness(new ConsoleTestOptions { ApiFactory = apiFactory, Terminal = terminal });
+            ScriptService = Console.Session.Services.Scripts;
         }
+
+        public ConsoleTestHarness Console { get; }
+
+        public ScriptService ScriptService { get; }
+
+        public string Output => Console.Output;
+
+        public void WriteScript(string fileName, string source) => Console.Files.WriteFile("home", fileName, source);
+
+        public Task WaitUntilSleepingAsync() => sleepRequested.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        public void CompleteSleep() => sleepCompletion.TrySetResult();
     }
 }

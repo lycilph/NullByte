@@ -127,6 +127,10 @@ Prefer the existing ActivityService/System lifecycle. Decide explicitly whether 
 - Test scripting behavior at both analysis/compilation and runtime boundaries when applicable.
 - Test editor behavior through the editor service/protocol boundary where useful.
 - Keep unit tests close to the layer that owns the behavior.
+- Put shared test setup in the project's `Infrastructure/` folder instead of building sessions and fixtures inside test classes. Console tests start from `ConsoleTestSetup.CreateHarness`.
+- Use NSubstitute for collaborators a test only needs to stub or verify (for example `INullByteApi` or `ISaveStore`). Keep hand-written fakes (`FakeTerminal`, `FakeGameClock`, `ScriptedRandom`, in-memory stores) where the test asserts on their recorded state.
+- Do not touch the real file system or wait on real time in a test unless that is the behavior under test; use `TemporaryDirectory`, `FakeTimeProvider` or a fake clock.
+- Name command tests as sentences (`Rm_deletes_a_file_but_explains_directories`) and unit tests as `Subject_Condition_Result`.
 
 ## AI-assisted development workflow
 

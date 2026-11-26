@@ -1,46 +1,16 @@
-﻿using NullByte.ConsoleUI.Commands;
-using NullByte.ConsoleUI.Commands.Groups;
-using NullByte.ConsoleUI.Terminal;
-using NullByte.Core.Configuration;
-using NullByte.Core.Domain;
+﻿using NullByte.ConsoleUI.Terminal;
 using NullByte.ConsoleUI.Tests.Infrastructure;
-using NullByte.Core.Formulas;
-using NullByte.Core.Services;
-using NullByte.Core.Time;
 
 namespace NullByte.ConsoleUI.Tests;
 
-internal sealed class FileCommandsFixture
+/// <summary>A new game with the home server and one more server to copy files to.</summary>
+file static class FileGame
 {
-    private readonly FakeTerminal terminal = new();
-    private readonly CommandDispatcher dispatcher;
-
-    public FileCommandsFixture()
-    {
-        var state = TestGameFactory.CreateGame(
-            additionalServers: [TestGameFactory.CreateServer("n00dles")]);
-        var networkService = new NetworkService(
-            state, new GameScheduler(new FakeGameClock()), new NetworkFormulas(new BalanceConfig()));
-
-        Files = state.FileSystem;
-        Registry = new CommandRegistry();
-        Work = new WorkingDirectory(state);
-        new FileCommands(Files, networkService, Work, terminal).Register(Registry);
-        dispatcher = new CommandDispatcher(Registry, terminal);
-    }
-
-    public VirtualFileSystem Files { get; }
-    public WorkingDirectory Work { get; }
-    public CommandRegistry Registry { get; }
-
-    /// <summary>Runs a command line and returns what it printed.</summary>
-    public async Task<IReadOnlyList<string>> RunAsync(string commandLine)
-    {
-        terminal.Lines.Clear();
-        await dispatcher.DispatchAsync(commandLine);
-        return terminal.Lines.ToArray();
-    }
-
+    public static ConsoleTestHarness Create()
+        => ConsoleTestSetup.CreateHarness(new ConsoleTestOptions
+        {
+            State = TestGameFactory.CreateGame(additionalServers: [TestGameFactory.CreateServer("n00dles")])
+        });
 }
 
 public class FileCommandsTests
@@ -50,9 +20,9 @@ public class FileCommandsTests
     [Fact]
     public async Task Mkdir_creates_a_directory_and_its_parents()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
 
-        Assert.Equal(new[] { "Created tools/net/ on home." }, await game.RunAsync("mkdir tools/net"));
+        Assert.Equal(new[] { "Created tools/net/ on home." }, await game.RunAndCaptureAsync("mkdir tools/net"));
 
         Assert.Equal(new[] { "tools", "tools/net" }, game.Files.ListDirectories("home"));
     }
@@ -60,21 +30,21 @@ public class FileCommandsTests
     [Fact]
     public async Task Mkdir_explains_what_is_in_the_way()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.WriteFile("home", "a.cx", "x");
         game.Files.CreateDirectory("home", "tools");
 
-        Assert.Equal(new[] { "Directory already exists: tools" }, await game.RunAsync("mkdir tools"));
-        Assert.Equal(new[] { "A file with that name already exists: a.cx" }, await game.RunAsync("mkdir a.cx"));
-        Assert.Equal(new[] { "'a.cx' is a file." }, await game.RunAsync("mkdir a.cx/sub"));
+        Assert.Equal(new[] { "Directory already exists: tools" }, await game.RunAndCaptureAsync("mkdir tools"));
+        Assert.Equal(new[] { "A file with that name already exists: a.cx" }, await game.RunAndCaptureAsync("mkdir a.cx"));
+        Assert.Equal(new[] { "'a.cx' is a file." }, await game.RunAndCaptureAsync("mkdir a.cx/sub"));
     }
 
     [Fact]
     public async Task A_bad_path_gives_a_plain_message()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
 
-        var output = Assert.Single(await game.RunAsync("mkdir a//b"));
+        var output = Assert.Single(await game.RunAndCaptureAsync("mkdir a//b"));
 
         Assert.StartsWith("Path segments must be simple names", output);
         Assert.DoesNotContain("(Parameter", output);
@@ -85,33 +55,33 @@ public class FileCommandsTests
     [Fact]
     public async Task Ls_lists_directories_first_with_a_slash()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.WriteFile("home", "z.cx", "x");
         game.Files.WriteFile("home", "tools/a.cx", "x");
         game.Files.CreateDirectory("home", "empty");
 
-        Assert.Equal(new[] { "empty/", "tools/", "z.cx" }, await game.RunAsync("ls"));
-        Assert.Equal(new[] { "a.cx" }, await game.RunAsync("ls tools"));
+        Assert.Equal(new[] { "empty/", "tools/", "z.cx" }, await game.RunAndCaptureAsync("ls"));
+        Assert.Equal(new[] { "a.cx" }, await game.RunAndCaptureAsync("ls tools"));
     }
 
     [Fact]
     public async Task Ls_reports_empty_missing_and_file_arguments()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.CreateDirectory("home", "empty");
         game.Files.WriteFile("home", "a.cx", "x");
 
-        Assert.Equal(new[] { "The directory is empty." }, await game.RunAsync("ls empty"));
-        Assert.Equal(new[] { "Directory not found: nope" }, await game.RunAsync("ls nope"));
-        Assert.Equal(new[] { "a.cx" }, await game.RunAsync("ls a.cx"));
+        Assert.Equal(new[] { "The directory is empty." }, await game.RunAndCaptureAsync("ls empty"));
+        Assert.Equal(new[] { "Directory not found: nope" }, await game.RunAndCaptureAsync("ls nope"));
+        Assert.Equal(new[] { "a.cx" }, await game.RunAndCaptureAsync("ls a.cx"));
     }
 
     [Fact]
     public async Task Ls_on_an_empty_server_says_so()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
 
-        Assert.Equal(new[] { "No files on this server." }, await game.RunAsync("ls"));
+        Assert.Equal(new[] { "No files on this server." }, await game.RunAndCaptureAsync("ls"));
     }
 
     // ---- cat ----
@@ -119,12 +89,12 @@ public class FileCommandsTests
     [Fact]
     public async Task Cat_reads_files_in_directories_and_refuses_directories()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.WriteFile("home", "tools/a.cx", "hello");
 
-        Assert.Equal(new[] { "hello" }, await game.RunAsync("cat tools/a.cx"));
-        Assert.Equal(new[] { "tools is a directory." }, await game.RunAsync("cat tools"));
-        Assert.Equal(new[] { "File not found: nope.cx" }, await game.RunAsync("cat nope.cx"));
+        Assert.Equal(new[] { "hello" }, await game.RunAndCaptureAsync("cat tools/a.cx"));
+        Assert.Equal(new[] { "tools is a directory." }, await game.RunAndCaptureAsync("cat tools"));
+        Assert.Equal(new[] { "File not found: nope.cx" }, await game.RunAndCaptureAsync("cat nope.cx"));
     }
 
     // ---- rm and rmdir ----
@@ -132,13 +102,13 @@ public class FileCommandsTests
     [Fact]
     public async Task Rm_deletes_a_file_but_explains_directories()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.WriteFile("home", "a.cx", "x");
         game.Files.WriteFile("home", "tools/b.cx", "x");
 
-        Assert.Equal(new[] { "Deleted a.cx." }, await game.RunAsync("rm a.cx"));
+        Assert.Equal(new[] { "Deleted a.cx." }, await game.RunAndCaptureAsync("rm a.cx"));
 
-        var output = Assert.Single(await game.RunAsync("rm tools"));
+        var output = Assert.Single(await game.RunAndCaptureAsync("rm tools"));
         Assert.Contains("rm -r tools", output);
         Assert.True(game.Files.DirectoryExists("home", "tools"));
     }
@@ -149,11 +119,11 @@ public class FileCommandsTests
     [InlineData("rm -R tools")]
     public async Task Rm_with_the_recursive_flag_deletes_a_directory_and_its_content(string command)
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.WriteFile("home", "tools/a.cx", "x");
         game.Files.WriteFile("home", "tools/net/b.cx", "x");
 
-        Assert.Equal(new[] { "Deleted tools/ and the 2 file(s) in it." }, await game.RunAsync(command));
+        Assert.Equal(new[] { "Deleted tools/ and the 2 file(s) in it." }, await game.RunAndCaptureAsync(command));
 
         Assert.Empty(game.Files.ListFiles("home"));
         Assert.Empty(game.Files.ListDirectories("home"));
@@ -162,25 +132,25 @@ public class FileCommandsTests
     [Fact]
     public async Task Rm_protects_the_root_and_reports_missing_files()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
 
-        Assert.Equal(new[] { "The root directory cannot be deleted." }, await game.RunAsync("rm -r /"));
-        Assert.Equal(new[] { "File not found: nope.cx" }, await game.RunAsync("rm nope.cx"));
-        Assert.Equal(new[] { "Usage: rm [-r] <path>" }, await game.RunAsync("rm -r -r"));
+        Assert.Equal(new[] { "The root directory cannot be deleted." }, await game.RunAndCaptureAsync("rm -r /"));
+        Assert.Equal(new[] { "File not found: nope.cx" }, await game.RunAndCaptureAsync("rm nope.cx"));
+        Assert.Equal(new[] { "Usage: rm [-r] <path>" }, await game.RunAndCaptureAsync("rm -r -r"));
     }
 
     [Fact]
     public async Task Rmdir_only_deletes_empty_directories()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.CreateDirectory("home", "empty");
         game.Files.WriteFile("home", "full/a.cx", "x");
         game.Files.WriteFile("home", "a.cx", "x");
 
-        Assert.Equal(new[] { "Deleted empty/." }, await game.RunAsync("rmdir empty"));
-        Assert.StartsWith("Directory not empty: full", Assert.Single(await game.RunAsync("rmdir full")));
-        Assert.Equal(new[] { "a.cx is a file. Use 'rm' to delete it." }, await game.RunAsync("rmdir a.cx"));
-        Assert.Equal(new[] { "Directory not found: nope" }, await game.RunAsync("rmdir nope"));
+        Assert.Equal(new[] { "Deleted empty/." }, await game.RunAndCaptureAsync("rmdir empty"));
+        Assert.StartsWith("Directory not empty: full", Assert.Single(await game.RunAndCaptureAsync("rmdir full")));
+        Assert.Equal(new[] { "a.cx is a file. Use 'rm' to delete it." }, await game.RunAndCaptureAsync("rmdir a.cx"));
+        Assert.Equal(new[] { "Directory not found: nope" }, await game.RunAndCaptureAsync("rmdir nope"));
     }
 
     // ---- mv ----
@@ -188,10 +158,10 @@ public class FileCommandsTests
     [Fact]
     public async Task Mv_renames_a_file_and_moves_it_into_a_new_directory()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.WriteFile("home", "a.cx", "x");
 
-        Assert.Equal(new[] { "Moved a.cx to archive/old/a.cx on home." }, await game.RunAsync("mv a.cx archive/old/a.cx"));
+        Assert.Equal(new[] { "Moved a.cx to archive/old/a.cx on home." }, await game.RunAndCaptureAsync("mv a.cx archive/old/a.cx"));
 
         Assert.Equal(new[] { "archive/old/a.cx" }, game.Files.ListFiles("home"));
     }
@@ -199,10 +169,10 @@ public class FileCommandsTests
     [Fact]
     public async Task Mv_moves_a_directory_with_its_content()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.WriteFile("home", "old/a.cx", "x");
 
-        Assert.Equal(new[] { "Moved old to new on home." }, await game.RunAsync("mv old new"));
+        Assert.Equal(new[] { "Moved old to new on home." }, await game.RunAndCaptureAsync("mv old new"));
 
         Assert.Equal(new[] { "new/a.cx" }, game.Files.ListFiles("home"));
     }
@@ -210,16 +180,16 @@ public class FileCommandsTests
     [Fact]
     public async Task Mv_refuses_what_it_cannot_do()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.WriteFile("home", "a.cx", "x");
         game.Files.WriteFile("home", "b.cx", "y");
         game.Files.WriteFile("home", "dir/c.cx", "z");
 
-        Assert.Equal(new[] { "File already exists: b.cx" }, await game.RunAsync("mv a.cx b.cx"));
-        Assert.Equal(new[] { "Directory already exists: dir" }, await game.RunAsync("mv a.cx dir"));
-        Assert.Equal(new[] { "b.cx is a file, not a directory." }, await game.RunAsync("mv a.cx b.cx/a.cx"));
-        Assert.Equal(new[] { "A directory cannot be moved into itself." }, await game.RunAsync("mv dir dir/inner"));
-        Assert.Equal(new[] { "File not found: nope" }, await game.RunAsync("mv nope other"));
+        Assert.Equal(new[] { "File already exists: b.cx" }, await game.RunAndCaptureAsync("mv a.cx b.cx"));
+        Assert.Equal(new[] { "Directory already exists: dir" }, await game.RunAndCaptureAsync("mv a.cx dir"));
+        Assert.Equal(new[] { "b.cx is a file, not a directory." }, await game.RunAndCaptureAsync("mv a.cx b.cx/a.cx"));
+        Assert.Equal(new[] { "A directory cannot be moved into itself." }, await game.RunAndCaptureAsync("mv dir dir/inner"));
+        Assert.Equal(new[] { "File not found: nope" }, await game.RunAndCaptureAsync("mv nope other"));
 
         Assert.Equal(new[] { "a.cx", "b.cx", "dir/c.cx" }, game.Files.ListFiles("home"));
     }
@@ -229,10 +199,10 @@ public class FileCommandsTests
     [Fact]
     public async Task Scp_copies_a_file_in_a_directory_and_creates_the_directory_there()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.WriteFile("home", "tools/a.cx", "x");
 
-        Assert.Equal(new[] { "Files tools/a.cx copied to n00dles" }, await game.RunAsync("scp tools/a.cx n00dles"));
+        Assert.Equal(new[] { "Files tools/a.cx copied to n00dles" }, await game.RunAndCaptureAsync("scp tools/a.cx n00dles"));
 
         Assert.True(game.Files.TryReadFile("n00dles", "tools/a.cx", out _));
         Assert.True(game.Files.DirectoryExists("n00dles", "tools"));
@@ -241,10 +211,10 @@ public class FileCommandsTests
     [Fact]
     public async Task Scp_says_it_copies_files_only()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.WriteFile("home", "tools/a.cx", "x");
 
-        Assert.Equal(new[] { "tools is a directory; scp copies files only." }, await game.RunAsync("scp tools n00dles"));
+        Assert.Equal(new[] { "tools is a directory; scp copies files only." }, await game.RunAndCaptureAsync("scp tools n00dles"));
     }
 
     // ---- edit ----
@@ -252,12 +222,12 @@ public class FileCommandsTests
     [Fact]
     public async Task Edit_refuses_before_the_editor_opens()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.WriteFile("home", "a.cx", "x");
         game.Files.CreateDirectory("home", "tools");
 
-        Assert.Equal(new[] { "tools is a directory." }, await game.RunAsync("edit tools"));
-        Assert.Equal(new[] { "a.cx is a file, not a directory." }, await game.RunAsync("edit a.cx/b.cx"));
+        Assert.Equal(new[] { "tools is a directory." }, await game.RunAndCaptureAsync("edit tools"));
+        Assert.Equal(new[] { "a.cx is a file, not a directory." }, await game.RunAndCaptureAsync("edit a.cx/b.cx"));
     }
 
     // ---- tab completion ----
@@ -265,8 +235,7 @@ public class FileCommandsTests
     [Fact]
     public void Tab_completion_offers_directories_where_they_make_sense()
     {
-        var game = new FileCommandsFixture();
-        var commands = game.Registry.Commands.Select(c => new CommandCompletionInfo(c.Name, c.Completions)).ToArray();
+        var commands = ConsoleTestSetup.CreateRegistry().Commands.Select(c => new CommandCompletionInfo(c.Name, c.Completions)).ToArray();
         var values = new Dictionary<CompletionKind, IReadOnlyList<string>>
         {
             [CompletionKind.Directory] = new[] { "tools", "tools/net" },
@@ -286,71 +255,71 @@ public class WorkingDirectoryCommandsTests
     [Fact]
     public async Task Pwd_and_cd_move_around_the_directory_tree()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.CreateDirectory("home", "tools/net");
 
-        Assert.Equal(new[] { "/" }, await game.RunAsync("pwd"));
+        Assert.Equal(new[] { "/" }, await game.RunAndCaptureAsync("pwd"));
 
-        Assert.Empty(await game.RunAsync("cd tools/net"));
-        Assert.Equal(new[] { "/tools/net" }, await game.RunAsync("pwd"));
+        Assert.Empty(await game.RunAndCaptureAsync("cd tools/net"));
+        Assert.Equal(new[] { "/tools/net" }, await game.RunAndCaptureAsync("pwd"));
 
-        await game.RunAsync("cd ..");
-        Assert.Equal(new[] { "/tools" }, await game.RunAsync("pwd"));
+        await game.RunAndCaptureAsync("cd ..");
+        Assert.Equal(new[] { "/tools" }, await game.RunAndCaptureAsync("pwd"));
 
-        await game.RunAsync("cd net");
-        await game.RunAsync("cd /");
-        Assert.Equal(new[] { "/" }, await game.RunAsync("pwd"));
+        await game.RunAndCaptureAsync("cd net");
+        await game.RunAndCaptureAsync("cd /");
+        Assert.Equal(new[] { "/" }, await game.RunAndCaptureAsync("pwd"));
 
-        await game.RunAsync("cd tools/net");
-        await game.RunAsync("cd");   // no argument: the root
-        Assert.Equal(new[] { "/" }, await game.RunAsync("pwd"));
+        await game.RunAndCaptureAsync("cd tools/net");
+        await game.RunAndCaptureAsync("cd");   // no argument: the root
+        Assert.Equal(new[] { "/" }, await game.RunAndCaptureAsync("pwd"));
 
-        await game.RunAsync("cd tools");
-        await game.RunAsync("cd ../../..");   // cannot go above the root
-        Assert.Equal(new[] { "/" }, await game.RunAsync("pwd"));
+        await game.RunAndCaptureAsync("cd tools");
+        await game.RunAndCaptureAsync("cd ../../..");   // cannot go above the root
+        Assert.Equal(new[] { "/" }, await game.RunAndCaptureAsync("pwd"));
     }
 
     [Fact]
     public async Task Cd_explains_what_is_wrong_and_stays_where_it_is()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.WriteFile("home", "a.cx", "x");
 
-        Assert.Equal(new[] { "Directory not found: nope" }, await game.RunAsync("cd nope"));
-        Assert.Equal(new[] { "a.cx is a file, not a directory." }, await game.RunAsync("cd a.cx"));
-        Assert.StartsWith("Path segments must be simple names", Assert.Single(await game.RunAsync("cd a//b")));
+        Assert.Equal(new[] { "Directory not found: nope" }, await game.RunAndCaptureAsync("cd nope"));
+        Assert.Equal(new[] { "a.cx is a file, not a directory." }, await game.RunAndCaptureAsync("cd a.cx"));
+        Assert.StartsWith("Path segments must be simple names", Assert.Single(await game.RunAndCaptureAsync("cd a//b")));
 
-        Assert.Equal(new[] { "/" }, await game.RunAsync("pwd"));
+        Assert.Equal(new[] { "/" }, await game.RunAndCaptureAsync("pwd"));
     }
 
     [Fact]
     public async Task Commands_work_relative_to_the_current_directory()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.WriteFile("home", "tools/a.cx", "hello");
         game.Files.WriteFile("home", "root.cx", "x");
-        await game.RunAsync("cd tools");
+        await game.RunAndCaptureAsync("cd tools");
 
-        Assert.Equal(new[] { "a.cx" }, await game.RunAsync("ls"));
-        Assert.Equal(new[] { "tools/", "root.cx" }, await game.RunAsync("ls /"));
-        Assert.Equal(new[] { "tools/", "root.cx" }, await game.RunAsync("ls .."));
-        Assert.Equal(new[] { "hello" }, await game.RunAsync("cat a.cx"));
-        Assert.Equal(new[] { "x" }, await game.RunAsync("cat ../root.cx"));
+        Assert.Equal(new[] { "a.cx" }, await game.RunAndCaptureAsync("ls"));
+        Assert.Equal(new[] { "tools/", "root.cx" }, await game.RunAndCaptureAsync("ls /"));
+        Assert.Equal(new[] { "tools/", "root.cx" }, await game.RunAndCaptureAsync("ls .."));
+        Assert.Equal(new[] { "hello" }, await game.RunAndCaptureAsync("cat a.cx"));
+        Assert.Equal(new[] { "x" }, await game.RunAndCaptureAsync("cat ../root.cx"));
 
-        Assert.Equal(new[] { "Created tools/sub/ on home." }, await game.RunAsync("mkdir sub"));
-        Assert.Equal(new[] { "Moved tools/a.cx to tools/sub/b.cx on home." }, await game.RunAsync("mv a.cx sub/b.cx"));
-        Assert.Equal(new[] { "Deleted tools/sub/b.cx." }, await game.RunAsync("rm sub/b.cx"));
-        Assert.Equal(new[] { "Deleted tools/sub/." }, await game.RunAsync("rmdir sub"));
+        Assert.Equal(new[] { "Created tools/sub/ on home." }, await game.RunAndCaptureAsync("mkdir sub"));
+        Assert.Equal(new[] { "Moved tools/a.cx to tools/sub/b.cx on home." }, await game.RunAndCaptureAsync("mv a.cx sub/b.cx"));
+        Assert.Equal(new[] { "Deleted tools/sub/b.cx." }, await game.RunAndCaptureAsync("rm sub/b.cx"));
+        Assert.Equal(new[] { "Deleted tools/sub/." }, await game.RunAndCaptureAsync("rmdir sub"));
     }
 
     [Fact]
     public async Task Scp_keeps_the_full_path_on_the_destination()
     {
-        var game = new FileCommandsFixture();
+        var game = FileGame.Create();
         game.Files.WriteFile("home", "tools/a.cx", "x");
-        await game.RunAsync("cd tools");
+        await game.RunAndCaptureAsync("cd tools");
 
-        Assert.Equal(new[] { "Files tools/a.cx copied to n00dles" }, await game.RunAsync("scp a.cx n00dles"));
+        Assert.Equal(new[] { "Files tools/a.cx copied to n00dles" }, await game.RunAndCaptureAsync("scp a.cx n00dles"));
 
         Assert.True(game.Files.TryReadFile("n00dles", "tools/a.cx", out _));
     }

@@ -11,7 +11,7 @@ public sealed class SettingsFileLoaderTests
 
         var settings = SettingsFileLoader.Load(directory.GetPath("settings.json"));
 
-        var expected = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NullByte", "saves");
+        var expected = SettingsTestData.DefaultSaveDirectory;
         Assert.Equal(expected, settings.SaveDirectory);
         Assert.False(settings.Editor.Enabled);
         Assert.Null(settings.Editor.Port);
@@ -118,6 +118,30 @@ public sealed class SettingsFileLoaderTests
     }
 
     [Fact]
+    public void Load_WithPartialJson_PreservesDefaults()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("settings.json");
+
+        File.WriteAllText(
+            path,
+            """
+        {
+          "development": {
+            "gameSpeedMultiplier": 5.0
+          }
+        }
+        """);
+
+        var settings = SettingsFileLoader.Load(path);
+
+        var expected = SettingsTestData.DefaultSaveDirectory;
+        Assert.Equal(expected, settings.SaveDirectory);
+        Assert.False(settings.Editor.Enabled);
+        Assert.Equal(5.0, settings.Development.GameSpeedMultiplier);
+    }
+
+    [Fact]
     public void WriteDefault_WhenFileDoesNotExist_WritesDefaults()
     {
         using var directory = new TemporaryDirectory();
@@ -130,7 +154,7 @@ public sealed class SettingsFileLoaderTests
 
         var settings = SettingsFileLoader.Load(path);
 
-        var expected = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NullByte", "saves");
+        var expected = SettingsTestData.DefaultSaveDirectory;
         Assert.Equal(expected, settings.SaveDirectory);
         Assert.False(settings.Editor.Enabled);
         Assert.Equal(1.0, settings.Development.GameSpeedMultiplier);

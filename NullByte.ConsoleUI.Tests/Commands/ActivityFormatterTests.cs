@@ -1,4 +1,5 @@
 ﻿using NullByte.ConsoleUI.Commands;
+using NullByte.ConsoleUI.Tests.Infrastructure;
 using NullByte.Core.Domain;
 using NullByte.Core.Domain.Activities;
 using NullByte.Core.Formulas;

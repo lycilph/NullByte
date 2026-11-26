@@ -12,7 +12,7 @@ public sealed class SettingsLoaderTests
 
         var result = SettingsLoader.Load([], path);
 
-        var expected = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NullByte", "saves");
+        var expected = SettingsTestData.DefaultSaveDirectory;
         Assert.Equal(expected, result.Settings.SaveDirectory);
         Assert.False(result.Settings.Editor.Enabled);
         Assert.Equal(1.0, result.Settings.Development.GameSpeedMultiplier);
@@ -218,31 +218,7 @@ public sealed class SettingsLoaderTests
         Assert.True(result.WriteDefaultSettings);
         Assert.False(result.StartNewGame);
 
-        var expected = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NullByte", "saves");
+        var expected = SettingsTestData.DefaultSaveDirectory;
         Assert.Equal(expected, result.Settings.SaveDirectory);
-    }
-
-    [Fact]
-    public void Load_WithPartialJson_PreservesDefaults()
-    {
-        using var directory = new TemporaryDirectory();
-        var path = directory.GetPath("settings.json");
-
-        File.WriteAllText(
-            path,
-            """
-        {
-          "development": {
-            "gameSpeedMultiplier": 5.0
-          }
-        }
-        """);
-
-        var settings = SettingsFileLoader.Load(path);
-
-        var expected = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NullByte", "saves");
-        Assert.Equal(expected, settings.SaveDirectory);
-        Assert.False(settings.Editor.Enabled);
-        Assert.Equal(5.0, settings.Development.GameSpeedMultiplier);
     }
 }
