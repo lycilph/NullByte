@@ -1,6 +1,5 @@
 ﻿using NullByte.Core.Domain;
 using NullByte.Core.Scripting;
-using NullByte.Core.Domain;
 using NullByte.Core.Scripting.Activities;
 using NullByte.Core.Services;
 using NullByte.Scripting.Compilation;
