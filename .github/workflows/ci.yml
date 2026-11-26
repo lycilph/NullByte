@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dotnet:
+    name: .NET build, formatting and tests
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore solution
+        run: dotnet restore NullByte.slnx
+
+      - name: Verify formatting of changed C# files
+        shell: pwsh
+        run: |
+          $base = $env:GITHUB_EVENT_BEFORE
+
+          if (
+            $env:GITHUB_EVENT_NAME -eq "pull_request" -or
+            $env:GITHUB_REF -ne "refs/heads/master" -or
+            [string]::IsNullOrWhiteSpace($base) -or
+            $base -match '^0+$'
+          ) {
+            git fetch origin master
+            if ($LASTEXITCODE -ne 0) {
+              throw "Unable to fetch master for the formatting comparison."
+            }
+
+            $base = git merge-base origin/master HEAD
+            if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($base)) {
+              throw "Unable to determine the merge base with master."
+            }
+          }
+
+          $files = @(
+            git diff --name-only $base HEAD -- '*.cs' |
+              Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+          )
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to determine changed C# files."
+          }
+
+          if ($files.Count -eq 0) {
+            Write-Host "No changed C# files; skipping formatting verification."
+            exit 0
+          }
+
+          Write-Host "Checking formatting for:"
+          $files | ForEach-Object { Write-Host "  $_" }
+
+          dotnet format NullByte.slnx --verify-no-changes --no-restore --severity warn --include $files
+          if ($LASTEXITCODE -ne 0) {
+            throw "Formatting verification failed."
+          }
+
+      - name: Build solution
+        run: dotnet build NullByte.slnx --configuration Release --no-restore -p:EnableNETAnalyzers=true -p:AnalysisLevel=latest
+
+      - name: Run tests
+        run: dotnet test --solution NullByte.slnx --configuration Release --no-build --no-restore
+
+  vscode-extension:
+    name: VS Code extension build and tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: NullByte.vscode
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: NullByte.vscode/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile and run tests
+        run: npm test
