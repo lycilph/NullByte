@@ -1,4 +1,4 @@
-﻿using NullByte.Core.Domain;
+using NullByte.Core.Domain;
 using NullByte.Core.Formulas;
 using NullByte.Core.Time;
 
@@ -128,7 +128,7 @@ public sealed class NetworkService
     public NetworkConnectionResult GoHome()
     {
         var homeServer = gameState.Network.GetServer(gameState.Player.HomeServerId);
-        
+
         SetCurrentServer(homeServer.Id);
 
         return NetworkConnectionResult.Success(homeServer);
