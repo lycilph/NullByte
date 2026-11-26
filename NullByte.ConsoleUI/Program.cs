@@ -5,7 +5,6 @@ using NullByte.ConsoleUI.Startup;
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Configuration;
 using NullByte.Core.Persistence;
-using NullByte.Core.Services;
 using NullByte.Editor;
 using NullByte.Scripting.Compilation;
 using NullByte.Scripting.LanguageService;
@@ -18,9 +17,9 @@ public class Program
 {
     static async Task Main(string[] args)
     {
-        if (CommandLineHelp.IsRequested(args))
+        if (Configuration.CommandLineParser.IsRequested(args))
         {
-            Console.Write(CommandLineHelp.GetUsageText());
+            Console.Write(Configuration.CommandLineParser.GetUsageText());
             return;
         }
 
