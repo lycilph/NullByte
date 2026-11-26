@@ -1,6 +1,6 @@
 <Solution>
   <Folder Name="/Docs/">
-    <File Path="AIPrompts.md" />
+    <File Path="AIPromptsTemplate.md" />
     <File Path="ARCHITECTURE.md" />
     <File Path="CODEBASE.md" />
     <File Path="DECISIONS.md" />

@@ -7,11 +7,6 @@
 
 # Todo
 	
-
-- Github CI builds/tests?
-
-- Github CI builds/tests?
-
 # Future ideas
 
 - Make botnet and cloud servers unlockable
