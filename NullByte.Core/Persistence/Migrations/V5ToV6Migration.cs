@@ -6,7 +6,7 @@ namespace NullByte.Core.Persistence.Migrations;
 
 /// <summary>
 /// Migrates version 5 saves to version 6: servers gain immutable IDs and all persisted
-/// server relationships are changed from hostnames to those IDs.
+/// server relationships are changed from hostnames to those IDs. IDs for legacy saves are deterministic so migration is repeatable.
 /// </summary>
 public sealed class V5ToV6Migration : ISaveMigration
 {
