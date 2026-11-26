@@ -53,8 +53,13 @@ public class SaveDirectoriesTests
     {
         var node = JsonNode.Parse(Save(StateWithFolders()))!.AsObject();
 
+        var hostnamesById = node["servers"]!.AsArray()
+            .ToDictionary(
+                server => server!["id"]!.GetValue<string>(),
+                server => server!["hostname"]!.GetValue<string>());
+
         var saved = node["directories"]!.AsArray()
-            .Select(d => $"{d!["hostname"]}:{d["path"]}")
+            .Select(directory => $"{hostnamesById[directory!["serverId"]!.GetValue<string>()]}:{directory["path"]}")
             .ToArray();
 
         Assert.Equal(new[] { "home:empty", "home:tools", "home:tools/net", "n00dles:logs" }, saved);
@@ -91,11 +96,7 @@ public class SaveDirectoriesTests
     [Fact]
     public void A_version_2_save_loads_with_no_saved_directories()
     {
-        var node = JsonNode.Parse(Save(StateWithFolders()))!.AsObject();
-        node["version"] = 2;
-        node.Remove("directories");
-
-        var save = new SaveGameSerializer().Deserialize(node.ToJsonString());
+        var save = new SaveGameSerializer().Deserialize(GoldenSaves.V2);
 
         Assert.Equal(SaveGame.CurrentVersion, save.Version);
         Assert.Empty(save.Directories);
@@ -113,7 +114,10 @@ public class SaveDirectoriesTests
     public void A_save_with_an_invalid_directory_is_refused(string hostname, string path)
     {
         var node = JsonNode.Parse(Save(NewState()))!.AsObject();
-        node["directories"]!.AsArray().Add(new JsonObject { ["hostname"] = hostname, ["path"] = path });
+        var homeId = node["servers"]!.AsArray()
+            .Single(server => server!["hostname"]!.GetValue<string>() == "home")!["id"]!.GetValue<string>();
+        var serverId = hostname == "home" ? homeId : "00000000-0000-0000-0000-000000000001";
+        node["directories"]!.AsArray().Add(new JsonObject { ["serverId"] = serverId, ["path"] = path });
 
         var save = new SaveGameSerializer().Deserialize(node.ToJsonString());
 
@@ -127,7 +131,9 @@ public class SaveDirectoriesTests
         state.FileSystem.WriteFile("home", "a.cx", "x");
 
         var node = JsonNode.Parse(Save(state))!.AsObject();
-        node["directories"]!.AsArray().Add(new JsonObject { ["hostname"] = "home", ["path"] = "a.cx" });
+        var homeId = node["servers"]!.AsArray()
+            .Single(server => server!["hostname"]!.GetValue<string>() == "home")!["id"]!.GetValue<string>();
+        node["directories"]!.AsArray().Add(new JsonObject { ["serverId"] = homeId, ["path"] = "a.cx" });
 
         var save = new SaveGameSerializer().Deserialize(node.ToJsonString());
 

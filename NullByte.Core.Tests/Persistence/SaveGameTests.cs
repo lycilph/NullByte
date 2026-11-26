@@ -130,7 +130,15 @@ public class SaveGameTests
         {
             var network = new Network();
             foreach (var host in hostOrder)
-                network.AddServer(new Server(host, 1000, 500, 3, 1, 3, 1, 30, 4, hasRootAccess: host == "home"));
+                var id = host switch
+                {
+                    "home" => HomeServerId,
+                    "n00dles" => N00dlesServerId,
+                    "foodnstuff" => FoodnstuffServerId,
+                    "zero-day" => ZeroDayServerId,
+                    _ => throw new InvalidOperationException($"Unexpected test server '{host}'.")
+                };
+                network.AddServer(new Server(host, 1000, 500, 3, 1, 3, 1, 30, 4, hasRootAccess: host == "home", id: ServerId.Parse(id)));
             foreach (var (a, b) in edgeOrder)
                 network.Connect(a, b);
 
@@ -283,7 +291,7 @@ public class SaveGameTests
             currentVersion: 7);
         var serializer = new SaveGameSerializer(migrator);
 
-        var loaded = serializer.Deserialize(GoldenSaves.V5);
+        var loaded = serializer.Deserialize(GoldenSaves.V6);
 
         Assert.Equal(new[] { 5, 6 }, steps);
         Assert.Equal(7, loaded.Version);

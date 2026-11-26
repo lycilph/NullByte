@@ -144,6 +144,6 @@ public sealed class V5ToV6Migration : ISaveMigration
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes("NullByte.Server:" + hostname));
         bytes[6] = (byte)((bytes[6] & 0x0F) | 0x50);
         bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
-        return new Guid(bytes[..16]).ToString("D");
+        return new Guid(bytes[..16], bigEndian: true).ToString("D");
     }
 }

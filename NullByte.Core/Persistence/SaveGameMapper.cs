@@ -73,7 +73,11 @@ public static class SaveGameMapper
                 CurrentServerId = player.CurrentServerId.ToString(),
                 Money = player.Money,
                 Skills = CaptureSkills(player.Skills),
-                DiscoveredServerIds = player.DiscoveredServerIds.Select(id => id.ToString()).Order(StringComparer.Ordinal).ToArray()
+                DiscoveredServerIds = player.DiscoveredServerIds
+                    .Select(id => state.Network.GetServer(id))
+                    .OrderBy(server => server.Hostname, StringComparer.Ordinal)
+                    .Select(server => server.Id.ToString())
+                    .ToArray()
             },
             Servers = servers.Select(CaptureServer).ToArray(),
 
