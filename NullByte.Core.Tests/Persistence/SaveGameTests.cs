@@ -138,7 +138,7 @@ public class SaveGameTests
                     "zero-day" => ZeroDayServerId,
                     _ => throw new InvalidOperationException($"Unexpected test server '{host}'.")
                 };
-                network.AddServer(new Server(host, 1000, 500, 3, 1, 3, 1, 30, 4, hasRootAccess: host == "home", id: ServerId.Parse(id)));
+            network.AddServer(new Server(host, 1000, 500, 3, 1, 3, 1, 30, 4, hasRootAccess: host == "home", id: ServerId.Parse(id)));
             foreach (var (a, b) in edgeOrder)
                 network.Connect(a, b);
 
