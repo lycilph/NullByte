@@ -65,7 +65,7 @@ public sealed class NetworkService
         var neighbors = gameState.Network.GetNeighbors(server.Id);
 
         foreach (var neighbor in neighbors)
-            gameState.Player.DiscoverServer(neighbor.Hostname);
+            gameState.Player.DiscoverServer(neighbor.Id);
 
         return neighbors;
     }
