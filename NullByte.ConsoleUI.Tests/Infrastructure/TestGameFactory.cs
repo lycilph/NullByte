@@ -31,6 +31,6 @@ internal static class TestGameFactory
         var home = CreateServer("home");
         var network = CreateNetwork([home, .. additionalServers]);
 
-        return new GameState(new Player("home", startingMoney: money), network);
+        return new GameState(new Player(home.Id, startingMoney: money), network);
     }
 }
