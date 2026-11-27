@@ -64,16 +64,17 @@ A persistent narrative state therefore requires a save-format change and migrati
 
 ## 3. Recommended access model
 
-### 3.1 Separate in-world capabilities from host controls
+### 3.1 Literal zero-command start and host controls
 
-Recommended distinction:
+**Confirmed user decision:** a new game begins with absolutely no console commands available. This includes `help`, `exit`/`quit`, `clear`/`cls`, `save`, `load`, `saves`, `reset` and optional host integrations such as `vscode`.
 
-- **In-world gameplay commands** are hidden until NB-0001 acquires the corresponding capability.
-- **Host/session controls** remain available independently of the story so the player is not trapped and can still get help, save, load, reset, clear the terminal or exit.
+The opening is therefore not initiated by a command. SYSTEM's initialization sequence is emitted automatically after a new session starts. It explicitly authorizes `status`, which is the first available command. The player is not asked to guess or type an unknown command.
 
-Under this model, a new game starts with no in-world commands, while a small meta-command set remains available. The help output initially contains only that meta-command set.
+After the player successfully executes `status`, a separate `host.controls` capability is granted. This makes the normal host/session commands available from then on. They are not in-world capabilities and should not be presented as discoveries made by NB-0001; they are simply withheld during the short initialization hand-off.
 
-This is a recommendation for review, not a settled user decision. If "starts with nothing" is intended literally to include `help`, `save`, `load` and `exit`, the design needs a different bootstrap and escape mechanism.
+The host application can still be closed using ordinary operating-system/window controls. Those are outside the in-game command interface.
+
+This means the initial state has no command allow-list entries at all. The first state transition grants `player.inspect`; the first successful `status` use then grants `host.controls` and the next narrative capability.
 
 ### 3.2 Capability identity
 
@@ -123,7 +124,7 @@ The following IDs are proposed stable identifiers. They group related functional
 | `activities.crime` | `crime` | Attempt crimes |
 | `activities.manage` | `stop`, `focus`, `activity` | Manage or inspect the current activity |
 
-Host/session controls proposed to remain outside narrative gating:
+Host/session commands use the separate `host.controls` capability, granted only after the player successfully executes `status`:
 
 | Command | Alias | Reason |
 |---|---|---|
@@ -199,7 +200,7 @@ Player capability profile: EMPTY
 Awaiting authorization.
 ~~~
 
-No gameplay command is available yet. Host/session controls remain available under the recommended access model.
+No command is available yet—not even `help`, `save`, `load` or `exit`. The initialization sequence is displayed automatically; the player does not need to enter a command to begin.
 
 SYSTEM continues:
 
@@ -210,7 +211,7 @@ One operation is available.
 Use: status
 ~~~
 
-Unlock `player.inspect` (or a narrower initial `player.status` capability if we later decide that `money` and `skills` should be separate).
+Unlock `player.inspect`. This is the only capability available at the first prompt, so `status` is the only accepted command.
 
 ### Step 1 — Inspect the local environment
 
@@ -227,13 +228,14 @@ SYSTEM:
 ~~~text
 Local environment verified.
 
+Runtime controls are now available.
 A network interface is present.
 Its connection table is incomplete.
 
 I can restore a discovery operation.
 ~~~
 
-Unlock `network.scan` and `network.analyze`.
+Unlock `host.controls`, then `network.scan` and `network.analyze`. The `help`, `save`, `load`, `saves`, `reset`, `clear` and `exit` commands now become available alongside the network capabilities.
 
 ### Step 2 — Discover adjacent systems
 
@@ -353,22 +355,23 @@ This is a first proposal, not a final balance decision.
 
 | Order | Capability | Trigger / prerequisite |
 |---:|---|---|
-| 0 | Host/session controls | Always available; not part of the in-world capability profile |
-| 1 | `player.inspect` | Explicitly granted during initialization |
-| 2 | `network.scan` | After the player successfully uses `status` |
-| 3 | `network.analyze` | After the first successful scan |
-| 4 | `network.connect` | After inspecting a discovered server |
-| 5 | `server.root-access` | After connecting to a suitable remote host |
-| 6 | `server.operations` | After first successful root acquisition |
-| 7 | `files.navigation`, `files.read` | After the first remote operation / return to home |
-| 8 | `files.manage` | When the player is ready to create a script |
-| 9 | `scripts.execute`, `scripts.inspect`, `scripts.control` | After a script file is created |
-| 10 | `botnet.inspect`, `botnet.purchase`, `botnet.upgrade` | Expansion milestone; exact trigger to be playtested |
-| 11 | `cloud.inspect`, `cloud.purchase`, `cloud.manage` | Later expansion milestone; exact trigger to be playtested |
-| 12 | `server.backdoor` | After the player has encountered a suitable rooted host |
-| 13 | `activities.learn`, `activities.manage` | Optional introduction to structured learning |
-| 14 | `activities.work` | Optional introduction to legitimate employment |
-| 15 | `activities.crime` | Optional introduction to unauthorized activity |
+| 0 | No commands | Initial new-game state; SYSTEM speaks automatically |
+| 1 | `player.inspect` | Explicitly granted during initialization; exposes `status` only |
+| 2 | `host.controls` | After the player successfully executes `status` |
+| 3 | `network.scan` | After the player successfully uses `status` |
+| 4 | `network.analyze` | After the first successful scan |
+| 5 | `network.connect` | After inspecting a discovered server |
+| 6 | `server.root-access` | After connecting to a suitable remote host |
+| 7 | `server.operations` | After first successful root acquisition |
+| 8 | `files.navigation`, `files.read` | After the first remote operation / return to home |
+| 9 | `files.manage` | When the player is ready to create a script |
+| 10 | `scripts.execute`, `scripts.inspect`, `scripts.control` | After a script file is created |
+| 11 | `botnet.inspect`, `botnet.purchase`, `botnet.upgrade` | Expansion milestone; exact trigger to be playtested |
+| 12 | `cloud.inspect`, `cloud.purchase`, `cloud.manage` | Later expansion milestone; exact trigger to be playtested |
+| 13 | `server.backdoor` | After the player has encountered a suitable rooted host |
+| 14 | `activities.learn`, `activities.manage` | Optional introduction to structured learning |
+| 15 | `activities.work` | Optional introduction to legitimate employment |
+| 16 | `activities.crime` | Optional introduction to unauthorized activity |
 
 The exact trigger for later systems should be selected from real game events. Do not require a player to buy a cloud server, commit a crime or take a particular job just to advance the main story.
 
@@ -387,10 +390,10 @@ The current code suggests the following responsibilities:
 
 The implementation should be designed around the actual game-thread and save/load lifecycle. In particular, scripts are restored after a saved session starts; their API instances must see the restored capability state.
 
-## 8. Decisions to confirm before implementation
+## 8. Confirmed access-scope decisions
 
-1. **Host controls:** should `help`, `exit`, `clear`, `save`, `load`, `saves` and `reset` remain available from the beginning, while all in-world gameplay commands start hidden? This is the recommended model.
-2. **First unlock:** is `status` the right first in-world command, with the opening SYSTEM message explicitly telling the player to use it?
-3. **Script API visibility:** is runtime rejection of locked API calls sufficient for the first iteration, even though the full API surface may remain visible in editor completion, or should we also design capability-aware script IntelliSense before scripting is introduced?
+1. **Host controls:** literal zero-command start. No host/session commands are available before the player successfully executes `status`; they are then exposed through `host.controls`.
+2. **First unlock:** `status`, granted automatically by the initialization sequence.
+3. **Scripting API visibility:** enforce capability restrictions at runtime in the first iteration. The full API may remain visible in editor completion/IntelliSense.
 
-No runtime code should be changed until these access-scope decisions are agreed.
+The state ownership, save model, version 7-to-8 migration and legacy-save policy are specified in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md).
