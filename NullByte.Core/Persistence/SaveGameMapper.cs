@@ -246,15 +246,13 @@ public static class SaveGameMapper
         var savedPlayer = save.Player;
         var homeServer = network.GetServer(ServerId.Parse(savedPlayer.HomeServerId));
         var currentServer = network.GetServer(ServerId.Parse(savedPlayer.CurrentServerId));
-        var player = new Player(homeServer.Hostname, savedPlayer.Money)
+        var player = new Player(homeServer.Id, savedPlayer.Money)
         {
-            CurrentHostname = currentServer.Hostname
+            CurrentServerId = currentServer.Id
         };
 
         RestoreSkills(player.Skills, savedPlayer.Skills, "The player");
 
-        // The GameState constructor binds the player to the network, allowing discovered servers
-        // to be retained by immutable identity.
         var state = new GameState(player, network);
 
         foreach (var id in savedPlayer.DiscoveredServerIds)
