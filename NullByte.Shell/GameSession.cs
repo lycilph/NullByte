@@ -131,8 +131,8 @@ public sealed class GameSession : IAsyncDisposable
         foreach (var result in results.Where(result => !result.Start.Succeeded))
         {
             output.WriteLine(
-                $"  Could not restart {result.Saved.Filename} " +        // no "(pid N)" any more
-                $"on {result.Saved.Hostname}: {result.Start.FailureMessage}");
+                $"  Could not restart {result.Saved.Filename} " +
+                $"on {State.Network.GetServer(ServerId.Parse(result.Saved.ServerId)).Hostname}: {result.Start.FailureMessage}");
         }
     }
 
@@ -164,7 +164,7 @@ public sealed class GameSession : IAsyncDisposable
 
     public static GameSession Create(GameSessionOptions options)
     {
-        var clock = options.Clock 
+        var clock = options.Clock
             ?? new RealGameClock(options.InitialGameTime) { SpeedMultiplier = options.Balance.GameSpeedMultiplier };
 
         var synchronizationContext = new GameSynchronizationContext();
@@ -187,7 +187,7 @@ public sealed class GameSession : IAsyncDisposable
         var scriptLoader = new ScriptAssemblyLoader();
         var scriptRunner = new ScriptRunner(scriptLoader);
         var scriptProcessManager = new ScriptProcessManager();
-        var apiFactory = options.ApiFactory 
+        var apiFactory = options.ApiFactory
             ?? new NullByteApiFactory(
                 state,
                 scheduler,

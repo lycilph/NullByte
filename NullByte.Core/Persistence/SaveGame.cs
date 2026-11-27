@@ -14,7 +14,7 @@ namespace NullByte.Core.Persistence;
 public sealed record SaveGame
 {
     /// <summary>The format version this build writes, and the newest one it can read.</summary>
-    public const int CurrentVersion = 5;
+    public const int CurrentVersion = 6;
 
     public required int Version { get; init; }
     public required DateTimeOffset SavedAtUtc { get; init; }
@@ -37,15 +37,15 @@ public sealed record SaveGame
 
 public sealed record PlayerSave
 {
-    public required string HomeHostname { get; init; }
-    public required string CurrentHostname { get; init; }
+    public required string HomeServerId { get; init; }
+    public required string CurrentServerId { get; init; }
     public required double Money { get; init; }
     /// <summary>
     /// Experience per skill, by lowercase skill name (<c>hacking</c>, <c>strength</c>, ...). Skills that are missing have none.
     /// Before version 4 this was a single <c>HackingExperience</c> number.
     /// </summary>
     public required IReadOnlyDictionary<string, double> Skills { get; init; }
-    public required IReadOnlyList<string> DiscoveredHostnames { get; init; }
+    public required IReadOnlyList<string> DiscoveredServerIds { get; init; }
 }
 
 /// <summary>
@@ -55,6 +55,7 @@ public sealed record PlayerSave
 /// </summary>
 public sealed record ServerSave
 {
+    public required string Id { get; init; }
     public required string Hostname { get; init; }
     public required double MaximumMoney { get; init; }
     public required double Money { get; init; }
@@ -74,8 +75,8 @@ public sealed record ServerSave
 /// </summary>
 public sealed record ConnectionSave
 {
-    public required string From { get; init; }
-    public required string To { get; init; }
+    public required string FromServerId { get; init; }
+    public required string ToServerId { get; init; }
 }
 
 public sealed record BotnetSave
@@ -93,14 +94,14 @@ public sealed record BotnetNodeSave
 
 public sealed record DirectorySave
 {
-    public required string Hostname { get; init; }
+    public required string ServerId { get; init; }
     /// <summary>The path relative to the server root, for example "tools/net".</summary>
     public required string Path { get; init; }
 }
 
 public sealed record FileSave
 {
-    public required string Hostname { get; init; }
+    public required string ServerId { get; init; }
     /// <summary>The path of the file relative to the server root. Before version 3 this was always a plain name.</summary>
     public required string Name { get; init; }
     public required string Content { get; init; }
@@ -111,7 +112,7 @@ public sealed record FileSave
 public sealed record ProcessSave
 {
     public required string Filename { get; init; }
-    public required string Hostname { get; init; }
+    public required string ServerId { get; init; }
     public required IReadOnlyList<string> Args { get; init; }
     public required int Threads { get; init; }
 }

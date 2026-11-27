@@ -168,9 +168,9 @@ public sealed class CompletionCatalogTests
         network.Connect("home", "near");
         network.Connect("near", "far");
 
-        var player = new Player("home");
-        player.DiscoverServer("near");
-        player.DiscoverServer("far");
+        var player = new Player(network.GetServer("home").Id);
+        player.DiscoverServer(network.GetServer("near").Id);
+        player.DiscoverServer(network.GetServer("far").Id);
 
         var fixture = CreateFixture(new GameState(player, network));
         fixture.Catalog.Refresh();

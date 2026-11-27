@@ -24,7 +24,7 @@ public sealed class WorkingDirectory(GameState gameState)
     {
         var player = gameState.Player;
         if (player.CurrentDirectory.Length == 0 ||
-            gameState.FileSystem.DirectoryExists(player.CurrentHostname, player.CurrentDirectory))
+            gameState.FileSystem.DirectoryExists(gameState.Network.GetServer(player.CurrentServerId).Hostname, player.CurrentDirectory))
             return false;
 
         player.CurrentDirectory = "";
@@ -37,7 +37,7 @@ public sealed class WorkingDirectory(GameState gameState)
         if (!TryResolve(typed, out var directory, out error))
             return false;
 
-        var hostname = gameState.Player.CurrentHostname;
+        var hostname = gameState.Network.GetServer(gameState.Player.CurrentServerId).Hostname;
         if (!gameState.FileSystem.DirectoryExists(hostname, directory))
         {
             error = gameState.FileSystem.TryReadFile(hostname, directory, out _)

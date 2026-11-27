@@ -12,10 +12,10 @@ public sealed class NetworkServiceTests
         var fixture = CreateFixture();
 
         Assert.Contains(
-            fixture.Home.Hostname,
-            fixture.Player.DiscoveredHostnames);
+            fixture.Home.Id,
+            fixture.Player.DiscoveredServerIds);
 
-        Assert.Single(fixture.Player.DiscoveredHostnames);
+        Assert.Single(fixture.Player.DiscoveredServerIds);
     }
 
     [Fact]
@@ -48,20 +48,20 @@ public sealed class NetworkServiceTests
         fixture.Service.Scan(fixture.Home.Hostname);
 
         Assert.Contains(
-            fixture.Home.Hostname,
-            fixture.Player.DiscoveredHostnames);
+            fixture.Home.Id,
+            fixture.Player.DiscoveredServerIds);
 
         Assert.Contains(
-            fixture.N00dles.Hostname,
-            fixture.Player.DiscoveredHostnames);
+            fixture.N00dles.Id,
+            fixture.Player.DiscoveredServerIds);
 
         Assert.Contains(
-            fixture.FoodNStuff.Hostname,
-            fixture.Player.DiscoveredHostnames);
+            fixture.FoodNStuff.Id,
+            fixture.Player.DiscoveredServerIds);
 
         Assert.DoesNotContain(
-            fixture.SigmaCosmetics.Hostname,
-            fixture.Player.DiscoveredHostnames);
+            fixture.SigmaCosmetics.Id,
+            fixture.Player.DiscoveredServerIds);
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public sealed class NetworkServiceTests
         fixture.Service.Scan(fixture.Home.Hostname);
         fixture.Service.Scan(fixture.Home.Hostname);
 
-        Assert.Equal(3, fixture.Player.DiscoveredHostnames.Count);
+        Assert.Equal(3, fixture.Player.DiscoveredServerIds.Count);
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public sealed class NetworkServiceTests
             result.Error,
             StringComparison.OrdinalIgnoreCase);
 
-        Assert.Equal(fixture.Home.Hostname, fixture.Player.CurrentHostname);
+        Assert.Equal(fixture.Home.Hostname, fixture.Service.GetCurrentServer().Hostname);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public sealed class NetworkServiceTests
             result.Error,
             StringComparison.OrdinalIgnoreCase);
 
-        Assert.Equal(fixture.Home.Hostname, fixture.Player.CurrentHostname);
+        Assert.Equal(fixture.Home.Hostname, fixture.Service.GetCurrentServer().Hostname);
     }
 
     [Fact]
@@ -131,7 +131,7 @@ public sealed class NetworkServiceTests
 
         Assert.Equal(
             fixture.N00dles.Hostname,
-            fixture.Player.CurrentHostname);
+            fixture.Service.GetCurrentServer().Hostname);
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public sealed class NetworkServiceTests
 
         fixture.Service.Scan(fixture.N00dles.Hostname);
 
-        Assert.Contains(fixture.SigmaCosmetics.Hostname, fixture.Player.DiscoveredHostnames);
+        Assert.Contains(fixture.SigmaCosmetics.Id, fixture.Player.DiscoveredServerIds);
 
         /*
          * Return directly home. Sigma remains discovered,
@@ -194,7 +194,7 @@ public sealed class NetworkServiceTests
             result.Error,
             StringComparison.OrdinalIgnoreCase);
 
-        Assert.Equal(fixture.Home.Hostname, fixture.Player.CurrentHostname);
+        Assert.Equal(fixture.Home.Hostname, fixture.Service.GetCurrentServer().Hostname);
     }
 
     [Fact]
@@ -215,7 +215,7 @@ public sealed class NetworkServiceTests
         Assert.True(result.Succeeded);
         Assert.Same(fixture.SigmaCosmetics, result.Server);
         Assert.Null(result.Error);
-        Assert.Equal(fixture.SigmaCosmetics.Hostname, fixture.Player.CurrentHostname);
+        Assert.Equal(fixture.SigmaCosmetics.Hostname, fixture.Service.GetCurrentServer().Hostname);
     }
 
     [Fact]
@@ -228,7 +228,7 @@ public sealed class NetworkServiceTests
 
         Assert.False(result.Succeeded);
         Assert.Contains("not been discovered", result.Error, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(fixture.Home.Hostname, fixture.Player.CurrentHostname);
+        Assert.Equal(fixture.Home.Hostname, fixture.Service.GetCurrentServer().Hostname);
     }
 
     [Fact]
@@ -254,7 +254,7 @@ public sealed class NetworkServiceTests
 
         Assert.True(result.Succeeded);
 
-        Assert.Equal(fixture.N00dles.Hostname, fixture.Player.CurrentHostname);
+        Assert.Equal(fixture.N00dles.Hostname, fixture.Service.GetCurrentServer().Hostname);
     }
 
     [Fact]
@@ -289,7 +289,7 @@ public sealed class NetworkServiceTests
         Assert.True(result.Succeeded);
         Assert.Same(fixture.Home, result.Server);
         Assert.Null(result.Error);
-        Assert.Equal(fixture.Home.Hostname, fixture.Player.CurrentHostname);
+        Assert.Equal(fixture.Home.Hostname, fixture.Service.GetCurrentServer().Hostname);
     }
 
     [Fact]
@@ -302,7 +302,7 @@ public sealed class NetworkServiceTests
         Assert.True(result.Succeeded);
         Assert.Same(fixture.Home, result.Server);
         Assert.Null(result.Error);
-        Assert.Equal(fixture.Home.Hostname, fixture.Player.CurrentHostname);
+        Assert.Equal(fixture.Home.Hostname, fixture.Service.GetCurrentServer().Hostname);
     }
 
     private static NetworkFixture CreateFixture()
@@ -333,7 +333,8 @@ public sealed class NetworkServiceTests
             Home: home,
             N00dles: n00dles,
             FoodNStuff: foodNStuff,
-            SigmaCosmetics: sigmaCosmetics);
+            SigmaCosmetics: sigmaCosmetics,
+            Network: world.Network);
     }
 
     private sealed record NetworkFixture(
@@ -342,5 +343,6 @@ public sealed class NetworkServiceTests
         Server Home,
         Server N00dles,
         Server FoodNStuff,
-        Server SigmaCosmetics);
+        Server SigmaCosmetics,
+        Network Network);
 }

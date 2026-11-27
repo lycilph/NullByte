@@ -51,7 +51,7 @@ public static class SaveGameMapper
             {
                 if (state.FileSystem.TryReadFile(server.Hostname, name, out var content) && content is not null &&
                     state.FileSystem.TryGetFileTimes(server.Hostname, name, out var times))
-                    files.Add(new FileSave { Hostname = server.Hostname, Name = name, Content = content, Created = times.Created, Modified = times.Modified });
+                    files.Add(new FileSave { ServerId = server.Id.ToString(), Name = name, Content = content, Created = times.Created, Modified = times.Modified });
             }
         }
 
@@ -59,7 +59,7 @@ public static class SaveGameMapper
         foreach (var server in servers)
         {
             foreach (var path in state.FileSystem.ListDirectories(server.Hostname))
-                directories.Add(new DirectorySave { Hostname = server.Hostname, Path = path });
+                directories.Add(new DirectorySave { ServerId = server.Id.ToString(), Path = path });
         }
 
         return new SaveGame
@@ -69,11 +69,15 @@ public static class SaveGameMapper
             GameTime = gameTime,
             Player = new PlayerSave
             {
-                HomeHostname = player.HomeHostname,
-                CurrentHostname = player.CurrentHostname,
+                HomeServerId = player.HomeServerId.ToString(),
+                CurrentServerId = player.CurrentServerId.ToString(),
                 Money = player.Money,
                 Skills = CaptureSkills(player.Skills),
-                DiscoveredHostnames = player.DiscoveredHostnames.Order(StringComparer.Ordinal).ToArray()
+                DiscoveredServerIds = player.DiscoveredServerIds
+                    .Select(id => state.Network.GetServer(id))
+                    .OrderBy(server => server.Hostname, StringComparer.Ordinal)
+                    .Select(server => server.Id.ToString())
+                    .ToArray()
             },
             Servers = servers.Select(CaptureServer).ToArray(),
 
@@ -82,11 +86,11 @@ public static class SaveGameMapper
             Connections = state.Network.GetConnections()
                 .Select(connection => new ConnectionSave
                 {
-                    From = connection.First,
-                    To = connection.Second
+                    FromServerId = state.Network.GetServer(connection.First).Id.ToString(),
+                    ToServerId = state.Network.GetServer(connection.Second).Id.ToString()
                 })
-                .OrderBy(connection => connection.From, StringComparer.Ordinal)
-                .ThenBy(connection => connection.To, StringComparer.Ordinal)
+                .OrderBy(connection => state.Network.GetServer(ServerId.Parse(connection.FromServerId)).Hostname, StringComparer.Ordinal)
+                .ThenBy(connection => state.Network.GetServer(ServerId.Parse(connection.ToServerId)).Hostname, StringComparer.Ordinal)
                 .ToArray(),
 
             Botnet = new BotnetSave
@@ -170,6 +174,7 @@ public static class SaveGameMapper
 
     private static ServerSave CaptureServer(Server server) => new()
     {
+        Id = server.Id.ToString(),
         Hostname = server.Hostname,
         MaximumMoney = server.MaximumMoney,
 
@@ -201,6 +206,7 @@ public static class SaveGameMapper
             return RestoreCore(save, catalog ?? ActivityCatalogFactory.CreateDefault());
         }
         catch (Exception exception) when (exception is ArgumentException
+                                              or FormatException
                                               or InvalidOperationException
                                               or KeyNotFoundException
                                               or InvalidDataException)
@@ -218,6 +224,7 @@ public static class SaveGameMapper
 
         foreach (var server in save.Servers)
         {
+            var serverId = ServerId.Parse(server.Id);
             network.AddServer(new Server(
                 hostname: server.Hostname,
                 maximumMoney: server.MaximumMoney,
@@ -229,42 +236,51 @@ public static class SaveGameMapper
                 growthParameter: server.GrowthParameter,
                 maximumRam: server.MaximumRam,
                 hasRootAccess: server.HasRootAccess,
+                id: serverId,
                 hasBackdoor: server.HasBackdoor));
         }
 
         foreach (var connection in save.Connections)
-            network.Connect(connection.From, connection.To);
+            network.Connect(ServerId.Parse(connection.FromServerId), ServerId.Parse(connection.ToServerId));
 
         var savedPlayer = save.Player;
-        var player = new Player(savedPlayer.HomeHostname, savedPlayer.Money)
+        var homeServer = network.GetServer(ServerId.Parse(savedPlayer.HomeServerId));
+        var currentServer = network.GetServer(ServerId.Parse(savedPlayer.CurrentServerId));
+        var player = new Player(homeServer.Id, savedPlayer.Money)
         {
-            CurrentHostname = savedPlayer.CurrentHostname
+            CurrentServerId = currentServer.Id
         };
 
         RestoreSkills(player.Skills, savedPlayer.Skills, "The player");
 
-        foreach (var hostname in savedPlayer.DiscoveredHostnames)
-        {
-            RequireServer(network, hostname, "A discovered server");
-            player.DiscoverServer(hostname);
-        }
-
-        // The GameState constructor checks that the home and current servers exist.
         var state = new GameState(player, network);
+
+        foreach (var id in savedPlayer.DiscoveredServerIds)
+        {
+            var serverId = ServerId.Parse(id);
+            RequireServer(network, serverId, "A discovered server");
+            player.DiscoverServer(serverId);
+        }
 
         state.Botnet.Restore(
             save.Botnet.Nodes.Select(node => new BotnetNode(node.Level, node.Ram, node.Cores)),
             save.Botnet.TotalEarned);
 
         foreach (var directory in save.Directories)
-            state.FileSystem.RestoreDirectory(directory.Hostname, directory.Path);
+        {
+            var server = RequireServer(network, ServerId.Parse(directory.ServerId), "A directory server");
+            state.FileSystem.RestoreDirectory(server.Hostname, directory.Path);
+        }
 
         foreach (var file in save.Files)
-            state.FileSystem.RestoreFile(file.Hostname, file.Name, file.Content, file.Created, file.Modified);
+        {
+            var server = RequireServer(network, ServerId.Parse(file.ServerId), "A file server");
+            state.FileSystem.RestoreFile(server.Hostname, file.Name, file.Content, file.Created, file.Modified);
+        }
 
         foreach (var process in save.Processes)
         {
-            RequireServer(network, process.Hostname, $"The host of '{process.Filename}'");
+            RequireServer(network, ServerId.Parse(process.ServerId), $"The host of '{process.Filename}'");
 
             if (process.Threads < 1)
                 throw new InvalidDataException($"'{process.Filename}' has fewer than one thread.");
@@ -472,9 +488,11 @@ public static class SaveGameMapper
         return new ActivityProgress(saved.Elapsed, saved.NetMoney, experience, saved.ReputationGained, saved.Attempts, saved.Successes);
     }
 
-    private static void RequireServer(Network network, string hostname, string what)
+    private static Server RequireServer(Network network, ServerId serverId, string what)
     {
-        if (!network.TryGetServer(hostname, out _))
-            throw new InvalidDataException($"{what} ('{hostname}') does not exist in the network.");
+        if (!network.TryGetServer(serverId, out var server))
+            throw new InvalidDataException($"{what} ('{serverId}') does not exist in the network.");
+
+        return server;
     }
 }

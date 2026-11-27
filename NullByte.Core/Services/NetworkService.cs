@@ -1,4 +1,4 @@
-﻿using NullByte.Core.Domain;
+using NullByte.Core.Domain;
 using NullByte.Core.Formulas;
 using NullByte.Core.Time;
 
@@ -26,16 +26,14 @@ public sealed class NetworkService
     /// <summary>
     /// Gets the server the player is currently connected to.
     /// </summary>
-    public Server GetCurrentServer() => gameState.Network.GetServer(gameState.Player.CurrentHostname);
+    public Server GetCurrentServer() => gameState.Network.GetServer(gameState.Player.CurrentServerId);
 
-    private void SetCurrentServer(string hostname)
+    private void SetCurrentServer(ServerId serverId)
     {
         var player = gameState.Player;
-
-        if (!string.Equals(player.CurrentHostname, hostname, StringComparison.OrdinalIgnoreCase))
-            player.CurrentDirectory = "";   // a different server starts at its root
-
-        player.CurrentHostname = hostname;
+        if (player.CurrentServerId != serverId)
+            player.CurrentDirectory = "";
+        player.CurrentServerId = serverId;
     }
 
     public Server GetServer(string hostname)
@@ -48,7 +46,10 @@ public sealed class NetworkService
     }
 
     public bool IsServerKnown(string hostname)
-        => gameState.Player.DiscoveredHostnames.Contains(hostname);
+    {
+        return gameState.Network.TryGetServer(hostname, out var server) &&
+               gameState.Player.DiscoveredServerIds.Contains(server.Id);
+    }
 
     /// <summary>
     /// Discovers and returns all servers directly connected
@@ -58,13 +59,13 @@ public sealed class NetworkService
     {
         var server = ResolveTarget(hostname);
 
-        if (!IsServerKnown(server.Hostname))
+        if (!gameState.Player.DiscoveredServerIds.Contains(server.Id))
             return [];
 
-        var neighbors = gameState.Network.GetNeighbors(server.Hostname);
+        var neighbors = gameState.Network.GetNeighbors(server.Id);
 
         foreach (var neighbor in neighbors)
-            gameState.Player.DiscoverServer(neighbor.Hostname);
+            gameState.Player.DiscoverServer(neighbor.Id);
 
         return neighbors;
     }
@@ -108,15 +109,15 @@ public sealed class NetworkService
             return NetworkConnectionResult.Failure("A server name is required.");
         if (!gameState.Network.TryGetServer(serverName, out var targetServer))
             return NetworkConnectionResult.Failure($"Unknown server: {serverName}");
-        if (string.Equals(targetServer!.Hostname, gameState.Player.CurrentHostname,StringComparison.OrdinalIgnoreCase))
+        if (targetServer!.Id == gameState.Player.CurrentServerId)
             return NetworkConnectionResult.Failure($"Already connected to {targetServer.Hostname}.");
-        if (!gameState.Player.DiscoveredHostnames.Contains(targetServer.Hostname))
+        if (!gameState.Player.DiscoveredServerIds.Contains(targetServer.Id))
             return NetworkConnectionResult.Failure($"Server '{targetServer.Hostname}' has not been discovered.");
         // A backdoor lets the player connect directly, so only other servers have to be adjacent.
-        if (!targetServer.HasBackdoor && !gameState.Network.AreConnected(gameState.Player.CurrentHostname, targetServer.Hostname))
+        if (!targetServer.HasBackdoor && !gameState.Network.AreConnected(gameState.Player.CurrentServerId, targetServer.Id))
             return NetworkConnectionResult.Failure($"Server '{targetServer.Hostname}' is not directly connected to the current server.");
 
-        SetCurrentServer(targetServer.Hostname);
+        SetCurrentServer(targetServer.Id);
 
         return NetworkConnectionResult.Success(targetServer);
     }
@@ -126,9 +127,9 @@ public sealed class NetworkService
     /// </summary>
     public NetworkConnectionResult GoHome()
     {
-        var homeServer = gameState.Network.GetServer(gameState.Player.HomeHostname);
-        
-        SetCurrentServer(homeServer.Hostname);
+        var homeServer = gameState.Network.GetServer(gameState.Player.HomeServerId);
+
+        SetCurrentServer(homeServer.Id);
 
         return NetworkConnectionResult.Success(homeServer);
     }
@@ -139,52 +140,5 @@ public sealed class NetworkService
             throw new ArgumentException("The target hostname cannot be empty.", nameof(hostname));
 
         return gameState.Network.GetServer(hostname);
-    }
-}
-
-/// <summary>
-/// Describes the result of a player connection attempt.
-/// </summary>
-public sealed record NetworkConnectionResult
-{
-    private NetworkConnectionResult(
-        bool succeeded,
-        Server? server,
-        string? error)
-    {
-        Succeeded = succeeded;
-        Server = server;
-        Error = error;
-    }
-
-    public bool Succeeded { get; }
-
-    public Server? Server { get; }
-
-    public string? Error { get; }
-
-    public static NetworkConnectionResult Success(Server server)
-    {
-        ArgumentNullException.ThrowIfNull(server);
-
-        return new NetworkConnectionResult(
-            succeeded: true,
-            server,
-            error: null);
-    }
-
-    public static NetworkConnectionResult Failure(string error)
-    {
-        if (string.IsNullOrWhiteSpace(error))
-        {
-            throw new ArgumentException(
-                "An error message is required.",
-                nameof(error));
-        }
-
-        return new NetworkConnectionResult(
-            succeeded: false,
-            server: null,
-            error);
     }
 }

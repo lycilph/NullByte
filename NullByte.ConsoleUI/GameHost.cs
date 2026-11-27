@@ -327,6 +327,6 @@ public sealed class GameHost(
 
         var activity = state.Activity.Current is { } current ? $"[{ActivityFormatter.PromptTag(current)}] " : "";
 
-        return $"{activity}root@{player.CurrentHostname}{directory} $ ";
+        return $"{activity}root@{state.Network.GetServer(player.CurrentServerId).Hostname}{directory} $ ";
     }
 }

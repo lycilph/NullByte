@@ -1,4 +1,5 @@
-﻿using NullByte.Core.Scripting;
+using NullByte.Core.Scripting;
+using NullByte.Core.Domain;
 
 namespace NullByte.Scripting.Runtime;
 
@@ -10,7 +11,7 @@ public sealed class ScriptProcess
     internal ScriptProcess(
         int pid,
         string filename,
-        string hostname,
+        ServerId hostServerId,
         IReadOnlyList<string> args,
         int threads,
         double ramCost,
@@ -18,9 +19,9 @@ public sealed class ScriptProcess
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pid, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(threads, 1);
-        
+
         ArgumentException.ThrowIfNullOrWhiteSpace(filename);
-        ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
+
         ArgumentNullException.ThrowIfNull(args);
         ArgumentNullException.ThrowIfNull(cancellation);
 
@@ -29,7 +30,7 @@ public sealed class ScriptProcess
 
         Pid = pid;
         Filename = filename;
-        Hostname = hostname;
+        HostServerId = hostServerId;
         Args = args.ToArray();
         Threads = threads;
         RamCost = ramCost;
@@ -38,7 +39,7 @@ public sealed class ScriptProcess
 
     public int Pid { get; }
     public string Filename { get; }
-    public string Hostname { get; }
+    public ServerId HostServerId { get; }
     public IReadOnlyList<string> Args { get; }
     public int Threads { get; }
 

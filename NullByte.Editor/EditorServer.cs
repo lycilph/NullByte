@@ -138,7 +138,7 @@ public sealed class EditorServer(
         }
         catch (Exception e) when (e is OperationCanceledException or WebSocketException) { }
     }
-    
+
     private async Task RespondAsync(EditorConnection connection, string message)
         => connection.Send(await files.HandleAsync(message));   // HandleAsync catches everything itself
 
@@ -184,7 +184,7 @@ public sealed class EditorServer(
     // Both handlers run on the game thread, so reading game state here is safe.
     private void OnFileChanged(FileChange change)
     {
-        if (watched is not { } state || !state.Player.DiscoveredHostnames.Contains(change.Hostname))
+        if (watched is not { } state || !state.Network.TryGetServer(change.Hostname, out var changedServer) || !state.Player.DiscoveredServerIds.Contains(changedServer.Id))
             return;   // changes on hidden servers stay hidden
 
         Broadcast(new
@@ -196,11 +196,11 @@ public sealed class EditorServer(
         });
     }
 
-    private void OnServerDiscovered(string hostname)
+    private void OnServerDiscovered(ServerId serverId)
     {
         if (watched is not { } state) return;
 
-        var name = state.Network.TryGetServer(hostname, out var server) ? server.Hostname : hostname;
+        var name = state.Network.GetServer(serverId).Hostname;
         Broadcast(new { @event = "fileChanged", type = "created", path = $"/{name}" });
     }
 

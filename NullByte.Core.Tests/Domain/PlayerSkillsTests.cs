@@ -50,7 +50,7 @@ public sealed class PlayerSkillsTests
     [Fact]
     public void Player_hacking_experience_lives_in_the_skills()
     {
-        var player = new Player("home", startingMoney: 0, startingHackingExperience: 123);
+        var player = new Player(ServerId.New(), startingMoney: 0, startingHackingExperience: 123);
 
         player.AddHackingExperience(7);
 

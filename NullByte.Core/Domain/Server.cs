@@ -23,7 +23,8 @@ public sealed class Server
         double growthParameter,
         double maximumRam,
         bool hasRootAccess = false,
-        bool hasBackdoor = false)
+        bool hasBackdoor = false,
+        ServerId? id = null)
     {
         if (string.IsNullOrWhiteSpace(hostname))
             throw new ArgumentException("Host name cannot be empty.", nameof(hostname));
@@ -44,6 +45,10 @@ public sealed class Server
         if (!double.IsFinite(maximumRam) || maximumRam < 0)
             throw new ArgumentOutOfRangeException(nameof(maximumRam), "Maximum RAM must be finite and non-negative.");
 
+        Id = id ?? ServerId.New();
+        if (Id.Value == Guid.Empty)
+            throw new ArgumentException("Server ID cannot be empty.", nameof(id));
+
         Hostname = hostname;
 
         MaximumMoney = maximumMoney;
@@ -62,6 +67,11 @@ public sealed class Server
         HasRootAccess = hasRootAccess;
         HasBackdoor = hasBackdoor;
     }
+
+    /// <summary>
+    /// Gets the immutable identity of this server.
+    /// </summary>
+    public ServerId Id { get; }
 
     public string Hostname { get; }
     public double MaximumMoney { get; }

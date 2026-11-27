@@ -20,7 +20,7 @@ public sealed class NullByteApi : INullByteApi
     private readonly IScriptOperations scriptOperations;
     private readonly IGameOutput output;
 
-    private readonly string processHostname;
+    private readonly ServerId processHostServerId;
     private readonly int processThreads;
     private readonly CancellationToken cancellationToken;
 
@@ -35,7 +35,7 @@ public sealed class NullByteApi : INullByteApi
         BotnetFormulas botnetFormulas,
         IScriptOperations scriptOperations,
         IGameOutput output,
-        string processHostname,
+        ServerId processHostServerId,
         int processThreads = 1,
         CancellationToken cancellationToken = default)
     {
@@ -59,10 +59,10 @@ public sealed class NullByteApi : INullByteApi
         this.skillFormulas = skillFormulas;
         this.scriptOperations = scriptOperations;
         this.cancellationToken = cancellationToken;
-        this.processHostname = processHostname;
+        this.processHostServerId = processHostServerId;
         this.processThreads = processThreads;
 
-        Files = new NullByteFilesApi(gameState.FileSystem, processHostname);
+        Files = new NullByteFilesApi(gameState.FileSystem, gameState.Network, processHostServerId);
         Botnet = new NullByteBotnetApi(gameState.Botnet, botnetService, botnetFormulas);
         Activities = new NullByteActivitiesApi(gameState, activityService, skillFormulas, cancellationToken);
     }
@@ -104,7 +104,7 @@ public sealed class NullByteApi : INullByteApi
 
     public IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "") => scriptOperations.ProcessesRunning(GetTargetHostname(hostname));
 
-    public async Task<int> RunAsync(string filename, params string[] args) => await scriptOperations.StartSimple(processHostname, filename, args, processThreads);
+    public async Task<int> RunAsync(string filename, params string[] args) => await scriptOperations.StartSimple(gameState.Network.GetServer(processHostServerId).Hostname, filename, args, processThreads);
     public async Task<int> ExecAsync(string filename, string hostname, params string[] args) => await scriptOperations.StartSimple(hostname, filename, args, processThreads);
 
     public bool Kill(int pid) => scriptOperations.Kill(pid);
@@ -112,7 +112,7 @@ public sealed class NullByteApi : INullByteApi
     public bool ScriptRunning(string filename, string hostname = "") => scriptOperations.ScriptRunning(filename, GetTargetHostname(hostname));
     public double GetScriptRam(string filename, string hostname = "") => scriptOperations.GetScriptRam(filename, GetTargetHostname(hostname));
 
-    private string GetTargetHostname(string hostname) => string.IsNullOrWhiteSpace(hostname) ? processHostname : hostname;
+    private string GetTargetHostname(string hostname) => string.IsNullOrWhiteSpace(hostname) ? gameState.Network.GetServer(processHostServerId).Hostname : hostname;
 
     private Server GetServer(string hostname)
     {

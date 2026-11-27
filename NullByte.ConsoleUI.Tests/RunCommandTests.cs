@@ -1,6 +1,7 @@
 ﻿using NSubstitute;
 using NullByte.ConsoleUI.Tests.Infrastructure;
 using NullByte.Core.Scripting;
+using NullByte.Core.Domain;
 using NullByte.Scripting.Runtime;
 
 namespace NullByte.ConsoleUI.Tests;
@@ -158,7 +159,7 @@ public sealed class RunCommandTests
 
             var apiFactory = Substitute.For<INullByteApiFactory>();
             apiFactory
-                .Create(Arg.Any<IScriptOperations>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Create(Arg.Any<IScriptOperations>(), Arg.Any<ServerId>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
                 .Returns(api);
 
             Console = ConsoleTestSetup.CreateHarness(new ConsoleTestOptions { ApiFactory = apiFactory, Terminal = terminal });

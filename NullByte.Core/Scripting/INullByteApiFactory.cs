@@ -1,6 +1,8 @@
-﻿namespace NullByte.Core.Scripting;
+using NullByte.Core.Domain;
+
+namespace NullByte.Core.Scripting;
 
 public interface INullByteApiFactory
 {
-    INullByteApi Create(IScriptOperations scriptOperations, string processHostname, int threads, CancellationToken cancellationToken);
+    INullByteApi Create(IScriptOperations scriptOperations, ServerId processHostServerId, int threads, CancellationToken cancellationToken);
 }

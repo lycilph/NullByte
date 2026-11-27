@@ -13,8 +13,10 @@ public static class InitialGameStateFactory
     {
         var network = LoadNetwork();
 
+        var homeServer = network.GetServer(HomeHostname);
+
         var player = new Player(
-            homeHostname: HomeHostname,
+            homeServer.Id,
             startingMoney: StartingMoney);
 
         return new GameState(player, network);
