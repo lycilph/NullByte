@@ -59,6 +59,7 @@ public sealed class ScriptAcceptanceTests
         network.Connect(home.Hostname, target.Hostname);
 
         var gameState = new GameState(player, network);
+        gameState.Narrative.Mode = NarrativeProgressionMode.Freeplay;
         var clock = new FakeGameClock();
         var scheduler = new GameScheduler(clock);
 
