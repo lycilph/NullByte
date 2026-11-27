@@ -22,7 +22,7 @@ public sealed class PlayerTests
     {
         var player = new Player(ServerId.New());
         Assert.Equal(0, player.Money);
-        Assert.Equal(0, player.HackingExperience);
+        Assert.Equal(0, player.Skills.GetExperience(SkillKind.Hacking));
     }
 
     [Fact]
