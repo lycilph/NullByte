@@ -73,7 +73,7 @@ public sealed class IncludeLanguageServiceTests : IDisposable
     {
         const string source = "#include \"lib/util.cx\"\nnb.";
         var items = await service.GetCompletionsAsync(source, source.Length, TestContext.Current.CancellationToken, context: Context);
-        Assert.Contains(items, i => i.InsertText == "GetHackingLevel");
+        Assert.Contains(items, i => i.InsertText == "Player");
     }
 
     [Fact]
