@@ -1,14 +1,19 @@
 ﻿# In progress
 
+- New milestone
+  - Story/narrative, features are unlocked slowly
+  - Add this as a new milestone (between 12 and 13)
+	
+- Gameplay issue
+  - vscode command should be revealed later (check when)
+  - Show specifically which commands have unlocked
+
 - Make the text in the terminal green (so it doesn't look like a normal console)
   - Narrative messages should be another color (blue?)
 
-- Add a freeplay flag to the --new argument (in commandline parser)
+- Add a freeplay flag to the --new argument (in commandline parser) and the reset command
  
 # Todo
-
-- New milestone
-  -  Story/narrative, features are unlocked slowly
 
 - Maybe: add cancel manual hack, weaken and grow (backdoor?)
 - Do the full solution format check

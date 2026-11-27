@@ -1,4 +1,5 @@
-﻿using NullByte.Core.Persistence;
+﻿using NullByte.Core.Domain;
+using NullByte.Core.Persistence;
 using NullByte.Core.Scripting;
 using NullByte.Shell.Persistence;
 using NullByte.Shell.Tests.Infrastructure;
@@ -14,7 +15,7 @@ public sealed class SessionSaveLoadTests
     /// <summary>Plays a little: a script running with two threads on home, args and all.</summary>
     private static async Task<(GameSession Session, SaveGame Save, double UsedRam)> StartPlayedGameAsync(RecordingOutput output)
     {
-        var session = GameSession.Create(new GameSessionOptions { Output = output });
+        var session = GameSession.Create(new GameSessionOptions { Output = output, NarrativeMode = NarrativeProgressionMode.Freeplay });
         await session.StartAsync();
 
         var usedRam = await session.GameThread.InvokeAsync(async () =>
