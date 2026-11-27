@@ -55,7 +55,7 @@ public sealed class ServerActions
         if (!server.HasRootAccess)
             return HackResult.Failed("Hack failed: root access required.");
 
-        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, gameState.Player.HackingExperience);
+        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, gameState.Player.Skills.GetExperience(SkillKind.Hacking));
         if (hackingLevel < server.RequiredHackingLevel)
             return HackResult.Failed("Hack failed: hacking level too low.");
         
@@ -77,12 +77,12 @@ public sealed class ServerActions
             player.AddMoney(moneyStolen);
         
             server.IncreaseSecurity(securityIncrease);
-            player.AddHackingExperience(experienceGained);
+            player.Skills.AddExperience(SkillKind.Hacking, experienceGained);
         }
         else
         {
             var failedHackFactor = formulas.GetFailedHackExperienceFactor();
-            player.AddHackingExperience(experienceGained * failedHackFactor);
+            player.Skills.AddExperience(SkillKind.Hacking, experienceGained * failedHackFactor);
         }
 
         return new HackResult(
@@ -120,7 +120,7 @@ public sealed class ServerActions
         server.IncreaseSecurity(securityIncrease);
 
         var experienceGained = formulas.CalculateHackingExperience(server, threads);
-        player.AddHackingExperience(experienceGained);
+        player.Skills.AddExperience(SkillKind.Hacking, experienceGained);
 
         return new GrowResult(
             Succeeded: true,
@@ -154,7 +154,7 @@ public sealed class ServerActions
         var requestedDecrease = formulas.CalculateWeakenSecurityDecrease(threads);
         var securityDecrease = server.DecreaseSecurity(requestedDecrease);
         var experienceGained = formulas.CalculateHackingExperience(server, threads);
-        player.AddHackingExperience(experienceGained);
+        player.Skills.AddExperience(SkillKind.Hacking, experienceGained);
 
         return new WeakenResult(
             Succeeded: true, 
@@ -181,7 +181,7 @@ public sealed class ServerActions
             return BackdoorResult.Failed("Backdoor failed: root access required.");
 
         var player = gameState.Player;
-        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
+        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.Skills.GetExperience(SkillKind.Hacking));
         if (hackingLevel < server.RequiredHackingLevel)
             return BackdoorResult.Failed("Backdoor failed: hacking level too low.");
 
@@ -200,7 +200,7 @@ public sealed class ServerActions
     {
         var server = ResolveTarget(hostname);
 
-        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, gameState.Player.HackingExperience);
+        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, gameState.Player.Skills.GetExperience(SkillKind.Hacking));
 
         if (server.HasRootAccess)
             return NukeResult.Failed($"Nuke failed: You already have root access to {hostname}");
