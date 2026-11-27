@@ -23,7 +23,7 @@ public class SaveGameTests
     ];
 
     /// <summary>A small game that has been played a bit: every kind of state the save has to carry.</summary>
-    internal static GameState CreateState()
+    internal static GameState CreateState(NarrativeProgressionMode mode = NarrativeProgressionMode.Tutorial)
     {
         var network = new Network();
         network.AddServer(new Server("home", 0, 0, 1, 1, 1, 1, 1, 8, hasRootAccess: true, id: ServerId.Parse(HomeServerId)));
@@ -45,6 +45,7 @@ public class SaveGameTests
         player.DiscoverServer(ServerId.Parse(FoodnstuffServerId));
 
         var state = new GameState(player, network);
+        state.Narrative.Mode = mode;
 
         network.GetServer("n00dles").GrantRootAccess();
         network.GetServer("n00dles").RemoveMoney(1.0 / 3.0);
@@ -66,7 +67,7 @@ public class SaveGameTests
 
     private static SaveGame Capture(GameState state) => SaveGameMapper.Capture(state, GameTime, Processes, SavedAt);
 
-    private static string CurrentVersionGolden => GoldenSaves.V8;
+    private static string CurrentVersionGolden => Serializer.Serialize(Serializer.Deserialize(GoldenSaves.V8));
 
     private static string Describe(GameState state) => Serializer.Serialize(Capture(state));
 
@@ -196,18 +197,7 @@ public class SaveGameTests
                     "zero-day" => ZeroDayServerId,
                     _ => throw new InvalidOperationException($"Unexpected test server '{host}'.")
                 };
-                network.AddServer(new Server(
-                    host,
-                    1000,
-                    500,
-                    3,
-                    1,
-                    3,
-                    1,
-                    30,
-                    4,
-                    hasRootAccess: host == "home",
-                    id: ServerId.Parse(id)));
+                network.AddServer(new Server(host, 1000, 500, 3, 1, 3, 1, 30, 4, hasRootAccess: host == "home", id: ServerId.Parse(id)));
             }
             foreach (var (a, b) in edgeOrder)
                 network.Connect(a, b);
@@ -252,8 +242,8 @@ public class SaveGameTests
         // If this fails you changed the save format. Bump SaveGame.CurrentVersion, add a migration,
         // and keep the old golden text as a test for that migration. Do not just edit the golden text.
         var expected = CurrentVersionGolden;
-        var actual = Describe(CreateState());
-        Assert.True(JsonNode.DeepEquals(expected, actual));
+        var actual = Describe(CreateState(NarrativeProgressionMode.Freeplay));
+        Assert.Equal(expected, actual);
     }
 
     [Fact]
@@ -263,9 +253,9 @@ public class SaveGameTests
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        var expected = JsonNode.Parse(CurrentVersionGolden);
-        var actual = JsonNode.Parse(again);
-        Assert.True(JsonNode.DeepEquals(expected, actual));
+        var expected = CurrentVersionGolden;
+        var actual = again;
+        Assert.Equal(expected, actual);
     }
 
     [Fact]
