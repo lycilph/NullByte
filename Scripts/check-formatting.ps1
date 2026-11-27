@@ -1,3 +1,7 @@
+param(
+    [switch]$fix
+)
+
 $ErrorActionPreference = "Stop"
 
 git fetch origin master
@@ -17,16 +21,37 @@ if ($files.Count -eq 0) {
     exit 0
 }
 
-Write-Host "Checking formatting:"
+if ($Fix) {
+    Write-Host "Fixing formatting:"
+} else {
+    Write-Host "Checking formatting:"
+}
+
 $files | ForEach-Object { Write-Host "  $_" }
 
-dotnet format NullByte.slnx --verify-no-changes --no-restore --severity warn --include $files
+$formatArgs = @(
+    "format"
+    "NullByte.slnx"
+    "--no-restore"
+    "--severity"
+    "warn"
+    "--include"
+) + $files
+if (-not $Fix) {
+    $formatArgs += "--verify-no-changes"
+}
 
-# Use this to fix the errors found
-#dotnet format NullByte.slnx --no-restore --severity warn --include $files
+dotnet @formatArgs
 
 if ($LASTEXITCODE -ne 0) {
+    if ($Fix) {
+        throw "Formatting failed."
+    }
     throw "Formatting verification failed."
 }
 
-Write-Host "Formatting verification passed."
+if ($Fix) {
+    Write-Host "Formatting completed."
+} else {
+    Write-Host "Formatting verification passed."
+}
