@@ -47,7 +47,7 @@ public sealed class IncludeLanguageServiceTests : IDisposable
     [Fact]
     public async Task ApiMembersAndTheGeneratedWrapperHaveNoDefinition()
     {
-        const string source = "nb.GetHackingLevel();";
+        const string source = "nb.Player.Skills.Hacking.Level.ToString();";
         Assert.Null(await service.GetDefinitionAsync(source, source.IndexOf("GetHacking", StringComparison.Ordinal) + 1, TestContext.Current.CancellationToken));
         Assert.Null(await service.GetDefinitionAsync(source, 1, TestContext.Current.CancellationToken));   // 'nb' is declared in the generated wrapper
     }
