@@ -1,3 +1,4 @@
+using System.Globalization;
 using NullByte.ConsoleUI.Tests.Infrastructure;
 using NullByte.Core.Configuration;
 using NullByte.Core.Domain;
@@ -20,7 +21,9 @@ public sealed class CloudCommandTests
 
         Assert.Contains("Cloud servers", game.Output);
         Assert.Contains("Servers: 0/5", game.Output);
-        Assert.Contains("Next server costs $100,000", game.Output);
+
+        var expectedCost = 100_000.ToString("N0", CultureInfo.CurrentCulture);
+        Assert.Contains($"Next server costs ${expectedCost}", game.Output);
     }
 
     [Fact]
@@ -30,7 +33,7 @@ public sealed class CloudCommandTests
 
         await game.RunAsync("cloud buy buildbox");
 
-        var server = Assert.Single(game.State.Network.Servers.Where(server => server.IsCloudServer));
+        var server = Assert.Single(game.State.Network.Servers, server => server.IsCloudServer);
         Assert.Equal("buildbox", server.Hostname);
         Assert.Equal(8.0, server.MaximumRam);
         Assert.Equal(50_000.0, game.State.Player.Money);
@@ -46,7 +49,7 @@ public sealed class CloudCommandTests
 
         await game.RunAsync("cloud buy buildbox 16");
 
-        var server = Assert.Single(game.State.Network.Servers.Where(server => server.IsCloudServer));
+        var server = Assert.Single(game.State.Network.Servers, server => server.IsCloudServer);
         Assert.Equal(16.0, server.MaximumRam);
         Assert.Equal(50_000.0, game.State.Player.Money);
     }
@@ -58,7 +61,7 @@ public sealed class CloudCommandTests
 
         await game.RunAsync("cloud buy buildbox");
 
-        Assert.Empty(game.State.Network.Servers.Where(server => server.IsCloudServer));
+        Assert.DoesNotContain(game.State.Network.Servers, server => server.IsCloudServer);
         Assert.Equal(99_999.0, game.State.Player.Money);
         Assert.Contains("Not enough money", game.Output);
     }
@@ -121,7 +124,7 @@ public sealed class CloudCommandTests
 
         await game.RunAsync(commandLine);
 
-        Assert.Empty(game.State.Network.Servers.Where(server => server.IsCloudServer));
+        Assert.DoesNotContain(game.State.Network.Servers, server => server.IsCloudServer);
         Assert.Equal(1_000_000.0, game.State.Player.Money);
         Assert.Contains("Usage:", game.Output);
     }

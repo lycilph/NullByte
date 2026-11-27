@@ -12,23 +12,35 @@ public sealed class CloudCommands(CloudServerService service, IGameOutput output
 
     public void Register(CommandRegistry registry)
     {
-        registry.Register(new CommandDefinition("cloud", "cloud [list]", "Show your cloud servers.", ListAsync)
-        {
-            Aliases = ["cloud list"]
-        });
+        registry.Register(new CommandDefinition(
+            "cloud", 
+            "cloud [list]", 
+            "Show your cloud servers.", 
+            ListAsync)
+        { Aliases = ["cloud list"] });
 
-        registry.Register(new CommandDefinition("cloud buy", BuyUsage, "Purchase a cloud server.", BuyAsync)
-        {
-            MinArgs = 1, MaxArgs = 2
-        });
+        registry.Register(new CommandDefinition(
+            "cloud buy", 
+            BuyUsage, 
+            "Purchase a cloud server.", 
+            BuyAsync)
+        { MinArgs = 1, MaxArgs = 2 });
 
-        registry.Register(new CommandDefinition("cloud upgrade", UpgradeUsage, "Upgrade a cloud server's RAM.", UpgradeAsync)
+        registry.Register(new CommandDefinition(
+            "cloud upgrade", 
+            UpgradeUsage, 
+            "Upgrade a cloud server's RAM.", 
+            UpgradeAsync)
         {
             MinArgs = 2, MaxArgs = 2,
             Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.CloudServer }]
         });
 
-        registry.Register(new CommandDefinition("cloud rename", RenameUsage, "Rename a cloud server.", RenameAsync)
+        registry.Register(new CommandDefinition(
+            "cloud rename", 
+            RenameUsage, 
+            "Rename a cloud server.", 
+            RenameAsync)
         {
             MinArgs = 2, MaxArgs = 2,
             Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.CloudServer }]

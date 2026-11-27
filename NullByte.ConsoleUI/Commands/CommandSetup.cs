@@ -35,7 +35,7 @@ public static class CommandSetup
             new CloudCommands(session.Services.CloudServers, terminal),
             new ActivityCommands(session.Services.Activities, session.State.Player, formulas.Skills, terminal)
         ];
-        
+
         // Hosts that cannot save (and tests) simply leave these out.
         if (saves is not null)
             groups.Add(new PersistenceCommands(session, saves, hostRequests, terminal));
