@@ -31,12 +31,12 @@ public sealed class PlayerCommands(Player player, NetworkService networkService,
     private async Task StatusAsync(IReadOnlyList<string> arguments)
     {
         var server = networkService.GetCurrentServer();
-        var hackingLevel = skillFormulas.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
+        var hackingLevel = skillFormulas.CalculateLevel(SkillKind.Hacking, player.Skills.GetExperience(SkillKind.Hacking));
 
         output.WriteLine("Status");
         output.WriteLine($"Money: ${player.Money:N2}");
         output.WriteLine($"Hacking level: {hackingLevel}");
-        output.WriteLine($"Hacking XP: {player.HackingExperience:N2}");
+        output.WriteLine($"Hacking XP: {player.Skills.GetExperience(SkillKind.Hacking):N2}");
         output.WriteLine($"Connected to: {server.Hostname}");
         output.WriteLine($"Root access: {(server.HasRootAccess ? "Yes" : "No")}");
     }
