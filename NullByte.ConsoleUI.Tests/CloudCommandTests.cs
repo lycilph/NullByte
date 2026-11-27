@@ -55,6 +55,18 @@ public sealed class CloudCommandTests
     }
 
     [Fact]
+    public async Task Buy_with_unsupported_ram_tier_lists_supported_tiers()
+    {
+        var game = CreateGame(1_000_000);
+
+        await game.RunAsync("cloud buy test-server 14");
+
+        Assert.DoesNotContain(game.State.Network.Servers, server => server.IsCloudServer);
+        Assert.Equal(1_000_000.0, game.State.Player.Money);
+        Assert.Contains("Invalid RAM tier '14'. Supported tiers: 8, 16, 32, 64, 128, 256 GB.", game.Output);
+    }
+
+    [Fact]
     public async Task Buy_with_insufficient_funds_does_not_create_a_server_or_spend_money()
     {
         var game = CreateGame(99_999);
@@ -78,6 +90,19 @@ public sealed class CloudCommandTests
         Assert.Equal(16.0, server.MaximumRam);
         Assert.Equal(50_000.0, game.State.Player.Money);
         Assert.Contains("Upgraded 'buildbox' to 16 GB RAM", game.Output);
+    }
+
+    [Fact]
+    public async Task Upgrade_with_unsupported_ram_tier_lists_supported_tiers()
+    {
+        var game = CreateGame(1_000_000);
+        await game.RunAsync("cloud buy buildbox");
+        var server = game.State.Network.GetServer("buildbox");
+
+        await game.RunAsync("cloud upgrade buildbox 14");
+
+        Assert.Equal(8.0, server.MaximumRam);
+        Assert.Contains("Invalid RAM tier '14'. Supported tiers: 8, 16, 32, 64, 128, 256 GB.", game.Output);
     }
 
     [Fact]
@@ -109,11 +134,9 @@ public sealed class CloudCommandTests
 
     [Theory]
     [InlineData("cloud buy")]
-    [InlineData("cloud buy buildbox 12")]
     [InlineData("cloud buy buildbox extra")]
     [InlineData("cloud upgrade")]
     [InlineData("cloud upgrade buildbox")]
-    [InlineData("cloud upgrade buildbox sixteen")]
     [InlineData("cloud rename buildbox")]
     [InlineData("cloud rename buildbox new-name extra")]
     [InlineData("cloud list extra")]
