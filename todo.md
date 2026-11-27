@@ -1,20 +1,25 @@
 ﻿# In progress
 
+- Add a player sub-api (get skills, money etc.)
+ 
+# Todo
+
+- New milestone
+  -  Story/narrative, features are unlocked slowly
+
+- Maybe: add cancel manual hack, weaken and grow (backdoor?)
+- Make the text in the terminal green (so it doesn't look like a normal console)
+- Do the full solution format check
+
+# Future ideas
+
 - Test projects clean up
   - Consolidate startup/fixture/infrastructure code in a shared class
   - Use Mocks where appropriate
   - Look at the tests themselves
 	- Done: ConsoleUI.Tests, Core.Tests
 	- Missing: Editor.Tests, Scripting.Tests, Shell.Tests
-
-# Todo
-
-- Add a player sub-api (get skills, money etc.)
-- Maybe: add cancel manual hack, weaken and grow (backdoor?)
-- Make the text in the terminal green (so it doesn't look like a normal console)
-- Do the full solution format check
-
-# Future ideas
+  - OR start over with new tests...
 
 - Make botnet and cloud servers unlockable
   - Make a system to unlock features on a trigger

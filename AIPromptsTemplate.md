@@ -7,7 +7,7 @@ Identify the relevant code and tests, then propose an implementation approach. D
 
 ---- Repomix ---
 Exclusion parameter:
-*.md, *.git*, NullByte/* (~240k tokens)
+*.md, *.git*, NullByte/*
 
 Or without the test projects
-*.md, *.git*, NullByte/*, NullByte*Test*/** (~123k tokens)
+*.md, *.git*, NullByte/*, NullByte*Test*/**
