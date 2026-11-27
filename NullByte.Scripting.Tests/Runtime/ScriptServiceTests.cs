@@ -397,7 +397,7 @@ public sealed class ScriptServiceTests
             network.AddServer(Home);
 
             GameState = new GameState(
-                new Player("home"),
+                new Player(Home.Id),
                 network);
 
             Api = new TestNullByteApi();
