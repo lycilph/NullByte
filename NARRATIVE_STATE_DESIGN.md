@@ -178,7 +178,7 @@ The first iteration enforces scripting restrictions at runtime. Editor completio
 
 ### 7.1 Save contract
 
-The current save format is version 7. The narrative state should be added as a required top-level `Narrative` save object in the next format version.
+The current save format is version 8. The narrative state should be added as a required top-level `Narrative` save object in the next format version.
 
 New-game creation should offer two progression modes: `Tutorial` (the default, with the zero-command opening) and `Freeplay` (starts with all capabilities available and skips the tutorial). The existing restart/new-game flow should expose this choice without requiring a story command.
 
