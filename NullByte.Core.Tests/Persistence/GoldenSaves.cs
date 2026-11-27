@@ -1181,10 +1181,10 @@ internal static class GoldenSaves
     }
   ]
 }
-"""
+""";
 
-#pragma warning disable IDE0055
-    public const string V8 = """{
+    public const string V8 = """
+{
   "version": 8,
   "savedAtUtc": "2026-11-17T10:30:00+00:00",
   "gameTime": "00:12:34.2500000",
@@ -1346,6 +1346,12 @@ internal static class GoldenSaves
       "modified": "2026-11-17T10:30:00+00:00"
     }
   ],
+  "narrative": {
+    "mode": 1,
+    "unlockedCapabilities": [],
+    "completedMilestones": [],
+    "deliveredMessages": []
+  },
   "processes": [
     {
       "filename": "weaken.cx",
@@ -1362,15 +1368,7 @@ internal static class GoldenSaves
       ],
       "threads": 2
     }
-  ],
-  "narrative": {
-    "mode": 1,
-    "unlockedCapabilities": [],
-    "completedMilestones": [],
-    "deliveredMessages": []
-  }
+  ]
 }
 """;
-#pragma warning restore IDE0055
-
 }
