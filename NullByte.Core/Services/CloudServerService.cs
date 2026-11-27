@@ -105,6 +105,28 @@ public sealed class CloudServerService
         return new CloudServerOperationResult(true, string.Empty, cost.Value, server);
     }
 
+    public CloudServerOperationResult Rename(string hostname, string newHostname)
+    {
+        if (string.IsNullOrWhiteSpace(hostname) || !gameState.Network.TryGetServer(hostname, out var server) || !server!.IsCloudServer)
+            return CloudServerOperationResult.Failed($"Unknown cloud server: {hostname}");
+        if (string.IsNullOrWhiteSpace(newHostname))
+            return CloudServerOperationResult.Failed("A new hostname is required.");
+
+        try
+        {
+            gameState.Network.RenameServer(server.Id, newHostname);
+            return new CloudServerOperationResult(true, string.Empty, 0, server);
+        }
+        catch (ArgumentException exception)
+        {
+            return CloudServerOperationResult.Failed(exception.Message);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return CloudServerOperationResult.Failed(exception.Message);
+        }
+    }
+
     private static void ValidateRam(int ram)
     {
         if (!CloudServerFormulas.IsSupportedRam(ram))
