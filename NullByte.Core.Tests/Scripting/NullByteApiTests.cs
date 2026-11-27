@@ -134,7 +134,7 @@ public sealed class NullByteApiTests
             ProgressionMode = NarrativeProgressionMode.Tutorial,
             Servers = [TestServers.Home(), TestServers.Create("n00dles")]
         });
-        var api = world.CreateApi(Substitute.For<IScriptOperations>());
+        var api = world.CreateApi(Substitute.For<IScriptOperations>(), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Throws<InvalidOperationException>(() => api.Scan());
         Assert.Throws<InvalidOperationException>(() => _ = api.Player.Money);
