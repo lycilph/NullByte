@@ -263,6 +263,7 @@ public static class SaveGameMapper
         RestoreSkills(player.Skills, savedPlayer.Skills, "The player");
 
         var state = new GameState(player, network);
+        RestoreNarrative(save.Narrative, state.Narrative);
 
         foreach (var id in savedPlayer.DiscoveredServerIds)
         {
@@ -305,6 +306,37 @@ public static class SaveGameMapper
             Warnings = warnings,
             ActivityCatalog = catalog
         };
+    }
+
+    private static void RestoreNarrative(NarrativeSave saved, NarrativeState narrative)
+    {
+        ArgumentNullException.ThrowIfNull(saved);
+        ArgumentNullException.ThrowIfNull(narrative);
+
+        narrative.Mode = saved.Mode;
+        foreach (var capability in saved.UnlockedCapabilities)
+        {
+            if (string.IsNullOrWhiteSpace(capability))
+                throw new InvalidDataException("A narrative capability ID is empty.");
+
+            narrative.UnlockCapability(capability);
+        }
+
+        foreach (var milestone in saved.CompletedMilestones)
+        {
+            if (string.IsNullOrWhiteSpace(milestone))
+                throw new InvalidDataException("A narrative milestone ID is empty.");
+
+            narrative.CompleteMilestone(milestone);
+        }
+
+        foreach (var message in saved.DeliveredMessages)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                throw new InvalidDataException("A narrative message ID is empty.");
+
+            narrative.DeliverMessage(message);
+        }
     }
 
     private static void RestoreSkills(PlayerSkills skills, IReadOnlyDictionary<string, double> saved, string who)
