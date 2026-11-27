@@ -78,7 +78,8 @@ When changing balance, first locate the existing formula rather than embedding a
 - `Time/IGameClock.cs` — game-time abstraction.
 - `Time/RealGameClock.cs`, `FakeGameClock.cs` — real/test clocks.
 - `Time/GameScheduler.cs` — scheduled game-time work.
-- `Systems/ActivitySystem.cs`, `BotnetSystem.cs` — recurring simulation systems.
+- `Systems/ActivitySystem.cs`, `BotnetSystem.cs`, `ProgressionSystem.cs` — recurring simulation systems.
+- `Domain/Progression/` — the story as data (`Journey`, `Chapter`, `ChapterCondition`), the unlockable `GameFeature`s and the player's `ProgressionState` (on `GameState.Progression`). See `STORY.md`.
 
 Game-thread ownership rules are in `ARCHITECTURE.md`.
 
@@ -103,6 +104,8 @@ Look in `NullByte.Core/Scripting` for the public API exposed to player scripts:
 - `Persistence/Migrations/` — version-to-version migrations (`VnToVm`); the highest number is the current save version.
 - `Data/initial-network.json` — initial network data.
 - `Data/activities.json` — activity definitions.
+- `Data/journey.json` — the story: chapters, their conditions and the features they unlock. Described in `STORY.md`; change both together.
+- `World/JourneyLoader.cs`, `JourneyFactory.cs`, `JourneyDefinition.cs` — load and validate the journey.
 - `InitialGameStateFactory.cs` — initial world construction.
 
 ## Scripting
@@ -154,7 +157,8 @@ Look in `NullByte.Scripting/Runtime`:
 - `GameHost.cs` — runtime composition and session ownership.
 - `HostRequest.cs`, `HostRequestMailbox.cs` — host-level lifecycle requests.
 - `NanoEditor.cs` — editor integration entry point.
-- command groups for action, activity, botnet, debug, file, network, persistence, player, script and system operations.
+- command groups for action, activity, botnet, cloud, debug, file, journey, network, persistence, player, script and system operations.
+- `Commands/CommandUnlocks.cs` — the one table that says which story feature unlocks each command; `CommandRegistry` hides locked commands.
 - terminal parsing, completion, history, hotkeys and live panels.
 - configuration under `Configuration/`.
 - the startup sequence under `Startup/`; it renders boot progress while required compiler and (when enabled) editor language-service warm-ups run, and completes before the interactive terminal takes ownership of the console.
@@ -226,6 +230,15 @@ Start with `VirtualFileSystem.cs`, `VirtualPath.cs`, `PathResolver.cs`, then the
 ### Servers and cloud infrastructure
 
 Start with `Domain/Server.cs`, `Domain/ServerId.cs`, `Domain/Network.cs`, then `Services/CloudServerService.cs` and `Formulas/CloudServerFormulas.cs`. The console adapter is under `NullByte.ConsoleUI/Commands/Groups/CloudCommands.cs`; the player-script surface is under `NullByte.Core/Scripting`.
+
+### Story and unlocking
+
+1. `STORY.md` (premise, tone, chapter table, checklist for adding to the story).
+2. `Data/journey.json` and `World/JourneyLoader.cs`.
+3. `Domain/Progression/` and `Systems/ProgressionSystem.cs`.
+4. `NullByte.ConsoleUI/Commands/CommandUnlocks.cs`, `CommandRegistry.cs` and `Groups/JourneyCommands.cs`.
+5. `Persistence/Migrations/V7ToV8Migration.cs` for how progression is saved.
+6. `NullByte.Core.Tests/Progression/` and `NullByte.ConsoleUI.Tests/ProgressionCommandTests.cs`.
 
 ### Persistence
 

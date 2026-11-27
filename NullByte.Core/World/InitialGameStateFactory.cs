@@ -1,4 +1,5 @@
 ﻿using NullByte.Core.Domain;
+using NullByte.Core.Domain.Progression;
 
 namespace NullByte.Core.World;
 
@@ -19,7 +20,8 @@ public static class InitialGameStateFactory
             homeServer.Id,
             startingMoney: StartingMoney);
 
-        return new GameState(player, network);
+        // A new game starts the journey: everything is locked until the story unlocks it.
+        return new GameState(player, network, ProgressionState.NewJourney());
     }
 
     private static Network LoadNetwork()

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using NullByte.Core.Domain.Progression;
 
 namespace NullByte.ConsoleUI.Commands;
 
@@ -6,10 +7,16 @@ public sealed class CommandRegistry
 {
     private readonly Dictionary<string, CommandDefinition> commands = new(StringComparer.OrdinalIgnoreCase);
     private int maxWords = 1;
+    private readonly ProgressionState? progression;
 
+    /// <param name="progression">What the player has unlocked. Without it every command is available.</param>
+    public CommandRegistry(ProgressionState? progression = null) => this.progression = progression;
+
+    /// <summary>The commands the player can use now. Commands the story has not unlocked yet are left out.</summary>
     public IReadOnlyCollection<CommandDefinition> Commands =>
         commands.Values
             .Distinct()
+            .Where(IsAvailable)
             .OrderBy(command => command.Name)
             .ToArray();
 
@@ -35,7 +42,7 @@ public sealed class CommandRegistry
     {
         for (var n = Math.Min(maxWords, tokens.Count); n >= 1; n--)
         {
-            if (commands.TryGetValue(string.Join(' ', tokens.Take(n)), out command))
+            if (commands.TryGetValue(string.Join(' ', tokens.Take(n)), out command) && IsAvailable(command))
             {
                 wordsConsumed = n;
                 return true;
@@ -44,6 +51,28 @@ public sealed class CommandRegistry
 
         command = null;
         wordsConsumed = 0;
+        return false;
+    }
+
+    /// <summary>Whether the story has unlocked the command. A command without a feature is always available.</summary>
+    public bool IsAvailable(CommandDefinition command)
+        => progression is null
+           || !CommandUnlocks.TryGetFeature(command, out var feature)
+           || progression.IsUnlocked(feature);
+
+    /// <summary>
+    /// Finds a command the typed tokens name but the story has not unlocked yet, so the player
+    /// can be told it is coming rather than that it does not exist.
+    /// </summary>
+    public bool TryGetLocked(IReadOnlyList<string> tokens, [NotNullWhen(true)] out CommandDefinition? command)
+    {
+        for (var n = Math.Min(maxWords, tokens.Count); n >= 1; n--)
+        {
+            if (commands.TryGetValue(string.Join(' ', tokens.Take(n)), out command) && !IsAvailable(command))
+                return true;
+        }
+
+        command = null;
         return false;
     }
 

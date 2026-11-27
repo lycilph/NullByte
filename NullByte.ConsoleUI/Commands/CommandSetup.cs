@@ -18,7 +18,7 @@ public static class CommandSetup
         IExternalEditorStatus? externalEditorStatus = null,
         AppSettings? settings = null)
     {
-        var registry = new CommandRegistry();
+        var registry = new CommandRegistry(session.State.Progression);
         var workingDirectory = new WorkingDirectory(session.State);
         var formulas = session.Services.Formulas;
 
@@ -33,7 +33,8 @@ public static class CommandSetup
             new ActionCommands(session.State.Player, session.Clock, formulas.ServerOperations, session.Services.Actions, session.Services.Network, terminal),
             new BotnetCommands(session.State.Botnet, session.Services.Botnet, formulas.Botnet, terminal),
             new CloudCommands(session.Services.CloudServers, terminal),
-            new ActivityCommands(session.Services.Activities, session.State.Player, formulas.Skills, terminal)
+            new ActivityCommands(session.Services.Activities, session.State.Player, formulas.Skills, terminal),
+            new JourneyCommands(session.State.Progression, session.Services.Journey, terminal)
         ];
 
         // Hosts that cannot save (and tests) simply leave these out.

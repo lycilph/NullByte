@@ -62,6 +62,8 @@ See [Script sandbox and safety](ARCHITECTURE.md#script-sandbox-and-safety) for t
 
 Planned work around progression, economy and balancing the available activities and hacking systems into a coherent player progression.
 
+First step done: a story-driven unlock system (`STORY.md`, `Data/journey.json`, `ProgressionSystem`, the `journey` command). Chapter thresholds are placeholders to be tuned here, and unlocking is not yet enforced in Core services or the script API.
+
 The exact feature set should be shaped by playtesting rather than prematurely locking the implementation.
 
 ## M14 — First playable release

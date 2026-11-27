@@ -36,7 +36,8 @@ public sealed class SaveMigrator
             new V3ToV4Migration(),
             new V4ToV5Migration(),
             new V5ToV6Migration(),
-            new V6ToV7Migration()
+            new V6ToV7Migration(),
+            new V7ToV8Migration()
         ])
             .ToDictionary(migration => migration.FromVersion);
     }

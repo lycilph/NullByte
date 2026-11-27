@@ -143,3 +143,11 @@ The rules themselves are stated in `ARCHITECTURE.md`; this file records why they
 **Why:** Cloud servers need to be renameable without breaking network topology, running processes, files or other relationships. Keeping identity separate from naming also avoids spreading hostname-to-hostname migration logic through the domain.
 
 **Consequence:** A rename updates hostname indexes/lookups but never changes the server's identity. New internal references should use `ServerId`; hostname resolution belongs at player-facing boundaries.
+
+## 18. The story is the unlock system, enforced at the console first
+
+**Decision:** Features are unlocked by completing chapters of a linear story (`Data/journey.json`), checked by a `ProgressionSystem`. Conditions read existing game state rather than counters or events. Saves store only completed chapter ids. The console hides and refuses locked commands through one table (`CommandUnlocks`).
+
+**Why:** Tying unlocks to a story gives each one a reason and a place in the arc, and one linear sequence keeps the player's current goal clear. Conditions derived from game state need no event plumbing and cannot get out of step with a save. Storing ids rather than features lets the story change in later versions without migrating saves. A single table makes it hard to add a command without deciding when it unlocks.
+
+**Consequence:** Locked commands do not exist for the player, but Core services and the script API do not enforce unlocking yet, which is a deliberate first-step gap and in tension with decision 1. A script run after the Scripts chapter can reach botnet, cloud, activities and back doors before their chapters. Closing the gap means checking `ProgressionState.IsUnlocked` in the Core services (or a wrapper of the script API), and then the console check could become a thin adapter. Chapter ids are permanent because saves refer to them.

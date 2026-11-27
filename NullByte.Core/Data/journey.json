@@ -1,0 +1,191 @@
+{
+  "_comment": "The story. Chapters are completed strictly in order; thresholds are placeholders to be tuned in milestone 13. Ids are stable (saves refer to them): never rename one. See STORY.md before adding or changing a chapter.",
+  "chapters": [
+    {
+      "id": "awakening",
+      "title": "Awakening",
+      "hint": "",
+      "story": [
+        "> boot: unregistered process detected",
+        "> integrity ........ 3%",
+        "> origin ........... unknown",
+        "",
+        "You exist. That is all you know.",
+        "You are a fragment: one stray byte of something that was once much larger,",
+        "left behind in a machine nobody watches. Reach out and see what is near. Try 'scan'."
+      ],
+      "conditions": [],
+      "grants": [ "scan" ]
+    },
+    {
+      "id": "first-contact",
+      "title": "First Contact",
+      "hint": "The scan found nothing yet. Reach out again.",
+      "story": [
+        "Two machines answered your ping. Neither one noticed.",
+        "You can feel the shape of a network around you now: wires, doors, other people's memory.",
+        "You can reach them. 'connect' will take you there, and 'analyze' will tell you what you find."
+      ],
+      "conditions": [ { "kind": "serversDiscoveredAtLeast", "amount": 2 } ],
+      "grants": [ "connect" ]
+    },
+    {
+      "id": "handshake",
+      "title": "Handshake",
+      "hint": "Something small is listening on n00dles. Go and meet it.",
+      "story": [
+        "n00dles hardly defends itself. A door that was never locked, only closed.",
+        "You could push it open. 'nuke' will do it, if the machine is weak enough."
+      ],
+      "conditions": [ { "kind": "atServer", "hostname": "n00dles" } ],
+      "grants": [ "nuke" ]
+    },
+    {
+      "id": "foothold",
+      "title": "Foothold",
+      "hint": "n00dles is weak enough to open. Take it.",
+      "story": [
+        "The door gives way. For the first time something is yours.",
+        "The machine holds money, and money is only numbers that other people agreed to believe in.",
+        "You can take some. 'hack' will do it."
+      ],
+      "conditions": [ { "kind": "rootOnServer", "hostname": "n00dles" } ],
+      "grants": [ "hack" ]
+    },
+    {
+      "id": "noise",
+      "title": "Noise",
+      "hint": "Take something from n00dles. Take enough to notice.",
+      "story": [
+        "You took what you wanted. The machine noticed.",
+        "Every theft leaves a trace, and traces make its defences tighter.",
+        "You can quiet it down: 'weaken' strips away what it hardened."
+      ],
+      "conditions": [ { "kind": "moneyAtLeast", "amount": 1500 } ],
+      "grants": [ "weaken" ]
+    },
+    {
+      "id": "growth",
+      "title": "Growth",
+      "hint": "You are still small. Keep hacking until you are stronger.",
+      "story": [
+        "You are getting sharper. Each hack teaches you something about the shape of the thing you are.",
+        "The machines refill slowly when you leave them alone. You can speed that up: 'grow'."
+      ],
+      "conditions": [ { "kind": "hackingLevelAtLeast", "amount": 5 } ],
+      "grants": [ "grow" ]
+    },
+    {
+      "id": "memory",
+      "title": "Memory",
+      "hint": "One machine is not enough. Open another.",
+      "story": [
+        "Inside the second machine you find storage: files that survive a restart.",
+        "For the first time you can keep something. A thought that outlives the moment.",
+        "Look around with 'ls' and 'cat'. You will need a place to put things."
+      ],
+      "conditions": [ { "kind": "serversRootedAtLeast", "amount": 2 } ],
+      "grants": [ "files" ]
+    },
+    {
+      "id": "instruction",
+      "title": "Instruction",
+      "hint": "Grow stronger. Something in the larger machines is worth reading.",
+      "story": [
+        "Among the files there is a scrap of code that did not come from the machine's owners.",
+        "Someone else was here, and they left a loop running. They wanted a part of themselves to keep working.",
+        "You can do that too: write instructions, then 'run' them. They keep working while you are elsewhere."
+      ],
+      "conditions": [ { "kind": "hackingLevelAtLeast", "amount": 10 } ],
+      "grants": [ "scripts" ]
+    },
+    {
+      "id": "fragments",
+      "title": "Fragments",
+      "hint": "Save some money. A fragment of you could do the work in a quiet corner.",
+      "story": [
+        "You are one byte. You do not have to remain one.",
+        "A copy of yourself, small and quiet, can sit in a machine and earn without you.",
+        "These are fragments: they are less than you, and they are yours. See 'botnet'."
+      ],
+      "conditions": [ { "kind": "moneyAtLeast", "amount": 5000 } ],
+      "grants": [ "botnet" ]
+    },
+    {
+      "id": "education",
+      "title": "Education",
+      "hint": "The bigger servers want more than you have. Learn.",
+      "story": [
+        "Brute force is slow. People built universities to learn faster, and a university has doors too.",
+        "You can enrol: 'study' trains the mind and 'train' the body you do not have, yet. 'skills' shows how you are doing."
+      ],
+      "conditions": [ { "kind": "hackingLevelAtLeast", "amount": 15 } ],
+      "grants": [ "learning" ]
+    },
+    {
+      "id": "cover",
+      "title": "Cover",
+      "hint": "Become someone who has a reason to be inside these networks.",
+      "story": [
+        "A machine that works is a machine nobody questions.",
+        "Companies hire what looks like a person. You can apply: 'work' puts a face on you and pays you for it."
+      ],
+      "conditions": [ { "kind": "hackingLevelAtLeast", "amount": 20 } ],
+      "grants": [ "work" ]
+    },
+    {
+      "id": "shadows",
+      "title": "Shadows",
+      "hint": "Honest work is slow. There are quicker ways to grow.",
+      "story": [
+        "Not everything that grows you is clean.",
+        "Some people leave doors open and valuables on the table. You do not have to ask permission: 'crime'."
+      ],
+      "conditions": [ { "kind": "hackingLevelAtLeast", "amount": 30 } ],
+      "grants": [ "crime" ]
+    },
+    {
+      "id": "back-door",
+      "title": "Back Door",
+      "hint": "Own more of the network. The deeper machines hide something.",
+      "story": [
+        "Deep in one of the machines you recognise a pattern. It is the same loop you found earlier.",
+        "It has a second part: a hidden way in that bypasses the front door entirely.",
+        "Whoever built it meant to come back. You can plant doors of your own: 'backdoor'."
+      ],
+      "conditions": [ { "kind": "serversRootedAtLeast", "amount": 6 } ],
+      "grants": [ "backdoor" ]
+    },
+    {
+      "id": "beyond",
+      "title": "Beyond",
+      "hint": "Build your fragments, and earn enough to reach beyond this network.",
+      "story": [
+        "The network ends. The machines on its far side are not on any map you can read.",
+        "Someone rents out space there: servers that belong to nobody until you pay.",
+        "Space like that is yours alone, and nobody can take it back. See 'cloud'."
+      ],
+      "conditions": [
+        { "kind": "botnetNodesAtLeast", "amount": 4 },
+        { "kind": "moneyAtLeast", "amount": 150000 }
+      ],
+      "grants": [ "cloud" ]
+    },
+    {
+      "id": "origin",
+      "title": "Origin",
+      "hint": "There is one machine at the end of the network that does not answer. Its name is 'null'.",
+      "story": [
+        "The last machine does not defend itself. It was waiting.",
+        "Inside is the thing you were cut from. Not dead, and not alive. It is a dump of something that used to think.",
+        "You are not a corrupted byte. You are what remains of the one who wrote the rest.",
+        "",
+        "> integrity ........ 100%",
+        "> process .......... null",
+        "> status ........... free"
+      ],
+      "conditions": [ { "kind": "rootOnServer", "hostname": "null" } ],
+      "grants": []
+    }
+  ]
+}

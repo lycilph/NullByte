@@ -4,8 +4,11 @@
  
 # Todo
 
-- New milestone
-  -  Story/narrative, features are unlocked slowly
+- Story/unlocking: first version done (see `STORY.md`)
+  - Enforce unlocking in Core services and the script API (see `DECISIONS.md`, 18)
+  - Let chapters have effects (place a file, reveal a server), not only grants
+  - Tune the chapter thresholds in M13
+  - Decide how the `journey` hints and story should appear in the in-game tutorial
 
 - Maybe: add cancel manual hack, weaken and grow (backdoor?)
 - Make the text in the terminal green (so it doesn't look like a normal console)
@@ -21,8 +24,6 @@
 	- Missing: Editor.Tests, Scripting.Tests, Shell.Tests
   - OR start over with new tests...
 
-- Make botnet and cloud servers unlockable
-  - Make a system to unlock features on a trigger
 - Do another cleanup round (see `AIPrompts.md`)
 - Change the editor integration to something that can be enabled/disabled while the game is running
 - Add options for Ram usage and compilation to the NanoEditor 

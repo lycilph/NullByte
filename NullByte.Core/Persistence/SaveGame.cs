@@ -14,7 +14,7 @@ namespace NullByte.Core.Persistence;
 public sealed record SaveGame
 {
     /// <summary>The format version this build writes, and the newest one it can read.</summary>
-    public const int CurrentVersion = 7;
+    public const int CurrentVersion = 8;
 
     public required int Version { get; init; }
     public required DateTimeOffset SavedAtUtc { get; init; }
@@ -33,6 +33,20 @@ public sealed record SaveGame
     public required IReadOnlyList<FileSave> Files { get; init; }
     /// <summary>Scripts that were running. They are started again on load.</summary>
     public required IReadOnlyList<ProcessSave> Processes { get; init; }
+    /// <summary>How far the player is in the story. Added in version 8.</summary>
+    public required ProgressionSave Progression { get; init; }
+}
+
+/// <summary>
+/// The story so far. Only the completed chapters are stored; the features they unlock are read
+/// from the journey when the game loads.
+/// </summary>
+public sealed record ProgressionSave
+{
+    /// <summary>True for a game with no story gating, where everything is available. Saves from before version 8 are like this.</summary>
+    public required bool Unrestricted { get; init; }
+    /// <summary>The ids of the completed chapters, in the order they were completed.</summary>
+    public required IReadOnlyList<string> CompletedChapters { get; init; }
 }
 
 public sealed record PlayerSave

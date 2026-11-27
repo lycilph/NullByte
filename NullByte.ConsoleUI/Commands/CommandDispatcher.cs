@@ -24,6 +24,13 @@ public sealed class CommandDispatcher
 
         if (!registry.TryResolve(tokens, out var command, out var consumed))
         {
+            if (registry.TryGetLocked(tokens, out _))
+            {
+                output.WriteLine($"You do not know how to '{tokens[0]}' yet.");
+                output.WriteLine("Type 'journey' to see where you are and what to do next.");
+                return false;
+            }
+
             output.WriteLine($"Unknown command: {tokens[0]}");
             output.WriteLine("Type 'help' to see available commands.");
             return false;

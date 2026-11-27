@@ -675,6 +675,7 @@ Done. Design in 3.5.3 and 4.13.
 - Home RAM upgrades and cloud-server infrastructure.
 - Botnet and hack economy balanced so neither dominates.
 - Short in-game tutorial via `help` and a few sample scripts shipped in the starting file system.
+- Story-driven unlocks: a new game starts with almost nothing, and a linear journey of chapters unlocks commands and systems one at a time (see `STORY.md`). First version is implemented; this milestone tunes the thresholds.
 
 **Acceptance**: a play session of roughly 1 to 2 hours reaches the final in-scope tier of servers, with a script-based economy clearly better than manual play.
 

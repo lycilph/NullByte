@@ -1,5 +1,6 @@
 ﻿using NullByte.Core.Configuration;
 using NullByte.Core.Domain;
+using NullByte.Core.Domain.Progression;
 using NullByte.Core.Formulas;
 using NullByte.Core.Persistence;
 using NullByte.Core.Randomness;
@@ -27,6 +28,7 @@ public sealed record GameSessionOptions
     public IRandomSource? Random { get; init; }                                 // tests pass a fixed source
     public INullByteApiFactory? ApiFactory { get; init; }                       // tests pass a fake api factory
     public ActivityCatalog? ActivityCatalog { get; init; }                      // tests pass a small catalog; null = the one that ships with the game
+    public Journey? Journey { get; init; }                                      // tests pass a small story; null = the one that ships with the game
     public IScriptCompiler? ScriptCompiler { get; init; }                       // tests can provide a compiler; null = create the default compiler
 
     public GameSessionOptions WithSave(RestoredGame restored)
@@ -52,7 +54,8 @@ public sealed record GameServices(
     CloudServerService CloudServers,
     ScriptService Scripts,
     ActivityService Activities,
-    FormulaSet Formulas);
+    FormulaSet Formulas,
+    Journey Journey);
 
 public sealed class GameSession : IAsyncDisposable
 {
@@ -202,11 +205,13 @@ public sealed class GameSession : IAsyncDisposable
                 options.Output);
         var scriptService = new ScriptService(state, scriptCompiler, scriptRunner, apiFactory, scriptProcessManager);
 
-        var services = new GameServices(networkService, serverActions, botnetService, cloudServerService, scriptService, activityService, formulas);
+        var journey = options.Journey ?? JourneyFactory.CreateDefault();
+        var services = new GameServices(networkService, serverActions, botnetService, cloudServerService, scriptService, activityService, formulas, journey);
 
         // Systems are updated by the game loop on the game thread; they must be added before it starts.
         gameLoop.AddSystem(new BotnetSystem(state, formulas.Botnet));
         gameLoop.AddSystem(new ActivitySystem(state, formulas.Activities, activityService, randomSource));
+        gameLoop.AddSystem(new ProgressionSystem(state, journey, formulas.Skills, options.Output));
 
         scriptService.ProcessFailed += (proc, exception) => options.Output.WriteLine($"Process {proc.Pid} failed: {exception.Message}");
         gameLoop.UnhandledException += exception => options.Output.WriteLine($"Unhandled error on the game thread: {exception.Message}");

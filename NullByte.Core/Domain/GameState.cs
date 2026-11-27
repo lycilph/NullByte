@@ -1,4 +1,5 @@
 ﻿using NullByte.Core.Domain.Activities;
+using NullByte.Core.Domain.Progression;
 
 namespace NullByte.Core.Domain;
 
@@ -7,7 +8,7 @@ namespace NullByte.Core.Domain;
 /// </summary>
 public sealed class GameState
 {
-    public GameState(Player player, Network network)
+    public GameState(Player player, Network network, ProgressionState? progression = null)
     {
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(network);
@@ -27,6 +28,7 @@ public sealed class GameState
         Activity = new ActivityState();
         Employment = new Employment();
         FileSystem = new VirtualFileSystem(network);
+        Progression = progression ?? ProgressionState.Unrestricted();
     }
 
     public Player Player { get; }
@@ -35,4 +37,7 @@ public sealed class GameState
     public ActivityState Activity { get; }
     public Employment Employment { get; }
     public VirtualFileSystem FileSystem { get; }
+
+    /// <summary>How far the player is in the story, and so what is unlocked. Unrestricted unless the game is a journey.</summary>
+    public ProgressionState Progression { get; }
 }

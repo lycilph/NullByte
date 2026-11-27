@@ -70,8 +70,20 @@ Examples:
 - `BotnetService` — botnet behavior.
 - `ActivitySystem` — activity progression.
 - `BotnetSystem` — botnet progression.
+- `ProgressionSystem` — story progression: completes chapters and unlocks features (see below).
 
 The distinction is useful when deciding where new behavior belongs: a user/request-driven operation generally belongs in a service; recurring time-driven progression belongs in a system.
+
+## Story progression and unlocking
+
+The story unlocks the game one feature at a time (see `STORY.md`).
+
+- The journey is data (`Data/journey.json`): ordered chapters, each with conditions read from `GameState` and the `GameFeature`s it unlocks.
+- `ProgressionState` on `GameState.Progression` records the completed chapter ids. Unlocked features follow from them and are rebuilt from the journey on load; only the ids are saved.
+- `ProgressionSystem` checks only the next chapter each update, so chapters complete in order. It writes the story through `IGameOutput`, so no host wiring is needed.
+- A game that is not a journey is *unrestricted*: everything is available. A new game is a journey; tests and tools that build a `GameState` directly are unrestricted, so they are unaffected.
+- **The console gates by command.** `CommandUnlocks` maps each command to a feature, and `CommandRegistry` leaves locked commands out of lookup, `help` and completion. A new command must be added to that table (a test enforces it).
+- **Known gap:** Core services and the script API do not check `IsUnlocked` yet, so unlocking is not enforced against scripts. See `DECISIONS.md` (18).
 
 ## Time and scheduling
 

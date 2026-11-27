@@ -1,5 +1,6 @@
 using NullByte.Core.Domain;
 using NullByte.Core.Domain.Activities;
+using NullByte.Core.Domain.Progression;
 using NullByte.Core.World;
 
 namespace NullByte.Core.Persistence;
@@ -104,8 +105,27 @@ public static class SaveGameMapper
             Activity = CaptureActivity(state.Activity.Current),
             Files = files,
             Directories = directories,
-            Processes = processes.ToArray()          // was: sorted by Pid
+            Processes = processes.ToArray(),         // was: sorted by Pid
+            Progression = new ProgressionSave
+            {
+                Unrestricted = state.Progression.IsUnrestricted,
+                CompletedChapters = state.Progression.CompletedChapterIds.ToArray()
+            }
         };
+    }
+
+    private static ProgressionState RestoreProgression(ProgressionSave saved)
+    {
+        if (saved.Unrestricted)
+            return ProgressionState.Unrestricted();
+
+        var progression = ProgressionState.NewJourney();
+
+        // The unlocked features are rebuilt from the journey by the ProgressionSystem.
+        foreach (var id in saved.CompletedChapters)
+            progression.RestoreCompleted(id);
+
+        return progression;
     }
 
     // Every skill is written, so the file shows all of them and is the same shape every time.
@@ -255,7 +275,7 @@ public static class SaveGameMapper
 
         RestoreSkills(player.Skills, savedPlayer.Skills, "The player");
 
-        var state = new GameState(player, network);
+        var state = new GameState(player, network, RestoreProgression(save.Progression));
 
         foreach (var id in savedPlayer.DiscoveredServerIds)
         {
