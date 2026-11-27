@@ -35,49 +35,8 @@ jobs:
       - name: Restore solution
         run: dotnet restore NullByte.slnx
 
-      - name: Verify formatting of changed C# files
-        shell: pwsh
-        run: |
-          $base = $env:GITHUB_EVENT_BEFORE
-
-          if (
-            $env:GITHUB_EVENT_NAME -eq "pull_request" -or
-            $env:GITHUB_REF -ne "refs/heads/master" -or
-            [string]::IsNullOrWhiteSpace($base) -or
-            $base -match '^0+$'
-          ) {
-            git fetch origin master
-            if ($LASTEXITCODE -ne 0) {
-              throw "Unable to fetch master for the formatting comparison."
-            }
-
-            $base = git merge-base origin/master HEAD
-            if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($base)) {
-              throw "Unable to determine the merge base with master."
-            }
-          }
-
-          $files = @(
-            git diff --name-only $base HEAD -- '*.cs' |
-              Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-          )
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Unable to determine changed C# files."
-          }
-
-          if ($files.Count -eq 0) {
-            Write-Host "No changed C# files; skipping formatting verification."
-            exit 0
-          }
-
-          Write-Host "Checking formatting for:"
-          $files | ForEach-Object { Write-Host "  $_" }
-
-          dotnet format NullByte.slnx --verify-no-changes --no-restore --severity warn --include $files
-          if ($LASTEXITCODE -ne 0) {
-            throw "Formatting verification failed."
-          }
+      - name: Verify formatting
+        run: dotnet format NullByte.slnx --verify-no-changes --no-restore --severity warn
 
       - name: Build solution
         run: dotnet build NullByte.slnx --configuration Release --no-restore -p:EnableNETAnalyzers=true -p:AnalysisLevel=latest
