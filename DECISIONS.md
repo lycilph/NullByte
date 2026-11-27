@@ -134,3 +134,12 @@ The rules themselves are stated in `ARCHITECTURE.md`; this file records why they
 
 **Consequence:** When a new Core namespace or service type is added, decide whether scripts need it and extend the banned list otherwise. Moving the script-facing API into a dedicated assembly would remove this maintenance step.
 
+
+
+## 17. Server identity is separate from hostname
+
+**Decision:** Every server has an immutable `ServerId`; the hostname is a mutable player-facing name. Internal relationships use IDs, while terminal and scripting interfaces continue to accept hostnames.
+
+**Why:** Cloud servers need to be renameable without breaking network topology, running processes, files or other relationships. Keeping identity separate from naming also avoids spreading hostname-to-hostname migration logic through the domain.
+
+**Consequence:** A rename updates hostname indexes/lookups but never changes the server's identity. New internal references should use `ServerId`; hostname resolution belongs at player-facing boundaries.

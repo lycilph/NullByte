@@ -180,6 +180,25 @@ public sealed class CompletionCatalogTests
         Assert.Equal(new[] { "far", "near" }, result.Candidates);
     }
 
+    [Fact]
+    public void CloudCommands_OfferOwnedCloudServersForUpgradeAndRename()
+    {
+        var home = new Server("home", 0, 0, 1, 1, 1, 1, 1, 8, hasRootAccess: true);
+        var cloud = new Server("buildbox", 0, 0, 1, 1, 1, 1, 0, 8, hasRootAccess: true, isCloudServer: true);
+        var network = new Network();
+        network.AddServer(home);
+        network.AddServer(cloud);
+        network.Connect("home", "buildbox");
+        var player = new Player(home.Id);
+        player.DiscoverServer(cloud.Id);
+
+        var fixture = CreateFixture(new GameState(player, network));
+        fixture.Catalog.Refresh();
+
+        Assert.Equal("buildbox ", fixture.Catalog.Complete("cloud upgrade bu", 16).Replacement);
+        Assert.Equal("buildbox ", fixture.Catalog.Complete("cloud rename bu", 15).Replacement);
+    }
+
     private static Fixture CreateFixture(GameState? state = null)
     {
         var gameState = state ?? InitialGameStateFactory.Create();

@@ -6,6 +6,10 @@ public sealed class CommandRegistrationTests
 {
     [Theory]
     [InlineData("botnet")]
+    [InlineData("cloud")]
+    [InlineData("cloud buy")]
+    [InlineData("cloud upgrade")]
+    [InlineData("cloud rename")]
     [InlineData("run")]
     public void Player_commands_are_registered_and_are_not_debug_commands(string name)
     {

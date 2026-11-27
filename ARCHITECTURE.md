@@ -300,3 +300,17 @@ Treat these as reasons to stop and reconsider:
 5. **Snapshots cross background boundaries.**
 6. **Persistence is explicit and versioned.**
 7. **Prefer small, testable seams over global coordination.**
+
+
+## Server identity and cloud servers
+
+Servers have two distinct identities:
+
+- **Server ID** is immutable and is used for internal relationships.
+- **Hostname** is mutable and is the player-facing name used by commands and scripting.
+
+Internal references such as network connections, script process hosts and filesystem ownership use server IDs. Hostname lookup remains an adapter-friendly interface for player-facing operations. Renaming therefore changes the public name without changing the server's identity or its existing state.
+
+Cloud servers are ordinary `Server` instances marked with `IsCloudServer`. `CloudServerService` owns purchase, upgrade and rename operations, while `CloudServerFormulas` owns their configurable pricing and RAM-tier calculations. Console commands and the `nb.Cloud` scripting API delegate to this service rather than implementing cloud-server rules themselves.
+
+Cloud servers start with 8 GB RAM, zero money, minimum security and root access, are immediately discoverable, and connect to the player's home server. Supported RAM tiers are 8, 16, 32, 64, 128 and 256 GB. The design deliberately leaves room for future infrastructure such as CPU cores without implementing them now.

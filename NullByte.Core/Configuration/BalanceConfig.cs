@@ -255,6 +255,23 @@ public sealed record BalanceConfig
     /// </summary>
     public double ServerGrowthMultiplier { get; init; } = 1.0;
 
+    // Cloud servers
+
+    /// <summary>Maximum number of cloud servers the player may own.</summary>
+    public int CloudServerMaxCount { get; init; } = 5;
+
+    /// <summary>Base cost of the first cloud server.</summary>
+    public double CloudServerBaseCost { get; init; } = 100_000;
+
+    /// <summary>Growth factor applied for each cloud server already owned.</summary>
+    public double CloudServerCostGrowth { get; init; } = 2.0;
+
+    /// <summary>Cost of the first RAM tier upgrade (8 GB to 16 GB).</summary>
+    public double CloudServerRamUpgradeBaseCost { get; init; } = 50_000;
+
+    /// <summary>Growth factor applied for each RAM tier already passed.</summary>
+    public double CloudServerRamUpgradeCostGrowth { get; init; } = 2.0;
+
     // Botnet
     #region botnet
 
@@ -263,7 +280,7 @@ public sealed record BalanceConfig
     /// botnet's share of the economy without touching the cost curves.
     /// </summary>
     public double BotnetProductionMultiplier { get; init; } = 1.0;
-    
+
     /// <summary>
     /// Multiplier applied to botnet node and upgrade costs.
     /// </summary>

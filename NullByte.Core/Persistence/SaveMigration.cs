@@ -29,7 +29,15 @@ public sealed class SaveMigrator
     public SaveMigrator(IEnumerable<ISaveMigration>? migrations = null, int currentVersion = SaveGame.CurrentVersion)
     {
         this.currentVersion = currentVersion;
-        this.migrations = (migrations ?? [new V1ToV2Migration(), new V2ToV3Migration(), new V3ToV4Migration(), new V4ToV5Migration(), new V5ToV6Migration()])
+        this.migrations = (migrations ??
+        [
+            new V1ToV2Migration(),
+            new V2ToV3Migration(),
+            new V3ToV4Migration(),
+            new V4ToV5Migration(),
+            new V5ToV6Migration(),
+            new V6ToV7Migration()
+        ])
             .ToDictionary(migration => migration.FromVersion);
     }
 

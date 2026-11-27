@@ -258,6 +258,19 @@ public sealed class NetworkServiceTests
     }
 
     [Fact]
+    public void GetServer_ResolvesRenamedCloudServerByNewHostname()
+    {
+        var fixture = CreateFixture();
+        var cloud = new Server("cloud-old", 0, 0, 1, 1, 1, 1, 0, 8, hasRootAccess: true, isCloudServer: true);
+        fixture.Network.AddServer(cloud);
+
+        fixture.Network.RenameServer(cloud.Id, "cloud-new");
+
+        Assert.Same(cloud, fixture.Service.GetServer("cloud-new"));
+        Assert.False(fixture.Service.IsServerKnown("cloud-new"));
+    }
+
+    [Fact]
     public void GetCurrentServer_ReturnsPlayersCurrentServer()
     {
         var fixture = CreateFixture();

@@ -91,6 +91,12 @@ public sealed class CompletionCatalog : ICompletionProvider
             .Select(s => s.Name)
             .ToArray();
 
+        var cloudServers =
+            network.Servers.Where(server => server.IsCloudServer)
+                .OrderBy(server => server.Hostname, StringComparer.OrdinalIgnoreCase)
+                .Select(server => server.Hostname)
+                .ToArray();
+
         var botnetNodes =
             Enumerable
                 .Range(1, gameState.Botnet.NodeCount)
@@ -105,6 +111,7 @@ public sealed class CompletionCatalog : ICompletionProvider
             [CompletionKind.Directory] = directories,
             [CompletionKind.SaveGame] = saves,
             [CompletionKind.BotnetNode] = botnetNodes,
+            [CompletionKind.CloudServer] = cloudServers,
             [CompletionKind.UniversityCourse] = activityCatalog.Courses.Where(c => c.Kind == FacilityKind.University).Select(c => c.Name).ToArray(),
             [CompletionKind.University] = activityCatalog.Facilities.Where(f => f.Kind == FacilityKind.University).Select(f => f.Name).ToArray(),
             [CompletionKind.GymCourse] = activityCatalog.Courses.Where(c => c.Kind == FacilityKind.Gym).Select(c => c.Name).ToArray(),

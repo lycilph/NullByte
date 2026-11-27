@@ -24,7 +24,8 @@ public sealed class Server
         double maximumRam,
         bool hasRootAccess = false,
         bool hasBackdoor = false,
-        ServerId? id = null)
+        ServerId? id = null,
+        bool isCloudServer = false)
     {
         if (string.IsNullOrWhiteSpace(hostname))
             throw new ArgumentException("Host name cannot be empty.", nameof(hostname));
@@ -50,6 +51,7 @@ public sealed class Server
             throw new ArgumentException("Server ID cannot be empty.", nameof(id));
 
         Hostname = hostname;
+        IsCloudServer = isCloudServer;
 
         MaximumMoney = maximumMoney;
         money = startingMoney;
@@ -73,7 +75,8 @@ public sealed class Server
     /// </summary>
     public ServerId Id { get; }
 
-    public string Hostname { get; }
+    public string Hostname { get; private set; }
+    public bool IsCloudServer { get; }
     public double MaximumMoney { get; }
     public double Money => money;
     public double BaseDifficulty { get; }
@@ -87,9 +90,25 @@ public sealed class Server
     /// Whether the player has installed a backdoor, which lets them connect directly to this server from anywhere.
     /// </summary>
     public bool HasBackdoor { get; private set; }
-    public double MaximumRam { get; }
+    public double MaximumRam { get; private set; }
     public double UsedRam => usedRam;
     public double AvailableRam => MaximumRam - usedRam;
+
+    internal void UpgradeRam(double newMaximumRam)
+    {
+        if (!double.IsFinite(newMaximumRam) || newMaximumRam <= MaximumRam)
+            throw new ArgumentOutOfRangeException(nameof(newMaximumRam), "New maximum RAM must be finite and greater than the current maximum.");
+        if (newMaximumRam < usedRam)
+            throw new InvalidOperationException("The new maximum RAM cannot be lower than currently allocated RAM.");
+
+        MaximumRam = newMaximumRam;
+    }
+
+    internal void Rename(string hostname)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
+        Hostname = hostname;
+    }
 
     public bool TryGainRootAccess(int hackingLevel)
     {

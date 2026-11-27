@@ -189,7 +189,8 @@ public static class SaveGameMapper
         GrowthParameter = server.GrowthParameter,
         MaximumRam = server.MaximumRam,
         HasRootAccess = server.HasRootAccess,
-        HasBackdoor = server.HasBackdoor
+        HasBackdoor = server.HasBackdoor,
+        IsCloudServer = server.IsCloudServer
     };
 
     /// <param name="save">The save to restore.</param>
@@ -237,7 +238,8 @@ public static class SaveGameMapper
                 maximumRam: server.MaximumRam,
                 hasRootAccess: server.HasRootAccess,
                 id: serverId,
-                hasBackdoor: server.HasBackdoor));
+                hasBackdoor: server.HasBackdoor,
+                isCloudServer: server.IsCloudServer));
         }
 
         foreach (var connection in save.Connections)

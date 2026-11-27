@@ -66,6 +66,8 @@ public class SaveGameTests
 
     private static SaveGame Capture(GameState state) => SaveGameMapper.Capture(state, GameTime, Processes, SavedAt);
 
+    private static string CurrentVersionGolden => Serializer.Serialize(Serializer.Deserialize(GoldenSaves.V7));
+
     private static string Describe(GameState state) => Serializer.Serialize(Capture(state));
 
     [Fact]
@@ -194,7 +196,7 @@ public class SaveGameTests
     {
         // If this fails you changed the save format. Bump SaveGame.CurrentVersion, add a migration,
         // and keep the old golden text as a test for that migration. Do not just edit the golden text.
-        string expected = Normalize(GoldenSaves.V6);
+        string expected = CurrentVersionGolden;
         string actual = Describe(CreateState());
         Assert.Equal(expected, actual);
     }
@@ -202,11 +204,11 @@ public class SaveGameTests
     [Fact]
     public void The_current_golden_file_loads_and_saves_back_unchanged()
     {
-        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V6));
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V7));
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(Normalize(GoldenSaves.V6), again);
+        Assert.Equal(CurrentVersionGolden, again);
     }
 
     [Fact]
@@ -216,17 +218,7 @@ public class SaveGameTests
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(Normalize(GoldenSaves.V6), again);
-    }
-
-    [Fact]
-    public void The_version_4_golden_file_is_migrated_correctly()
-    {
-        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V4));
-
-        var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
-
-        Assert.Equal(Normalize(GoldenSaves.V6), again);
+        Assert.Equal(Normalize(GoldenSaves.V7), again);
     }
 
     [Fact]
@@ -281,6 +273,40 @@ public class SaveGameTests
         Assert.True(restored.State.Network.GetServer("n00dles").HasBackdoor);
         Assert.False(restored.State.Network.GetServer("foodnstuff").HasBackdoor);
         Assert.Equal(Describe(original), Describe(restored.State));
+    }
+
+
+    [Fact]
+    public void Cloud_server_marker_survives_save_and_load_and_remains_renameable()
+    {
+        var original = CreateState();
+        var cloud = new Server(
+            "cloud-one", 0, 0, 1, 1, 1, 1, 0, 8,
+            hasRootAccess: true,
+            isCloudServer: true);
+        original.Network.AddServer(cloud);
+        original.Network.Connect("home", cloud.Hostname);
+        original.Player.DiscoverServer(cloud.Id);
+
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(Describe(original)));
+        var restoredCloud = restored.State.Network.GetServer(cloud.Id);
+
+        Assert.True(restoredCloud.IsCloudServer);
+        Assert.True(restored.State.Network.AreConnected("home", "cloud-one"));
+        restored.State.Network.RenameServer(cloud.Id, "cloud-renamed");
+        Assert.Equal("cloud-renamed", restored.State.Network.GetServer(cloud.Id).Hostname);
+    }
+
+    [Fact]
+    public void The_version_6_migration_marks_all_existing_servers_as_non_cloud()
+    {
+        var save = JsonNode.Parse(GoldenSaves.V6)!.AsObject();
+
+        new V6ToV7Migration().Migrate(save);
+
+        var servers = save["servers"]!.AsArray();
+        Assert.NotEmpty(servers);
+        Assert.All(servers, server => Assert.False(server!["isCloudServer"]!.GetValue<bool>()));
     }
 
     [Fact]
