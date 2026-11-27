@@ -28,7 +28,8 @@ public sealed class CommandDispatcher
         if (!registry.TryResolve(tokens, out var command, out var consumed))
         {
             output.WriteLine($"Unknown command: {tokens[0]}");
-            output.WriteLine("Type 'help' to see available commands.");
+            if (registry.TryGet("help", out _))
+                output.WriteLine("Type 'help' to see available commands.");
             return false;
         }
 
