@@ -25,7 +25,7 @@ This plan deliberately starts with documentation and design. It does not assume 
 
 ### Stage 0 — Narrative design and repository alignment
 
-**Status: Design drafted; awaiting access-scope decisions**
+**Status: Design drafted; access-scope decisions confirmed**
 
 Deliverables:
 - NARRATIVE.md — narrative premise, world, NB-0001, SYSTEM, five-act arc, command discovery, narrative delivery and boundaries.
@@ -41,7 +41,7 @@ Acceptance:
 
 ### Stage 1 — Tutorial walkthrough and capability map
 
-**Status: Drafted; three design decisions need confirmation**
+**Status: Drafted; access-scope decisions confirmed**
 
 **Goal:** define exactly what a new player experiences, before implementing the progression system.
 
@@ -68,32 +68,24 @@ Acceptance:
 
 ### Stage 2 — Narrative and capability state model
 
+**Status: Design drafted; awaiting review**
+
 **Goal:** establish the smallest persistent representation of narrative progression and player access.
 
-Potential concepts to evaluate (names are illustrative, not prescribed):
-- Narrative chapter or milestone state.
-- Acquired capability identifiers.
-- Delivered narrative-message identifiers.
-- Optional discovery identifiers.
-
-Design considerations:
-- Keep narrative progression separate from transient console/UI state.
-- Use stable IDs rather than relying on message text or list position.
-- Define whether capability unlocks are granted directly or derived from completed milestones.
-- Ensure one-time messages and unlocks are idempotent.
-- Define defaults for new games and upgrades for older save versions.
-- Avoid storing redundant state if a capability can be derived safely from a durable milestone.
+The proposed state ownership, Tutorial/Legacy modes, capability/milestone/message IDs, new-game defaults, host-control hand-off, version 7-to-8 migration and legacy-save compatibility policy are documented in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md).
 
 Deliverables:
-- A short design decision describing state ownership and invariants.
-- Save model and migration design, if required.
-- Unit-test scenarios for fresh state, unlocks, duplicate events and save/load.
+- Core state ownership and invariants.
+- Save model and V7-to-V8 migration design.
+- Domain, persistence and integration test scenarios.
 
 Acceptance:
-- A new game starts with the intended zero-command state.
-- An unlock can be applied once and safely repeated without duplicate effects.
-- Save/load preserves chapter progress, delivered messages and acquired capabilities.
-- Existing saves retain their established access according to the agreed compatibility policy.
+- New Tutorial-mode games start with no capabilities and no commands.
+- The automatic initialization sequence grants `player.inspect`, exposing `status` only.
+- Successfully executing `status` grants `host.controls`.
+- Unlocks, milestones and one-time message delivery are idempotent.
+- Save/load preserves Tutorial and Legacy state.
+- Existing saves migrate to unrestricted Legacy mode without replaying the tutorial.
 
 ### Stage 3 — Event-driven narrative progression
 
@@ -257,4 +249,4 @@ Keep the first implementation narrow.
 | 6 — Activity-system narrative | Not started |
 | 7 — Review, balance and documentation | Not started |
 
-Stage 1's repository inspection and first design draft are complete in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md). Before moving to Stage 2, confirm the host-control policy, the first unlock (`status`), and the expected first-iteration treatment of script API visibility. Once those are agreed, finalize the capability matrix and begin the state/persistence design.
+Stage 1's repository inspection, capability-map draft and tutorial walkthrough are complete in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md). The access decisions are confirmed. Stage 2's proposed state and persistence design is documented in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md) and is ready for review. The next step is to resolve any design feedback, then begin Stage 3: event-driven narrative progression.
