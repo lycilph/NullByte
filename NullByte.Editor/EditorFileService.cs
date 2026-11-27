@@ -386,7 +386,7 @@ internal sealed class EditorFileService(Func<EditorBackend?> backendProvider, IS
 
     private static void RequireServer(GameState state, string host)
     {
-        if (!state.Network.TryGetServer(host, out _) || !state.Network.TryGetServer(host, out var discoveredServer) && state.Player.DiscoveredServerIds.Contains(discoveredServer.Id))
+        if (!state.Network.TryGetServer(host, out var server) || !state.Player.DiscoveredServerIds.Contains(server!.Id))
             throw new EditorException("NotFound", $"Server '{host}' does not exist.");
     }
 
