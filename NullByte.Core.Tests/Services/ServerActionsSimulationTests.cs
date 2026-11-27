@@ -54,12 +54,12 @@ public sealed class ServerActionsSimulationTests
             Assert.InRange(target.Money, 0, target.MaximumMoney);
             Assert.True(target.Security >= target.MinimumSecurity);
             Assert.True(player.Money >= 0);
-            Assert.True(player.HackingExperience >= 0);
+            Assert.True(player.Skills.GetExperience(SkillKind.Hacking) >= 0);
 
             Assert.True(double.IsFinite(target.Money));
             Assert.True(double.IsFinite(target.Security));
             Assert.True(double.IsFinite(player.Money));
-            Assert.True(double.IsFinite(player.HackingExperience));
+            Assert.True(double.IsFinite(player.Skills.GetExperience(SkillKind.Hacking)));
 
             Assert.Equal(0, scheduler.PendingCount);
         }
@@ -70,7 +70,7 @@ public sealed class ServerActionsSimulationTests
         Assert.True(failures > 0);
 
         Assert.True(player.Money > 0);
-        Assert.True(player.HackingExperience > 0);
+        Assert.True(player.Skills.GetExperience(SkillKind.Hacking) > 0);
 
         Assert.InRange(target.Money, 0, target.MaximumMoney);
         Assert.True(target.Security >= target.MinimumSecurity);
