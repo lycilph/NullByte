@@ -16,7 +16,8 @@ internal sealed class ConsoleTestHarness
         Session = session;
         Registry = registry;
         Terminal = terminal;
-        dispatcher = new CommandDispatcher(registry, terminal);
+        dispatcher = new CommandDispatcher(registry, terminal, session.Narrative);
+        session.Narrative.Initialize();
     }
 
     public GameSession Session { get; }

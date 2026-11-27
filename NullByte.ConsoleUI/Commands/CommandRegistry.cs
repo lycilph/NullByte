@@ -29,7 +29,14 @@ public sealed class CommandRegistry
             RegisterName(alias, command);
     }
 
-    public bool TryGet(string name, out CommandDefinition? command) => commands.TryGetValue(name, out command);
+    public bool TryGet(string name, out CommandDefinition? command)
+    {
+        if (commands.TryGetValue(name, out command) && IsAvailable(command))
+            return true;
+
+        command = null;
+        return false;
+    }
 
     /// <summary>
     /// Finds the longest registered name that is a prefix of the typed tokens,
