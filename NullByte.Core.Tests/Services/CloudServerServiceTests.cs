@@ -93,7 +93,7 @@ public sealed class CloudServerServiceTests
 
         Assert.False(result.Succeeded);
         Assert.Equal(99_999, world.Player.Money);
-        Assert.Equal(1, world.Network.Servers.Count);
+        Assert.Single(world.Network.Servers);
     }
 
     [Fact]

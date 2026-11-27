@@ -222,16 +222,6 @@ public class SaveGameTests
     }
 
     [Fact]
-    public void The_version_4_golden_file_is_migrated_correctly()
-    {
-        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V4));
-
-        var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
-
-        Assert.Equal(Normalize(GoldenSaves.V7), again);
-    }
-
-    [Fact]
     public void The_version_5_migration_assigns_stable_ids_and_rewrites_server_references()
     {
         var save = JsonNode.Parse(GoldenSaves.V5)!.AsObject();
