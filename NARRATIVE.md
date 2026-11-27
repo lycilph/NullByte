@@ -426,7 +426,7 @@ The narrative system should be small and event-driven.
 - Avoid building a general-purpose quest or dialogue engine for the first iteration.
 - Keep presentation separate from content so a future WPF host can present the same narrative events.
 
-The architecture should follow the existing Core/session/host boundaries described in ARCHITECTURE.md. The precise ownership and persistence model will be decided in the implementation design, after inspecting the current command registry, Core state and save format.
+The architecture should follow the existing Core/session/host boundaries described in ARCHITECTURE.md. The ownership, initial state, save format and legacy compatibility policy are defined in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md). The confirmed access-scope decisions are recorded in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md).
 
 ## 12. Open design questions
 
