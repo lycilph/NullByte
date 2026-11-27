@@ -94,7 +94,7 @@ public sealed class InitialGameStateFactoryIntegrationTests
 
         // Act
         var hackingLevel = formulas.CalculateLevel(SkillKind.Hacking, gameState.Player.HackingExperience);
-        var reachedLevels = new HashSet<int>{hackingLevel};
+        var reachedLevels = new HashSet<int> { hackingLevel };
 
         const int maximumHackCount = 110_000;
 

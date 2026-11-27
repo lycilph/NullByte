@@ -12,6 +12,8 @@
 	- Missing: Editor.Tests, Scripting.Tests, Shell.Tests
 
 # Todo
+
+- Rename the NullByte.ConsoleUI.exe -> NullByte.exe
 	
 # Future ideas
 

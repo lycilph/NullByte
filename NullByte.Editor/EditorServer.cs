@@ -138,7 +138,7 @@ public sealed class EditorServer(
         }
         catch (Exception e) when (e is OperationCanceledException or WebSocketException) { }
     }
-    
+
     private async Task RespondAsync(EditorConnection connection, string message)
         => connection.Send(await files.HandleAsync(message));   // HandleAsync catches everything itself
 

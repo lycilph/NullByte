@@ -98,21 +98,21 @@ public sealed class CompletionCatalog : ICompletionProvider
                 .ToArray();
 
         var values = new Dictionary<CompletionKind, IReadOnlyList<string>>
-            {
-                [CompletionKind.ConnectableServer] = connectableServers,
-                [CompletionKind.KnownServer] = knownServers,
-                [CompletionKind.Filename] = files,
-                [CompletionKind.Directory] = directories,
-                [CompletionKind.SaveGame] = saves,
-                [CompletionKind.BotnetNode] = botnetNodes,
-                [CompletionKind.UniversityCourse] = activityCatalog.Courses.Where(c => c.Kind == FacilityKind.University).Select(c => c.Name).ToArray(),
-                [CompletionKind.University] = activityCatalog.Facilities.Where(f => f.Kind == FacilityKind.University).Select(f => f.Name).ToArray(),
-                [CompletionKind.GymCourse] = activityCatalog.Courses.Where(c => c.Kind == FacilityKind.Gym).Select(c => c.Name).ToArray(),
-                [CompletionKind.Gym] = activityCatalog.Facilities.Where(f => f.Kind == FacilityKind.Gym).Select(f => f.Name).ToArray(),
-                [CompletionKind.Company] = activityCatalog.Companies.Select(c => c.Name).ToArray(),
-                [CompletionKind.Career] = activityCatalog.Companies.SelectMany(c => c.Careers).Select(c => c.Name).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
-                [CompletionKind.Crime] = activityCatalog.Crimes.Select(c => c.Name).ToArray()
-            };
+        {
+            [CompletionKind.ConnectableServer] = connectableServers,
+            [CompletionKind.KnownServer] = knownServers,
+            [CompletionKind.Filename] = files,
+            [CompletionKind.Directory] = directories,
+            [CompletionKind.SaveGame] = saves,
+            [CompletionKind.BotnetNode] = botnetNodes,
+            [CompletionKind.UniversityCourse] = activityCatalog.Courses.Where(c => c.Kind == FacilityKind.University).Select(c => c.Name).ToArray(),
+            [CompletionKind.University] = activityCatalog.Facilities.Where(f => f.Kind == FacilityKind.University).Select(f => f.Name).ToArray(),
+            [CompletionKind.GymCourse] = activityCatalog.Courses.Where(c => c.Kind == FacilityKind.Gym).Select(c => c.Name).ToArray(),
+            [CompletionKind.Gym] = activityCatalog.Facilities.Where(f => f.Kind == FacilityKind.Gym).Select(f => f.Name).ToArray(),
+            [CompletionKind.Company] = activityCatalog.Companies.Select(c => c.Name).ToArray(),
+            [CompletionKind.Career] = activityCatalog.Companies.SelectMany(c => c.Careers).Select(c => c.Name).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            [CompletionKind.Crime] = activityCatalog.Crimes.Select(c => c.Name).ToArray()
+        };
 
         snapshot = new CompletionSnapshot(commands, values, player.CurrentDirectory);
     }
