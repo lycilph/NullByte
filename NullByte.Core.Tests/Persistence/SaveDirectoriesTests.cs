@@ -96,7 +96,17 @@ public class SaveDirectoriesTests
     [Fact]
     public void A_version_2_save_loads_with_no_saved_directories()
     {
-        var save = new SaveGameSerializer().Deserialize(GoldenSaves.V2);
+        var node = JsonNode.Parse(GoldenSaves.V2)!.AsObject();
+        node["files"]!.AsArray().Add(new JsonObject
+        {
+            ["hostname"] = "home",
+            ["name"] = "tools/net/scan.cx",
+            ["content"] = "scan",
+            ["created"] = "2026-11-17T10:30:00+00:00",
+            ["modified"] = "2026-11-17T10:30:00+00:00"
+        });
+
+        var save = new SaveGameSerializer().Deserialize(node.ToJsonString());
 
         Assert.Equal(SaveGame.CurrentVersion, save.Version);
         Assert.Empty(save.Directories);

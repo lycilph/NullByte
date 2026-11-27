@@ -89,8 +89,8 @@ public static class SaveGameMapper
                     FromServerId = state.Network.GetServer(connection.First).Id.ToString(),
                     ToServerId = state.Network.GetServer(connection.Second).Id.ToString()
                 })
-                .OrderBy(connection => connection.FromServerId, StringComparer.Ordinal)
-                .ThenBy(connection => connection.ToServerId, StringComparer.Ordinal)
+                .OrderBy(connection => state.Network.GetServer(ServerId.Parse(connection.FromServerId)).Hostname, StringComparer.Ordinal)
+                .ThenBy(connection => state.Network.GetServer(ServerId.Parse(connection.ToServerId)).Hostname, StringComparer.Ordinal)
                 .ToArray(),
 
             Botnet = new BotnetSave

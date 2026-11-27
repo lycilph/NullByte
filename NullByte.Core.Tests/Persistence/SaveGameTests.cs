@@ -304,11 +304,13 @@ public class SaveGameTests
             currentVersion: 7);
         var serializer = new SaveGameSerializer(migrator);
 
-        var loaded = serializer.Deserialize(GoldenSaves.V6);
+        var save = JsonNode.Parse(GoldenSaves.V5)!.AsObject();
+
+        migrator.Upgrade(save);
 
         Assert.Equal(new[] { 5, 6 }, steps);
-        Assert.Equal(7, loaded.Version);
-        Assert.Equal(0.1 + 0.2 + 120, loaded.Player.Money);
+        Assert.Equal(7, save["version"]!.GetValue<int>());
+        Assert.Equal(0.1 + 0.2 + 120, save["player"]!["money"]!.GetValue<double>());
     }
 
     [Fact]
