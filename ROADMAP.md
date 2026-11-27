@@ -77,7 +77,7 @@ These are ideas rather than committed milestones:
 
 - WPF/AvalonEdit in-game editor;
 - larger and more varied networks;
-- purchased servers and additional infrastructure;
+- additional infrastructure beyond the implemented cloud servers;
 - port-opening/network-access mechanics;
 - home infrastructure;
 - factions;
