@@ -30,6 +30,13 @@ public sealed class NarrativeState
     public bool HasCapability(string capability)
         => IsFreeplay || UnlockedCapabilities.Contains(capability);
 
+    public void EnsureCapability(string capability)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(capability);
+        if (!HasCapability(capability))
+            throw new InvalidOperationException($"Capability '{capability}' is not available.");
+    }
+
     public bool CompleteMilestone(string milestone)
         => CompletedMilestones.Add(milestone);
 

@@ -64,11 +64,11 @@ public sealed class NullByteApi : INullByteApi
         this.processHostServerId = processHostServerId;
         this.processThreads = processThreads;
 
-        Files = new NullByteFilesApi(gameState.FileSystem, gameState.Network, processHostServerId);
-        Botnet = new NullByteBotnetApi(gameState.Botnet, botnetService, botnetFormulas);
-        Cloud = new NullByteCloudApi(cloudServerService);
+        Files = new NullByteFilesApi(gameState.FileSystem, gameState.Network, processHostServerId, gameState.Narrative);
+        Botnet = new NullByteBotnetApi(gameState.Botnet, botnetService, botnetFormulas, gameState.Narrative);
+        Cloud = new NullByteCloudApi(cloudServerService, gameState.Narrative);
         Activities = new NullByteActivitiesApi(gameState, activityService, skillFormulas, cancellationToken);
-        Player = new NullBytePlayerApi(gameState.Player, skillFormulas);
+        Player = new NullBytePlayerApi(gameState.Player, skillFormulas, gameState.Narrative);
     }
 
     public INullByteFilesApi Files { get; }
@@ -77,28 +77,30 @@ public sealed class NullByteApi : INullByteApi
     public INullByteActivitiesApi Activities { get; }
     public INullBytePlayerApi Player { get; }
 
-    public void Print(object? value) => output.WriteLine(value?.ToString() ?? string.Empty);
-    public Task Sleep(TimeSpan duration) => scheduler.DelayAsync(duration, cancellationToken);
-    public Task<HackResult> Hack(string hostname = "") => serverActions.HackAsync(GetTargetHostname(hostname), processThreads, cancellationToken);
-    public Task<GrowResult> Grow(string hostname = "") => serverActions.GrowAsync(GetTargetHostname(hostname), processThreads, cancellationToken);
-    public Task<WeakenResult> Weaken(string hostname = "") => serverActions.WeakenAsync(GetTargetHostname(hostname), processThreads, cancellationToken);
-    public NukeResult Nuke(string hostname = "") => serverActions.Nuke(GetTargetHostname(hostname));
-    public IReadOnlyList<string> Scan(string hostname = "") => networkService.Scan(GetTargetHostname(hostname)).Select(s => s.Hostname).ToList();
-    public double GetServerMoneyAvailable(string hostname = "") => GetServer(GetTargetHostname(hostname)).Money;
-    public double GetServerMaxMoney(string hostname = "") => GetServer(GetTargetHostname(hostname)).MaximumMoney;
-    public double GetServerSecurityLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).Security;
-    public double GetServerMinSecurityLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).MinimumSecurity;
-    public int GetServerRequiredHackingLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).RequiredHackingLevel;
-    public double GetServerMaxRam(string hostname = "") => GetServer(GetTargetHostname(hostname)).MaximumRam;
-    public double GetServerUsedRam(string hostname = "") => GetServer(GetTargetHostname(hostname)).UsedRam;
-    public bool HasRootAccess(string hostname = "") => GetServer(GetTargetHostname(hostname)).HasRootAccess;
-    public IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "") => scriptOperations.ProcessesRunning(GetTargetHostname(hostname));
-    public async Task<int> RunAsync(string filename, params string[] args) => await scriptOperations.StartSimple(gameState.Network.GetServer(processHostServerId).Hostname, filename, args, processThreads);
-    public async Task<int> ExecAsync(string filename, string hostname, params string[] args) => await scriptOperations.StartSimple(hostname, filename, args, processThreads);
-    public bool Kill(int pid) => scriptOperations.Kill(pid);
-    public int KillAll() => scriptOperations.KillAll();
-    public bool ScriptRunning(string filename, string hostname = "") => scriptOperations.ScriptRunning(filename, GetTargetHostname(hostname));
-    public double GetScriptRam(string filename, string hostname = "") => scriptOperations.GetScriptRam(filename, GetTargetHostname(hostname));
+    public void Print(object? value) { Require("scripts.execute"); output.WriteLine(value?.ToString() ?? string.Empty); }
+    public Task Sleep(TimeSpan duration) { Require("scripts.execute"); return scheduler.DelayAsync(duration, cancellationToken); }
+    public Task<HackResult> Hack(string hostname = "") { Require("server.operations"); return serverActions.HackAsync(GetTargetHostname(hostname), processThreads, cancellationToken); }
+    public Task<GrowResult> Grow(string hostname = "") { Require("server.operations"); return serverActions.GrowAsync(GetTargetHostname(hostname), processThreads, cancellationToken); }
+    public Task<WeakenResult> Weaken(string hostname = "") { Require("server.operations"); return serverActions.WeakenAsync(GetTargetHostname(hostname), processThreads, cancellationToken); }
+    public NukeResult Nuke(string hostname = "") { Require("server.root-access"); return serverActions.Nuke(GetTargetHostname(hostname)); }
+    public IReadOnlyList<string> Scan(string hostname = "") { Require("network.scan"); return networkService.Scan(GetTargetHostname(hostname)).Select(s => s.Hostname).ToList(); }
+    public double GetServerMoneyAvailable(string hostname = "") { Require("network.inspect"); return GetServer(GetTargetHostname(hostname)).Money; }
+    public double GetServerMaxMoney(string hostname = "") { Require("network.inspect"); return GetServer(GetTargetHostname(hostname)).MaximumMoney; }
+    public double GetServerSecurityLevel(string hostname = "") { Require("network.inspect"); return GetServer(GetTargetHostname(hostname)).Security; }
+    public double GetServerMinSecurityLevel(string hostname = "") { Require("network.inspect"); return GetServer(GetTargetHostname(hostname)).MinimumSecurity; }
+    public int GetServerRequiredHackingLevel(string hostname = "") { Require("network.inspect"); return GetServer(GetTargetHostname(hostname)).RequiredHackingLevel; }
+    public double GetServerMaxRam(string hostname = "") { Require("network.inspect"); return GetServer(GetTargetHostname(hostname)).MaximumRam; }
+    public double GetServerUsedRam(string hostname = "") { Require("network.inspect"); return GetServer(GetTargetHostname(hostname)).UsedRam; }
+    public bool HasRootAccess(string hostname = "") { Require("network.inspect"); return GetServer(GetTargetHostname(hostname)).HasRootAccess; }
+    public IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "") { Require("scripts.inspect"); return scriptOperations.ProcessesRunning(GetTargetHostname(hostname)); }
+    public async Task<int> RunAsync(string filename, params string[] args) { Require("scripts.execute"); return await scriptOperations.StartSimple(gameState.Network.GetServer(processHostServerId).Hostname, filename, args, processThreads); }
+    public async Task<int> ExecAsync(string filename, string hostname, params string[] args) { Require("scripts.execute"); return await scriptOperations.StartSimple(hostname, filename, args, processThreads); }
+    public bool Kill(int pid) { Require("scripts.control"); return scriptOperations.Kill(pid); }
+    public int KillAll() { Require("scripts.control"); return scriptOperations.KillAll(); }
+    public bool ScriptRunning(string filename, string hostname = "") { Require("scripts.inspect"); return scriptOperations.ScriptRunning(filename, GetTargetHostname(hostname)); }
+    public double GetScriptRam(string filename, string hostname = "") { Require("scripts.inspect"); return scriptOperations.GetScriptRam(filename, GetTargetHostname(hostname)); }
+
+    private void Require(string capability) => gameState.Narrative.EnsureCapability(capability);
 
     private string GetTargetHostname(string hostname) => string.IsNullOrWhiteSpace(hostname) ? gameState.Network.GetServer(processHostServerId).Hostname : hostname;
 
