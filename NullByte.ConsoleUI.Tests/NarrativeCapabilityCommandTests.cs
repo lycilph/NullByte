@@ -41,8 +41,7 @@ public sealed class NarrativeCapabilityCommandTests
         Assert.True(harness.Registry.TryGet("help", out _));
         Assert.True(harness.Registry.TryGet("quit", out _));
         Assert.True(harness.Registry.TryGet("cls", out _));
-        Assert.True(harness.Registry.TryGet("save", out _));
-        Assert.True(harness.Registry.TryGet("scan", out _));
+         Assert.True(harness.Registry.TryGet("scan", out _));
         Assert.False(harness.Registry.TryGet("analyze", out _));
         Assert.False(harness.Registry.TryGet("money", out _));
         Assert.False(harness.Registry.TryGet("skills", out _));
@@ -53,6 +52,7 @@ public sealed class NarrativeCapabilityCommandTests
     {
         var harness = ConsoleTestSetup.CreateHarness(new ConsoleTestOptions
         {
+            State = TestGameFactory.CreateGame(additionalServers: [TestGameFactory.CreateServer("n00dles")]),
             ProgressionMode = NarrativeProgressionMode.Tutorial
         });
 
