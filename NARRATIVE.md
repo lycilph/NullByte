@@ -202,6 +202,10 @@ Where a capability is essential to the main tutorial, its unlock should be expli
 9. **Support existing saves.** The eventual implementation must define how saves created before narrative progression are treated. Do not silently remove capabilities from an established save.
 10. **Keep the tutorial recoverable.** Players should be able to review important instructions after the initial message has passed.
 
+## 6.6 Concrete tutorial and capability mapping
+
+The command-by-command capability proposal and the first playable walkthrough are maintained in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md). That document is based on the current command registry, scripting API, new-game state and save format. Its proposed access policy still requires confirmation before runtime implementation.
+
 ## 7. Main narrative arc
 
 The acts describe thematic progression, not strict feature gates. The player may encounter systems out of order; SYSTEM and optional narrative content should respond without requiring a rigid sequence.
