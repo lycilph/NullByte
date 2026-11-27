@@ -2,7 +2,6 @@
 
 This roadmap records the current development direction. Milestones are intended to represent coherent player-visible capabilities rather than arbitrary amounts of code.
 
-
 ## M0–M3 — Foundation
 **Status: Completed**
 
@@ -59,12 +58,14 @@ The editor workflow has been expanded with:
 See [Script sandbox and safety](ARCHITECTURE.md#script-sandbox-and-safety) for the security model and its limitations.
 
 ## M13 — Progression and balance
+**Status: Planned**
 
 Planned work around progression, economy and balancing the available activities and hacking systems into a coherent player progression.
 
 The exact feature set should be shaped by playtesting rather than prematurely locking the implementation.
 
 ## M14 — First playable release
+**Status: Planned**
 
 Bring the currently implemented systems together into a coherent first release with enough content and balance for a complete gameplay loop.
 

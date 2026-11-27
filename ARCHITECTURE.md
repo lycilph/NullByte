@@ -151,22 +151,26 @@ A running script keeps the compiled snapshot it started with. Editing a source f
 
 Player scripts run as compiled .NET code inside the game process. The scripting layer applies practical safeguards at compilation and runtime, but it is not a hardened security boundary.
 
-The safeguards include:
+The safeguards live in `ScriptCompiler` (reference allow-list) and `ScriptSecurityAnalyzer` (semantic checks), plus failure handling in `ScriptRunner` and `ScriptService`:
 
-- allow-listed metadata references to limit which framework assemblies scripts can compile against;
-- semantic diagnostics for selected APIs that could access the host environment;
-- diagnostics for common synchronous blocking APIs;
-- a syntactic check that rejects loops without an asynchronous yield in their loop body;
-- runtime failure handling that records the process failure, releases reserved RAM, unloads the collectible script load context and isolates lifecycle observers from one another.
+- **Reference allow-list.** Scripts compile only against a short list of framework assemblies and the `NullByte.Core` assembly. The allow-list limits what can be named, but `System.Private.CoreLib` contains most of the dangerous types, so the analyzer below does the real work.
+- **Banned APIs (`NB1007`).** Resolved symbols are matched against banned namespaces (file system, network, reflection, native interop, assembly loading), banned types (`Environment`, `Process`, `Thread`, `ThreadPool`, `Timer`, `Activator`, `AppDomain`, `GC`, `Unsafe` and similar) and banned members of otherwise harmless types (`Type.GetType`/`GetMethod`/`Assembly`..., `Delegate.CreateDelegate`/`DynamicInvoke`, `Task.Run`/`Factory`/`Start`/`ContinueWith`). The reflection and background-work bans close the obvious routes around the namespace bans and keep scripts from starting work that outlives their process.
+- **Game internals (`NB1007`).** Scripts see the whole `NullByte.Core` assembly at compile time, so the analyzer also bans the internal namespaces (`Domain`, `Persistence`, `Simulation`, `Systems`, `Threading`, `Time`, `World`, `Formulas`, `Randomness`, `Configuration`) and the concrete API and service types behind `nb`. Scripts may use only the `INullByteApi` interfaces, their result types and `NullByte.Core.Scripting`. Update the list when new Core namespaces are added.
+- **Blocking APIs (`NB1008`).** `Task.Wait`/`WaitAll`/`WaitAny`, `.Result`, `GetAwaiter().GetResult()`, wait handles, `Monitor.Wait`, `SpinWait.SpinUntil` and similar are rejected. Asynchronous waiting (`await`) is allowed.
+- **Cooperative loops (`NB1009`).** A `while`, `do` or condition-less/constant-true `for` loop must contain a real yield point: an `await` that is not on an already-completed task (`Task.CompletedTask`, `Task.FromResult`...), an `await foreach` or an `await using`. `foreach` loops and `for` loops with a condition are accepted without one, because ordinary code uses them to walk finite ranges. Awaits inside nested lambdas and local functions do not count for the enclosing loop.
+- **Failure containment.** A script exception is recorded on the process (state `Failed`), reserved RAM is released, the collectible load context is unloaded even if `LoadContextCreated` throws, and each `ProcessCompleted`/`ProcessFailed` observer is invoked in isolation. An observer that throws never changes the script's outcome or prevents other observers from running; the failure is written to `System.Diagnostics.Trace` so a host bug is not hidden.
+
+Each banned usage is reported once, at its outermost expression, rather than once per nested name.
 
 The intended threat model is accidental mistakes and common attempts to access the host environment in a hobby game. It does not attempt to contain a determined attacker.
 
 Important limitations:
 
-- The banned-API list and reference allow-list reduce exposure; they do not prove that every reachable API is safe.
-- The loop check is syntactic. It does not prove that every path through a loop yields, nor does it prevent expensive but finite computations.
+- The banned lists and the reference allow-list reduce exposure; they do not prove that every reachable API is safe. They are name-based, so a newly added framework or Core type is not covered until it is added to the lists.
+- The loop check is syntactic. It does not prove that a loop terminates or that a yield point is reached on every path, and it does not see `goto`-based loops, unbounded `foreach` over an infinite enumerable, recursion or expensive but finite computations. `await Task.Delay(0)` and similar calls that complete immediately are not recognised as non-yielding.
 - Script cancellation is cooperative and takes effect at asynchronous yield points. Arbitrary synchronous code cannot be safely interrupted by the current runtime.
-- There is no separate process boundary or hard execution-time limit.
+- There is no memory limit and no stack limit: a script can exhaust memory, and unbounded recursion ends in a stack overflow that terminates the whole game process.
+- There is no separate process boundary and no hard execution-time limit (see DECISIONS.md #14).
 
 Treat these measures as guardrails for ordinary gameplay scripts, not as a substitute for operating-system-level isolation when running untrusted code.
 
