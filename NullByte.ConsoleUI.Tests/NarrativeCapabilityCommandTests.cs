@@ -1,4 +1,5 @@
 using NullByte.Core.Domain;
+using NullByte.Core.World;
 using NullByte.ConsoleUI.Tests.Infrastructure;
 
 namespace NullByte.ConsoleUI.Tests;
@@ -52,7 +53,7 @@ public sealed class NarrativeCapabilityCommandTests
     {
         var harness = ConsoleTestSetup.CreateHarness(new ConsoleTestOptions
         {
-            State = TestGameFactory.CreateGame(additionalServers: [TestGameFactory.CreateServer("n00dles")]),
+            State = InitialGameStateFactory.Create(),
             ProgressionMode = NarrativeProgressionMode.Tutorial
         });
 
