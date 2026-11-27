@@ -132,14 +132,60 @@ public sealed class ScriptCompilerTests
     [InlineData("while (true) { nb.Print(\"loop\"); }")]
     [InlineData("for (;;) { nb.Print(\"loop\"); }")]
     [InlineData("do { nb.Print(\"loop\"); } while (true);")]
-    [InlineData("foreach (var value in new[] { 1, 2, 3 }) { nb.Print(value); }")]
-    public void Compile_WithLoopWithoutAwait_Fails(string source)
+    [InlineData("for (var i = 0; true; i++) { nb.Print(i); }")]
+    [InlineData("while (nb.HasRootAccess()) { nb.Print(\"loop\"); }")]
+    [InlineData("var i = 0; while (i < 3) { i++; }")]
+    public void Compile_WithUnboundedLoopWithoutAwait_Fails(string source)
     {
         var result = compiler.Compile(source, "synchronous-loop.cx");
 
         Assert.False(result.Succeeded);
         Assert.Null(result.Script);
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1009");
+    }
+
+    [Theory]
+    [InlineData("foreach (var value in new[] { 1, 2, 3 }) { nb.Print(value); }")]
+    [InlineData("foreach (var host in nb.Scan()) { nb.Print(host); }")]
+    [InlineData("for (var i = 0; i < 3; i++) { nb.Print(i); }")]
+    public void Compile_WithBoundedLoopWithoutAwait_Succeeds(string source)
+    {
+        var result = compiler.Compile(source, "bounded-loop.cx");
+
+        AssertCompilationSucceeded(result);
+    }
+
+    [Theory]
+    [InlineData("while (true) { await Task.CompletedTask; }")]
+    [InlineData("while (true) { await Task.FromResult(1); }")]
+    public void Compile_WithLoopAwaitingACompletedTask_Fails(string source)
+    {
+        var result = compiler.Compile(source, "completed-task-loop.cx");
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1009");
+    }
+
+    [Fact]
+    public void Compile_WithAwaitForeachInLoopBody_Succeeds()
+    {
+        const string source = """
+            async IAsyncEnumerable<int> Numbers()
+            {
+                yield return 1;
+                await Task.Delay(1);
+            }
+
+            while (true)
+            {
+                await foreach (var value in Numbers())
+                    nb.Print(value);
+            }
+            """;
+
+        var result = compiler.Compile(source, "await-foreach.cx");
+
+        AssertCompilationSucceeded(result);
     }
 
     [Fact]
@@ -181,6 +227,18 @@ public sealed class ScriptCompilerTests
     [InlineData("var name = typeof(string).Assembly.GetName();")]
     [InlineData("var error = System.Runtime.InteropServices.Marshal.GetLastWin32Error();")]
     [InlineData("var value = System.IO.File.ReadAllText(\"file.txt\");")]
+    [InlineData("var task = Task.Run(() => { });")]
+    [InlineData("var factory = Task.Factory;")]
+    [InlineData("var timer = new System.Threading.Timer(_ => { }, null, 0, 1000);")]
+    [InlineData("var type = Type.GetType(\"System.IO.File\");")]
+    [InlineData("var method = typeof(string).GetMethod(\"Trim\", Type.EmptyTypes);")]
+    [InlineData("var instance = Activator.CreateInstance(typeof(object));")]
+    [InlineData("var reader = Delegate.CreateDelegate(typeof(Func<string, string>), Type.GetType(\"System.IO.File\")!.GetMethod(\"ReadAllText\", new[] { typeof(string) })!);")]
+    [InlineData("GC.Collect();")]
+    [InlineData("var type = typeof(System.Runtime.Loader.AssemblyLoadContext);")]
+    [InlineData("var type = typeof(NullByte.Core.Domain.GameState);")]
+    [InlineData("NullByte.Core.Services.ServerActions? actions = null;")]
+    [InlineData("var concrete = (NullByte.Core.Scripting.NullByteApi)nb;")]
     public void Compile_WithBannedApiUsage_Fails(string source)
     {
         var result = compiler.Compile(source, "security.cx");
@@ -188,6 +246,15 @@ public sealed class ScriptCompilerTests
         Assert.False(result.Succeeded);
         Assert.Null(result.Script);
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1007");
+    }
+
+    [Fact]
+    public void Compile_WithBannedApiUsage_ReportsOneDiagnosticPerUsage()
+    {
+        var result = compiler.Compile("var value = System.IO.File.ReadAllText(\"file.txt\");", "single-usage.cx");
+
+        Assert.False(result.Succeeded);
+        Assert.Single(result.Diagnostics, diagnostic => diagnostic.Id == "NB1007");
     }
 
     [Theory]

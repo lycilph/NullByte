@@ -328,9 +328,11 @@ public sealed class ScriptService : IScriptOperations, IScriptService
             {
                 handler(process);
             }
-            catch
+            catch (Exception observerException)
             {
-                // A host-side observer must not change the outcome of script execution.
+                // A host-side observer must not change the outcome of script execution,
+                // but its failure is a bug in the host, so it is traced rather than hidden.
+                ReportObserverFailure(nameof(ProcessCompleted), process, observerException);
             }
         }
     }
@@ -347,12 +349,18 @@ public sealed class ScriptService : IScriptOperations, IScriptService
             {
                 handler(process, exception);
             }
-            catch
+            catch (Exception observerException)
             {
-                // A host-side observer must not prevent other observers from being notified.
+                // A host-side observer must not prevent other observers from being notified,
+                // but its failure is a bug in the host, so it is traced rather than hidden.
+                ReportObserverFailure(nameof(ProcessFailed), process, observerException);
             }
         }
     }
+
+    private static void ReportObserverFailure(string eventName, ScriptProcess process, Exception exception)
+        => System.Diagnostics.Trace.TraceError(
+            $"A {eventName} observer threw while handling process {process.Pid}: {exception}");
 
     private void ReleaseProcessRam(ScriptProcess process)
     {

@@ -144,6 +144,15 @@ The rules:
 
 The details are in 4.10.
 
+### 3.5.3 Script restrictions
+
+Scripts are ordinary C#, with a few rules that keep one script from freezing or escaping the game. They are enforced when the script compiles, and each breach is a normal compile error with a line and column. The design is in 4.13.
+
+- **No host access.** Files, network, reflection, native interop, assembly loading, `Environment`, `Process`, threads, timers, `Task.Run` and similar are not available. A script talks to the game only through `nb`, and the game's own files only through `nb.Files`.
+- **No blocking.** `Task.Wait`, `.Result`, `GetAwaiter().GetResult()` and wait handles are rejected; use `await`.
+- **Loops that can run forever must yield.** A `while`, `do` or `for(;;)` loop needs an `await` in its body, for example `await nb.Sleep(...)` or `await nb.Hack(target)`. Awaiting something that is already complete (`Task.CompletedTask`) does not count. `foreach` loops and `for` loops with a condition need no `await`.
+- **Only the `nb` API.** The game's internal types are not available even though they live in the same assembly.
+
 ## 4. Technical architecture
 
 ### 4.1 Solution layout
@@ -189,8 +198,8 @@ A timer completed in stage 2 posts its continuation to the mailbox, and stage 3 
 1. Resolve includes: find the `#include` directives in the player's source, read the files they name from the server the script runs on, and build the include graph (see 4.10). Missing, cyclic and too deeply nested includes are reported as errors.
 2. Parse the player's source and every included file into their own `SyntaxTree`, with the `#include` lines blanked so positions do not move. Syntax errors are reported against the player's own text, each in the file it is in, so line numbers are right. An included file may only contain `using` lines and type declarations.
 3. Wrap the source: a generator splits the script into `using` lines, top-level statements and type declarations, and emits a class implementing `IScript` around them. `#line` directives make every later diagnostic point at the player's lines. The default global `using`s go into a separate syntax tree.
-4. Create a `CSharpCompilation` from the generated wrapper, the default usings and the included files, with a curated list of metadata references (an allow-list of core runtime assemblies we allow, plus `NullByte.Core` API types).
-5. Run analysis: the RAM cost calculation using the semantic model and the `[RamCost]` attributes, over every tree of the compilation. Banned API usage (file, network, process, reflection, threading, `Environment`, `Assembly` loading) and loop checks arrive with M12; the entry point is supplied by the wrapper, so it is not checked.
+4. Create a `CSharpCompilation` from the generated wrapper, the default usings and the included files, with a curated list of metadata references (an allow-list of core runtime assemblies we allow, plus the `NullByte.Core` assembly, whose internals the sandbox analyzer then bans, see 4.13).
+5. Run analysis over every tree of the compilation. First the sandbox checks of 4.13 (banned APIs, blocking calls and loops that never yield); if they report errors, compilation stops there. Then the RAM cost calculation using the semantic model and the `[RamCost]` attributes. The entry point is supplied by the wrapper, so it is not checked.
 6. Emit to an in-memory assembly (with a portable PDB) and load it into a collectible `AssemblyLoadContext`, so recompiling or killing a script lets it be unloaded.
 7. Instantiate the generated class and run `Run(nb, args)` as a process on the game thread.
 8. Report diagnostics (file, line, column, severity, message) to the host as game output. Editors get the same diagnostics from the same compiler (see 4.8).
@@ -217,9 +226,10 @@ Each method has a RAM cost declared with an attribute (for example `[RamCost(0.1
 
 | Risk | Mitigation |
 | --- | --- |
-| A script with a tight synchronous loop (no `await`) freezes the single game thread | Analyzer error for loops without an `await` in the body; ban `Thread.Sleep`, `Task.Wait`, `.Result`; consider an instruction-count or time-budget guard via injected checks (investigate in M12) |
+| A script with a tight synchronous loop (no `await`) freezes the single game thread | Analyzer error (NB1009) for `while`, `do` and unbounded `for` loops without a real yield point; ban `Thread.Sleep`, `Task.Wait`, `.Result` (NB1008). No runtime instruction-count or time guard: investigated in M12 and decided against (DECISIONS.md #14) |
 | Roslyn startup and compile latency | Warm up the compiler at launch; cache results; show "compiling" status |
-| Sandbox escape through reflection or dynamic loading | Allow-list references and ban APIs at the semantic level, not just by string matching. This is hobby-level sandboxing, not a security boundary, and the doc should say so |
+| Sandbox escape through reflection or dynamic loading | Allow-list references and ban APIs at the semantic level, not just by string matching (4.13). This is hobby-level sandboxing, not a security boundary, and the docs say so |
+| A script exhausts memory or overflows the stack (unbounded recursion), which ends the whole process | Not mitigated: documented limitation of the in-process sandbox (4.13, DECISIONS.md #14) |
 | Floating-point drift and balance bugs | Central `Formulas` class with unit tests; seeded RNG |
 | Console output interleaving with input | Single output writer on the game thread; the prompt is redrawn after other output |
 | A web page connects to the localhost websocket and reads or overwrites scripts | Loopback only, handshakes with an `Origin` header rejected, a fresh per-run token kept in a file only the user can read |
@@ -283,6 +293,8 @@ Includes let a script use code from other files on the same server. The work hap
 | NB1004 | Invalid include path |
 | NB1005 | Malformed `#include` |
 | NB1006 | Top-level statements in an included file |
+
+The sandbox diagnostics NB1007 to NB1009 are listed in 4.13.
 
 - **Commands**: `run` and `exec` compile on the server the script runs on, so its libraries must be there. `scp` copies the files it is given and does not follow includes. `mem` reports the RAM of the script and its libraries and, when the script does not compile, prints the reason and the diagnostics instead of a bare failure (`ScriptService.MeasureRam`; `GetScriptRam` for the script API keeps returning 0 for "cannot be measured").
 - **Processes**: a running process is compiled code, so editing a library only affects scripts started afterwards. After `load`, processes are recompiled from the current files like any other script.
@@ -399,6 +411,24 @@ Validation does not require configured files or directories to exist. Save direc
 - `StartNewGame` is inverted into `resumeAutosave` when calling `GameHost.StartAsync`.
 
 This keeps `AppSettings` out of `NullByte.Core`, `NullByte.Scripting` and `NullByte.Editor`. Those components continue receiving their existing focused options and abstractions.
+
+### 4.13 Script sandbox
+
+Scripts are compiled .NET code running inside the game process, so the sandbox is a set of practical guardrails for mistakes and casual misuse, not a security boundary. The architecture view, with the full list of limitations, is in `ARCHITECTURE.md` (Script sandbox and safety); the reasons are in `DECISIONS.md` (#14 to #16). The player's view is in 3.5.3.
+
+The checks run in `ScriptSecurityAnalyzer`, on resolved Roslyn symbols rather than text, after the reference allow-list has limited what can be named:
+
+| Id | Meaning |
+| --- | --- |
+| NB1007 | A banned API: file system, network, reflection (including `Type.GetType`/`GetMethod`, `Activator`, `Delegate.CreateDelegate`), native interop, assembly loading, host environment/process/thread/timer/GC access, `Task.Run` and other ways to start background work, or a game-internal type or namespace behind `nb` |
+| NB1008 | A synchronous blocking call: `Task.Wait`, `.Result`, `GetAwaiter().GetResult()`, wait handles, `Monitor.Wait` and similar |
+| NB1009 | A `while`, `do` or unbounded `for` loop without a real yield point |
+
+- **Banned usage is reported once per expression**, at the outermost expression (`System.IO.File.ReadAllText(...)` gives one error, not one per name), with the same file/line/column span as every other diagnostic, so the console and the editor underline it like any compile error.
+- **Yield points** are `await` expressions on tasks that are not already complete, `await foreach` and `await using`. Awaits inside a nested lambda or local function do not count for the enclosing loop. `foreach` loops and `for` loops with a non-constant condition are not checked, because they walk finite ranges in ordinary code.
+- **Core internals.** Scripts compile against the whole `NullByte.Core` assembly. The analyzer bans its internal namespaces and the concrete API and service types, so scripts can use only `INullByteApi`, its interfaces and result types. The list must be extended when new Core namespaces appear.
+- **Runtime containment.** A failing script marks its process `Failed`, releases its RAM and has its load context unloaded; observers of `ProcessCompleted` and `ProcessFailed` are isolated from each other and from the script outcome, and their own failures are traced.
+- **Not covered**: memory and stack exhaustion, `goto` loops, infinite `foreach` enumerables, immediately-completing awaits such as `Task.Delay(0)`, and any API not on the banned lists. There is deliberately no runtime time or instruction guard.
 
 ## 5. Milestones
 
@@ -611,14 +641,19 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
 
 ### M12: Sandbox and safety
 
+Done. Design in 3.5.3 and 4.13.
+
 **Deliverables**
 
-- Allow-listed references and banned API analysis.
-- Guard against synchronous infinite loops (analyzer rule plus an investigated runtime guard).
+- Allow-listed references and banned API analysis (NB1007), including reflection, background-work and game-internal bans.
+- Prevention of synchronous blocking APIs (NB1008).
+- Guard against synchronous infinite loops: an analyzer rule for loops that never yield (NB1009). The investigated runtime guard was decided against (DECISIONS.md #14).
+- Containment of script failures: process state, RAM release, load-context unloading and isolation of lifecycle observers.
 
 **Acceptance**
 
-- A set of malicious or buggy sample scripts (file access, reflection, `while(true){}`, thrown exceptions) are rejected or contained, and the game continues to run.
+- Buggy and malicious sample scripts (file access, reflection and its common workarounds, `while(true){}`, blocking calls, background tasks, game internals) are rejected at compile time, and a script that throws is contained, while the game continues to run. Covered by the compiler and script-service tests.
+- Ordinary scripts (`foreach` over `nb.Scan()`, bounded `for` loops, cooperative `while` loops with `await`) still compile.
 
 ### M13: Progression and balance pass
 
@@ -672,6 +707,8 @@ Reusable libraries: a script can include other scripts with `#include "<file>"`,
 - Path resolution and tab completion tests: the resolver, the current directory state (including its resets), and the completion engine against hand-made snapshots.
 - Editor protocol tests that send requests through the file service against a real game state.
 - Include tests: the resolver (order, include once, cycles, depth, missing and malformed includes, directives inside strings and comments), compilation with includes (file and line of errors in libraries, unchanged line numbers, library shape, a library compiled on its own), RAM across files (counted once, whole-file cost, nested includes), and the language service with includes (completion, hover, signature help, definition).
+
+- Sandbox tests: banned namespaces, types and members (including reflection workarounds and game internals), blocking APIs, loops with and without yield points (including awaits of completed tasks, `await foreach` and nested functions), one diagnostic per banned usage, scripts that merely mention a banned namespace, failing scripts (state, RAM release, next script can start) and throwing lifecycle observers.
 
 - Configuration parser tests cover every supported switch, all options together, missing values, unknown arguments, invalid numeric syntax, invariant numeric parsing, repeated values and the exclusivity of `--write-default-settings`.
 - Settings validation tests cover defaults, null nested settings, empty paths, editor port boundaries, non-positive and non-finite game-speed values, and aggregation of multiple errors.

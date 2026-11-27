@@ -111,6 +111,7 @@ Look in `NullByte.Scripting/Compilation`:
 - `ScriptCompiler.cs` — Roslyn compilation.
 - `ScriptSourceGenerator.cs` — generated script wrapper/source.
 - `ScriptRamAnalyzer.cs` — RAM analysis.
+- `ScriptSecurityAnalyzer.cs` — sandbox checks: banned APIs (NB1007), blocking APIs (NB1008) and loops that never yield (NB1009).
 - `ScriptDiagnostic.cs` — script diagnostics.
 - `IncludeScanner.cs`, `IncludeResolver.cs` — include handling.
 - `SourceSnapshot.cs` — immutable source input for background work.

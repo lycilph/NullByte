@@ -115,3 +115,22 @@ The rules themselves are stated in `ARCHITECTURE.md`; this file records why they
 **Why:** The goal is to prevent common mistakes and ordinary attempts to access the host environment without introducing the complexity and overhead of a hardened sandbox. The game is a hobby project, not a platform for executing hostile code.
 
 **Consequence:** Keep the reference allow-list, banned-API diagnostics, blocking-call checks, cooperative-loop guard and process-failure cleanup as defense-in-depth guardrails. Document their limitations clearly. Do not describe the scripting runtime as safe for determined attackers or arbitrary untrusted code.
+
+**Runtime guard:** The M12 investigation into an instruction-count or time-budget guard concluded that none is added. Injecting checks into player code adds overhead and complexity, and a guard that cannot interrupt arbitrary synchronous code gives a false sense of safety. The compile-time loop rule and cooperative cancellation are the accepted protection; memory and stack exhaustion are documented limitations.
+
+## 15. The loop guard targets unbounded loops
+
+**Decision:** `NB1009` rejects only loops that have no built-in end (`while`, `do`, and `for` without a condition or with a constant-true condition) unless they contain a real yield point. `foreach` loops and `for` loops with a condition are allowed without an `await`.
+
+**Why:** The goal is to stop a script from freezing the single game thread. Rejecting every loop would also reject ordinary code such as `foreach (var host in nb.Scan())` and synchronous helper methods in libraries, which makes the language feel broken without making the game meaningfully safer. An `await` of an already-completed task does not yield, so it does not count.
+
+**Consequence:** The check stays syntactic and is a guardrail, not a termination proof; its limits are listed in `ARCHITECTURE.md`. If playtesting shows that bounded-looking loops freeze the game in practice, tighten the rule rather than adding a runtime guard.
+
+## 16. Scripts may use only the nb API from NullByte.Core
+
+**Decision:** Scripts compile against the whole `NullByte.Core` assembly, but the security analyzer bans every Core namespace and the concrete API and service types except `NullByte.Core.Scripting`, the `INullByteApi` interfaces and the result types in `NullByte.Core.Services`.
+
+**Why:** Splitting the script API into its own assembly would be cleaner but is a larger change than the sandbox milestone warrants. The ban list gives the same compile-time result for now.
+
+**Consequence:** When a new Core namespace or service type is added, decide whether scripts need it and extend the banned list otherwise. Moving the script-facing API into a dedicated assembly would remove this maintenance step.
+
