@@ -132,6 +132,7 @@ internal sealed class CoreTestWorld
             Scheduler,
             networkService.Value,
             botnetService.Value,
+            cloudServerService.Value,
             serverActions.Value,
             activityService.Value,
             SkillFormulas,
