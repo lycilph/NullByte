@@ -67,6 +67,7 @@ public sealed class ScriptAcceptanceTests
 
         var networkServices = new NetworkService(gameState, scheduler, networkFormulas);
         var botnetService = new BotnetService(gameState, botnetFormulas);
+        var cloudServerService = new CloudServerService(gameState, new CloudServerFormulas(balance));
         var actions = new ServerActions(
             gameState,
             scheduler,
@@ -85,6 +86,7 @@ public sealed class ScriptAcceptanceTests
             scheduler,
             networkServices,
             botnetService,
+            cloudServerService,
             actions,
             activityService,
             skillFormulas,
