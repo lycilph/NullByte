@@ -84,8 +84,8 @@ Acceptance:
 - The automatic initialization sequence grants `player.inspect`, exposing `status` only.
 - Successfully executing `status` grants `host.controls`.
 - Unlocks, milestones and one-time message delivery are idempotent.
-- Save/load preserves Tutorial and Legacy state.
-- Existing saves migrate to unrestricted Legacy mode without replaying the tutorial.
+- Save/load preserves Tutorial and Freeplay state.
+- Existing saves migrate to unrestricted Freeplay mode without replaying the tutorial.
 
 ### Stage 3 — Event-driven narrative progression
 
