@@ -12,10 +12,10 @@ public sealed class NetworkServiceTests
         var fixture = CreateFixture();
 
         Assert.Contains(
-            fixture.Home.Hostname,
-            fixture.Player.DiscoveredServerIds.Select(id => fixture.Service.GetServer(id).Hostname).ToHashSet(StringComparer.OrdinalIgnoreCase));
+            fixture.Home.Id,
+            fixture.Player.DiscoveredServerIds);
 
-        Assert.Single(fixture.Player.DiscoveredServerIds.Select(id => fixture.Service.GetServer(id).Hostname).ToHashSet(StringComparer.OrdinalIgnoreCase));
+        Assert.Single(fixture.Player.DiscoveredServerIds);
     }
 
     [Fact]
@@ -48,20 +48,20 @@ public sealed class NetworkServiceTests
         fixture.Service.Scan(fixture.Home.Hostname);
 
         Assert.Contains(
-            fixture.Home.Hostname,
-            fixture.Player.DiscoveredServerIds.Select(id => fixture.Service.GetServer(id).Hostname).ToHashSet(StringComparer.OrdinalIgnoreCase));
+            fixture.Home.Id,
+            fixture.Player.DiscoveredServerIds);
 
         Assert.Contains(
-            fixture.N00dles.Hostname,
-            fixture.Player.DiscoveredServerIds.Select(id => fixture.Service.GetServer(id).Hostname).ToHashSet(StringComparer.OrdinalIgnoreCase));
+            fixture.N00dles.Id,
+            fixture.Player.DiscoveredServerIds);
 
         Assert.Contains(
-            fixture.FoodNStuff.Hostname,
-            fixture.Player.DiscoveredServerIds.Select(id => fixture.Service.GetServer(id).Hostname).ToHashSet(StringComparer.OrdinalIgnoreCase));
+            fixture.FoodNStuff.Id,
+            fixture.Player.DiscoveredServerIds);
 
         Assert.DoesNotContain(
-            fixture.SigmaCosmetics.Hostname,
-            fixture.Player.DiscoveredServerIds.Select(id => fixture.Service.GetServer(id).Hostname).ToHashSet(StringComparer.OrdinalIgnoreCase));
+            fixture.SigmaCosmetics.Id,
+            fixture.Player.DiscoveredServerIds);
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public sealed class NetworkServiceTests
         fixture.Service.Scan(fixture.Home.Hostname);
         fixture.Service.Scan(fixture.Home.Hostname);
 
-        Assert.Equal(3, fixture.Player.DiscoveredServerIds.Select(id => fixture.Service.GetServer(id).Hostname).ToHashSet(StringComparer.OrdinalIgnoreCase).Count);
+        Assert.Equal(3, fixture.Player.DiscoveredServerIds.Count);
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public sealed class NetworkServiceTests
 
         fixture.Service.Scan(fixture.N00dles.Hostname);
 
-        Assert.Contains(fixture.SigmaCosmetics.Hostname, fixture.Player.DiscoveredServerIds.Select(id => fixture.Service.GetServer(id).Hostname).ToHashSet(StringComparer.OrdinalIgnoreCase));
+        Assert.Contains(fixture.SigmaCosmetics.Id, fixture.Player.DiscoveredServerIds);
 
         /*
          * Return directly home. Sigma remains discovered,
