@@ -26,7 +26,7 @@ public class ScriptServicePathTests
             "home", maximumMoney: 0, startingMoney: 0, baseDifficulty: 1, minimumSecurity: 1,
             startingSecurity: 1, requiredHackingLevel: 1, growthParameter: 0, maximumRam: 8, hasRootAccess: true));
 
-        state = new GameState(new Player("home", 0, 0), network);
+        state = new GameState(new Player(network.GetServer("home").Id, 0, 0), network);
         service = new ScriptService(
             state, new ScriptCompiler(), new ScriptRunner(new ScriptAssemblyLoader()),
             new ThrowingApiFactory(), processes);
