@@ -9,7 +9,7 @@ public static class InitialGameStateFactory
 
     private static readonly string NetworkDefinitionPath = Path.Combine("Data", "initial-network.json");
 
-    public static GameState Create()
+    public static GameState Create(NarrativeProgressionMode narrativeMode = NarrativeProgressionMode.Tutorial)
     {
         var network = LoadNetwork();
 
@@ -19,7 +19,9 @@ public static class InitialGameStateFactory
             homeServer.Id,
             startingMoney: StartingMoney);
 
-        return new GameState(player, network);
+        var state = new GameState(player, network);
+        state.Narrative.Mode = narrativeMode;
+        return state;
     }
 
     private static Network LoadNetwork()
