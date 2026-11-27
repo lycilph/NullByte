@@ -2,9 +2,7 @@
 
 ## 1. Purpose
 
-This document records the Stage 2 design for persistent narrative progression and command capability access.
-
-It defines the proposed Core state, save representation, migration policy and invariants before runtime implementation. It does not implement these concepts.
+This document records the Stage 2 state and persistence decisions. The domain state, save representation, migration policy and Tutorial/Freeplay behavior are implemented; later-stage capability enforcement is described in the current code and tutorial capability map.
 
 The design follows the existing architecture: mutable gameplay state belongs to Core and is owned by the game thread; persistence uses a separate versioned save contract and explicit migrations; hosts present narrative output but do not own progression rules.
 
@@ -120,7 +118,7 @@ The zero-command state is real, but brief and automatically resolved by the open
 
 The literal decision applies to the initial state. Host/session commands must not be available before `status` is used.
 
-After the player successfully runs `status`, the tutorial should unlock a separate `host.controls` capability, exposing the normal host commands such as `help`, `save`, `load`, `saves`, `reset`, `clear` and `exit` (plus optional integrations such as `vscode` when configured).
+After the player successfully runs `status`, the tutorial unlocks `host.controls` and `network.scan`. Host controls expose the normal host commands such as `help`, `save`, `load`, `saves`, `reset`, `clear` and `exit` (plus optional integrations such as `vscode` when configured); `network.scan` begins the in-world network tutorial.
 
 These commands are not part of NB-0001's in-world capability profile and should not be framed as abilities discovered in the fiction. They are simply withheld during the short initialization hand-off.
 
@@ -271,17 +269,14 @@ Stage 2 implementation should include tests at the owning layer.
 
 ## 9. Explicitly deferred
 
-- Runtime implementation of narrative state and capability checks.
+- Capability-aware IntelliSense/editor completion.
 - Full tutorial content and later act triggers.
 - A journal or persistent message-body history.
 - Branching dialogue, choices and morality/alignment.
-- Capability-aware IntelliSense/editor completion.
 - A general quest/dialogue framework.
 - Conversion of a Freeplay save into Tutorial mode.
 - Any changes to starting money, home server, network topology or existing gameplay balance.
 
 ## 10. Stage 2 outcome
 
-Stage 2 is complete when this state/persistence design is accepted and the implementation can proceed without unresolved questions about state ownership, new-game defaults, old-save compatibility or idempotency.
-
-The next implementation stage is Stage 3: event-driven narrative progression. The current service/event map and proposed trigger contracts are documented in [NARRATIVE_PROGRESSION_DESIGN.md](NARRATIVE_PROGRESSION_DESIGN.md).
+Stage 2 is implemented. Stage 3 adds the Core coordinator and gameplay-event milestones. Stage 4 applies the resulting capabilities to command discovery/dispatch and runtime scripting API calls. The current capability map is maintained in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md).
