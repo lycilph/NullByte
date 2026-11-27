@@ -14,7 +14,7 @@ public class SaveDirectoriesTests
         network.AddServer(NewServer("home"));
         network.AddServer(NewServer("n00dles"));
 
-        return new GameState(new Player("home", 0, 0), network);
+        return new GameState(new Player(network.GetServer("home").Id, 0, 0), network);
     }
 
     private static GameState StateWithFolders()
