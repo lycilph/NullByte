@@ -12,6 +12,7 @@
 - Add a player sub-api (get skills, money etc.)
 - Maybe: add cancel manual hack, weaken and grow (backdoor?)
 - Make the text in the terminal green (so it doesn't look like a normal console)
+- Do the full solution format check
 
 # Future ideas
 
