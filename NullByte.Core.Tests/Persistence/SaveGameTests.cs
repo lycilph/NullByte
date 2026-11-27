@@ -66,7 +66,7 @@ public class SaveGameTests
 
     private static SaveGame Capture(GameState state) => SaveGameMapper.Capture(state, GameTime, Processes, SavedAt);
 
-    private static string CurrentVersionGolden => Serializer.Serialize(Serializer.Deserialize(GoldenSaves.V6));
+    private static string CurrentVersionGolden => Serializer.Serialize(Serializer.Deserialize(GoldenSaves.V7));
 
     private static string Describe(GameState state) => Serializer.Serialize(Capture(state));
 
@@ -204,7 +204,7 @@ public class SaveGameTests
     [Fact]
     public void The_current_golden_file_loads_and_saves_back_unchanged()
     {
-        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V6));
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V7));
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
@@ -218,7 +218,7 @@ public class SaveGameTests
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(Normalize(GoldenSaves.V6), again);
+        Assert.Equal(Normalize(GoldenSaves.V7), again);
     }
 
     [Fact]
@@ -228,7 +228,7 @@ public class SaveGameTests
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(Normalize(GoldenSaves.V6), again);
+        Assert.Equal(Normalize(GoldenSaves.V7), again);
     }
 
     [Fact]
