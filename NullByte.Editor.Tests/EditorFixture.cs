@@ -1,5 +1,9 @@
 ﻿
+using NullByte.Core.Configuration;
 using NullByte.Core.Domain;
+using NullByte.Core.Formulas;
+using NullByte.Core.Services;
+using NullByte.Core.Time;
 using NullByte.Core.Scripting;
 using NullByte.Core.Simulation;
 using NullByte.Scripting.Compilation;
@@ -41,6 +45,7 @@ internal sealed class EditorFixture : IDisposable
         network.AddServer(NewServer("n00dles"));
 
         State = new GameState(new Player(network.GetServer("home").Id, 0, 0), network);
+        NetworkService = new NetworkService(State, new GameScheduler(new FakeClock()), new NetworkFormulas(new BalanceConfig()));
 
         var scriptCompiler = new ScriptCompiler();
         var scriptLoader = new ScriptAssemblyLoader();
@@ -58,6 +63,8 @@ internal sealed class EditorFixture : IDisposable
     }
 
     public GameState State { get; }
+
+    public NetworkService NetworkService { get; }
 
     public VirtualFileSystem Files => State.FileSystem;
 
