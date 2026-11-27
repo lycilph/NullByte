@@ -333,7 +333,8 @@ public sealed class NetworkServiceTests
             Home: home,
             N00dles: n00dles,
             FoodNStuff: foodNStuff,
-            SigmaCosmetics: sigmaCosmetics);
+            SigmaCosmetics: sigmaCosmetics,
+            Network: world.Network);
     }
 
     private sealed record NetworkFixture(
@@ -342,5 +343,6 @@ public sealed class NetworkServiceTests
         Server Home,
         Server N00dles,
         Server FoodNStuff,
-        Server SigmaCosmetics);
+        Server SigmaCosmetics,
+        Network Network);
 }
