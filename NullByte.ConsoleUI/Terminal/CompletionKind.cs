@@ -23,6 +23,8 @@ public enum CompletionKind
     SaveGame,
     /// <summary>Existing botnet node numbers.</summary>
     BotnetNode,
+    /// <summary>Cloud servers owned by the player.</summary>
+    CloudServer,
     /// <summary>University courses.</summary>
     UniversityCourse,
     /// <summary>Universities.</summary>
