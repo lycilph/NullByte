@@ -18,6 +18,7 @@ internal sealed class ActivityTestWorld
     {
         Balance = balance ?? new BalanceConfig();
         State = InitialGameStateFactory.Create();          // the player starts with $1000
+        State.Narrative.Mode = NarrativeProgressionMode.Freeplay;
         Formulas = new ActivityFormulas(Balance);
         Service = new ActivityService(State, Catalog, Formulas);
         Random = new ScriptedRandom();

@@ -35,6 +35,8 @@ internal sealed record CoreTestOptions
     public IRandomSource? Random { get; init; }
 
     public ActivityCatalog? Catalog { get; init; }
+
+    public NarrativeProgressionMode ProgressionMode { get; init; } = NarrativeProgressionMode.Freeplay;
 }
 
 /// <summary>
@@ -172,9 +174,11 @@ internal static class CoreTestSetup
 
         var experience = new SkillFormulas(balance).CalculateExperienceForLevel(SkillKind.Hacking, options.HackingLevel);
         var player = new Player(home.Id, options.Money, experience);
+        var state = new GameState(player, network);
+        state.Narrative.Mode = options.ProgressionMode;
 
         return new CoreTestWorld(
-            new GameState(player, network),
+            state,
             balance,
             options.Random ?? new ScriptedRandom(),
             options.Catalog ?? ActivityCatalogFactory.CreateDefault());

@@ -9,7 +9,7 @@ public sealed class NarrativeCoordinatorTests
     [Fact]
     public void Initialize_TutorialUnlocksOnlyPlayerInspectionAndPublishesOnce()
     {
-        var world = CoreTestSetup.CreateWorld();
+        var world = CoreTestSetup.CreateWorld(new CoreTestOptions { ProgressionMode = NarrativeProgressionMode.Tutorial });
         var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions);
         var messages = new List<NarrativeMessage>();
         coordinator.MessagePublished += messages.Add;
@@ -63,6 +63,7 @@ public sealed class NarrativeCoordinatorTests
     {
         var world = CoreTestSetup.CreateWorld(new CoreTestOptions
         {
+            ProgressionMode = NarrativeProgressionMode.Tutorial,
             Servers = [TestServers.Home(), TestServers.Create("n00dles")]
         });
         var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions);
@@ -81,7 +82,7 @@ public sealed class NarrativeCoordinatorTests
     public void SuccessfulNuke_UnlocksServerOperations()
     {
         var target = TestServers.Create("n00dles", hasRootAccess: false);
-        var world = CoreTestSetup.CreateWorld(new CoreTestOptions { Servers = [TestServers.Home(), target] });
+        var world = CoreTestSetup.CreateWorld(new CoreTestOptions { ProgressionMode = NarrativeProgressionMode.Tutorial, Servers = [TestServers.Home(), target] });
         var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions);
         var messages = new List<NarrativeMessage>();
         coordinator.MessagePublished += messages.Add;
