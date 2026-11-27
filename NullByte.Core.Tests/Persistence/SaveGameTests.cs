@@ -71,6 +71,62 @@ public class SaveGameTests
     private static string Describe(GameState state) => Serializer.Serialize(Capture(state));
 
     [Fact]
+    [Fact]
+    public void New_game_starts_in_tutorial_mode_with_no_narrative_capabilities()
+    {
+        var state = CreateState();
+
+        Assert.Equal(NarrativeProgressionMode.Tutorial, state.Narrative.Mode);
+        Assert.Empty(state.Narrative.UnlockedCapabilities);
+        Assert.Empty(state.Narrative.CompletedMilestones);
+        Assert.Empty(state.Narrative.DeliveredMessages);
+    }
+
+    [Fact]
+    public void Narrative_state_survives_a_save_and_load()
+    {
+        var state = CreateState();
+        state.Narrative.UnlockCapability("player.inspect");
+        state.Narrative.CompleteMilestone("tutorial.initialization.complete");
+        state.Narrative.DeliverMessage("system.initialization");
+
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(Describe(state)));
+
+        Assert.Equal(NarrativeProgressionMode.Tutorial, restored.State.Narrative.Mode);
+        Assert.Contains("player.inspect", restored.State.Narrative.UnlockedCapabilities);
+        Assert.Contains("tutorial.initialization.complete", restored.State.Narrative.CompletedMilestones);
+        Assert.Contains("system.initialization", restored.State.Narrative.DeliveredMessages);
+    }
+
+    [Fact]
+    public void V7_save_migrates_to_freeplay_without_tutorial_state()
+    {
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V7));
+
+        Assert.Equal(NarrativeProgressionMode.Freeplay, restored.State.Narrative.Mode);
+        Assert.Empty(restored.State.Narrative.UnlockedCapabilities);
+        Assert.Empty(restored.State.Narrative.CompletedMilestones);
+        Assert.Empty(restored.State.Narrative.DeliveredMessages);
+    }
+
+    [Fact]
+    public void Freeplay_narrative_state_round_trips()
+    {
+        var state = CreateState();
+        state.Narrative.Mode = NarrativeProgressionMode.Freeplay;
+        state.Narrative.UnlockCapability("future.capability");
+        state.Narrative.CompleteMilestone("future.milestone");
+        state.Narrative.DeliverMessage("future.message");
+
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(Describe(state)));
+
+        Assert.Equal(NarrativeProgressionMode.Freeplay, restored.State.Narrative.Mode);
+        Assert.Contains("future.capability", restored.State.Narrative.UnlockedCapabilities);
+        Assert.Contains("future.milestone", restored.State.Narrative.CompletedMilestones);
+        Assert.Contains("future.message", restored.State.Narrative.DeliveredMessages);
+    }
+
+    [Fact]
     public void Restore_reproduces_everything_that_was_saved()
     {
         var original = CreateState();
