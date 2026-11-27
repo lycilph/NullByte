@@ -74,8 +74,11 @@ public sealed class CommandRegistry
 
     private bool IsAvailable(CommandDefinition command)
     {
-        if (narrative is null || command.Debug)
+        if (narrative is null)
             return true;
+
+        if (command.Debug)
+            return narrative.IsFreeplay;
 
         var capability = CommandCapabilityMap.GetRequiredCapability(command.Name);
         return narrative.HasCapability(capability);
