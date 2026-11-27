@@ -58,6 +58,8 @@ Look in `NullByte.Core/Services` for operations over the domain:
 - `ActivityService.cs` — activity lifecycle and attempts.
 - `CrimeAttempt.cs` — crime resolution.
 - `BotnetService.cs` — botnet operations.
+- `CloudServerService.cs` — cloud-server purchase, upgrade and rename operations.
+- `CloudServerOperationResult.cs` — cloud-server operation results.
 - `WorkingDirectory.cs` — current-directory/path behavior.
 
 New gameplay rules go here (or in formulas/systems), not in adapters. See `ARCHITECTURE.md`.
@@ -87,6 +89,7 @@ Look in `NullByte.Core/Scripting` for the public API exposed to player scripts:
 - `INullByteApi.cs`, `NullByteApi.cs`
 - file and botnet APIs
 - activity APIs
+- cloud-server APIs (`INullByteCloudApi`, `NullByteCloudApi`) and their result/info DTOs
 - `IScript.cs`, `IScriptOperations.cs`
 - process information/state
 - `RamCostAttribute.cs`
@@ -219,6 +222,10 @@ Start with `IncludeScanner.cs`, `IncludeResolver.cs` and `SourceSnapshot.cs`, th
 ### Files and folders
 
 Start with `VirtualFileSystem.cs`, `VirtualPath.cs`, `PathResolver.cs`, then the editor file service and console file commands.
+
+### Servers and cloud infrastructure
+
+Start with `Domain/Server.cs`, `Domain/ServerId.cs`, `Domain/Network.cs`, then `Services/CloudServerService.cs` and `Formulas/CloudServerFormulas.cs`. The console adapter is under `NullByte.ConsoleUI/Commands/Groups/CloudCommands.cs`; the player-script surface is under `NullByte.Core/Scripting`.
 
 ### Persistence
 
