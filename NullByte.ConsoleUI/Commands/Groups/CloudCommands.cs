@@ -1,6 +1,6 @@
 using NullByte.ConsoleUI.Terminal;
-using NullByte.Core.Services;
 using NullByte.Core.Formulas;
+using NullByte.Core.Services;
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
