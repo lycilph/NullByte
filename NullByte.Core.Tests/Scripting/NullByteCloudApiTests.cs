@@ -31,7 +31,7 @@ public sealed class NullByteCloudApiTests
     {
         var world = CreateWorld(money: 200_000);
         Assert.True(world.CloudServerService.Purchase("cloud-one").Succeeded);
-        var api = world.CreateApi(Substitute.For<NullByte.Core.Services.IScriptOperations>()).Cloud;
+        var api = world.CreateApi(Substitute.For<IScriptOperations>(), cancellationToken: TestContext.Current.CancellationToken).Cloud;
 
         Assert.Equal("cloud-one", api.GetServer("CLOUD-ONE")!.Hostname);
         Assert.Null(api.GetServer("missing"));
