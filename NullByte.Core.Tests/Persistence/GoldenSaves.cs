@@ -1181,10 +1181,10 @@ internal static class GoldenSaves
     }
   ]
 }
-""";
+"""
 
-    public const string V8 = """
-{
+#pragma warning disable IDE0055
+    public const string V8 = """{
   "version": 8,
   "savedAtUtc": "2026-11-17T10:30:00+00:00",
   "gameTime": "00:12:34.2500000",
@@ -1222,7 +1222,7 @@ internal static class GoldenSaves
       "hasBackdoor": false,
       "isCloudServer": false
     },
-  {
+    {
       "id": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e",
       "hostname": "home",
       "maximumMoney": 0,
@@ -1237,7 +1237,7 @@ internal static class GoldenSaves
       "hasBackdoor": false,
       "isCloudServer": false
     },
-  {
+    {
       "id": "98a3870e-58cb-5079-93b5-bb06f209320b",
       "hostname": "n00dles",
       "maximumMoney": 50000,
@@ -1252,7 +1252,7 @@ internal static class GoldenSaves
       "hasBackdoor": false,
       "isCloudServer": false
     },
-  {
+    {
       "id": "e68d08ef-e8d3-5b8b-9bd3-001535c25142",
       "hostname": "zero-day",
       "maximumMoney": 1000000,
@@ -1273,31 +1273,31 @@ internal static class GoldenSaves
       "fromServerId": "83d7acb2-037f-5621-bd1d-c708349ae12f",
       "toServerId": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e"
     },
-  {
+    {
       "fromServerId": "83d7acb2-037f-5621-bd1d-c708349ae12f",
       "toServerId": "98a3870e-58cb-5079-93b5-bb06f209320b"
     },
-  {
+    {
       "fromServerId": "83d7acb2-037f-5621-bd1d-c708349ae12f",
       "toServerId": "e68d08ef-e8d3-5b8b-9bd3-001535c25142"
     },
-  {
+    {
       "fromServerId": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e",
       "toServerId": "83d7acb2-037f-5621-bd1d-c708349ae12f"
     },
-  {
+    {
       "fromServerId": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e",
       "toServerId": "98a3870e-58cb-5079-93b5-bb06f209320b"
     },
-  {
+    {
       "fromServerId": "98a3870e-58cb-5079-93b5-bb06f209320b",
       "toServerId": "83d7acb2-037f-5621-bd1d-c708349ae12f"
     },
-  {
+    {
       "fromServerId": "98a3870e-58cb-5079-93b5-bb06f209320b",
       "toServerId": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e"
     },
-  {
+    {
       "fromServerId": "e68d08ef-e8d3-5b8b-9bd3-001535c25142",
       "toServerId": "83d7acb2-037f-5621-bd1d-c708349ae12f"
     }
@@ -1331,14 +1331,14 @@ internal static class GoldenSaves
       "created": "2026-11-17T10:30:00+00:00",
       "modified": "2026-11-17T10:30:00+00:00"
     },
-  {
+    {
       "serverId": "6e6c7219-14ba-58f9-ac7f-2df3c2f12f5e",
       "name": "hack.cx",
       "content": "var t = args[0];\nnb.Print(\"héllo \\\"world\\\" ✓\");\n",
       "created": "2026-11-17T10:30:00+00:00",
       "modified": "2026-11-17T10:30:00+00:00"
     },
-  {
+    {
       "serverId": "98a3870e-58cb-5079-93b5-bb06f209320b",
       "name": "hack.cx",
       "content": "await nb.Hack();",
@@ -1353,7 +1353,7 @@ internal static class GoldenSaves
       "args": [],
       "threads": 1
     },
-  {
+    {
       "filename": "hack.cx",
       "serverId": "98a3870e-58cb-5079-93b5-bb06f209320b",
       "args": [
@@ -1371,4 +1371,6 @@ internal static class GoldenSaves
   }
 }
 """;
+#pragma warning restore IDE0055
+
 }
