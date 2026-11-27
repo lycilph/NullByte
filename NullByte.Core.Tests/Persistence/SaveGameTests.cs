@@ -177,7 +177,7 @@ public class SaveGameTests
         var network = new Network();
         network.AddServer(new Server("home", 0, 0, 1, 1, 1, 1, 1, 8, hasRootAccess: true));
         network.AddServer(new Server("zero-day", 1_000_000, 500_000, 40, 7.54, 66.41759912548187, 50, 10, 16));
-        var state = new GameState(new Player("home"), network);
+        var state = new GameState(new Player(network.GetServer("home").Id), network);
 
         var server = network.GetServer("zero-day");
         server.DecreaseSecurity(1_000_000);
