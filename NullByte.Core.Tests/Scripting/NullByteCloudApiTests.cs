@@ -14,7 +14,7 @@ public sealed class NullByteCloudApiTests
         var first = world.CloudServerService.Purchase("cloud-a").Server!;
         first.AllocateRam(3);
 
-        var servers = world.CreateApi(Substitute.For<NullByte.Core.Services.IScriptOperations>()).Cloud.GetServers();
+        var servers = world.CreateApi(Substitute.For<IScriptOperations>(), cancellationToken: TestContext.Current.CancellationToken).Cloud.GetServers();
 
         Assert.Collection(servers,
             server =>
@@ -31,7 +31,7 @@ public sealed class NullByteCloudApiTests
     {
         var world = CreateWorld();
         world.CloudServerService.Purchase("cloud-one");
-        var api = world.CreateApi(Substitute.For<NullByte.Core.Services.IScriptOperations>()).Cloud;
+        var api = world.CreateApi(Substitute.For<IScriptOperations>(), cancellationToken: TestContext.Current.CancellationToken).Cloud;
 
         Assert.Equal("cloud-one", api.GetServer("CLOUD-ONE")!.Hostname);
         Assert.Null(api.GetServer("missing"));
@@ -41,7 +41,7 @@ public sealed class NullByteCloudApiTests
     public void GetPurchaseCost_DelegatesToCloudServerService()
     {
         var world = CreateWorld();
-        var api = world.CreateApi(Substitute.For<NullByte.Core.Services.IScriptOperations>()).Cloud;
+        var api = world.CreateApi(Substitute.For<IScriptOperations>(), cancellationToken: TestContext.Current.CancellationToken).Cloud;
 
         Assert.Equal(world.CloudServerService.GetPurchaseCost(32), api.GetPurchaseCost(32));
     }
@@ -51,7 +51,7 @@ public sealed class NullByteCloudApiTests
     {
         var world = CreateWorld(money: 500_000);
         world.CloudServerService.Purchase("cloud-one");
-        var api = world.CreateApi(Substitute.For<NullByte.Core.Services.IScriptOperations>()).Cloud;
+        var api = world.CreateApi(Substitute.For<IScriptOperations>(), cancellationToken: TestContext.Current.CancellationToken).Cloud;
 
         Assert.Equal(world.CloudServerService.GetUpgradeCost("cloud-one", 32), api.GetUpgradeCost("cloud-one", 32));
         Assert.Null(api.GetUpgradeCost("cloud-one", 8));
@@ -62,7 +62,7 @@ public sealed class NullByteCloudApiTests
     public void Purchase_ReportsResultAndCreatesCloudServer()
     {
         var world = CreateWorld(money: 500_000);
-        var api = world.CreateApi(Substitute.For<NullByte.Core.Services.IScriptOperations>()).Cloud;
+        var api = world.CreateApi(Substitute.For<IScriptOperations>(), cancellationToken: TestContext.Current.CancellationToken).Cloud;
 
         var result = api.Purchase("cloud-one", 16);
 
@@ -78,7 +78,7 @@ public sealed class NullByteCloudApiTests
     public void Purchase_WhenRejected_ReportsFailureWithoutChangingState()
     {
         var world = CreateWorld(money: 0);
-        var api = world.CreateApi(Substitute.For<NullByte.Core.Services.IScriptOperations>()).Cloud;
+        var api = world.CreateApi(Substitute.For<IScriptOperations>(), cancellationToken: TestContext.Current.CancellationToken).Cloud;
 
         var result = api.Purchase("cloud-one");
 
@@ -95,7 +95,7 @@ public sealed class NullByteCloudApiTests
     {
         var world = CreateWorld(money: 500_000);
         world.CloudServerService.Purchase("cloud-one");
-        var api = world.CreateApi(Substitute.For<NullByte.Core.Services.IScriptOperations>()).Cloud;
+        var api = world.CreateApi(Substitute.For<IScriptOperations>(), cancellationToken: TestContext.Current.CancellationToken).Cloud;
 
         var result = api.Upgrade("cloud-one", 32);
 
@@ -110,7 +110,7 @@ public sealed class NullByteCloudApiTests
         var world = CreateWorld(money: 500_000);
         var original = world.CloudServerService.Purchase("cloud-one").Server!;
         var originalId = original.Id;
-        var api = world.CreateApi(Substitute.For<NullByte.Core.Services.IScriptOperations>()).Cloud;
+        var api = world.CreateApi(Substitute.For<IScriptOperations>(), cancellationToken: TestContext.Current.CancellationToken).Cloud;
 
         var result = api.Rename("cloud-one", "renamed");
 
@@ -125,7 +125,7 @@ public sealed class NullByteCloudApiTests
     public void Rename_OfUnknownServer_ReportsFailure()
     {
         var world = CreateWorld();
-        var api = world.CreateApi(Substitute.For<NullByte.Core.Services.IScriptOperations>()).Cloud;
+        var api = world.CreateApi(Substitute.For<IScriptOperations>(), cancellationToken: TestContext.Current.CancellationToken).Cloud;
 
         var result = api.Rename("missing", "renamed");
 
@@ -134,6 +134,6 @@ public sealed class NullByteCloudApiTests
         Assert.Null(result.Server);
     }
 
-    private static NullByte.Core.Tests.Infrastructure.CoreTestWorld CreateWorld(double money = 1_000)
-        => CoreTestSetup.CreateWorld(new NullByte.Core.Tests.Infrastructure.CoreTestOptions { Money = money });
+    private static CoreTestWorld CreateWorld(double money = 1_000)
+        => CoreTestSetup.CreateWorld(new CoreTestOptions { Money = money });
 }

@@ -123,6 +123,7 @@ public sealed class ScriptUnloadTests
         public INullByteFilesApi Files => throw new NotSupportedException();
         public INullByteBotnetApi Botnet => throw new NotSupportedException();
         public INullByteActivitiesApi Activities => throw new NotSupportedException();
+        public INullByteCloudApi Cloud => throw new NotSupportedException();
 
         public void Print(object? value) { }
         public Task Sleep(TimeSpan duration) => Task.CompletedTask;

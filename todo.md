@@ -2,8 +2,6 @@
 
 - Add cloud servers
 
-- Verify M12 milestone
-
 - Test projects clean up
   - Consolidate startup/fixture/infrastructure code in a shared class
   - Use Mocks where appropriate
@@ -13,8 +11,8 @@
 
 # Todo
 
-- Rename the NullByte.ConsoleUI.exe -> NullByte.exe
-	
+- Maybe: add cancel manual hack, weaken and grow (backdoor?)
+
 # Future ideas
 
 - Make botnet and cloud servers unlockable
