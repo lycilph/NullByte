@@ -19,9 +19,9 @@ public sealed class CloudServerServiceTests
 
         var server = Assert.IsType<Server>(result.Server);
         Assert.True(server.IsCloudServer);
-        Assert.Equal(8, server.MaximumRam);
-        Assert.Equal(0, server.MaximumMoney);
-        Assert.Equal(0, server.Money);
+        Assert.Equal(8.0, server.MaximumRam);
+        Assert.Equal(0.0, server.MaximumMoney);
+        Assert.Equal(0.0, server.Money);
         Assert.Equal(server.MinimumSecurity, server.Security);
         Assert.Equal(1, server.RequiredHackingLevel);
         Assert.Equal(0, server.GrowthParameter);
@@ -42,7 +42,7 @@ public sealed class CloudServerServiceTests
         Assert.True(result.Succeeded);
         Assert.Equal(250_000, result.Cost);
         Assert.Equal(50_000, world.Player.Money);
-        Assert.Equal(32, result.Server!.MaximumRam);
+        Assert.Equal(32.0, result.Server!.MaximumRam);
     }
 
     [Fact]
@@ -145,9 +145,9 @@ public sealed class CloudServerServiceTests
         Assert.Equal(150_000, result.Cost);
         Assert.Same(server, result.Server);
         Assert.Equal(originalId, server.Id);
-        Assert.Equal(32, server.MaximumRam);
-        Assert.Equal(6, server.UsedRam);
-        Assert.Equal(26, server.AvailableRam);
+        Assert.Equal(32.0, server.MaximumRam);
+        Assert.Equal(6.0, server.UsedRam);
+        Assert.Equal(26.0, server.AvailableRam);
         Assert.True(world.Network.AreConnected(world.Player.HomeServerId, server.Id));
         Assert.True(world.Player.DiscoveredServerIds.Contains(server.Id));
     }
@@ -163,7 +163,7 @@ public sealed class CloudServerServiceTests
 
         Assert.False(result.Succeeded);
         Assert.Equal(money, world.Player.Money);
-        Assert.Equal(8, server.MaximumRam);
+        Assert.Equal(8.0, server.MaximumRam);
     }
 
     [Fact]
@@ -178,7 +178,7 @@ public sealed class CloudServerServiceTests
         var cloud = world.CloudServerService.Purchase("cloud-one").Server!;
         Assert.False(world.CloudServerService.Upgrade("cloud-one", 8).Succeeded);
         Assert.False(world.CloudServerService.Upgrade("cloud-one", 24).Succeeded);
-        Assert.Equal(8, cloud.MaximumRam);
+        Assert.Equal(8.0, cloud.MaximumRam);
     }
 
     [Fact]
