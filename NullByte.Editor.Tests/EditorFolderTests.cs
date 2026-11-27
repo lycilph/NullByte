@@ -206,7 +206,7 @@ public class EditorFolderTests
     public async Task Rename_refuses_impossible_moves()
     {
         var editor = new EditorFixture();
-        editor.State.Player.DiscoverServer(editor.State.Network.GetServer("n00dles").Id);
+        editor.NetworkService.Scan("home");
         editor.Files.WriteFile("home", "a/b/c.cx", "x");
         editor.Files.WriteFile("home", "f.cx", "x");
 
@@ -253,7 +253,7 @@ public class EditorFolderTests
 
         Assert.Equal("NotFound", Code(await editor.SendAsync("stat", "/n00dles/tools/a.cx")));
 
-        editor.State.Player.DiscoverServer(editor.State.Network.GetServer("n00dles").Id);
+        editor.NetworkService.Scan("home");
 
         Assert.Null(Code(await editor.SendAsync("stat", "/n00dles/tools/a.cx")));
     }
