@@ -58,6 +58,29 @@ public sealed class Network
     }
 
     /// <summary>
+    /// Renames a cloud server while preserving its immutable identity and all server state.
+    /// Hostname lookup is updated as part of the same network operation.
+    /// </summary>
+    public void RenameServer(ServerId serverId, string newHostname)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(newHostname);
+
+        var server = GetServer(serverId);
+        if (!server.IsCloudServer)
+            throw new InvalidOperationException($"Server '{server.Hostname}' is not a cloud server and cannot be renamed.");
+
+        if (string.Equals(server.Hostname, newHostname, StringComparison.Ordinal))
+            return;
+
+        if (serversByHostname.TryGetValue(newHostname, out var existing) && existing.Id != serverId)
+            throw new InvalidOperationException($"A server with hostname '{newHostname}' already exists.");
+
+        serversByHostname.Remove(server.Hostname);
+        server.Rename(newHostname);
+        serversByHostname.Add(server.Hostname, server);
+    }
+
+    /// <summary>
     /// Gets a server by hostname.
     /// </summary>
     public Server GetServer(string hostname)
