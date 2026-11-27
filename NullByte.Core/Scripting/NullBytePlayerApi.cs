@@ -7,13 +7,16 @@ namespace NullByte.Core.Scripting;
 public sealed class NullBytePlayerApi : INullBytePlayerApi
 {
     private readonly Player player;
+    private readonly NarrativeState? narrative;
 
-    public NullBytePlayerApi(Player player, SkillFormulas skillFormulas)
+    public NullBytePlayerApi(Player player, SkillFormulas skillFormulas, NarrativeState? narrative = null)
     {
         this.player = player ?? throw new ArgumentNullException(nameof(player));
-        Skills = new SkillsInfo(player.Skills, skillFormulas);
+        this.narrative = narrative;
+        skills = new SkillsInfo(player.Skills, skillFormulas);
     }
 
-    public double Money => player.Money;
-    public SkillsInfo Skills { get; }
+    public double Money { get { narrative?.EnsureCapability("player.inspect"); return player.Money; } }
+    public SkillsInfo Skills { get { narrative?.EnsureCapability("player.inspect"); return skills; } }
+    private readonly SkillsInfo skills;
 }

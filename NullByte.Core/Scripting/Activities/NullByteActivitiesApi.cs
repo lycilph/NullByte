@@ -34,16 +34,26 @@ public sealed class NullByteActivitiesApi : INullByteActivitiesApi
     }
 
     public ActivityActionResult Work(string company, string career = "")
-        => Describe(service.StartWork(company, NullIfBlank(career), ActivityMode.Background));
+    {
+        Require("activities.work");
+        return Describe(service.StartWork(company, NullIfBlank(career), ActivityMode.Background));
+    }
 
     public ActivityActionResult Study(string course, string university = "")
-        => Describe(service.StartCourse(FacilityKind.University, course, NullIfBlank(university), ActivityMode.Background));
+    {
+        Require("activities.learn");
+        return Describe(service.StartCourse(FacilityKind.University, course, NullIfBlank(university), ActivityMode.Background));
+    }
 
     public ActivityActionResult Train(string skill, string gym = "")
-        => Describe(service.StartCourse(FacilityKind.Gym, skill, NullIfBlank(gym), ActivityMode.Background));
+    {
+        Require("activities.learn");
+        return Describe(service.StartCourse(FacilityKind.Gym, skill, NullIfBlank(gym), ActivityMode.Background));
+    }
 
     public async Task<CrimeOutcome> Crime(string crime)
     {
+        Require("activities.crime");
         var started = service.StartCrime(crime, repeat: false, ActivityMode.Background);
 
         if (!started.Succeeded)
@@ -89,10 +99,11 @@ public sealed class NullByteActivitiesApi : INullByteActivitiesApi
         }
     }
 
-    public bool Stop() => service.Stop() is not null;
+    public bool Stop() { Require("activities.manage"); return service.Stop() is not null; }
 
     public ActivityStatus? GetStatus()
     {
+        Require("activities.manage");
         if (service.Current is not { } activity)
             return null;
 
@@ -112,6 +123,7 @@ public sealed class NullByteActivitiesApi : INullByteActivitiesApi
 
     public int GetSkillLevel(string skill)
     {
+        Require("player.inspect");
         var kind = ParseSkill(skill);
 
         return skillFormulas.CalculateLevel(kind, gameState.Player.Skills.GetExperience(kind));
@@ -119,6 +131,7 @@ public sealed class NullByteActivitiesApi : INullByteActivitiesApi
 
     public double GetCrimeChance(string crime)
     {
+        Require("activities.crime");
         ArgumentException.ThrowIfNullOrWhiteSpace(crime);
 
         if (!service.Catalog.TryGetCrime(crime, out var found))
@@ -128,10 +141,14 @@ public sealed class NullByteActivitiesApi : INullByteActivitiesApi
     }
 
     public double GetReputation(string company)
-        => gameState.Employment.GetReputation(GetCompany(company).Name);
+    {
+        Require("activities.work");
+        return gameState.Employment.GetReputation(GetCompany(company).Name);
+    }
 
     public JobInfo? GetJob(string company)
     {
+        Require("activities.work");
         var found = GetCompany(company);
 
         if (gameState.Employment.GetJob(found.Name) is not { } job)
@@ -145,11 +162,13 @@ public sealed class NullByteActivitiesApi : INullByteActivitiesApi
         return new JobInfo(found.Name, career.Name, career.Ranks[job.RankIndex].Title, job.RankIndex + 1, career.Ranks.Count);
     }
 
-    public IReadOnlyList<string> GetCrimes() => service.Catalog.Crimes.Select(c => c.Name).ToList();
+    public IReadOnlyList<string> GetCrimes() { Require("activities.crime"); return service.Catalog.Crimes.Select(c => c.Name).ToList(); }
 
-    public IReadOnlyList<string> GetCourses() => service.Catalog.Courses.Select(c => c.Name).ToList();
+    public IReadOnlyList<string> GetCourses() { Require("activities.learn"); return service.Catalog.Courses.Select(c => c.Name).ToList(); }
 
-    public IReadOnlyList<string> GetCompanies() => service.Catalog.Companies.Select(c => c.Name).ToList();
+    public IReadOnlyList<string> GetCompanies() { Require("activities.work"); return service.Catalog.Companies.Select(c => c.Name).ToList(); }
+
+    private void Require(string capability) => gameState.Narrative.EnsureCapability(capability);
 
     private static ActivityActionResult Describe(ActivityStartResult result)
     {

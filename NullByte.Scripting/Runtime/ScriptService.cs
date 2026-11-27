@@ -79,6 +79,9 @@ public sealed class ScriptService : IScriptOperations, IScriptService
         ArgumentException.ThrowIfNullOrWhiteSpace(filename);
         ArgumentNullException.ThrowIfNull(args);
 
+        if (!gameState.Narrative.HasCapability("scripts.execute"))
+            return ScriptStartResult.Failure("Script execution is not available.");
+
         // "/tools/a.cx" and "tools/a.cx" are the same script. Use one spelling from here on,
         // so that the process list, ScriptRunning and the saved processes all agree.
         if (!VirtualPath.TryNormalizeFile(filename, out var path, out var pathError))
