@@ -141,7 +141,7 @@ public sealed class CloudCommandTests
     [InlineData("cloud rename buildbox new-name extra")]
     [InlineData("cloud list extra")]
     [InlineData("cloud unknown")]
-    public async Task Invalid_input_shows_usage_and_changes_nothing(string commandLine)
+    public async Task Invalid_command_arguments_show_usage_and_change_nothing(string commandLine)
     {
         var game = CreateGame(1_000_000);
 
