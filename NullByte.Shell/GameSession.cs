@@ -23,6 +23,7 @@ public sealed record GameSessionOptions
     public TimeSpan InitialGameTime { get; init; } = TimeSpan.Zero;             // Used when loading a saved game
     public IReadOnlyList<ProcessSave> ProcessesToRestart { get; init; } = [];   // Used when loading a saved game
     public GameState? State { get; init; }                                      // null = new game; a loaded game passes its restored state
+    public NarrativeProgressionMode NarrativeMode { get; init; } = NarrativeProgressionMode.Tutorial; // new games may explicitly skip the tutorial                                      // null = new game; a loaded game passes its restored state
     public IGameClock? Clock { get; init; }                                     // tests pass FakeGameClock
     public IRandomSource? Random { get; init; }                                 // tests pass a fixed source
     public INullByteApiFactory? ApiFactory { get; init; }                       // tests pass a fake api factory
@@ -172,7 +173,7 @@ public sealed class GameSession : IAsyncDisposable
         var scheduler = new GameScheduler(clock, synchronizationContext.VerifyAccess);
         var gameLoop = new GameLoop(clock, synchronizationContext, scheduler);
 
-        var state = options.State ?? InitialGameStateFactory.Create();
+        var state = options.State ?? InitialGameStateFactory.Create(options.NarrativeMode);
         var randomSource = options.Random ?? new SeededRandomSource(Random.Shared.Next());
 
         var formulas = new FormulaSet(options.Balance);
