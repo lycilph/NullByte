@@ -25,11 +25,12 @@ This plan deliberately starts with documentation and design. It does not assume 
 
 ### Stage 0 — Narrative design and repository alignment
 
-**Status: Documentation drafted**
+**Status: Design drafted; awaiting access-scope decisions**
 
 Deliverables:
 - NARRATIVE.md — narrative premise, world, NB-0001, SYSTEM, five-act arc, command discovery, narrative delivery and boundaries.
 - This plan — implementation stages, dependencies and acceptance criteria.
+- [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md) — current command/API capability map, proposed access model and first playable walkthrough.
 - Verify the design against the current command registry, scripting API, game state and save model before implementation.
 
 Acceptance:
@@ -39,6 +40,8 @@ Acceptance:
 - Existing-save behavior is explicitly designed.
 
 ### Stage 1 — Tutorial walkthrough and capability map
+
+**Status: Drafted; three design decisions need confirmation**
 
 **Goal:** define exactly what a new player experiences, before implementing the progression system.
 
@@ -254,4 +257,4 @@ Keep the first implementation narrow.
 | 6 — Activity-system narrative | Not started |
 | 7 — Review, balance and documentation | Not started |
 
-The next step is **Stage 1**: inspect the current command registry and scripting API, then produce the concrete capability matrix and tutorial walkthrough before changing runtime code.
+Stage 1's repository inspection and first design draft are complete in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md). Before moving to Stage 2, confirm the host-control policy, the first unlock (`status`), and the expected first-iteration treatment of script API visibility. Once those are agreed, finalize the capability matrix and begin the state/persistence design.
