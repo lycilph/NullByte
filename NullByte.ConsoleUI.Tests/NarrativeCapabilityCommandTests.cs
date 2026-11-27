@@ -30,6 +30,24 @@ public sealed class NarrativeCapabilityCommandTests
     }
 
     [Fact]
+    public async Task Journal_ShowsGuidanceForUnlockedCapabilities()
+    {
+        var harness = ConsoleTestSetup.CreateHarness(new ConsoleTestOptions
+        {
+            ProgressionMode = NarrativeProgressionMode.Tutorial
+        });
+
+        await harness.RunAsync("status");
+
+        var output = await harness.RunAndCaptureAsync("journal");
+
+        Assert.Contains("SYSTEM JOURNAL", output);
+        Assert.Contains("STATUS", output);
+        Assert.Contains("NETWORK DISCOVERY", output);
+        Assert.DoesNotContain("SERVER OPERATIONS", output);
+    }
+
+    [Fact]
     public async Task SuccessfulStatusUnlocksHostControlsAndNetworkScan()
     {
         var harness = ConsoleTestSetup.CreateHarness(new ConsoleTestOptions
