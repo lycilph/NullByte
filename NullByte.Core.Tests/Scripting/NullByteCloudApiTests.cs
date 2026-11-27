@@ -9,8 +9,8 @@ public sealed class NullByteCloudApiTests
     [Fact]
     public void GetServers_ReturnsOwnedCloudServersAsReadOnlyInfo()
     {
-        var world = CreateWorld();
-        world.CloudServerService.Purchase("cloud-b");
+        var world = CreateWorld(money: 500_000);
+        Assert.True(world.CloudServerService.Purchase("cloud-b").Succeeded);
         var first = world.CloudServerService.Purchase("cloud-a").Server!;
         first.AllocateRam(3);
 
@@ -29,9 +29,9 @@ public sealed class NullByteCloudApiTests
     [Fact]
     public void GetServer_ReturnsMatchingCloudServerOrNull()
     {
-        var world = CreateWorld();
-        world.CloudServerService.Purchase("cloud-one");
-        var api = world.CreateApi(Substitute.For<IScriptOperations>(), cancellationToken: TestContext.Current.CancellationToken).Cloud;
+        var world = CreateWorld(money: 200_000);
+        Assert.True(world.CloudServerService.Purchase("cloud-one").Succeeded);
+        var api = world.CreateApi(Substitute.For<NullByte.Core.Services.IScriptOperations>()).Cloud;
 
         Assert.Equal("cloud-one", api.GetServer("CLOUD-ONE")!.Hostname);
         Assert.Null(api.GetServer("missing"));
