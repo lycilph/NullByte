@@ -161,6 +161,9 @@ public sealed class ScriptService : IScriptOperations, IScriptService
             // Create a distinct API instance for this process.
             var api = apiFactory.Create(this, process.HostServerId, process.Threads, process.Cancellation.Token);
 
+            // Publish process creation before script code can call APIs that this milestone unlocks.
+            NotifyProcessStarted(process);
+
             // Start execution without waiting for the script to finish.
             process.Execution = RunAndObserveAsync(process, compiledScript, api);
         }
@@ -177,7 +180,6 @@ public sealed class ScriptService : IScriptOperations, IScriptService
             return ScriptStartResult.Failure($"Could not start '{filename}': {exception.Message}");
         }
 
-        NotifyProcessStarted(process);
         return ScriptStartResult.Success(process.Pid, compilation.Diagnostics);
     }
 
