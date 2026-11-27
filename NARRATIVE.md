@@ -204,7 +204,7 @@ Where a capability is essential to the main tutorial, its unlock should be expli
 
 ## 6.6 Concrete tutorial and capability mapping
 
-The command-by-command capability proposal and the first playable walkthrough are maintained in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md). That document is based on the current command registry, scripting API, new-game state and save format. Its proposed access policy still requires confirmation before runtime implementation.
+The command-by-command capability proposal and the first playable walkthrough are maintained in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md). The state/persistence design is in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md), and the current gameplay-event mapping is in [NARRATIVE_PROGRESSION_DESIGN.md](NARRATIVE_PROGRESSION_DESIGN.md).
 
 ## 7. Main narrative arc
 
@@ -426,18 +426,15 @@ The narrative system should be small and event-driven.
 - Avoid building a general-purpose quest or dialogue engine for the first iteration.
 - Keep presentation separate from content so a future WPF host can present the same narrative events.
 
-The architecture should follow the existing Core/session/host boundaries described in ARCHITECTURE.md. The ownership, initial state, save format and legacy compatibility policy are defined in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md). The confirmed access-scope decisions are recorded in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md).
+The architecture should follow the existing Core/session/host boundaries described in ARCHITECTURE.md. The ownership, initial state, save format and Freeplay compatibility policy are defined in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md). The confirmed access-scope decisions are recorded in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md).
 
-## 12. Open design questions
+## 12. Remaining design questions
 
-These should be resolved before implementing command gating:
+The following questions remain for the relevant implementation stages:
 
-1. Which capability is the very first unlock, and exactly how does the opening sequence hand control to the player?
-2. Which current commands belong to each capability group, including aliases and command subcommands?
-3. Which scripting API operations are gated with their related console capabilities?
-4. Which capabilities are mandatory for the main story, and which are optional discoveries?
-5. How should a player who already has a mature save enter the narrative?
-6. Should the journal be part of the first implementation or follow the initial tutorial?
-7. What should happen if a player discovers a later-stage feature before its planned story introduction?
+1. Which exact command and scripting API operations belong to each capability, including aliases and subcommands?
+2. Which capabilities are mandatory for the main story, and which are optional discoveries?
+3. Should the journal be part of the first implementation or follow the initial tutorial?
+4. What should happen if a player discovers a later-stage feature before its planned story introduction?
 
-These questions should be answered using the current implementation and a concrete tutorial walkthrough, rather than by guessing from the original GDD.
+The opening command, host-control hand-off, scripting API runtime enforcement and Tutorial/Freeplay modes are confirmed in the supporting narrative design documents.
