@@ -77,7 +77,7 @@ public sealed class CloudCommands(CloudServerService service, IGameOutput output
         var ram = arguments.Count == 2 ? ParseRam(arguments[1]) : 8;
         if (ram is null)
         {
-            output.WriteLine($"Usage: {BuyUsage}");
+            WriteInvalidRam(arguments[1]);
             return Task.CompletedTask;
         }
 
@@ -97,7 +97,7 @@ public sealed class CloudCommands(CloudServerService service, IGameOutput output
         var ram = ParseRam(arguments[1]);
         if (ram is null)
         {
-            output.WriteLine($"Usage: {UpgradeUsage}");
+            WriteInvalidRam(arguments[1]);
             return Task.CompletedTask;
         }
 
@@ -123,6 +123,12 @@ public sealed class CloudCommands(CloudServerService service, IGameOutput output
 
         output.WriteLine($"Renamed cloud server to '{result.Server!.Hostname}'.");
         return Task.CompletedTask;
+    }
+
+    private void WriteInvalidRam(string value)
+    {
+        var supportedTiers = string.Join(", ", CloudServerFormulas.RamTiers);
+        output.WriteLine($"Invalid RAM tier '{value}'. Supported tiers: {supportedTiers} GB.");
     }
 
     private static int? ParseRam(string value)
