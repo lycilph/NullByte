@@ -58,7 +58,7 @@ public sealed class ServerActions
         var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, gameState.Player.Skills.GetExperience(SkillKind.Hacking));
         if (hackingLevel < server.RequiredHackingLevel)
             return HackResult.Failed("Hack failed: hacking level too low.");
-        
+
         var player = gameState.Player;
         var duration = formulas.CalculateHackDuration(player, server);
         await scheduler.DelayAsync(duration, cancellationToken);
@@ -68,14 +68,14 @@ public sealed class ServerActions
         var moneyStolen = 0.0;
 
         var securityIncrease = formulas.CalculateHackSecurityIncrease(threads);
-        var experienceGained = formulas.CalculateHackingExperience(server,threads);
+        var experienceGained = formulas.CalculateHackingExperience(server, threads);
 
         if (succeeded)
         {
             var requestedAmount = formulas.CalculateHackAmount(player, server, threads);
             moneyStolen = server.RemoveMoney(requestedAmount);
             player.AddMoney(moneyStolen);
-        
+
             server.IncreaseSecurity(securityIncrease);
             player.Skills.AddExperience(SkillKind.Hacking, experienceGained);
         }
@@ -157,7 +157,7 @@ public sealed class ServerActions
         player.Skills.AddExperience(SkillKind.Hacking, experienceGained);
 
         return new WeakenResult(
-            Succeeded: true, 
+            Succeeded: true,
             FailureMessage: string.Empty,
             SecurityDecrease: securityDecrease,
             ExperienceGained: experienceGained,
