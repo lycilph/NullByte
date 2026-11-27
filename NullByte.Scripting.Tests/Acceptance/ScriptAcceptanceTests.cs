@@ -24,11 +24,6 @@ public sealed class ScriptAcceptanceTests
         var networkFormulas = new NetworkFormulas(balance);
         var activityFormulas = new ActivityFormulas(balance);
 
-        var player = new Player(
-            homeHostname: "home",
-            startingMoney: 1_000,
-            startingHackingExperience: skillFormulas.CalculateExperienceForLevel(SkillKind.Hacking, 1));
-
         var home = new Server(
             hostname: "home",
             maximumMoney: 0,
@@ -40,6 +35,11 @@ public sealed class ScriptAcceptanceTests
             growthParameter: 0,
             maximumRam: 8,
             hasRootAccess: true);
+
+        var player = new Player(
+            home.Id,
+            startingMoney: 1_000,
+            startingHackingExperience: skillFormulas.CalculateExperienceForLevel(SkillKind.Hacking, 1));
 
         var target = new Server(
             hostname: "n00dles",
