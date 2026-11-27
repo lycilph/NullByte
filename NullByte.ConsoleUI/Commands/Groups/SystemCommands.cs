@@ -70,12 +70,12 @@ public sealed class SystemCommands(
 
     private async Task JournalAsync(IReadOnlyList<string> arguments)
     {
-        terminal.WriteLine("SYSTEM JOURNAL");
+        terminal.WriteNarrativeLine("SYSTEM JOURNAL");
         terminal.WriteLine();
 
         foreach (var message in narrative.GetTutorialGuide())
         {
-            terminal.WriteLine(message.Text);
+            terminal.WriteNarrativeLine(message.Text);
             terminal.WriteLine();
         }
     }

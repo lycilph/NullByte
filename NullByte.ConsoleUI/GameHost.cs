@@ -269,7 +269,7 @@ public sealed class GameHost(
 
         var registry = CommandSetup.Create(session, terminal, hostRequests, saveManager, ExternalEditorStatus, settings);
         var dispatcher = new CommandDispatcher(registry, terminal, session.Narrative);
-        session.Narrative.MessagePublished += message => terminal.WriteLine(message.Text);
+        session.Narrative.MessagePublished += message => terminal.WriteNarrativeLine(message.Text);
         var completion = new CompletionCatalog(registry, session.State, session.Services.Activities.Catalog, saveManager);
         terminal.SetCompletionProvider(completion);
 
