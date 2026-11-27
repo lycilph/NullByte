@@ -15,7 +15,7 @@ public sealed class V7ToV8Migration : ISaveMigration
 
         save["narrative"] = new JsonObject
         {
-            ["mode"] = "Freeplay",
+            ["mode"] = 1,
             ["unlockedCapabilities"] = new JsonArray(),
             ["completedMilestones"] = new JsonArray(),
             ["deliveredMessages"] = new JsonArray()
