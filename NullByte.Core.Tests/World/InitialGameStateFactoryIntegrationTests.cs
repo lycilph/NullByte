@@ -93,16 +93,16 @@ public sealed class InitialGameStateFactoryIntegrationTests
         var experience = ops.CalculateHackingExperience(server);
 
         // Act
-        var hackingLevel = formulas.CalculateLevel(SkillKind.Hacking, gameState.Player.HackingExperience);
+        var hackingLevel = formulas.CalculateLevel(SkillKind.Hacking, gameState.Player.Skills.GetExperience(SkillKind.Hacking));
         var reachedLevels = new HashSet<int> { hackingLevel };
 
         const int maximumHackCount = 110_000;
 
         for (var hack = 0; hack < maximumHackCount; hack++)
         {
-            gameState.Player.AddHackingExperience(experience);
+            gameState.Player.Skills.AddExperience(SkillKind.Hacking, experience);
 
-            hackingLevel = formulas.CalculateLevel(SkillKind.Hacking, gameState.Player.HackingExperience);
+            hackingLevel = formulas.CalculateLevel(SkillKind.Hacking, gameState.Player.Skills.GetExperience(SkillKind.Hacking));
             reachedLevels.Add(hackingLevel);
         }
 
@@ -129,13 +129,13 @@ public sealed class InitialGameStateFactoryIntegrationTests
 
         // Act
         var hackCount = 0;
-        var hackingLevel = formulas.CalculateLevel(SkillKind.Hacking, gameState.Player.HackingExperience);
+        var hackingLevel = formulas.CalculateLevel(SkillKind.Hacking, gameState.Player.Skills.GetExperience(SkillKind.Hacking));
 
         while (hackingLevel < highestRequiredLevel &&
                hackCount < maximumReasonableHackCount)
         {
-            gameState.Player.AddHackingExperience(experience);
-            hackingLevel = formulas.CalculateLevel(SkillKind.Hacking, gameState.Player.HackingExperience);
+            gameState.Player.Skills.AddExperience(SkillKind.Hacking, experience);
+            hackingLevel = formulas.CalculateLevel(SkillKind.Hacking, gameState.Player.Skills.GetExperience(SkillKind.Hacking));
 
             hackCount++;
         }
