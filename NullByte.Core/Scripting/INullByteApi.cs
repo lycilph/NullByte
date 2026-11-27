@@ -11,6 +11,7 @@ public interface INullByteApi
 {
     INullByteFilesApi Files { get; }
     INullByteBotnetApi Botnet { get; }
+    INullByteCloudApi Cloud { get; }
     INullByteActivitiesApi Activities { get; }
 
     /// <summary>Writes a line to the script's output.</summary>
@@ -81,17 +82,11 @@ public interface INullByteApi
     [RamCost(0.2)]
     IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "");
 
-    /// <summary>
-    /// Starts a script on the server running the current script.
-    /// Returns the new process ID, or 0 if the script could not be started.
-    /// </summary>
+    /// <summary>Starts a script on the server running the current script.</summary>
     [RamCost(1.0)]
     Task<int> RunAsync(string filename, params string[] args);
 
-    /// <summary>
-    /// Starts a script on the specified server.
-    /// Returns the new process ID, or 0 if the script could not be started.
-    /// </summary>
+    /// <summary>Starts a script on the specified server.</summary>
     [RamCost(1.3)]
     Task<int> ExecAsync(string filename, string hostname, params string[] args);
 
