@@ -24,7 +24,8 @@ public sealed class Server
         double maximumRam,
         bool hasRootAccess = false,
         bool hasBackdoor = false,
-        ServerId? id = null)
+        ServerId? id = null,
+        bool isCloudServer = false)
     {
         if (string.IsNullOrWhiteSpace(hostname))
             throw new ArgumentException("Host name cannot be empty.", nameof(hostname));
@@ -50,6 +51,7 @@ public sealed class Server
             throw new ArgumentException("Server ID cannot be empty.", nameof(id));
 
         Hostname = hostname;
+        IsCloudServer = isCloudServer;
 
         MaximumMoney = maximumMoney;
         money = startingMoney;
@@ -73,7 +75,8 @@ public sealed class Server
     /// </summary>
     public ServerId Id { get; }
 
-    public string Hostname { get; }
+    public string Hostname { get; private set; }
+    public bool IsCloudServer { get; }
     public double MaximumMoney { get; }
     public double Money => money;
     public double BaseDifficulty { get; }
@@ -90,6 +93,12 @@ public sealed class Server
     public double MaximumRam { get; }
     public double UsedRam => usedRam;
     public double AvailableRam => MaximumRam - usedRam;
+
+    internal void Rename(string hostname)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
+        Hostname = hostname;
+    }
 
     public bool TryGainRootAccess(int hackingLevel)
     {
