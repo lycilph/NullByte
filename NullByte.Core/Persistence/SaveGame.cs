@@ -14,7 +14,7 @@ namespace NullByte.Core.Persistence;
 public sealed record SaveGame
 {
     /// <summary>The format version this build writes, and the newest one it can read.</summary>
-    public const int CurrentVersion = 6;
+    public const int CurrentVersion = 7;
 
     public required int Version { get; init; }
     public required DateTimeOffset SavedAtUtc { get; init; }
@@ -68,6 +68,8 @@ public sealed record ServerSave
     public required bool HasRootAccess { get; init; }
     /// <summary>Whether the player can connect directly to the server. Added in version 5.</summary>
     public required bool HasBackdoor { get; init; }
+    /// <summary>Whether this is a player-owned cloud server. Added in version 7.</summary>
+    public required bool IsCloudServer { get; init; }
 }
 
 /// <summary>
