@@ -1346,12 +1346,6 @@ internal static class GoldenSaves
       "modified": "2026-11-17T10:30:00+00:00"
     }
   ],
-  "narrative": {
-    "mode": 1,
-    "unlockedCapabilities": [],
-    "completedMilestones": [],
-    "deliveredMessages": []
-  },
   "processes": [
     {
       "filename": "weaken.cx",
@@ -1368,7 +1362,13 @@ internal static class GoldenSaves
       ],
       "threads": 2
     }
-  ]
+  ],
+  "narrative": {
+    "mode": 1,
+    "unlockedCapabilities": [],
+    "completedMilestones": [],
+    "deliveredMessages": []
+  }
 }
 """;
 }

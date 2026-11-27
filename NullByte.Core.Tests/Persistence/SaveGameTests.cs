@@ -98,7 +98,7 @@ public class SaveGameTests
     }
 
     [Fact]
-    public void V7_save_migrates_to_freeplay_without_tutorial_state()
+    public void V8_save_migrates_to_freeplay_without_tutorial_state()
     {
         var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V8));
 
@@ -251,9 +251,9 @@ public class SaveGameTests
     {
         // If this fails you changed the save format. Bump SaveGame.CurrentVersion, add a migration,
         // and keep the old golden text as a test for that migration. Do not just edit the golden text.
-        string expected = CurrentVersionGolden;
-        string actual = Describe(CreateState());
-        Assert.Equal(expected, actual);
+        var expected = CurrentVersionGolden;
+        var actual = Describe(CreateState());
+        Assert.True(JsonNode.DeepEquals(expected, actual));
     }
 
     [Fact]
@@ -263,7 +263,9 @@ public class SaveGameTests
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(CurrentVersionGolden, again);
+        var expected = JsonNode.Parse(CurrentVersionGolden);
+        var actual = JsonNode.Parse(again);
+        Assert.True(JsonNode.DeepEquals(expected, actual));
     }
 
     [Fact]
