@@ -1,6 +1,9 @@
 ﻿# In progress
 
-- Add a player sub-api (get skills, money etc.)
+- Make the text in the terminal green (so it doesn't look like a normal console)
+  - Narrative messages should be another color (blue?)
+
+- Add a freeplay flag to the --new argument (in commandline parser)
  
 # Todo
 
@@ -8,7 +11,6 @@
   -  Story/narrative, features are unlocked slowly
 
 - Maybe: add cancel manual hack, weaken and grow (backdoor?)
-- Make the text in the terminal green (so it doesn't look like a normal console)
 - Do the full solution format check
 
 # Future ideas
