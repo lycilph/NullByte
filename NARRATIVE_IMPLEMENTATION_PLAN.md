@@ -246,11 +246,11 @@ Keep the first implementation narrow.
 |---|---|
 | 0 — Narrative design and repository alignment | Complete |
 | 1 — Tutorial walkthrough and capability map | Complete (design draft) |
-| 2 — Narrative and capability state model | Design drafted; awaiting review |
+| 2 — Narrative and capability state model | Implemented; tests added |
 | 3 — Event-driven narrative progression | Design drafted; awaiting review |
 | 4 — Capability gating across player interfaces | Not started |
 | 5 — Initial tutorial content and presentation | Not started |
 | 6 — Activity-system narrative | Not started |
 | 7 — Review, balance and documentation | Not started |
 
-Stages 0 and 1 are complete as design work. The access decisions are confirmed and recorded in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md). Stage 2's state and persistence design is in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md); Stage 3's event-driven progression design is in [NARRATIVE_PROGRESSION_DESIGN.md](NARRATIVE_PROGRESSION_DESIGN.md). Both are drafts awaiting review. No runtime implementation has begun.
+Stages 0 and 1 are complete as design work. The access decisions are confirmed and recorded in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md). Stage 2's state and persistence design is in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md). The Tutorial/Freeplay state, save-format migration and new-game mode selection are implemented on the feature branch. Stage 3's event-driven progression design remains a draft in [NARRATIVE_PROGRESSION_DESIGN.md](NARRATIVE_PROGRESSION_DESIGN.md).
