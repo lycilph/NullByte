@@ -15,6 +15,8 @@ Inspired by Bitburner. The first iteration is a console game with an optional VS
 | `DEVELOPMENT.md` | Build/test commands, conventions and development workflow |
 | `ROADMAP.md` | Milestones |
 | `todo.md` | Current tasks and ideas |
+| `NARRATIVE.md` | Narrative setting, characters, story arc and capability-unlock principles |
+| `NARRATIVE_IMPLEMENTATION_PLAN.md` | Staged plan for designing and implementing the narrative tutorial |
 
 ## Build and run
 
