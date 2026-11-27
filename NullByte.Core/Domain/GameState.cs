@@ -18,7 +18,7 @@ public sealed class GameState
         if (!network.TryGetServer(player.CurrentServerId, out _))
             throw new ArgumentException($"The player's current server '{player.CurrentServerId}' does not exist in the network.", nameof(player));
 
-        if (!player.DiscoveredServerIds.All(network.TryGetServer))
+        if (!player.DiscoveredServerIds.All(id => network.TryGetServer(id, out _)))
             throw new ArgumentException("The player references a discovered server that does not exist in the network.", nameof(player));
 
         Player = player;
