@@ -17,6 +17,8 @@ public sealed class CloudServerService
         this.formulas = formulas ?? throw new ArgumentNullException(nameof(formulas));
     }
 
+    public int MaximumCount => formulas.MaximumCount;
+
     public int CloudServerCount => gameState.Network.Servers.Count(server => server.IsCloudServer);
 
     public IReadOnlyList<Server> GetServers()
