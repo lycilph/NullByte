@@ -39,6 +39,35 @@ public sealed class NarrativeCoordinator
             "player.inspect");
     }
 
+    /// <summary>
+    /// Returns concise tutorial guidance for capabilities the player has already unlocked.
+    /// This is deliberately derived from capability state rather than from terminal history,
+    /// so the essential instructions remain available after save/load.
+    /// </summary>
+    public IReadOnlyList<NarrativeMessage> GetTutorialGuide()
+    {
+        var messages = new List<NarrativeMessage>();
+
+        AddIfAvailable(messages, "journal.status", "STATUS\nInspect the local runtime and player state with: status", "player.inspect");
+        AddIfAvailable(messages, "journal.host", "HOST CONTROLS\nUse help to see available commands. save and load manage your saves. exit leaves the game.", "host.controls");
+        AddIfAvailable(messages, "journal.scan", "NETWORK DISCOVERY\nUse scan to discover hosts connected to your current server.", "network.scan");
+        AddIfAvailable(messages, "journal.analyze", "NETWORK ANALYSIS\nUse analyze <host> to inspect a discovered server before connecting.", "network.analyze");
+        AddIfAvailable(messages, "journal.connect", "NETWORK CONNECTION\nUse connect <host> to move between discovered hosts. Use home to return to your home server.", "network.connect");
+        AddIfAvailable(messages, "journal.root", "ACCESS\nUse nuke <host> when your hacking level is sufficient to gain root access.", "server.root-access");
+        AddIfAvailable(messages, "journal.operations", "SERVER OPERATIONS\nOn a rooted server, hack, grow and weaken change its resources and security.", "server.operations");
+        AddIfAvailable(messages, "journal.files", "FILES\nUse ls, cd and pwd to navigate. Use cat to read files. edit can create or change files.", "files.navigation");
+        AddIfAvailable(messages, "journal.scripts", "AUTOMATION\nCreate a script with edit, then run <file> to start it. Use ps to inspect processes and kill to stop them.", "scripts.execute");
+        AddIfAvailable(messages, "journal.expansion", "EXPANSION\nYour operational profile now includes distributed resources and optional human systems. Use help to explore the commands that are currently available.", "botnet.inspect");
+
+        return messages;
+    }
+
+    private void AddIfAvailable(List<NarrativeMessage> messages, string id, string text, string capability)
+    {
+        if (state.Narrative.HasCapability(capability))
+            messages.Add(new NarrativeMessage(id, text));
+    }
+
     public void StatusUsed()
     {
         Complete(

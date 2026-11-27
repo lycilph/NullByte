@@ -8,10 +8,18 @@ public sealed class SystemCommands(
     CommandRegistry registry,
     IGameTerminal terminal,
     HostRequestMailbox hostRequests,
-    AppSettings? settings) : ICommandGroup
+    AppSettings? settings,
+    NullByte.Core.Narrative.NarrativeCoordinator narrative) : ICommandGroup
 {
     public void Register(CommandRegistry registry)
     {
+        registry.Register(
+            new CommandDefinition(
+                "journal",
+                "journal",
+                "Review tutorial guidance for capabilities already unlocked.",
+                JournalAsync));
+
         registry.Register(
             new CommandDefinition(
                 "help",
@@ -58,6 +66,18 @@ public sealed class SystemCommands(
         };
 
         Process.Start(startInfo);
+    }
+
+    private async Task JournalAsync(IReadOnlyList<string> arguments)
+    {
+        terminal.WriteLine("SYSTEM JOURNAL");
+        terminal.WriteLine();
+
+        foreach (var message in narrative.GetTutorialGuide())
+        {
+            terminal.WriteLine(message.Text);
+            terminal.WriteLine();
+        }
     }
 
     private async Task HelpAsync(IReadOnlyList<string> arguments)

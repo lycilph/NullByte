@@ -7,6 +7,7 @@ internal static class CommandCapabilityMap
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["help"] = "host.controls",
+            ["journal"] = "host.controls",
             ["exit"] = "host.controls",
             ["clear"] = "host.controls",
             ["vscode"] = "host.controls",
