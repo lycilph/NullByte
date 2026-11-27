@@ -41,7 +41,7 @@ public sealed class NarrativeCapabilityCommandTests
         Assert.True(harness.Registry.TryGet("help", out _));
         Assert.True(harness.Registry.TryGet("quit", out _));
         Assert.True(harness.Registry.TryGet("cls", out _));
-         Assert.True(harness.Registry.TryGet("scan", out _));
+        Assert.True(harness.Registry.TryGet("scan", out _));
         Assert.False(harness.Registry.TryGet("analyze", out _));
         Assert.False(harness.Registry.TryGet("money", out _));
         Assert.False(harness.Registry.TryGet("skills", out _));
