@@ -40,7 +40,7 @@ internal sealed class EditorFixture : IDisposable
         network.AddServer(NewServer("home"));
         network.AddServer(NewServer("n00dles"));
 
-        State = new GameState(new Player("home", 0, 0), network);
+        State = new GameState(new Player(network.GetServer("home").Id, 0, 0), network);
 
         var scriptCompiler = new ScriptCompiler();
         var scriptLoader = new ScriptAssemblyLoader();
