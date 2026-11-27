@@ -52,8 +52,8 @@ public sealed class CloudServerService
             return CloudServerOperationResult.Failed("RAM must be one of the supported tiers: 8, 16, 32, 64, 128 or 256 GB.");
         if (gameState.Network.TryGetServer(hostname, out _))
             return CloudServerOperationResult.Failed($"A server named '{hostname}' already exists.");
-        if (CloudServerCount >= formulasMaximumCount)
-            return CloudServerOperationResult.Failed($"You can own at most {formulasMaximumCount} cloud servers.");
+        if (CloudServerCount >= formulas.MaximumCount)
+            return CloudServerOperationResult.Failed($"You can own at most {formulas.MaximumCount} cloud servers.");
 
         var cost = GetPurchaseCost(ram);
         if (gameState.Player.Money < cost)
@@ -105,10 +105,6 @@ public sealed class CloudServerService
         return new CloudServerOperationResult(true, string.Empty, cost.Value, server);
     }
 
-    private int formulasMaximumCount => gameState.Network.Servers
-        .Where(server => server.IsCloudServer)
-        .Select(_ => 1)
-        .Count() + 5 - CloudServerCount; // replaced below by the configured limit
     private static void ValidateRam(int ram)
     {
         if (!CloudServerFormulas.IsSupportedRam(ram))

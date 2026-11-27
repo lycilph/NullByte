@@ -7,7 +7,10 @@ namespace NullByte.Core.Formulas;
 /// </summary>
 public sealed class CloudServerFormulas
 {
-    public static IReadOnlyList<int> RamTiers { get; } = Array.AsReadOnly([8, 16, 32, 64, 128, 256]);
+    private static readonly int[] ramTierValues = [8, 16, 32, 64, 128, 256];
+    public static IReadOnlyList<int> RamTiers { get; } = Array.AsReadOnly(ramTierValues);
+
+    public int MaximumCount => balance.CloudServerMaxCount;
 
     private readonly BalanceConfig balance;
 
@@ -52,7 +55,7 @@ public sealed class CloudServerFormulas
 
     private static int GetRamTierIndex(int ram)
     {
-        var index = RamTiers.IndexOf(ram);
+        var index = Array.IndexOf(ramTierValues, ram);
         if (index < 0)
             throw new ArgumentOutOfRangeException(nameof(ram), ram, "RAM must be one of the supported cloud-server tiers.");
 
