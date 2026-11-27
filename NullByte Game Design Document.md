@@ -215,7 +215,7 @@ Each method has a RAM cost declared with an attribute (for example `[RamCost(0.1
 | Group | Methods |
 | --- | --- |
 | Actions | `Hack`, `Grow`, `Weaken`, `Sleep` |
-| Info | `GetServerMoneyAvailable`, `GetServerMaxMoney`, `GetServerSecurityLevel`, `GetServerMinSecurityLevel`, `GetServerRequiredHackingLevel`, `GetHackingLevel`, `GetServerMaxRam`, `GetServerUsedRam`, `HasRootAccess` |
+| Info | `GetServerMoneyAvailable`, `GetServerMaxMoney`, `GetServerSecurityLevel`, `GetServerMinSecurityLevel`, `GetServerRequiredHackingLevel`, `GetServerMaxRam`, `GetServerUsedRam`, `HasRootAccess` |
 | Network | `Scan`, `Nuke` |
 | Scripts | `Run`, `Exec`, `Kill`, `Ps`, `Scp`, `ScriptRunning`, `GetScriptRam` |
 | Files | `Files.List`, `Files.Delete`, `Files.Move`, `Files.Copy` (paths relative to the server root; `List` returns every file on the server) |
