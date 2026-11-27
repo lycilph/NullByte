@@ -11,7 +11,7 @@ public sealed class CloudServerFormulasTests
     [InlineData(2, 400_000)]
     public void CalculatePurchaseCost_DoublesForEachExistingServer(int existing, double expected)
     {
-        Assert.Equal(expected, new CloudServerFormulas(new BalanceConfig()).CalculatePurchaseCost(existing));
+        Assert.Equal(expected, new CloudServerFormulas(new BalanceConfig()).CalculateServerCost(existing));
     }
 
     [Fact]
@@ -23,7 +23,7 @@ public sealed class CloudServerFormulasTests
             CloudServerCostGrowth = 3
         });
 
-        Assert.Equal(2_250, formulas.CalculatePurchaseCost(2));
+        Assert.Equal(2_250, formulas.CalculateServerCost(2));
     }
 
     [Theory]

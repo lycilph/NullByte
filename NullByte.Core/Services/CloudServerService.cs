@@ -27,10 +27,10 @@ public sealed class CloudServerService
             .OrderBy(server => server.Hostname, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-    public double GetPurchaseCost(int ram = 8)
+    public double GetServerCost(int ram = 8)
     {
         ValidateRam(ram);
-        var cost = formulas.CalculatePurchaseCost(CloudServerCount);
+        var cost = formulas.CalculateServerCost(CloudServerCount);
         if (ram > 8)
             cost += formulas.CalculateRamUpgradeCost(8, ram);
         return cost;
@@ -57,7 +57,7 @@ public sealed class CloudServerService
         if (CloudServerCount >= formulas.MaximumCount)
             return CloudServerOperationResult.Failed($"You can own at most {formulas.MaximumCount} cloud servers.");
 
-        var cost = GetPurchaseCost(ram);
+        var cost = GetServerCost(ram);
         if (gameState.Player.Money < cost)
             return CloudServerOperationResult.Failed($"Not enough money. This cloud server costs ${cost:N2}.");
 

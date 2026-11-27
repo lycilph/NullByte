@@ -1,7 +1,5 @@
 ﻿# In progress
 
-- Add cloud servers
-
 - Test projects clean up
   - Consolidate startup/fixture/infrastructure code in a shared class
   - Use Mocks where appropriate
@@ -11,7 +9,9 @@
 
 # Todo
 
+- Add a player sub-api (get skills, money etc.)
 - Maybe: add cancel manual hack, weaken and grow (backdoor?)
+- Make the text in the terminal green (so it doesn't look like a normal console)
 
 # Future ideas
 

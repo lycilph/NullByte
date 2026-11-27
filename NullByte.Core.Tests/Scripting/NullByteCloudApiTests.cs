@@ -43,7 +43,7 @@ public sealed class NullByteCloudApiTests
         var world = CreateWorld();
         var api = world.CreateApi(Substitute.For<IScriptOperations>(), cancellationToken: TestContext.Current.CancellationToken).Cloud;
 
-        Assert.Equal(world.CloudServerService.GetPurchaseCost(32), api.GetPurchaseCost(32));
+        Assert.Equal(world.CloudServerService.GetServerCost(32), api.GetServerCost(32));
     }
 
     [Fact]

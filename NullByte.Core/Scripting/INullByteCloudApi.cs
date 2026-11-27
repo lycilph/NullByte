@@ -1,5 +1,3 @@
-using NullByte.Core.Services;
-
 namespace NullByte.Core.Scripting;
 
 /// <summary>Defines cloud-server management exposed through <c>nb.Cloud</c>.</summary>
@@ -15,7 +13,7 @@ public interface INullByteCloudApi
 
     /// <summary>Gets the cost of buying a cloud server with the requested RAM tier.</summary>
     [RamCost(0.2)]
-    double GetPurchaseCost(int ram = 8);
+    double GetServerCost(int ram = 8);
 
     /// <summary>Gets the cost of upgrading a cloud server, or null if the upgrade is invalid.</summary>
     [RamCost(0.2)]

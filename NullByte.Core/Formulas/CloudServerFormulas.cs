@@ -26,7 +26,7 @@ public sealed class CloudServerFormulas
         ValidateGrowth(balance.CloudServerRamUpgradeCostGrowth, nameof(balance.CloudServerRamUpgradeCostGrowth));
     }
 
-    public double CalculatePurchaseCost(int existingCloudServerCount)
+    public double CalculateServerCost(int existingCloudServerCount)
     {
         if (existingCloudServerCount < 0)
             throw new ArgumentOutOfRangeException(nameof(existingCloudServerCount));

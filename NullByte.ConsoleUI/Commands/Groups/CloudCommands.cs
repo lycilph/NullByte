@@ -70,7 +70,7 @@ public sealed class CloudCommands(CloudServerService service, IGameOutput output
             }
         }
 
-        output.WriteLine($"Next server costs \u0024{service.GetPurchaseCost():N0} (8 GB).");
+        output.WriteLine($"Next server costs \u0024{service.GetServerCost():N0} (8 GB).");
         return Task.CompletedTask;
     }
 

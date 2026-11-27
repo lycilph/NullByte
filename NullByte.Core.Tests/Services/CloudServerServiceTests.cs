@@ -51,9 +51,9 @@ public sealed class CloudServerServiceTests
         var world = Create(money: 1_000_000);
 
         Assert.True(world.CloudServerService.Purchase("cloud-one").Succeeded);
-        Assert.Equal(200_000, world.CloudServerService.GetPurchaseCost());
+        Assert.Equal(200_000, world.CloudServerService.GetServerCost());
         Assert.True(world.CloudServerService.Purchase("cloud-two").Succeeded);
-        Assert.Equal(400_000, world.CloudServerService.GetPurchaseCost());
+        Assert.Equal(400_000, world.CloudServerService.GetServerCost());
     }
 
     [Fact]
@@ -125,9 +125,9 @@ public sealed class CloudServerServiceTests
                 CloudServerCostGrowth = 3
             });
 
-        Assert.Equal(250, world.CloudServerService.GetPurchaseCost());
+        Assert.Equal(250, world.CloudServerService.GetServerCost());
         Assert.True(world.CloudServerService.Purchase("cloud-one").Succeeded);
-        Assert.Equal(750, world.CloudServerService.GetPurchaseCost());
+        Assert.Equal(750, world.CloudServerService.GetServerCost());
     }
 
     [Fact]

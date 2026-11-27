@@ -23,7 +23,7 @@ public sealed class NullByteCloudApi : INullByteCloudApi
         return server is null ? null : ToInfo(server);
     }
 
-    public double GetPurchaseCost(int ram = 8) => cloudServerService.GetPurchaseCost(ram);
+    public double GetServerCost(int ram = 8) => cloudServerService.GetServerCost(ram);
 
     public double? GetUpgradeCost(string hostname, int ram)
         => cloudServerService.GetUpgradeCost(hostname, ram);
