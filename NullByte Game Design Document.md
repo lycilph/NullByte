@@ -661,7 +661,7 @@ Done. Design in 3.5.3 and 4.13.
 **Deliverables**
 
 - Tuned network, requirements and payouts so that a first playthrough has a clear arc: manual hack, Botnet, first script, script on several servers, home RAM upgrades.
-- Home RAM upgrade purchase (and optionally purchased servers).
+- Home RAM upgrades and cloud-server infrastructure.
 - Botnet and hack economy balanced so neither dominates.
 - Short in-game tutorial via `help` and a few sample scripts shipped in the starting file system.
 
@@ -685,7 +685,7 @@ Done. Design in 3.5.3 and 4.13.
 - **Console follow-ups**: `scp -r` for copying folders, a recursive `ls`, and refreshing tab completion when files change outside the console (scripts, the editor).
 - Factions, augmentations and a progression-reset loop that grants persistent bonuses. This is distinct from the M7 `reset --confirm` command, which starts a completely clean new game, but it may reuse the host-request and session-replacement architecture from 4.11.
 - Port-opening programs and more servers.
-- Purchased servers, stock market, offline progress.
+- Stock market, offline progress.
 - Script API versioning.
 
 ## 7. Testing strategy
