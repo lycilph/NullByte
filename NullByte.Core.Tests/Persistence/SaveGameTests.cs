@@ -37,12 +37,12 @@ public class SaveGameTests
         network.Connect("n00dles", "foodnstuff");
         network.Connect("foodnstuff", "zero-day");
 
-        var player = new Player("home", startingMoney: 0.1 + 0.2, startingHackingExperience: 1.0 / 3.0)
+        var player = new Player(ServerId.Parse(HomeServerId), startingMoney: 0.1 + 0.2, startingHackingExperience: 1.0 / 3.0)
         {
-            CurrentHostname = "n00dles"
+            CurrentServerId = ServerId.Parse(N00dlesServerId)
         };
-        player.DiscoverServer("n00dles");
-        player.DiscoverServer("foodnstuff");
+        player.DiscoverServer(ServerId.Parse(N00dlesServerId));
+        player.DiscoverServer(ServerId.Parse(FoodnstuffServerId));
 
         var state = new GameState(player, network);
 
@@ -83,7 +83,7 @@ public class SaveGameTests
 
         Assert.Equal(0.1 + 0.2, restored.State.Player.Money);
         Assert.Equal(1.0 / 3.0, restored.State.Player.HackingExperience);
-        Assert.Equal("n00dles", restored.State.Player.CurrentHostname);
+        Assert.Equal("n00dles", restored.State.Network.GetServer(restored.State.Player.CurrentServerId).Hostname);
         Assert.True(restored.State.Network.GetServer("n00dles").HasRootAccess);
         Assert.Equal(2, restored.State.Botnet.NodeCount);
         Assert.Equal(12.345, restored.State.Botnet.TotalEarned);
@@ -155,7 +155,7 @@ public class SaveGameTests
             foreach (var (a, b) in edgeOrder)
                 network.Connect(a, b);
 
-            return Serializer.Serialize(SaveGameMapper.Capture(new GameState(new Player("home"), network), GameTime, [], SavedAt));
+            return Serializer.Serialize(SaveGameMapper.Capture(new GameState(new Player(network.GetServer("home").Id), network), GameTime, [], SavedAt));
         }
 
         var reversedAndFlipped = edges.Reverse().Select(edge => (edge.Item2, edge.Item1));
