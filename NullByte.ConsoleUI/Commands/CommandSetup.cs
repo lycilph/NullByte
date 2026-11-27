@@ -32,6 +32,7 @@ public static class CommandSetup
             new ScriptCommands(session.Services.Network, session.Services.Scripts, workingDirectory, terminal),
             new ActionCommands(session.State.Player, session.Clock, formulas.ServerOperations, session.Services.Actions, session.Services.Network, terminal),
             new BotnetCommands(session.State.Botnet, session.Services.Botnet, formulas.Botnet, terminal),
+            new CloudCommands(session.Services.CloudServers, terminal),
             new ActivityCommands(session.Services.Activities, session.State.Player, formulas.Skills, terminal)
         ];
         
