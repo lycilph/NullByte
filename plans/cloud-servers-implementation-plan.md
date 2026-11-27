@@ -111,6 +111,7 @@ Follow existing botnet API conventions and expose cloud functionality through `n
 Exact DTOs, result types, validation and RAM-cost behavior must follow the existing scripting API conventions. The API delegates to `CloudServerService`.
 
 ### Step 8 — Integration testing, documentation and verification
+**Status: Completed**
 
 Cover stable identity, hostname changes, network relationships, running processes, persistence and migration, cloud purchases/upgrades, terminal commands, scripting API registration and RAM accounting.
 
@@ -118,7 +119,7 @@ Update architecture, codebase, game design and roadmap documentation as appropri
 
 ## Working strategy and constraints
 
-- Work on feature branch `feature/stable-server-identity`.
+- Work on feature branch `feature/server-renaming`.
 - Use a CI/test checkpoint after each meaningful step.
 - Keep the identity refactoring separate from cloud-server behavior.
 - Design with future CPU cores in mind, but do not implement them now.
