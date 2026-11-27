@@ -62,6 +62,33 @@ public sealed class ScriptCompilerTests
     }
 
     [Fact]
+    public void Compile_WithPlayerApi_Succeeds()
+    {
+        const string source = """
+            var money = nb.Player.Money;
+            var hackingExperience = nb.Player.Skills.Hacking.Experience;
+            var hackingLevel = nb.Player.Skills.Hacking.Level;
+            var charismaLevel = nb.Player.Skills.Charisma.Level;
+            nb.Print($"{money}/{hackingExperience}/{hackingLevel}/{charismaLevel}");
+            """;
+
+        var result = compiler.Compile(source, "player-api.cx");
+
+        AssertCompilationSucceeded(result);
+        Assert.NotNull(result.Script);
+    }
+
+    [Fact]
+    public void Compile_WithRemovedGetHackingLevel_Fails()
+    {
+        var result = compiler.Compile("nb.GetHackingLevel();", "removed-api.cx");
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Script);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "CS1061");
+    }
+
+    [Fact]
     public void Compile_ProvidesDefaultSystemUsing()
     {
         const string source = """

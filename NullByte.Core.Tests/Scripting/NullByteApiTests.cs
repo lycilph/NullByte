@@ -93,14 +93,49 @@ public sealed class NullByteApiTests
     }
 
     [Fact]
-    public void GetHackingLevel_ReturnsThePlayersHackingLevel()
+    public void Player_ExposesMoney()
     {
         var fixture = new ApiFixture();
 
-        var level = fixture.World.SkillFormulas.CalculateLevel(SkillKind.Hacking, fixture.World.Player.HackingExperience);
+        Assert.Equal(fixture.World.Player.Money, fixture.Api.Player.Money);
+    }
 
+    [Fact]
+    public void Player_ExposesExperienceAndLevelForEverySkill()
+    {
+        var fixture = new ApiFixture();
 
-        Assert.Equal(level, fixture.Api.GetHackingLevel());
+        fixture.World.Player.Skills.AddExperience(SkillKind.Hacking, 123.5);
+        fixture.World.Player.Skills.AddExperience(SkillKind.Strength, 50);
+        fixture.World.Player.Skills.AddExperience(SkillKind.Defense, 25);
+        fixture.World.Player.Skills.AddExperience(SkillKind.Dexterity, 10);
+        fixture.World.Player.Skills.AddExperience(SkillKind.Agility, 5);
+        fixture.World.Player.Skills.AddExperience(SkillKind.Charisma, 2);
+
+        AssertSkill(fixture, fixture.Api.Player.Skills.Hacking, SkillKind.Hacking);
+        AssertSkill(fixture, fixture.Api.Player.Skills.Strength, SkillKind.Strength);
+        AssertSkill(fixture, fixture.Api.Player.Skills.Defense, SkillKind.Defense);
+        AssertSkill(fixture, fixture.Api.Player.Skills.Dexterity, SkillKind.Dexterity);
+        AssertSkill(fixture, fixture.Api.Player.Skills.Agility, SkillKind.Agility);
+        AssertSkill(fixture, fixture.Api.Player.Skills.Charisma, SkillKind.Charisma);
+    }
+
+    [Fact]
+    public void The_nb_object_has_a_player_property()
+    {
+        Assert.NotNull(typeof(INullByteApi).GetProperty(nameof(INullByteApi.Player)));
+    }
+
+    private static void AssertSkill(
+        ApiFixture fixture,
+        SkillInfo skill,
+        SkillKind kind)
+    {
+        var expectedExperience = fixture.World.Player.Skills.GetExperience(kind);
+        var expectedLevel = fixture.World.SkillFormulas.CalculateLevel(kind, expectedExperience);
+
+        Assert.Equal(expectedExperience, skill.Experience);
+        Assert.Equal(expectedLevel, skill.Level);
     }
 
     [Fact]

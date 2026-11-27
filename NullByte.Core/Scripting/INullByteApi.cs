@@ -13,6 +13,7 @@ public interface INullByteApi
     INullByteBotnetApi Botnet { get; }
     INullByteCloudApi Cloud { get; }
     INullByteActivitiesApi Activities { get; }
+    INullBytePlayerApi Player { get; }
 
     /// <summary>Writes a line to the script's output.</summary>
     [RamCost(0.1)]
@@ -41,10 +42,6 @@ public interface INullByteApi
     /// <summary>Scan the network and returns the neighbors of a server.</summary>
     [RamCost(0.2)]
     IReadOnlyList<string> Scan(string hostname = "");
-
-    /// <summary>Gets the hacking level of the player.</summary>
-    [RamCost(0.1)]
-    double GetHackingLevel();
 
     /// <summary>Gets the amount of money currently available on a server.</summary>
     [RamCost(0.1)]

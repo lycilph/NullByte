@@ -70,8 +70,8 @@ public sealed class ScriptLanguageService : IDisposable
     /// <summary>Pays the one-off start-up cost (MEF composition, JIT) ahead of the first real request.</summary>
     public async Task WarmUpAsync()
     {
-        await GetCompletionsAsync("nb.", 3);
-        await GetHoverAsync("nb.GetHackingLevel();", 5);
+        await GetCompletionsAsync("nb.Player.Skills.", 17);
+        await GetHoverAsync("nb.Player.Skills.Hacking.Level", 27);
         await GetSignatureHelpAsync("nb.Hack(", 8);
     }
 

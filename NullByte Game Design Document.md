@@ -41,10 +41,18 @@ The exact numbers below follow Bitburner as far as I remember them and are **sta
 
 | Field | Notes |
 | --- | --- |
-| Money | `decimal` or `double`; decide in M0 (see open questions) |
-| Hacking skill | Derived from hacking XP |
-| Hacking XP | Gained from successful hack, grow and weaken |
+| Money | Current player money, represented as a `double` |
+| Skills | Each skill has accumulated experience; its level is derived from that experience |
+| Hacking experience | Gained from successful hack, grow and weaken |
 | Home | A server with RAM that bounds script capacity |
+
+The player scripting API exposes this information through `nb.Player`:
+
+- `nb.Player.Money` returns the player's current money.
+- `nb.Player.Skills` exposes the player's skills: `Hacking`, `Strength`, `Defense`, `Dexterity`, `Agility` and `Charisma`.
+- Each skill exposes `Experience` and `Level`. Experience is the accumulated value; level is calculated from the skill's experience using the game's skill formulas.
+
+For example, `nb.Player.Skills.Hacking.Level` returns the player's current hacking level, and `nb.Player.Skills.Hacking.Experience` returns the underlying experience. The same properties are available for every listed skill.
 
 ### 3.2 Server
 
@@ -210,18 +218,21 @@ Not done yet:
 
 ### 4.6 NB API (first set)
 
-Each method has a RAM cost declared with an attribute (for example `[RamCost(0.1)]`) so analysis can find it.
+Each API method has a RAM cost declared with an attribute (for example `[RamCost(0.1)]`) so analysis can find it. The player information API is property-based and exposes read-only values.
 
-| Group | Methods |
+| Group | Methods / properties |
 | --- | --- |
 | Actions | `Hack`, `Grow`, `Weaken`, `Sleep` |
-| Info | `GetServerMoneyAvailable`, `GetServerMaxMoney`, `GetServerSecurityLevel`, `GetServerMinSecurityLevel`, `GetServerRequiredHackingLevel`, `GetHackingLevel`, `GetServerMaxRam`, `GetServerUsedRam`, `HasRootAccess` |
+| Info | `GetServerMoneyAvailable`, `GetServerMaxMoney`, `GetServerSecurityLevel`, `GetServerMinSecurityLevel`, `GetServerRequiredHackingLevel`, `GetServerMaxRam`, `GetServerUsedRam`, `HasRootAccess` |
+| Player | `Player.Money`; `Player.Skills.<skill>.Experience` and `Player.Skills.<skill>.Level` for Hacking, Strength, Defense, Dexterity, Agility and Charisma |
 | Network | `Scan`, `Nuke` |
 | Scripts | `Run`, `Exec`, `Kill`, `Ps`, `Scp`, `ScriptRunning`, `GetScriptRam` |
 | Files | `Files.List`, `Files.Delete`, `Files.Move`, `Files.Copy` (paths relative to the server root; `List` returns every file on the server) |
 | Botnet | `Botnet.NumNodes`, `PurchaseNode`, `UpgradeLevel`, `UpgradeRam`, `UpgradeCore`, cost getters |
 | Output | `Print`, `Tprint` |
 | Args | `Args` |
+
+The former top-level `GetHackingLevel()` method is not part of the API. Read the value from `Player.Skills.Hacking.Level` instead.
 
 ### 4.7 Known risks and mitigations
 
