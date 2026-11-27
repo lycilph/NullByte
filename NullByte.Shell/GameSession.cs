@@ -195,6 +195,7 @@ public sealed class GameSession : IAsyncDisposable
                 scheduler,
                 networkService,
                 botnetService,
+                cloudServerService,
                 serverActions,
                 activityService,
                 formulas,
