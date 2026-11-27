@@ -15,6 +15,10 @@ public sealed class NarrativeCapabilityCommandTests
 
         Assert.Equal(["status"], harness.Registry.Commands.Select(command => command.Name));
         Assert.False(harness.Registry.TryGet("help", out _));
+        Assert.False(harness.Registry.TryGet("quit", out _));
+        Assert.False(harness.Registry.TryGet("cls", out _));
+        Assert.False(harness.Registry.TryGet("botnet buy", out _));
+        Assert.False(harness.Registry.TryGet("cloud buy", out _));
         Assert.False(harness.Registry.TryGet("debug", out _));
 
         var output = await harness.RunAndCaptureAsync("help");
@@ -35,6 +39,8 @@ public sealed class NarrativeCapabilityCommandTests
         await harness.RunAsync("status");
 
         Assert.True(harness.Registry.TryGet("help", out _));
+        Assert.True(harness.Registry.TryGet("quit", out _));
+        Assert.True(harness.Registry.TryGet("cls", out _));
         Assert.True(harness.Registry.TryGet("save", out _));
         Assert.True(harness.Registry.TryGet("scan", out _));
         Assert.False(harness.Registry.TryGet("analyze", out _));
