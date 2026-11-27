@@ -63,7 +63,7 @@ public sealed class NarrativeCoordinatorTests
     {
         var world = CoreTestSetup.CreateWorld(new CoreTestOptions
         {
-            Servers = [TestServers.Home(), TestServers.N00dles()]
+            Servers = [TestServers.Home(), TestServers.Create("n00dles")]
         });
         var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions);
         var messages = new List<NarrativeMessage>();
@@ -80,7 +80,7 @@ public sealed class NarrativeCoordinatorTests
     [Fact]
     public void SuccessfulNuke_UnlocksServerOperations()
     {
-        var target = TestServers.N00dles(hasRootAccess: false);
+        var target = TestServers.Create("n00dles", hasRootAccess: false);
         var world = CoreTestSetup.CreateWorld(new CoreTestOptions { Servers = [TestServers.Home(), target] });
         var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions);
         var messages = new List<NarrativeMessage>();
@@ -99,7 +99,7 @@ public sealed class NarrativeCoordinatorTests
     {
         var world = CoreTestSetup.CreateWorld(new CoreTestOptions
         {
-            Servers = [TestServers.Home(), TestServers.N00dles()]
+            Servers = [TestServers.Home(), TestServers.Create("n00dles")]
         });
         var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions);
         coordinator.MessagePublished += _ => throw new InvalidOperationException("observer failed");
