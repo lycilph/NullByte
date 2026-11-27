@@ -955,7 +955,7 @@ public sealed class ServerOperationFormulasTests
             1);
 
         return new Player(
-            homeHostname: "home",
+            ServerId.New(),
             startingHackingExperience:
                 ExperienceForLevel(level));
     }
