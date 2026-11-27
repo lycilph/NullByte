@@ -259,7 +259,7 @@ public class SaveGameTests
     [Fact]
     public void The_current_golden_file_loads_and_saves_back_unchanged()
     {
-        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V7));
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V8));
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 

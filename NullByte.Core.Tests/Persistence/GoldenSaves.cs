@@ -1181,9 +1181,10 @@ internal static class GoldenSaves
     }
   ]
 }
-"""
+""";
 
-    public const string V8 = """{
+    public const string V8 = """
+{
   "version": 8,
   "savedAtUtc": "2026-11-17T10:30:00+00:00",
   "gameTime": "00:12:34.2500000",
@@ -1369,6 +1370,5 @@ internal static class GoldenSaves
     "deliveredMessages": []
   }
 }
-""";;
-
+""";
 }
