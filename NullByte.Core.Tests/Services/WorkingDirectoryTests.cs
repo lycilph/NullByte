@@ -16,7 +16,7 @@ public class WorkingDirectoryTests
         network.AddServer(NewServer("n00dles"));
         network.Connect("home", "n00dles");
 
-        var state = new GameState(new Player("home", 0, 0), network);
+        var state = new GameState(new Player(network.GetServer("home").Id, 0, 0), network);
         var networkService = new NetworkService(
             state, new GameScheduler(new FakeGameClock()), new NetworkFormulas(new BalanceConfig()));
 
@@ -73,7 +73,7 @@ public class WorkingDirectoryTests
     public void The_directory_resets_when_the_player_moves_to_another_server()
     {
         var (state, work, network) = Create();
-        state.Player.DiscoverServer("n00dles");
+        state.Player.DiscoverServer(network.GetServer("n00dles").Id);
         state.FileSystem.CreateDirectory("home", "tools");
         state.FileSystem.CreateDirectory("n00dles", "logs");
         work.TryChange("tools", out _);
@@ -82,7 +82,7 @@ public class WorkingDirectoryTests
         Assert.Equal("tools", work.Current);
 
         network.Connect("n00dles");
-        Assert.Equal("n00dles", state.Player.CurrentHostname);
+        Assert.Equal("n00dles", network.GetServer(state.Player.CurrentServerId).Hostname);
         Assert.Equal("", work.Current);
 
         work.TryChange("logs", out _);
