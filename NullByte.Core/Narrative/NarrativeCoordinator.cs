@@ -107,7 +107,25 @@ public sealed class NarrativeCoordinator
             state.Narrative.UnlockCapability(capability);
 
         state.Narrative.CompleteMilestone(milestoneId);
-        if (state.Narrative.DeliverMessage(messageId))
-            MessagePublished?.Invoke(new NarrativeMessage(messageId, text));
+        if (!state.Narrative.DeliverMessage(messageId))
+            return;
+
+        var handlers = MessagePublished;
+        if (handlers is null)
+            return;
+
+        var message = new NarrativeMessage(messageId, text);
+        foreach (Action<NarrativeMessage> handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                handler(message);
+            }
+            catch (Exception exception)
+            {
+                System.Diagnostics.Trace.TraceError(
+                    $"A narrative message observer failed for '{messageId}': {exception}");
+            }
+        }
     }
 }
