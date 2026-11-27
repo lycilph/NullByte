@@ -1,4 +1,5 @@
-﻿using NullByte.Core.Randomness;
+﻿using NullByte.Core.Domain;
+using NullByte.Core.Randomness;
 using NullByte.Core.Tests.Infrastructure;
 
 namespace NullByte.Core.Tests.Services;
