@@ -1,5 +1,7 @@
 # Narrative Progression Design
 
+> **Implementation status (2026-11-27):** The Core coordinator, tutorial bootstrap, status milestone, and main network/root/hack/script-start triggers described below are implemented on `feature/narrative-design-docs`. Optional botnet/cloud/activity triggers remain deferred. The code and tests are the source of truth where this design draft differs from implementation.
+
 ## 1. Purpose and scope
 
 This document records Stage 3: how actual gameplay outcomes should drive narrative milestones, capability unlocks and SYSTEM messages.

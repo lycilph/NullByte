@@ -68,7 +68,7 @@ Acceptance:
 
 ### Stage 2 — Narrative and capability state model
 
-**Status: Drafted; awaiting review**
+**Status: Implemented; tests added**
 
 **Goal:** establish the smallest persistent representation of narrative progression and player access.
 
@@ -89,7 +89,7 @@ Acceptance:
 
 ### Stage 3 — Event-driven narrative progression
 
-**Status: Design drafted; awaiting review**
+**Status: Main-path foundation implemented; validation and remaining triggers pending**
 
 **Goal:** translate gameplay milestones into narrative messages and capability unlocks.
 
@@ -247,10 +247,10 @@ Keep the first implementation narrow.
 | 0 — Narrative design and repository alignment | Complete |
 | 1 — Tutorial walkthrough and capability map | Complete (design draft) |
 | 2 — Narrative and capability state model | Implemented; tests added |
-| 3 — Event-driven narrative progression | Design drafted; awaiting review |
+| 3 — Event-driven narrative progression | Main-path foundation implemented; validation pending |
 | 4 — Capability gating across player interfaces | Not started |
 | 5 — Initial tutorial content and presentation | Not started |
 | 6 — Activity-system narrative | Not started |
 | 7 — Review, balance and documentation | Not started |
 
-Stages 0 and 1 are complete as design work. The access decisions are confirmed and recorded in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md). Stage 2's state and persistence design is in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md). The Tutorial/Freeplay state, save-format migration and new-game mode selection are implemented on the feature branch. Stage 3's event-driven progression design remains a draft in [NARRATIVE_PROGRESSION_DESIGN.md](NARRATIVE_PROGRESSION_DESIGN.md).
+Stages 0 and 1 are complete as design work. The access decisions are confirmed and recorded in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md). Stage 2's Tutorial/Freeplay state, save-format migration and new-game mode selection are implemented on the feature branch. Stage 3 now has a Core-owned coordinator, session bootstrap, host-neutral SYSTEM messages, and event-driven milestones for status, network discovery/analysis/connection, root access, successful hacking and successful script start. Focused coordinator tests have been added. Remaining work includes broader service-event coverage, end-to-end session validation and CI verification. Capability enforcement remains Stage 4.
