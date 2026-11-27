@@ -43,9 +43,10 @@ internal sealed class EditorFixture : IDisposable
         var network = new Network();
         network.AddServer(NewServer("home"));
         network.AddServer(NewServer("n00dles"));
+        network.Connect("home", "n00dles");
 
         State = new GameState(new Player(network.GetServer("home").Id, 0, 0), network);
-        NetworkService = new NetworkService(State, new GameScheduler(new FakeClock()), new NetworkFormulas(new BalanceConfig()));
+        NetworkService = new NetworkService(State, new GameScheduler(new FakeGameClock()), new NetworkFormulas(new BalanceConfig()));
 
         var scriptCompiler = new ScriptCompiler();
         var scriptLoader = new ScriptAssemblyLoader();
