@@ -7,6 +7,8 @@ namespace NullByte.ConsoleUI.Terminal;
 public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsyncDisposable
 {
     private const int RefreshDelayMilliseconds = 16;
+    private const ConsoleColor TerminalColor = ConsoleColor.Green;
+    private const ConsoleColor NarrativeColor = ConsoleColor.Cyan;
 
     private readonly int maximumHistoryLines;
     private ICompletionProvider? completionProvider;
@@ -41,7 +43,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
     private readonly CancellationTokenSource stopSource = new();
 
     // These fields are accessed only by the UI loop.
-    private readonly List<string> history = [];   // Output lines shown on screen.
+    private readonly List<HistoryLine> history = [];   // Output lines shown on screen.
     private readonly InputHistory inputHistory;    // Previously submitted commands (Up/Down).
     private readonly StringBuilder input = new();
 
@@ -169,8 +171,23 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
         foreach (var line in lines)
         {
             requests.Writer.TryWrite(
-                new AppendLineRequest(line));
+                new AppendLineRequest(line, TerminalColor));
         }
+    }
+
+    /// <summary>Writes narrative output using the terminal's narrative color.</summary>
+    public void WriteNarrativeLine(string message)
+    {
+        if (hasDisposed || stopSource.IsCancellationRequested)
+            return;
+
+        var lines = (message ?? string.Empty)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Split('\n');
+
+        foreach (var line in lines)
+            requests.Writer.TryWrite(new AppendLineRequest(line, NarrativeColor));
     }
 
     public void Clear()
@@ -253,6 +270,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
         try
         {
             Console.CursorVisible = false;
+            Console.ForegroundColor = TerminalColor;
             Console.Clear();
         }
         catch
@@ -274,6 +292,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
             var finalRow = Math.Max(0, SafeWindowHeight() - 1);
 
             Console.SetCursorPosition(0, finalRow);
+            Console.ForegroundColor = TerminalColor;
             Console.WriteLine();
             Console.CursorVisible = true;
         }
@@ -297,7 +316,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
                     break;
 
                 case AppendLineRequest append:
-                    history.Add(append.Message);
+                    history.Add(new HistoryLine(append.Message, append.Color));
                     TrimHistory();
                     changed = true;
                     break;
@@ -494,7 +513,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
             catch (Exception exception)
             {
                 // A failing hotkey must not take down the UI loop.
-                history.Add($"Hotkey failed: {exception.Message}");
+                history.Add(new HistoryLine($"Hotkey failed: {exception.Message}", TerminalColor));
                 TrimHistory();
             }
 
@@ -509,7 +528,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
         if (!string.IsNullOrWhiteSpace(command))
         {
             // Echo the submitted command into the output history.
-            history.Add($"{prompt}{command}");
+            history.Add(new HistoryLine($"{prompt}{command}", TerminalColor));
             TrimHistory();
 
             commands.Writer.TryWrite(command);
@@ -568,8 +587,8 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
         // show the options, like a shell does on a second Tab.
         if (!extended && result.Candidates.Count > 1)
         {
-            history.Add($"{prompt}{current}");
-            history.Add(string.Join("  ", result.Candidates));
+            history.Add(new HistoryLine($"{prompt}{current}", TerminalColor));
+            history.Add(new HistoryLine(string.Join("  ", result.Candidates), TerminalColor));
             TrimHistory();
             extended = true;
         }
@@ -611,8 +630,8 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
 
         for (var row = 0; row < historyHeight; row++)
         {
-            var text = row < wrappedOutput.Count ? wrappedOutput[row] : string.Empty;
-            WriteRow(historyHeight - row - 1, text, usableWidth);
+            var rendered = row < wrappedOutput.Count ? wrappedOutput[row] : new RenderedLine(string.Empty, TerminalColor);
+            WriteRow(historyHeight - row - 1, rendered.Text, usableWidth, rendered.Color);
         }
 
         if (panelRows > 0)
@@ -631,7 +650,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
         if (outputHeight == 0)
             return [];
 
-        var wrapped = new List<string>();
+        var wrapped = new List<RenderedLine>();
 
         foreach (var historyLine in history)
         {
@@ -646,11 +665,11 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
             outputHeight);
     }
 
-    private static void WrapLine(string line, int width, List<string> destination)
+    private static void WrapLine(HistoryLine line, int width, List<RenderedLine> destination)
     {
         if (line.Length == 0)
         {
-            destination.Add(string.Empty);
+            destination.Add(new RenderedLine(string.Empty, line.Color));
             return;
         }
 
@@ -659,7 +678,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
         while (index < line.Length)
         {
             var length = Math.Min(width, line.Length - index);
-            destination.Add(line.Substring(index, length));
+            destination.Add(new RenderedLine(line.Text.Substring(index, length), line.Color));
             index += length;
         }
     }
@@ -689,13 +708,9 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
             visibleInput = visibleInput[..usableWidth];
 
         var foregroundColor = Console.ForegroundColor;
-        if (!isInputEnabled)
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-
-        WriteRow(row, visibleInput, usableWidth);
-
-        if (!isInputEnabled)
-            Console.ForegroundColor = foregroundColor;
+        var inputColor = isInputEnabled ? TerminalColor : ConsoleColor.DarkGray;
+        WriteRow(row, visibleInput, usableWidth, inputColor);
+        Console.ForegroundColor = foregroundColor;
 
         var visibleCursorPosition = absoluteCursorPosition - horizontalOffset;
         visibleCursorPosition = Math.Clamp(visibleCursorPosition, 0, usableWidth - 1);
@@ -703,18 +718,22 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
         Console.SetCursorPosition(visibleCursorPosition, row);
     }
 
-    private static void WriteRow(int row, string text, int usableWidth)
+    private static void WriteRow(int row, string text, int usableWidth, ConsoleColor color = TerminalColor)
     {
         if (text.Length > usableWidth)
             text = text[..usableWidth];
 
         Console.SetCursorPosition(0, row);
+        var previousColor = Console.ForegroundColor;
+        Console.ForegroundColor = color;
         Console.Write(text);
 
         var remaining = usableWidth - text.Length;
 
         if (remaining > 0)
             Console.Write(new string(' ', remaining));
+
+        Console.ForegroundColor = previousColor;
     }
 
     private void WriteProgressRow(int row, int usableWidth)
@@ -803,7 +822,11 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
 
     private abstract record TerminalRequest;
 
-    private sealed record AppendLineRequest(string Message) : TerminalRequest;
+    private sealed record AppendLineRequest(string Message, ConsoleColor Color) : TerminalRequest;
+
+    private sealed record HistoryLine(string Text, ConsoleColor Color);
+
+    private sealed record RenderedLine(string Text, ConsoleColor Color);
 
     private sealed record ClearRequest : TerminalRequest
     {
