@@ -1,5 +1,6 @@
 using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Services;
+using NullByte.Core.Formulas;
 
 namespace NullByte.ConsoleUI.Commands.Groups;
 
@@ -113,5 +114,5 @@ public sealed class CloudCommands(CloudServerService service, IGameOutput output
     }
 
     private static int? ParseRam(string value)
-        => int.TryParse(value, out var ram) ? ram : null;
+        => int.TryParse(value, out var ram) && CloudServerFormulas.IsSupportedRam(ram) ? ram : null;
 }
