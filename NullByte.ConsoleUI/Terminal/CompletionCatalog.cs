@@ -47,7 +47,7 @@ public sealed class CompletionCatalog : ICompletionProvider
             BuildCommands();
 
         var knownServers =
-            player.DiscoveredHostnames
+            player.DiscoveredServerIds.Select(id => network.GetServer(id).Hostname).ToHashSet(StringComparer.OrdinalIgnoreCase)
                 .Select(hostname =>
                     network.TryGetServer(
                         hostname,
@@ -61,14 +61,14 @@ public sealed class CompletionCatalog : ICompletionProvider
         // Mirrors NetworkService.Connect: adjacent servers, plus any backdoored server, as long as it is discovered.
         var connectableServers =
             network
-                .GetNeighbors(player.CurrentHostname)
+                .GetNeighbors(network.GetServer(player.CurrentServerId).Hostname)
                 .Concat(network.Servers.Where(server => server.HasBackdoor))
                 .Where(server =>
-                    player.DiscoveredHostnames.Contains(
+                    player.DiscoveredServerIds.Select(id => network.GetServer(id).Hostname).ToHashSet(StringComparer.OrdinalIgnoreCase).Contains(
                         server.Hostname) &&
                     !string.Equals(
                         server.Hostname,
-                        player.CurrentHostname,
+                        network.GetServer(player.CurrentServerId).Hostname,
                         StringComparison.OrdinalIgnoreCase))
                 .Select(server => server.Hostname)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -76,12 +76,12 @@ public sealed class CompletionCatalog : ICompletionProvider
 
         var files =
             gameState.FileSystem
-                .ListFiles(player.CurrentHostname)
+                .ListFiles(network.GetServer(player.CurrentServerId).Hostname)
                 .ToArray();
 
         var directories =
             gameState.FileSystem
-                .ListDirectories(player.CurrentHostname)
+                .ListDirectories(network.GetServer(player.CurrentServerId).Hostname)
                 .ToArray();
 
         var saves =
