@@ -18,6 +18,7 @@ Inspired by Bitburner. The first iteration is a console game with an optional VS
 | `NARRATIVE.md` | Narrative setting, characters, story arc and capability-unlock principles |
 | `NARRATIVE_IMPLEMENTATION_PLAN.md` | Staged plan for designing and implementing the narrative tutorial |
 | `NARRATIVE_TUTORIAL.md` | Current command/API capability map and proposed first playable walkthrough |
+| `NARRATIVE_STATE_DESIGN.md` | Narrative state model, save migration and legacy-save compatibility design |
 
 ## Build and run
 
