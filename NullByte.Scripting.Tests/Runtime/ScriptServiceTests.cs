@@ -19,6 +19,21 @@ public sealed class ScriptServiceTests
     }
 
     [Fact]
+    public async Task Start_InTutorialModeWithoutCapability_IsRejectedBeforeCompilation()
+    {
+        var fixture = new Fixture();
+        fixture.GameState.Narrative.Mode = NarrativeProgressionMode.Tutorial;
+        fixture.WriteScript("hello.cx", """nb.Print("Hello");""");
+
+        var result = await fixture.Service.Start(fixture.Home.Hostname, "hello.cx", []);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("not available", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(fixture.Service.Processes);
+        Assert.Equal(0, fixture.Home.UsedRam);
+    }
+
+    [Fact]
     public async Task Start_WithExistingScript_ExecutesScript()
     {
         var fixture = new Fixture();
@@ -399,6 +414,7 @@ public sealed class ScriptServiceTests
             GameState = new GameState(
                 new Player(Home.Id),
                 network);
+            GameState.Narrative.Mode = NarrativeProgressionMode.Freeplay;
             GameState.Narrative.Mode = NarrativeProgressionMode.Freeplay;
 
             Api = new TestNullByteApi();
