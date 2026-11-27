@@ -68,12 +68,14 @@ public sealed class NullByteApi : INullByteApi
         Botnet = new NullByteBotnetApi(gameState.Botnet, botnetService, botnetFormulas);
         Cloud = new NullByteCloudApi(cloudServerService);
         Activities = new NullByteActivitiesApi(gameState, activityService, skillFormulas, cancellationToken);
+        Player = new NullBytePlayerApi(gameState.Player, skillFormulas);
     }
 
     public INullByteFilesApi Files { get; }
     public INullByteBotnetApi Botnet { get; }
     public INullByteCloudApi Cloud { get; }
     public INullByteActivitiesApi Activities { get; }
+    public INullBytePlayerApi Player { get; }
 
     public void Print(object? value) => output.WriteLine(value?.ToString() ?? string.Empty);
     public Task Sleep(TimeSpan duration) => scheduler.DelayAsync(duration, cancellationToken);
@@ -82,7 +84,6 @@ public sealed class NullByteApi : INullByteApi
     public Task<WeakenResult> Weaken(string hostname = "") => serverActions.WeakenAsync(GetTargetHostname(hostname), processThreads, cancellationToken);
     public NukeResult Nuke(string hostname = "") => serverActions.Nuke(GetTargetHostname(hostname));
     public IReadOnlyList<string> Scan(string hostname = "") => networkService.Scan(GetTargetHostname(hostname)).Select(s => s.Hostname).ToList();
-    public double GetHackingLevel() => skillFormulas.CalculateLevel(SkillKind.Hacking, gameState.Player.HackingExperience);
     public double GetServerMoneyAvailable(string hostname = "") => GetServer(GetTargetHostname(hostname)).Money;
     public double GetServerMaxMoney(string hostname = "") => GetServer(GetTargetHostname(hostname)).MaximumMoney;
     public double GetServerSecurityLevel(string hostname = "") => GetServer(GetTargetHostname(hostname)).Security;
