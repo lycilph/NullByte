@@ -8,6 +8,22 @@ namespace NullByte.Core.Tests.World;
 public sealed class InitialGameStateFactoryIntegrationTests
 {
     [Fact]
+    public void Create_DefaultsToTutorialMode()
+    {
+        var gameState = InitialGameStateFactory.Create();
+
+        Assert.Equal(NarrativeProgressionMode.Tutorial, gameState.Narrative.Mode);
+    }
+
+    [Fact]
+    public void Create_CanStartInFreeplayMode()
+    {
+        var gameState = InitialGameStateFactory.Create(NarrativeProgressionMode.Freeplay);
+
+        Assert.Equal(NarrativeProgressionMode.Freeplay, gameState.Narrative.Mode);
+    }
+
+    [Fact]
     public void Create_CreatesValidExpandedWorld()
     {
         // Act
