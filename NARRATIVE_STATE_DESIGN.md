@@ -15,7 +15,7 @@ The following decisions were made for the tutorial:
 1. **Literal zero-command start.** At the beginning of a new game, no console commands are available—not even `help`, `save`, `load`, `exit`, `clear` or `reset`.
 2. **First command is `status`.** SYSTEM automatically presents the initialization sequence and explicitly tells the player when `status` becomes available. The player never has to guess it.
 3. **Runtime API enforcement.** Script API calls will be checked at runtime against the same capability state as console commands. The API interface and IntelliSense may still expose unavailable members in the first implementation.
-4. **Legacy-save compatibility.** Saves created before narrative gating must retain access to all existing and future capabilities without replaying the new-game tutorial or being forced through the new unlock sequence.
+4. **Freeplay-save compatibility.** Saves created before narrative gating must retain access to all existing and future capabilities without replaying the new-game tutorial or being forced through the new unlock sequence.
 
 ## 3. State ownership
 
@@ -40,7 +40,7 @@ The initial state should remain deliberately small:
 
 | Field | Type / shape | Purpose |
 |---|---|---|
-| Progression mode | Stable enum: `Tutorial` or `Legacy` | Distinguishes a new narrative-gated game from a pre-narrative save |
+| Progression mode | Stable enum: `Tutorial` or `Freeplay` | Distinguishes a new narrative-gated game from a pre-narrative save |
 | Unlocked capability IDs | Set of stable strings | Records capabilities explicitly acquired in tutorial mode |
 | Completed milestone IDs | Set of stable strings | Prevents milestone triggers from being applied more than once |
 | Delivered message IDs | Set of stable strings | Prevents one-time SYSTEM messages from being delivered more than once |
@@ -59,18 +59,18 @@ public sealed class NarrativeState
 
 The actual API should preserve the project's normal domain encapsulation and validation style; callers should use methods such as `HasCapability`, `UnlockCapability`, `CompleteMilestone` and `MarkMessageDelivered`, rather than mutating collections directly.
 
-### 3.3 Why use a Legacy mode?
+### 3.3 Why use a Freeplay mode?
 
-A legacy save should not be migrated by writing a list of every capability known today. That would create a maintenance trap: every future capability would need another migration or an explicit grant to avoid restricting old players.
+A freeplay save should not be migrated by writing a list of every capability known today. That would create a maintenance trap: every future capability would need another migration or an explicit grant to avoid restricting old players.
 
 Instead:
 
 - `Tutorial` mode uses the explicit unlocked-capability set.
-- `Legacy` mode treats every capability as available.
-- A legacy save therefore remains compatible when new capabilities are added in later versions.
-- The legacy mode is permanent for that save unless a deliberate conversion feature is designed later.
+- `Freeplay` mode treats every capability as available.
+- A freeplay save therefore remains compatible when new capabilities are added in later versions.
+- The freeplay mode is permanent for that save unless a deliberate conversion feature is designed later.
 
-Legacy mode also marks the tutorial as bypassed. It must not replay initialization messages or trigger first-time tutorial milestones merely because the older save did not record them.
+Freeplay mode also marks the tutorial as bypassed. It must not replay initialization messages or trigger first-time tutorial milestones merely because the older save did not record them.
 
 ### 3.4 Stable identifiers
 
@@ -168,7 +168,7 @@ If later content needs explicit branching or chapter checkpoints, introduce that
 5. A locked command resolves exactly like an unknown command: no help entry, completion result, alias, usage or subcommand disclosure.
 6. Runtime script API calls require the same capability as the corresponding console operation.
 7. A script cannot gain access by calling a lower-level API route that bypasses the intended capability boundary.
-8. Legacy mode grants all capabilities, including capabilities introduced by future updates.
+8. Freeplay mode grants all capabilities, including capabilities introduced by future updates.
 9. Unlocking a capability is idempotent and persisted.
 10. Narrative progression is deterministic and mutated only on the game thread.
 
@@ -179,6 +179,8 @@ The first iteration enforces scripting restrictions at runtime. Editor completio
 ### 7.1 Save contract
 
 The current save format is version 7. The narrative state should be added as a required top-level `Narrative` save object in the next format version.
+
+New-game creation should offer two progression modes: `Tutorial` (the default, with the zero-command opening) and `Freeplay` (starts with all capabilities available and skips the tutorial). The existing restart/new-game flow should expose this choice without requiring a story command.
 
 Proposed shape:
 
@@ -208,10 +210,10 @@ The domain model and save DTO remain separate. Do not serialize the live domain 
 
 Add a `V7ToV8Migration` and register it in `SaveMigrator`. The migration should add the narrative object with:
 
-- `mode = legacy`;
+- `mode = freeplay`;
 - empty unlocked-capability, milestone and delivered-message arrays.
 
-The empty capability list is intentional: Legacy mode means all capabilities are available. This avoids hardcoding today's capability inventory into the migration and keeps old saves compatible with future capabilities.
+The empty capability list is intentional: Freeplay mode means all capabilities are available. This avoids hardcoding today's capability inventory into the migration and keeps old saves compatible with future capabilities.
 
 The migration must be deterministic and safe to run only once in the normal sequential migration pipeline. The typed save contract must require the narrative object after migration.
 
@@ -220,7 +222,7 @@ The migration must be deterministic and safe to run only once in the normal sequ
 - `SaveGameMapper.Capture` copies the narrative mode and sorted ID collections from `GameState.Narrative`.
 - `SaveGameMapper.Restore` validates the mode and IDs, creates the domain `NarrativeState`, and attaches it to the restored `GameState`.
 - A restored Tutorial-mode save resumes exactly where it left off.
-- A restored Legacy-mode save remains unrestricted and does not replay the tutorial.
+- A restored Freeplay-mode save remains unrestricted and does not replay the tutorial.
 - Running scripts are restarted only after the restored state is available; their API instances must consult the restored narrative state.
 
 ### 7.4 Validation
@@ -242,7 +244,7 @@ Stage 2 implementation should include tests at the owning layer.
 ### Domain state
 
 - New Tutorial-mode state has no capabilities, milestones or delivered messages.
-- Legacy-mode state reports every capability as available.
+- Freeplay-mode state reports every capability as available.
 - Unlocking a capability twice has one effect.
 - Completing a milestone twice has one effect.
 - Marking a message delivered twice has one effect.
@@ -251,9 +253,9 @@ Stage 2 implementation should include tests at the owning layer.
 ### Persistence
 
 - Capture/restore preserves Tutorial-mode capability, milestone and message state.
-- Capture/restore preserves Legacy mode.
+- Capture/restore preserves Freeplay mode.
 - Serialized collections are deterministic and ordinally sorted.
-- A version 7 save migrates to version 8 Legacy mode with empty explicit collections.
+- A version 7 save migrates to version 8 Freeplay mode with empty explicit collections.
 - Saves from earlier supported versions still migrate through version 8.
 - The existing golden-save fixture is updated deliberately for the new version and shape.
 - A malformed narrative object fails with the normal save-format error.
@@ -263,7 +265,7 @@ Stage 2 implementation should include tests at the owning layer.
 - A fresh session performs automatic initialization and unlocks only `player.inspect`.
 - Before `status` is successfully executed, no command—including host controls—is available.
 - After `status`, host controls become available.
-- Loading a legacy save does not run the new-game initialization.
+- Loading a freeplay save does not run the new-game initialization.
 - A restored Tutorial-mode save does not replay already-delivered one-time messages.
 - Script API instances created after load observe the restored capability state.
 
@@ -275,11 +277,11 @@ Stage 2 implementation should include tests at the owning layer.
 - Branching dialogue, choices and morality/alignment.
 - Capability-aware IntelliSense/editor completion.
 - A general quest/dialogue framework.
-- Conversion of a Legacy save into Tutorial mode.
+- Conversion of a Freeplay save into Tutorial mode.
 - Any changes to starting money, home server, network topology or existing gameplay balance.
 
 ## 10. Stage 2 outcome
 
 Stage 2 is complete when this state/persistence design is accepted and the implementation can proceed without unresolved questions about state ownership, new-game defaults, old-save compatibility or idempotency.
 
-The next implementation stage is Stage 3: event-driven narrative progression. Before Stage 3, the capability matrix from `NARRATIVE_TUTORIAL.md` should be finalized against every command and public scripting API operation.
+The next implementation stage is Stage 3: event-driven narrative progression. The current service/event map and proposed trigger contracts are documented in [NARRATIVE_PROGRESSION_DESIGN.md](NARRATIVE_PROGRESSION_DESIGN.md).
