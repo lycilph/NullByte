@@ -27,7 +27,7 @@ public sealed class CommandDefinition
     public Func<IReadOnlyList<string>, Task> Handler { get; }
 
     /// <summary>Alternative versions of the command</summary>
-    public IReadOnlyList<string> Aliases { get; init;  } = [];
+    public IReadOnlyList<string> Aliases { get; init; } = [];
     /// <summary>Checks if the number of arguments are correct</summary>
     public int MinArgs { get; init; } = 0;
     public int MaxArgs { get; init; } = 0; // int.MaxValue for variadic

@@ -6,7 +6,7 @@
 /// </summary>
 public abstract record HostRequest
 {
-    private HostRequest() {}
+    private HostRequest() { }
 
     public sealed record Shutdown : HostRequest;
 

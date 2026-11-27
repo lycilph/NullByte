@@ -43,7 +43,7 @@ public sealed class BootSequenceTests
             line.IndexOf("[ OK ]", StringComparison.Ordinal)));
         Assert.All(dotCounts, count => Assert.True(count > 6));
         Assert.True(dotCounts.Distinct().Count() > 1);
-        Assert.Equal(dotCounts.Sum()+1, delays.Count);
+        Assert.Equal(dotCounts.Sum() + 1, delays.Count);
 
         var totalDelays = new List<double>();
         var delayIndex = 0;

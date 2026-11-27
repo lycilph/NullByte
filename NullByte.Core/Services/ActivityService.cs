@@ -35,12 +35,12 @@ public sealed class ActivityService
     /// player stopped it or it ended by itself. Handlers must not throw.
     /// </summary>
     public event Action<ActivityEndInfo>? ActivityEnded;
-    
+
     /// <summary>
     /// Raised on the game thread when the player is promoted while working. Handlers must not throw.
     /// </summary>
     public event Action<JobPromotion>? JobPromoted;
-    
+
     /// <summary>
     /// Raised on the game thread whenever an attempt at a crime ends, however it went.
     /// Handlers must not throw.
@@ -52,7 +52,7 @@ public sealed class ActivityService
 
     /// <summary>Gets the current activity, or null if the player is idle.</summary>
     public Activity? Current => gameState.Activity.Current;
-    
+
     /// <summary>Gets the player's jobs and reputation.</summary>
     public Employment Employment => gameState.Employment;
 
@@ -255,7 +255,7 @@ public sealed class ActivityService
 
         return activity;
     }
-    
+
     /// <summary>Promotes a working player as far as they now qualify for, and tells the listeners.</summary>
     internal void PromoteIfQualified(JobActivity job)
     {

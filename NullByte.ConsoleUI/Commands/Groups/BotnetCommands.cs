@@ -38,7 +38,8 @@ public sealed class BotnetCommands(Botnet botnet, BotnetService service, BotnetF
             "Upgrade a botnet node.",
             UpgradeAsync)
         {
-            MinArgs = 2, MaxArgs = 2,
+            MinArgs = 2,
+            MaxArgs = 2,
             Completions =
                 [
                     new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.BotnetNode },

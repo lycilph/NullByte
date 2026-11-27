@@ -40,6 +40,6 @@ public sealed class FakeGameClock : IGameClock
         Elapsed += amount;
     }
 
-    public void Start() {}
-    public void Stop() {}
+    public void Start() { }
+    public void Stop() { }
 }

@@ -6,7 +6,7 @@ namespace NullByte.Core.Persistence;
 /// </summary>
 public sealed class SaveFormatException : Exception
 {
-    public SaveFormatException(string message) : base(message) {}
+    public SaveFormatException(string message) : base(message) { }
 
-    public SaveFormatException(string message, Exception innerException) : base(message, innerException) {}
+    public SaveFormatException(string message, Exception innerException) : base(message, innerException) { }
 }

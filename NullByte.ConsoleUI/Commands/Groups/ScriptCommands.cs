@@ -20,7 +20,8 @@ public sealed class ScriptCommands(
                 "Run a script, optionally with several threads.",
                 RunScriptAsync)
             {
-                MinArgs = 1, MaxArgs = int.MaxValue,
+                MinArgs = 1,
+                MaxArgs = int.MaxValue,
                 Completions = [
                     new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.Filename},
                     new ArgumentCompletion { ArgumentIndex = 1, Values = [RunArguments.ThreadsFlag] }]

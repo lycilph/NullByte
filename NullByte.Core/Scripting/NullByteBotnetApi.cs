@@ -25,7 +25,7 @@ public sealed class NullByteBotnetApi : INullByteBotnetApi
     }
 
     public int NumberOfNodes() => botnet.NodeCount;
-    
+
     public BotnetPurchaseResult PurchaseNode() => botnetService.PurchaseNode();
 
     public BotnetNodeInfo GetNodeStats(int nodeIndex)
@@ -36,11 +36,11 @@ public sealed class NullByteBotnetApi : INullByteBotnetApi
     }
 
     public double GetNextNodeCost() => botnetService.GetNextNodeCost();
-    
+
     public double? GetLevelUpgradeCost(int nodeIndex) => botnetService.GetUpgradeCost(nodeIndex, BotnetUpgradeKind.Level);
     public double? GetRamUpgradeCost(int nodeIndex) => botnetService.GetUpgradeCost(nodeIndex, BotnetUpgradeKind.Ram);
     public double? GetCoreUpgradeCost(int nodeIndex) => botnetService.GetUpgradeCost(nodeIndex, BotnetUpgradeKind.Cores);
-    
+
     public BotnetPurchaseResult UpgradeLevel(int nodeIndex) => botnetService.Upgrade(nodeIndex, BotnetUpgradeKind.Level);
     public BotnetPurchaseResult UpgradeRam(int nodeIndex) => botnetService.Upgrade(nodeIndex, BotnetUpgradeKind.Ram);
     public BotnetPurchaseResult UpgradeCore(int nodeIndex) => botnetService.Upgrade(nodeIndex, BotnetUpgradeKind.Cores);

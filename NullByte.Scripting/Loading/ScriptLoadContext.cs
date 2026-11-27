@@ -9,7 +9,7 @@ namespace NullByte.Scripting.Loading;
 /// </summary>
 public sealed class ScriptLoadContext : AssemblyLoadContext
 {
-    public ScriptLoadContext() : base(isCollectible: true) {}
+    public ScriptLoadContext() : base(isCollectible: true) { }
 
     protected override Assembly? Load(AssemblyName assemblyName) => null;
 }

@@ -75,10 +75,10 @@ internal static class ScriptSourceGenerator
         builder.AppendLine("        global::NullByte.Core.Scripting.INullByteApi nb, string[] args)");
         builder.AppendLine("    {");
         builder.AppendLine($"#line {bodyLine} \"{file}\"");
-        
+
         segments.Add(new SourceSegment(headerEnd, bodyEnd - headerEnd, builder.Length));
         AppendLine(builder, body);
-        
+
         builder.AppendLine("#line hidden");
         builder.AppendLine("    }");
         builder.AppendLine("}");

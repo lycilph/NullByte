@@ -72,7 +72,7 @@ public sealed class BotnetFormulas
         if (existingNodeCount < 0)
             throw new ArgumentOutOfRangeException(nameof(existingNodeCount), "Node count cannot be negative.");
 
-        return balance.BotnetNodeBaseCost 
+        return balance.BotnetNodeBaseCost
             * Math.Pow(balance.BotnetNodeCostGrowth, existingNodeCount)
             * balance.BotnetPurchaseCostMultiplier;
     }
@@ -85,7 +85,7 @@ public sealed class BotnetFormulas
         if (currentLevel < 1)
             throw new ArgumentOutOfRangeException(nameof(currentLevel), "Level must be at least one.");
 
-        return balance.BotnetLevelBaseCost 
+        return balance.BotnetLevelBaseCost
             * Math.Pow(balance.BotnetLevelCostGrowth, currentLevel - 1)
             * balance.BotnetPurchaseCostMultiplier;
     }
@@ -100,7 +100,7 @@ public sealed class BotnetFormulas
 
         var upgradesSoFar = int.Log2(currentRam);
 
-        return currentRam 
+        return currentRam
             * balance.BotnetRamBaseCost * Math.Pow(balance.BotnetRamCostGrowth, upgradesSoFar)
             * balance.BotnetPurchaseCostMultiplier;
     }
@@ -113,7 +113,7 @@ public sealed class BotnetFormulas
         if (currentCores < 1)
             throw new ArgumentOutOfRangeException(nameof(currentCores), "Cores must be at least one.");
 
-        return balance.BotnetCoreBaseCost 
+        return balance.BotnetCoreBaseCost
             * Math.Pow(balance.BotnetCoreCostGrowth, currentCores - 1)
             * balance.BotnetPurchaseCostMultiplier;
     }

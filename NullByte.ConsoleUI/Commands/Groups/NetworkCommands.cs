@@ -23,7 +23,8 @@ public sealed class NetworkCommands(IGameClock clock, NetworkService networkServ
                 "Show server information.",
                 AnalyzeAsync)
             {
-                MinArgs = 0, MaxArgs = 1,
+                MinArgs = 0,
+                MaxArgs = 1,
                 Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.KnownServer }]
             });
 
@@ -34,7 +35,8 @@ public sealed class NetworkCommands(IGameClock clock, NetworkService networkServ
                 "Connect to a discovered server.",
                 ConnectAsync)
             {
-                MinArgs = 1, MaxArgs = 1,
+                MinArgs = 1,
+                MaxArgs = 1,
                 Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.ConnectableServer }]
             });
 

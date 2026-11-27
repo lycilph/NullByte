@@ -61,7 +61,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
     private bool hasDisposed;
 
     public ThreadSafeConsoleTerminal(
-        string prompt = "> ", 
+        string prompt = "> ",
         int maximumHistoryLines = 1_000,
         ICompletionProvider? completionProvider = null,
         int maximumInputHistory = 200)
@@ -80,7 +80,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
     public CancellationToken StoppingToken => stopSource.Token;
 
     public void SetCompletionProvider(ICompletionProvider provider) => completionProvider = provider;
-    
+
     public void SuspendProcessing()
     {
         if (hasDisposed || stopSource.IsCancellationRequested)
@@ -466,7 +466,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
                     {
                         input.Insert(cursorIndex, key.KeyChar);
                         cursorIndex++;
-                        inputHistory.ResetNavigation(); 
+                        inputHistory.ResetNavigation();
                         changed = true;
                     }
 

@@ -29,6 +29,6 @@ public sealed class ScriptCompilationResult
     {
         ArgumentNullException.ThrowIfNull(diagnostics);
 
-        return new ScriptCompilationResult(script: null,diagnostics.ToArray());
+        return new ScriptCompilationResult(script: null, diagnostics.ToArray());
     }
 }

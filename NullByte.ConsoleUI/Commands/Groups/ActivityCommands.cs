@@ -50,7 +50,8 @@ public sealed class ActivityCommands : ICommandGroup
             "Take a university course (no arguments: list them).",
             arguments => StartCourseAsync(FacilityKind.University, arguments))
         {
-            MinArgs = 0, MaxArgs = 3,
+            MinArgs = 0,
+            MaxArgs = 3,
             Completions =
             [
                 new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.UniversityCourse },
@@ -64,7 +65,8 @@ public sealed class ActivityCommands : ICommandGroup
             "Train at a gym (no arguments: list the courses).",
             arguments => StartCourseAsync(FacilityKind.Gym, arguments))
         {
-            MinArgs = 0, MaxArgs = 3,
+            MinArgs = 0,
+            MaxArgs = 3,
             Completions =
             [
                 new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.GymCourse },
@@ -78,7 +80,8 @@ public sealed class ActivityCommands : ICommandGroup
             "Work for a company (no arguments: list them).",
             WorkAsync)
         {
-            MinArgs = 0, MaxArgs = 3,
+            MinArgs = 0,
+            MaxArgs = 3,
             Completions =
             [
                 new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.Company },
@@ -92,7 +95,8 @@ public sealed class ActivityCommands : ICommandGroup
            "Commit a crime, again and again until you stop (no arguments: list them).",
            CrimeAsync)
         {
-            MinArgs = 0, MaxArgs = 2,
+            MinArgs = 0,
+            MaxArgs = 2,
             Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.Crime }]
         });
 
@@ -257,7 +261,7 @@ public sealed class ActivityCommands : ICommandGroup
 
         return Task.CompletedTask;
     }
-    
+
     private void WriteJobDetails(JobActivity job)
     {
         terminal.WriteLine($"Position: {job.Rank.Title} (rank {job.RankIndex + 1} of {job.Career.Ranks.Count})");

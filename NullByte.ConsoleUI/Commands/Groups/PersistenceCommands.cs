@@ -15,29 +15,31 @@ public sealed class PersistenceCommands(
     public void Register(CommandRegistry registry)
     {
         registry.Register(new CommandDefinition(
-            "save", 
+            "save",
             "save [name]",
-            $"Save the game (default name '{DefaultSlot}').", 
+            $"Save the game (default name '{DefaultSlot}').",
             SaveAsync)
-        { 
-            MinArgs = 0, MaxArgs = 1,
+        {
+            MinArgs = 0,
+            MaxArgs = 1,
             Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.SaveGame }]
         });
 
         registry.Register(new CommandDefinition(
             "load",
             "load [name]",
-            $"Load a saved game (default name '{DefaultSlot}'). Unsaved progress is lost.", 
+            $"Load a saved game (default name '{DefaultSlot}'). Unsaved progress is lost.",
             LoadAsync)
         {
-            MinArgs = 0, MaxArgs = 1,
+            MinArgs = 0,
+            MaxArgs = 1,
             Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.SaveGame }]
         });
 
         registry.Register(new CommandDefinition(
             "saves",
             "saves",
-            "List saved games, newest first.", 
+            "List saved games, newest first.",
             ListAsync));
 
         registry.Register(new CommandDefinition(
@@ -46,7 +48,8 @@ public sealed class PersistenceCommands(
             "Start a new game. All unsaved progress and game files are lost.",
             ResetAsync)
         {
-            MinArgs = 0, MaxArgs = 1,
+            MinArgs = 0,
+            MaxArgs = 1,
             Completions = [new ArgumentCompletion { ArgumentIndex = 0, Values = ["--confirm"] }]
         });
     }

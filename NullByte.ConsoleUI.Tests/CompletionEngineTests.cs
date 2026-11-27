@@ -35,7 +35,7 @@ public sealed class CompletionEngineTests
             new("time", [], Hidden: true),
             new("debug", [])
         ],
-        
+
         Values:
             new Dictionary<CompletionKind, IReadOnlyList<string>>
             {

@@ -56,7 +56,7 @@ public abstract class Activity
 
     /// <summary>Attempts that succeeded so far (crimes).</summary>
     public int Successes => Progress.Successes;
-    
+
     /// <summary>Puts back what an activity had earned when the game was saved.</summary>
     internal void RestoreProgress(ActivityProgress saved)
     {

@@ -19,7 +19,8 @@ public sealed class FileCommands(
                 "List the files and directories in a directory.",
                 Guard(ListAsync))
             {
-                MinArgs = 0, MaxArgs = 1,
+                MinArgs = 0,
+                MaxArgs = 1,
                 Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.Directory }]
             });
 
@@ -30,7 +31,8 @@ public sealed class FileCommands(
                 "Change the current directory. Without an argument, go to the root.",
                 Guard(ChangeDirectoryAsync))
             {
-                MinArgs = 0, MaxArgs = 1,
+                MinArgs = 0,
+                MaxArgs = 1,
                 Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.Directory }]
             });
 
@@ -49,7 +51,8 @@ public sealed class FileCommands(
                 "Display a file's contents.",
                 Guard(CatAsync))
             {
-                MinArgs = 1, MaxArgs = 1,
+                MinArgs = 1,
+                MaxArgs = 1,
                 Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.Filename }]
             });
 
@@ -60,7 +63,8 @@ public sealed class FileCommands(
                 "Delete a file, or with -r a directory and everything in it.",
                 Guard(RemoveAsync))
             {
-                MinArgs = 1, MaxArgs = 2,
+                MinArgs = 1,
+                MaxArgs = 2,
                 Completions = [new ArgumentCompletion { ArgumentIndex = -1, Kind = CompletionKind.FilenameOrDirectory }]
             });
 
@@ -71,7 +75,8 @@ public sealed class FileCommands(
                 "Create a directory, and any missing parents.",
                 Guard(MakeDirectoryAsync))
             {
-                MinArgs = 1, MaxArgs = 1,
+                MinArgs = 1,
+                MaxArgs = 1,
                 Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.Directory }]
             });
 
@@ -82,7 +87,8 @@ public sealed class FileCommands(
                 "Delete an empty directory.",
                 Guard(RemoveDirectoryAsync))
             {
-                MinArgs = 1, MaxArgs = 1,
+                MinArgs = 1,
+                MaxArgs = 1,
                 Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.Directory }]
             });
 
@@ -93,7 +99,8 @@ public sealed class FileCommands(
                "Move or rename a file or directory.",
                Guard(MoveAsync))
            {
-               MinArgs = 2, MaxArgs = 2,
+               MinArgs = 2,
+               MaxArgs = 2,
                Completions = [
                    new ArgumentCompletion {ArgumentIndex = 0, Kind = CompletionKind.FilenameOrDirectory},
                    new ArgumentCompletion {ArgumentIndex = 1, Kind = CompletionKind.FilenameOrDirectory}]
@@ -106,7 +113,8 @@ public sealed class FileCommands(
                 "Copies files to a destination server.",
                 Guard(CopyFilesAsync))
             {
-                MinArgs = 2, MaxArgs = int.MaxValue,
+                MinArgs = 2,
+                MaxArgs = int.MaxValue,
                 Completions = [new ArgumentCompletion { ArgumentIndex = -1, Kind = CompletionKind.FilenameOrKnownServer }]
             });
 
@@ -117,7 +125,8 @@ public sealed class FileCommands(
                 "Create or replace a file.",
                 Guard(EditFileAsync))
             {
-                MinArgs = 1, MaxArgs = 1,
+                MinArgs = 1,
+                MaxArgs = 1,
                 Completions = [new ArgumentCompletion { ArgumentIndex = 0, Kind = CompletionKind.Filename }]
             });
     }

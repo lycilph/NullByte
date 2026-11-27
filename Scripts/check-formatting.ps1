@@ -1,5 +1,5 @@
 param(
-    [switch]$fix
+    [switch]$Fix
 )
 
 $ErrorActionPreference = "Stop"
