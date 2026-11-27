@@ -24,7 +24,7 @@ public sealed class WorkingDirectory(GameState gameState)
     {
         var player = gameState.Player;
         if (player.CurrentDirectory.Length == 0 ||
-            gameState.FileSystem.DirectoryExists(player.CurrentHostname, player.CurrentDirectory))
+            gameState.FileSystem.DirectoryExists(gameState.Network.GetServer(player.CurrentServerId).Hostname, player.CurrentDirectory))
             return false;
 
         player.CurrentDirectory = "";
