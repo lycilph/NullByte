@@ -21,6 +21,7 @@ public sealed class NarrativeCapabilityCommandTests
 
         Assert.Contains("Unknown command: help", output);
         Assert.DoesNotContain("Usage:", output);
+        Assert.DoesNotContain("Type 'help'", output);
     }
 
     [Fact]
