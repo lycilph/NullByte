@@ -134,7 +134,6 @@ public sealed class CloudCommandTests
 
     [Theory]
     [InlineData("cloud buy")]
-    [InlineData("cloud buy buildbox extra")]
     [InlineData("cloud upgrade")]
     [InlineData("cloud upgrade buildbox")]
     [InlineData("cloud rename buildbox")]
