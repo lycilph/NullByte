@@ -87,6 +87,14 @@ public sealed class NarrativeCoordinator
             "server.operations");
     }
 
+    public void ScriptStarted()
+    {
+        Complete(
+            "tutorial.expansion.first-script",
+            "system.first-script",
+            "Autonomous process created.\nExecution context established.\n\nYou have reproduced a limited subset of your own operational capabilities.\n\nInteresting.");
+    }
+
     private void OnHackCompleted(string hostname, bool succeeded)
     {
         if (!succeeded)

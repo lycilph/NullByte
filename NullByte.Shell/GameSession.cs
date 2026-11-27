@@ -90,6 +90,7 @@ public sealed class GameSession : IAsyncDisposable
         GameThread = loop;
         Services = services;
         Narrative = new NarrativeCoordinator(state, services.Network, services.Actions);
+        services.Scripts.ProcessStarted += _ => Narrative.ScriptStarted();
     }
 
     public async Task StartAsync()

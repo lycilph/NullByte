@@ -60,6 +60,9 @@ public sealed class ScriptService : IScriptOperations, IScriptService
     /// </summary>
     public event Action<ScriptProcess>? ProcessCompleted;
 
+    /// <summary>Raised after a script process has been created and its execution scheduled.</summary>
+    public event Action<ScriptProcess>? ProcessStarted;
+
     /// <summary>
     /// Compiles and starts a script stored in the virtual filesystem.
     /// This method returns immediately after starting the process.
@@ -171,6 +174,7 @@ public sealed class ScriptService : IScriptOperations, IScriptService
             return ScriptStartResult.Failure($"Could not start '{filename}': {exception.Message}");
         }
 
+        NotifyProcessStarted(process);
         return ScriptStartResult.Success(process.Pid, compilation.Diagnostics);
     }
 
@@ -314,6 +318,25 @@ public sealed class ScriptService : IScriptOperations, IScriptService
         finally
         {
             ReleaseProcessRam(process);
+        }
+    }
+
+    private void NotifyProcessStarted(ScriptProcess process)
+    {
+        var handlers = ProcessStarted;
+        if (handlers is null)
+            return;
+
+        foreach (Action<ScriptProcess> handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                handler(process);
+            }
+            catch (Exception observerException)
+            {
+                ReportObserverFailure(nameof(ProcessStarted), process, observerException);
+            }
         }
     }
 
