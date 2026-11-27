@@ -46,6 +46,7 @@ internal sealed class CoreTestWorld
     private readonly Lazy<ServerActions> serverActions;
     private readonly Lazy<NetworkService> networkService;
     private readonly Lazy<BotnetService> botnetService;
+    private readonly Lazy<CloudServerService> cloudServerService;
     private readonly Lazy<ActivityService> activityService;
     private readonly Lazy<BotnetSystem> botnetSystem;
     private readonly Lazy<ActivitySystem> activitySystem;
@@ -64,12 +65,14 @@ internal sealed class CoreTestWorld
         SkillFormulas = new SkillFormulas(balance);
         HackingFormulas = new ServerOperationFormulas(balance, SkillFormulas);
         BotnetFormulas = new BotnetFormulas(balance);
+        CloudServerFormulas = new CloudServerFormulas(balance);
         NetworkFormulas = new NetworkFormulas(balance);
         ActivityFormulas = new ActivityFormulas(balance);
 
         serverActions = new(() => new ServerActions(State, Scheduler, HackingFormulas, SkillFormulas, Random));
         networkService = new(() => new NetworkService(State, Scheduler, NetworkFormulas));
         botnetService = new(() => new BotnetService(State, BotnetFormulas));
+        cloudServerService = new(() => new CloudServerService(State, CloudServerFormulas));
         activityService = new(() => new ActivityService(State, Catalog, ActivityFormulas));
         botnetSystem = new(() => new BotnetSystem(State, BotnetFormulas));
         activitySystem = new(() => new ActivitySystem(State, ActivityFormulas, ActivityService, Random));
@@ -88,6 +91,7 @@ internal sealed class CoreTestWorld
 
     public ServerOperationFormulas HackingFormulas { get; }
     public BotnetFormulas BotnetFormulas { get; }
+    public CloudServerFormulas CloudServerFormulas { get; }
     public NetworkFormulas NetworkFormulas { get; }
     public SkillFormulas SkillFormulas { get; }
     public ActivityFormulas ActivityFormulas { get; }
@@ -95,6 +99,7 @@ internal sealed class CoreTestWorld
     public ServerActions ServerActions => serverActions.Value;
     public NetworkService NetworkService => networkService.Value;
     public BotnetService BotnetService => botnetService.Value;
+    public CloudServerService CloudServerService => cloudServerService.Value;
     public ActivityService ActivityService => activityService.Value;
     public BotnetSystem BotnetSystem => botnetSystem.Value;
     public ActivitySystem ActivitySystem => activitySystem.Value;

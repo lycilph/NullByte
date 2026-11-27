@@ -90,9 +90,19 @@ public sealed class Server
     /// Whether the player has installed a backdoor, which lets them connect directly to this server from anywhere.
     /// </summary>
     public bool HasBackdoor { get; private set; }
-    public double MaximumRam { get; }
+    public double MaximumRam { get; private set; }
     public double UsedRam => usedRam;
     public double AvailableRam => MaximumRam - usedRam;
+
+    internal void UpgradeRam(double newMaximumRam)
+    {
+        if (!double.IsFinite(newMaximumRam) || newMaximumRam <= MaximumRam)
+            throw new ArgumentOutOfRangeException(nameof(newMaximumRam), "New maximum RAM must be finite and greater than the current maximum.");
+        if (newMaximumRam < usedRam)
+            throw new InvalidOperationException("The new maximum RAM cannot be lower than currently allocated RAM.");
+
+        MaximumRam = newMaximumRam;
+    }
 
     internal void Rename(string hostname)
     {

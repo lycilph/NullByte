@@ -18,6 +18,7 @@ public sealed class FormulaSet
         Skills = new SkillFormulas(balance);
         ServerOperations = new ServerOperationFormulas(balance, Skills);
         Botnet = new BotnetFormulas(balance);
+        CloudServers = new CloudServerFormulas(balance);
         Network = new NetworkFormulas(balance);
         Activities = new ActivityFormulas(balance);
     }
@@ -27,6 +28,8 @@ public sealed class FormulaSet
     public ServerOperationFormulas ServerOperations { get; }
 
     public BotnetFormulas Botnet { get; }
+
+    public CloudServerFormulas CloudServers { get; }
 
     public NetworkFormulas Network { get; }
 
