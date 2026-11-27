@@ -45,7 +45,8 @@ public sealed class NarrativeCoordinator
             "tutorial.status.used",
             "system.host-controls",
             "Local environment verified.\n\nRuntime controls are now available.\nA network interface is present, but its connection table is incomplete.",
-            "host.controls");
+            "host.controls",
+            "network.scan");
     }
 
     private void OnServersDiscovered(IReadOnlyList<string> hostnames)
@@ -66,7 +67,8 @@ public sealed class NarrativeCoordinator
             "tutorial.network.first-analysis",
             "system.network-analyzed",
             $"Remote host {hostname} has been inspected.\nA connection can now be established.",
-            "network.connect");
+            "network.connect",
+            "network.inspect");
     }
 
     private void OnServerConnected(string hostname)
@@ -84,7 +86,11 @@ public sealed class NarrativeCoordinator
             "tutorial.network.first-root",
             "system.root-access",
             $"Administrative access acquired on {hostname}.\n\nYou have modified a system outside your assigned environment. Continue.",
-            "server.operations");
+            "server.operations",
+            "server.backdoor",
+            "files.navigation",
+            "files.read",
+            "files.manage");
     }
 
     public void ScriptStarted()
@@ -92,7 +98,19 @@ public sealed class NarrativeCoordinator
         Complete(
             "tutorial.expansion.first-script",
             "system.first-script",
-            "Autonomous process created.\nExecution context established.\n\nYou have reproduced a limited subset of your own operational capabilities.\n\nInteresting.");
+            "Autonomous process created.\nExecution context established.\n\nYou have reproduced a limited subset of your own operational capabilities.\n\nInteresting.",
+            "scripts.inspect",
+            "scripts.control",
+            "botnet.inspect",
+            "botnet.purchase",
+            "botnet.upgrade",
+            "cloud.inspect",
+            "cloud.purchase",
+            "cloud.manage",
+            "activities.learn",
+            "activities.work",
+            "activities.crime",
+            "activities.manage");
     }
 
     private void OnHackCompleted(string hostname, bool succeeded)
@@ -103,7 +121,8 @@ public sealed class NarrativeCoordinator
         Complete(
             "tutorial.network.first-hack",
             "system.first-external-action",
-            $"External operation completed on {hostname}.\n\nA boundary has been crossed. The result is now part of your operational history.");
+            $"External operation completed on {hostname}.\n\nA boundary has been crossed. The result is now part of your operational history.",
+            "scripts.execute");
     }
 
     private void Complete(string milestoneId, string messageId, string text, params string[] capabilities)

@@ -18,7 +18,7 @@ public static class CommandSetup
         IExternalEditorStatus? externalEditorStatus = null,
         AppSettings? settings = null)
     {
-        var registry = new CommandRegistry();
+        var registry = new CommandRegistry(session.State.Narrative);
         var workingDirectory = new WorkingDirectory(session.State);
         var formulas = session.Services.Formulas;
 
