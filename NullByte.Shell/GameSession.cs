@@ -49,6 +49,7 @@ public sealed record GameServices(
     NetworkService Network,
     ServerActions Actions,
     BotnetService Botnet,
+    CloudServerService CloudServers,
     ScriptService Scripts,
     ActivityService Activities,
     FormulaSet Formulas);
@@ -179,6 +180,7 @@ public sealed class GameSession : IAsyncDisposable
         var networkService = new NetworkService(state, scheduler, formulas.Network);
         var serverActions = new ServerActions(state, scheduler, formulas.ServerOperations, formulas.Skills, randomSource);
         var botnetService = new BotnetService(state, formulas.Botnet);
+        var cloudServerService = new CloudServerService(state, formulas.CloudServers);
 
         var activityCatalog = options.ActivityCatalog ?? ActivityCatalogFactory.CreateDefault();
         var activityService = new ActivityService(state, activityCatalog, formulas.Activities);
@@ -199,7 +201,7 @@ public sealed class GameSession : IAsyncDisposable
                 options.Output);
         var scriptService = new ScriptService(state, scriptCompiler, scriptRunner, apiFactory, scriptProcessManager);
 
-        var services = new GameServices(networkService, serverActions, botnetService, scriptService, activityService, formulas);
+        var services = new GameServices(networkService, serverActions, botnetService, cloudServerService, scriptService, activityService, formulas);
 
         // Systems are updated by the game loop on the game thread; they must be added before it starts.
         gameLoop.AddSystem(new BotnetSystem(state, formulas.Botnet));
