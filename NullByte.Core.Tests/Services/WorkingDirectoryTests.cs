@@ -87,7 +87,7 @@ public class WorkingDirectoryTests
 
         work.TryChange("logs", out _);
         network.GoHome();
-        Assert.Equal("home", state.Player.CurrentHostname);
+        Assert.Equal("home", network.GetCurrentServer().Hostname);
         Assert.Equal("", work.Current);
     }
 }
