@@ -82,7 +82,7 @@ public class WorkingDirectoryTests
         Assert.Equal("tools", work.Current);
 
         network.Connect("n00dles");
-        Assert.Equal("n00dles", network.GetServer(state.Player.CurrentServerId).Hostname);
+        Assert.Equal("n00dles", network.GetCurrentServer().Hostname);
         Assert.Equal("", work.Current);
 
         work.TryChange("logs", out _);
