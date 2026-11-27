@@ -25,7 +25,7 @@ This plan deliberately starts with documentation and design. It does not assume 
 
 ### Stage 0 — Narrative design and repository alignment
 
-**Status: Design drafted; access-scope decisions confirmed**
+**Status: Complete; access-scope decisions confirmed**
 
 Deliverables:
 - NARRATIVE.md — narrative premise, world, NB-0001, SYSTEM, five-act arc, command discovery, narrative delivery and boundaries.
@@ -41,7 +41,7 @@ Acceptance:
 
 ### Stage 1 — Tutorial walkthrough and capability map
 
-**Status: Drafted; access-scope decisions confirmed**
+**Status: Complete; access-scope decisions confirmed**
 
 **Goal:** define exactly what a new player experiences, before implementing the progression system.
 
@@ -68,11 +68,11 @@ Acceptance:
 
 ### Stage 2 — Narrative and capability state model
 
-**Status: Design drafted; awaiting review**
+**Status: Drafted; awaiting review**
 
 **Goal:** establish the smallest persistent representation of narrative progression and player access.
 
-The proposed state ownership, Tutorial/Legacy modes, capability/milestone/message IDs, new-game defaults, host-control hand-off, version 7-to-8 migration and legacy-save compatibility policy are documented in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md).
+The proposed state ownership, Tutorial/Freeplay modes, capability/milestone/message IDs, new-game defaults, host-control hand-off, version 7-to-8 migration and Freeplay compatibility policy are documented in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md).
 
 Deliverables:
 - Core state ownership and invariants.
@@ -89,7 +89,11 @@ Acceptance:
 
 ### Stage 3 — Event-driven narrative progression
 
+**Status: Design drafted; awaiting review**
+
 **Goal:** translate gameplay milestones into narrative messages and capability unlocks.
+
+The current service/event map, proposed Core event additions, trigger conditions, message delivery ordering, Freeplay behavior and test strategy are documented in [NARRATIVE_PROGRESSION_DESIGN.md](NARRATIVE_PROGRESSION_DESIGN.md).
 
 Tasks:
 1. Identify the owning Core events/services for the milestones in the tutorial.
@@ -240,13 +244,13 @@ Keep the first implementation narrow.
 
 | Stage | Status |
 |---|---|
-| 0 — Narrative design and repository alignment | Documentation drafted |
-| 1 — Tutorial walkthrough and capability map | Not started |
-| 2 — Narrative and capability state model | Not started |
-| 3 — Event-driven narrative progression | Not started |
+| 0 — Narrative design and repository alignment | Complete |
+| 1 — Tutorial walkthrough and capability map | Complete (design draft) |
+| 2 — Narrative and capability state model | Design drafted; awaiting review |
+| 3 — Event-driven narrative progression | Design drafted; awaiting review |
 | 4 — Capability gating across player interfaces | Not started |
 | 5 — Initial tutorial content and presentation | Not started |
 | 6 — Activity-system narrative | Not started |
 | 7 — Review, balance and documentation | Not started |
 
-Stage 1's repository inspection, capability-map draft and tutorial walkthrough are complete in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md). The access decisions are confirmed. Stage 2's proposed state and persistence design is documented in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md) and is ready for review. The next step is to resolve any design feedback, then begin Stage 3: event-driven narrative progression.
+Stages 0 and 1 are complete as design work. The access decisions are confirmed and recorded in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md). Stage 2's state and persistence design is in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md); Stage 3's event-driven progression design is in [NARRATIVE_PROGRESSION_DESIGN.md](NARRATIVE_PROGRESSION_DESIGN.md). Both are drafts awaiting review. No runtime implementation has begun.
