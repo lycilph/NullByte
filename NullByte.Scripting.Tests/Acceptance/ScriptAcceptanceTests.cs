@@ -99,6 +99,7 @@ public sealed class ScriptAcceptanceTests
             """
             var target = args[0];
             nb.Print($"Hacking {target}");
+            nb.Print($"Cloud servers: {nb.Cloud.GetServers().Count}");
             await nb.Hack(target);
             nb.Print("Hack complete");
             """;
@@ -118,7 +119,7 @@ public sealed class ScriptAcceptanceTests
         var runTask = runner.RunAsync(script, api, args);
 
         Assert.False(runTask.IsCompleted);
-        Assert.Equal(["Hacking n00dles"], output.Lines);
+        Assert.Equal(["Hacking n00dles", "Cloud servers: 0"], output.Lines);
 
         var hackDuration = formulas.CalculateHackDuration(player, target);
 
@@ -130,7 +131,7 @@ public sealed class ScriptAcceptanceTests
         Assert.True(player.Money > initialPlayerMoney);
         Assert.True(target.Money < initialServerMoney);
 
-        Assert.Equal(["Hacking n00dles", "Hack complete"], output.Lines);
+        Assert.Equal(["Hacking n00dles", "Cloud servers: 0", "Hack complete"], output.Lines);
     }
 
     private static string FormatDiagnostics(ScriptCompilationResult result)
