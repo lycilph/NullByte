@@ -66,7 +66,7 @@ public class SaveGameTests
 
     private static SaveGame Capture(GameState state) => SaveGameMapper.Capture(state, GameTime, Processes, SavedAt);
 
-    private static string CurrentVersionGolden => Serializer.Serialize(Serializer.Deserialize(GoldenSaves.V7));
+    private static string CurrentVersionGolden => GoldenSaves.V8;
 
     private static string Describe(GameState state) => Serializer.Serialize(Capture(state));
 
@@ -100,7 +100,7 @@ public class SaveGameTests
     [Fact]
     public void V7_save_migrates_to_freeplay_without_tutorial_state()
     {
-        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V7));
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V8));
 
         Assert.Equal(NarrativeProgressionMode.Freeplay, restored.State.Narrative.Mode);
         Assert.Empty(restored.State.Narrative.UnlockedCapabilities);
@@ -273,7 +273,7 @@ public class SaveGameTests
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(Normalize(GoldenSaves.V7), again);
+        Assert.Equal(Normalize(GoldenSaves.V8), again);
     }
 
     [Fact]
