@@ -27,7 +27,7 @@ public sealed class NarrativeCoordinatorTests
     [Fact]
     public void Initialize_FreeplayDoesNotPublishOrUnlockTutorialCapabilities()
     {
-        var world = CoreTestSetup.CreateWorld();
+        var world = CoreTestSetup.CreateWorld(new CoreTestOptions { ProgressionMode = NarrativeProgressionMode.Tutorial });
         world.State.Narrative.Mode = NarrativeProgressionMode.Freeplay;
         var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions);
         var messages = new List<NarrativeMessage>();
@@ -45,7 +45,7 @@ public sealed class NarrativeCoordinatorTests
     [Fact]
     public void StatusUsed_UnlocksHostControlsAndPublishesOnlyOnce()
     {
-        var world = CoreTestSetup.CreateWorld();
+        var world = CoreTestSetup.CreateWorld(new CoreTestOptions { ProgressionMode = NarrativeProgressionMode.Tutorial });
         var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions);
         var messages = new List<NarrativeMessage>();
         coordinator.MessagePublished += messages.Add;
@@ -100,6 +100,7 @@ public sealed class NarrativeCoordinatorTests
     {
         var world = CoreTestSetup.CreateWorld(new CoreTestOptions
         {
+            ProgressionMode = NarrativeProgressionMode.Tutorial,
             Servers = [TestServers.Home(), TestServers.Create("n00dles")]
         });
         var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions);
