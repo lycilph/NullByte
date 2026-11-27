@@ -48,13 +48,13 @@ public sealed class PlayerSkillsTests
     }
 
     [Fact]
-    public void Player_hacking_experience_lives_in_the_skills()
+    public void Player_hacking_experience_is_accessed_through_skills()
     {
         var player = new Player(ServerId.New(), startingMoney: 0, startingHackingExperience: 123);
 
-        player.AddHackingExperience(7);
+        player.Skills.AddExperience(SkillKind.Hacking, 7);
 
-        Assert.Equal(130, player.HackingExperience);
+        Assert.Equal(130, player.Skills.GetExperience(SkillKind.Hacking));
         Assert.Equal(130, player.Skills.GetExperience(SkillKind.Hacking));
     }
 }
