@@ -49,85 +49,6 @@ public sealed class NetworkTests
     }
 
     [Fact]
-    public void RenameServer_CloudServerUpdatesHostnameLookupAndPreservesIdentityAndConnections()
-    {
-        var network = new Network();
-        var home = CreateServer("home");
-        var cloud = CreateServer("cloud-old", isCloudServer: true);
-        network.AddServer(home);
-        network.AddServer(cloud);
-        network.Connect(home.Id, cloud.Id);
-        cloud.AllocateRam(3);
-        cloud.InstallBackdoor();
-
-        network.RenameServer(cloud.Id, "cloud-new");
-
-        Assert.Equal("cloud-new", cloud.Hostname);
-        Assert.Same(cloud, network.GetServer("cloud-new"));
-        Assert.Same(cloud, network.GetServer(cloud.Id));
-        Assert.Throws<KeyNotFoundException>(() => network.GetServer("cloud-old"));
-        Assert.Equal(cloud.Id, network.GetServer("cloud-new").Id);
-        Assert.True(network.AreConnected(home.Id, cloud.Id));
-        Assert.Equal(3, cloud.UsedRam);
-        Assert.True(cloud.HasBackdoor);
-    }
-
-    [Fact]
-    public void RenameServer_NonCloudServerThrowsWithoutChangingHostname()
-    {
-        var network = new Network();
-        var server = CreateServer("n00dles");
-        network.AddServer(server);
-
-        Assert.Throws<InvalidOperationException>(() => network.RenameServer(server.Id, "renamed"));
-
-        Assert.Equal("n00dles", server.Hostname);
-        Assert.Same(server, network.GetServer("n00dles"));
-    }
-
-    [Fact]
-    public void RenameServer_DuplicateHostnameThrowsWithoutChangingIndexes()
-    {
-        var network = new Network();
-        var cloud = CreateServer("cloud-old", isCloudServer: true);
-        var existing = CreateServer("existing");
-        network.AddServer(cloud);
-        network.AddServer(existing);
-
-        Assert.Throws<InvalidOperationException>(() => network.RenameServer(cloud.Id, "EXISTING"));
-
-        Assert.Equal("cloud-old", cloud.Hostname);
-        Assert.Same(cloud, network.GetServer("cloud-old"));
-        Assert.Same(existing, network.GetServer("existing"));
-    }
-
-    [Fact]
-    public void RenameServer_CaseOnlyRenameUpdatesHostnameIndex()
-    {
-        var network = new Network();
-        var cloud = CreateServer("cloud-old", isCloudServer: true);
-        network.AddServer(cloud);
-
-        network.RenameServer(cloud.Id, "CLOUD-OLD");
-
-        Assert.Equal("CLOUD-OLD", cloud.Hostname);
-        Assert.Same(cloud, network.GetServer("cloud-old"));
-    }
-
-    [Fact]
-    public void RenameServer_EmptyHostnameThrowsWithoutChangingHostname()
-    {
-        var network = new Network();
-        var cloud = CreateServer("cloud-old", isCloudServer: true);
-        network.AddServer(cloud);
-
-        Assert.Throws<ArgumentException>(() => network.RenameServer(cloud.Id, "  "));
-
-        Assert.Equal("cloud-old", cloud.Hostname);
-        Assert.Same(cloud, network.GetServer("cloud-old"));
-    }
-
-    [Fact]
     public void GetServer_ReturnsServerByHostnameCaseInsensitively()
     {
         var network = new Network();
@@ -280,9 +201,9 @@ public sealed class NetworkTests
         Assert.False(network.AreConnected(first.Hostname, second.Hostname));
     }
 
-    private static Server CreateServer(string hostname, ServerId? id = null, bool isCloudServer = false)
+    private static Server CreateServer(string hostname, ServerId? id = null)
     {
-        return new Server(hostname, 100_000, 50_000, 5, 1, 5, 1, 1.1, 32, id: id, isCloudServer: isCloudServer);
+        return new Server(hostname, 100_000, 50_000, 5, 1, 5, 1, 1.1, 32, id: id);
     }
 
     private static Network CreateLinearNetwork(out Server home, out Server n00dles, out Server sigmaCosmetics)

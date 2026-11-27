@@ -57,6 +57,23 @@ public sealed class ScriptProcessManagerTests
     }
 
     [Fact]
+    public void RenameHostServer_DoesNotChangeRunningProcessHostIdentity()
+    {
+        var network = new Network();
+        var cloud = new Server("cloud-old", 0, 0, 1, 1, 1, 1, 0, 8, isCloudServer: true);
+        network.AddServer(cloud);
+
+        var manager = new ScriptProcessManager();
+        var process = manager.Create("running.cx", cloud.Id, [], 1, 1);
+
+        network.RenameServer(cloud.Id, "cloud-new");
+
+        Assert.Equal(cloud.Id, process.HostServerId);
+        Assert.Same(process, Assert.Single(manager.GetForHost(cloud.Id)));
+        Assert.Same(cloud, network.GetServer("cloud-new"));
+    }
+
+    [Fact]
     public void TryGet_ReturnsProcess()
     {
         var manager = new ScriptProcessManager();
