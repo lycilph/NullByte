@@ -165,7 +165,7 @@ internal static class CoreTestSetup
         }
 
         var experience = new SkillFormulas(balance).CalculateExperienceForLevel(SkillKind.Hacking, options.HackingLevel);
-        var player = new Player(home.Hostname, options.Money, experience);
+        var player = new Player(home.Id, options.Money, experience);
 
         return new CoreTestWorld(
             new GameState(player, network),
