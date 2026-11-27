@@ -25,12 +25,13 @@ The central fantasy is the same as Bitburner: you start by typing commands, get 
 - Server actions: `scan`, `connect`, `nuke` (gain root), `hack`, `grow`, `weaken`, with variable duration and thread count.
 - Scripts: write, compile, run, kill and list scripts, with RAM cost, threads and arguments, and reusable libraries through `#include`.
 - Home RAM as the limiting resource for scripts.
+- Purchased cloud servers with configurable RAM tiers, allowing scripts to run on additional infrastructure.
 - A console that blocks input while a manual hack/grow/weaken runs.
 - Save, load and starting a completely new game through a confirmed reset command (late milestone).
 
 ### Out of scope (for now)
 
-Factions, augmentations, programs and port opening (we may simplify to "nuke needs hacking level only"), purchased servers (stretch goal), stock market, corporations, Bladeburner, Sleeves, Gangs, Stanek, Singularity API, offline progress, multiplayer, and a GUI.
+Factions, augmentations, programs and port opening (we may simplify to "nuke needs hacking level only"), offline progress, stock market, corporations, Bladeburner, Sleeves, Gangs, Stanek, Singularity API, multiplayer, and a GUI.
 
 ## 3. Core mechanics
 
