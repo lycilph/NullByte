@@ -74,7 +74,7 @@ After the player successfully executes `status`, a separate `host.controls` capa
 
 The host application can still be closed using ordinary operating-system/window controls. Those are outside the in-game command interface.
 
-This means the initial state has no command allow-list entries at all. The first state transition grants `player.inspect`; the first successful `status` use then grants `host.controls` and the next narrative capability.
+This means the initial state has no command allow-list entries at all. The first state transition grants `player.inspect`, exposing only `status`. The first successful `status` use grants `host.controls` and `network.scan`, starting the network tutorial.
 
 ### 3.2 Capability identity
 
@@ -100,7 +100,8 @@ The following IDs are proposed stable identifiers. They group related functional
 
 | Capability ID | Console commands | Notes |
 |---|---|---|
-| `player.inspect` | `status`, `money`, `skills` | Inspect player resources and skills |
+| `player.inspect` | `status` | Inspect the initial runtime state |
+| `player.profile` | `money`, `skills` | Inspect player resources and skills; unlocked after the first successful server analysis |
 | `network.scan` | `scan` | Discover adjacent servers |
 | `network.analyze` | `analyze` | Inspect a discovered server; requires network discovery |
 | `network.connect` | `connect`, `home` | Navigate discovered network |
@@ -166,7 +167,7 @@ The API should use the same capability IDs wherever a script method represents t
 | `activities.work` | `nb.Activities.Work`, `nb.Activities.GetCompanies`, `nb.Activities.GetReputation`, `nb.Activities.GetJob` |
 | `activities.crime` | `nb.Activities.Crime`, `nb.Activities.GetCrimes`, `nb.Activities.GetCrimeChance` |
 | `activities.manage` | `nb.Activities.Stop`, `nb.Activities.GetStatus` |
-| `player.inspect` | `nb.Player.Money`, `nb.Player.Skills`, `nb.Activities.GetSkillLevel` |
+| `player.profile` | `nb.Player.Money`, `nb.Player.Skills`, `nb.Activities.GetSkillLevel` |
 
 Important gaps and overlaps to resolve:
 
@@ -175,9 +176,9 @@ Important gaps and overlaps to resolve:
 - The API has no direct equivalents for console `connect`, `home`, `analyze` or `backdoor`.
 - The files API has list/delete/move/copy operations, but no direct read/write method. File editing is currently a console-host operation.
 - Activity API calls always start work in the background, as documented on `INullByteActivitiesApi`; the console can start focused or background activities.
-- `nb.Player` exposes money and skills as read-only information. It should be available when player inspection is unlocked.
+- `nb.Player` exposes money and skills as read-only information. It uses `player.profile`, unlocked after the first successful server analysis; `status` remains the only initial `player.inspect` command.
 
-For the first pass, runtime API calls must check the same capability state as their corresponding console actions. The full interface remains visible to script compilation and editor tooling today; concealing members from IntelliSense may require a separate API-surface design and is not solved by runtime checks alone.
+For the first pass, runtime API calls must check the same capability state as their corresponding console actions. The console registry applies the same checks to dispatch, aliases, help, subcommands and tab completion. Script startup is also checked in `ScriptService`, so callers cannot bypass the `run` command gate. The full interface remains visible to script compilation and editor tooling today; concealing members from IntelliSense may require a separate API-surface design and is not solved by runtime checks alone.
 
 ## 5. Proposed first playable walkthrough
 

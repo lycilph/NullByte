@@ -1,6 +1,6 @@
 # Narrative Progression Design
 
-> **Implementation status (2026-11-27):** The Core coordinator, tutorial bootstrap, status milestone, and main network/root/hack/script-start triggers described below are implemented on `feature/narrative-design-docs`. Optional botnet/cloud/activity triggers remain deferred. The code and tests are the source of truth where this design draft differs from implementation.
+> **Implementation status (2026-11-27):** The Core coordinator, tutorial bootstrap, status milestone, and main network/root/hack/script-start triggers are implemented on `feature/narrative-design-docs`. Stage 4 capability checks now enforce the console and scripting API map in `NARRATIVE_TUTORIAL.md`. Optional botnet/cloud/activity narrative messages remain deferred; their access capabilities are unlocked after the first successful script start. The code and tests are the source of truth where this design draft differs from implementation.
 
 ## 1. Purpose and scope
 
@@ -162,12 +162,13 @@ Stage 3 should establish the trigger semantics, but the complete command/API cap
 The current proposed main-path sequence is:
 
 1. Bootstrap: unlock `player.inspect` (only `status`).
-2. Successful `status`: unlock `host.controls`.
-3. First successful scan: unlock network analysis and connection capabilities according to the final capability map.
-4. First successful connection: unlock remote access actions.
-5. First root acquisition: unlock server operations.
-6. First successful hack: introduce resource acquisition and continue the expansion sequence.
-7. First successful script start: introduce automation and the script/process capability group.
+2. Successful `status`: unlock `host.controls` and `network.scan`.
+3. First successful scan: unlock `network.analyze`.
+4. First successful analysis: unlock `network.connect`, `network.inspect` and `player.profile`.
+5. First successful connection: unlock `server.root-access`.
+6. First root acquisition: unlock server operations, backdoor access and file navigation/read/management.
+7. First successful hack: unlock `scripts.execute`.
+8. First successful script creation: unlock script inspection/control and the optional botnet, cloud and activity capability groups.
 
 Do not unlock every future command at once just because a milestone was reached. Keep capability groups narrow enough that each unlock is understandable and does not reveal later mechanics prematurely.
 

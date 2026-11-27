@@ -116,6 +116,8 @@ Acceptance:
 
 ### Stage 4 — Capability gating across player interfaces
 
+**Status: Implemented on the feature branch; CI validation pending**
+
 **Goal:** ensure story unlocks control actual player access, not just what the console advertises.
 
 Tasks:
@@ -248,9 +250,9 @@ Keep the first implementation narrow.
 | 1 — Tutorial walkthrough and capability map | Complete (design draft) |
 | 2 — Narrative and capability state model | Implemented; tests added |
 | 3 — Event-driven narrative progression | Main-path foundation implemented; validation pending |
-| 4 — Capability gating across player interfaces | Not started |
+| 4 — Capability gating across player interfaces | Implemented; CI validation pending |
 | 5 — Initial tutorial content and presentation | Not started |
 | 6 — Activity-system narrative | Not started |
 | 7 — Review, balance and documentation | Not started |
 
-Stages 0 and 1 are complete as design work. The access decisions are confirmed and recorded in [NARRATIVE_TUTORIAL.md](NARRATIVE_TUTORIAL.md). Stage 2's Tutorial/Freeplay state, save-format migration and new-game mode selection are implemented on the feature branch. Stage 3 now has a Core-owned coordinator, session bootstrap, host-neutral SYSTEM messages, and event-driven milestones for status, network discovery/analysis/connection, root access, successful hacking and successful script start. Focused coordinator tests have been added. Remaining work includes broader service-event coverage, end-to-end session validation and CI verification. Capability enforcement remains Stage 4.
+Stages 0 and 1 are complete as design work. Stage 2's Tutorial/Freeplay state, save-format migration and new-game mode selection are implemented. Stage 3 has a Core-owned coordinator, session bootstrap, host-neutral SYSTEM messages and event-driven main-path milestones. Stage 4 now filters console dispatch, help, aliases, subcommands and completion by capability, and enforces the corresponding rules at scripting API and script-start boundaries. Focused tests cover tutorial command visibility and runtime API denial. The remaining work is CI validation and a fresh-save playthrough.
