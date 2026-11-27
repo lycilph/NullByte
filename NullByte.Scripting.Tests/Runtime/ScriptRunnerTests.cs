@@ -287,6 +287,7 @@ public sealed class ScriptRunnerTests
         public INullByteBotnetApi Botnet => throw new NotSupportedException();
         public INullByteActivitiesApi Activities => throw new NotSupportedException();
         public INullByteCloudApi Cloud => throw new NotSupportedException();
+        public INullBytePlayerApi Player => throw new NotSupportedException();
 
         public Task<HackResult> Hack(string hostname)
         {
@@ -323,10 +324,6 @@ public sealed class ScriptRunnerTests
             throw new NotSupportedException("Server state is not used by these runner tests.");
         }
 
-        public double GetHackingLevel()
-        {
-            throw new NotSupportedException("Player state is not used by these runner tests.");
-        }
 
         public int GetServerRequiredHackingLevel(string hostname)
         {
