@@ -380,13 +380,13 @@ The exact trigger for later systems should be selected from real game events. Do
 The current code suggests the following responsibilities:
 
 1. **Core state:** add durable narrative/capability state to the game model. It should be independent of ConsoleUI.
-2. **Persistence:** add a save-format migration. Current save format is v7; pre-narrative saves should load with all existing capabilities unlocked.
+2. **Persistence:** add a save-format migration. Current save format is v7; pre-narrative saves should load in Freeplay mode with all current and future capabilities available.
 3. **Command metadata:** associate each command definition with a capability requirement or an explicit host-control classification.
 4. **Registry/dispatch:** enforce availability for resolution, help, aliases and subcommand usage—not just help rendering.
 5. **Completion:** filter command names and aliases using the same capability state.
 6. **Script API:** guard each relevant API operation using the same capability state. Do not rely on console command hiding.
 7. **Narrative delivery:** provide host-neutral messages/events so the ConsoleUI can render SYSTEM output without owning progression.
-8. **Testing:** test direct command invocation, aliases, subcommands, help, completion, script API calls, save/load and legacy migration.
+8. **Testing:** test direct command invocation, aliases, subcommands, help, completion, script API calls, save/load and Freeplay migration.
 
 The implementation should be designed around the actual game-thread and save/load lifecycle. In particular, scripts are restored after a saved session starts; their API instances must see the restored capability state.
 
@@ -396,4 +396,4 @@ The implementation should be designed around the actual game-thread and save/loa
 2. **First unlock:** `status`, granted automatically by the initialization sequence.
 3. **Scripting API visibility:** enforce capability restrictions at runtime in the first iteration. The full API may remain visible in editor completion/IntelliSense.
 
-The state ownership, save model, version 7-to-8 migration and legacy-save policy are specified in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md).
+The state ownership, save model, version 7-to-8 migration and Freeplay-save policy are specified in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md).
