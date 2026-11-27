@@ -104,7 +104,14 @@ public static class SaveGameMapper
             Activity = CaptureActivity(state.Activity.Current),
             Files = files,
             Directories = directories,
-            Processes = processes.ToArray()          // was: sorted by Pid
+            Processes = processes.ToArray(),
+            Narrative = new NarrativeSave
+            {
+                Mode = state.Narrative.Mode,
+                UnlockedCapabilities = state.Narrative.UnlockedCapabilities.Order(StringComparer.Ordinal).ToArray(),
+                CompletedMilestones = state.Narrative.CompletedMilestones.Order(StringComparer.Ordinal).ToArray(),
+                DeliveredMessages = state.Narrative.DeliveredMessages.Order(StringComparer.Ordinal).ToArray()
+            }
         };
     }
 
