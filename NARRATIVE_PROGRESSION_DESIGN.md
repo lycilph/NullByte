@@ -51,7 +51,7 @@ The console commands and scripting APIs call these shared services. Narrative tr
 
 ### 3.3 Script start is a distinct milestone
 
-`ScriptService.Start` creates a process after validation, compilation, RAM allocation and API construction. `ProcessCompleted` only occurs when a process finishes. The narrative milestone "first autonomous process created" should therefore be tied to a successful process start, not process completion. A narrow `ProcessStarted` event is proposed.
+`ScriptService.Start` creates a process after validation, compilation, RAM allocation and API construction. The `ProcessStarted` event is raised after process/API creation but before script code begins, so capabilities unlocked by the first script are available to that script. `ProcessCompleted` only occurs when a process finishes. The narrative milestone "first autonomous process created" is therefore tied to process creation, not process completion.
 
 ## 4. Recommended architecture
 
@@ -204,7 +204,7 @@ The following are the narrow additions likely needed after confirming the exact 
 - `NetworkService.ServerConnected` — a successful change to a different current server.
 - `ServerActions.RootAccessGained` — emitted only when `Nuke` newly grants root access.
 - `ServerActions.HackCompleted` — emitted after a hack resolves, with success/failure and target identity.
-- `ScriptService.ProcessStarted` — emitted only after the process is created and execution has been scheduled successfully.
+- `ScriptService.ProcessStarted` — emitted after the process and its API instance are created, but before script code begins executing.
 - `BotnetService.NodePurchased` — emitted after successful node purchase.
 - `CloudServerService.ServerPurchased` — emitted after successful cloud-server purchase.
 - `ActivityService.ActivityStarted` — emitted after a course or job has started successfully. Include the activity kind and immutable identifying details.

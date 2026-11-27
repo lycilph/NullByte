@@ -60,7 +60,7 @@ public sealed class ScriptService : IScriptOperations, IScriptService
     /// </summary>
     public event Action<ScriptProcess>? ProcessCompleted;
 
-    /// <summary>Raised after a script process has been created and its execution scheduled.</summary>
+    /// <summary>Raised after process and API creation, before script code begins executing.</summary>
     public event Action<ScriptProcess>? ProcessStarted;
 
     /// <summary>
