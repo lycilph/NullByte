@@ -35,7 +35,7 @@ public sealed class ServerOperationFormulas
         if (!server.HasRootAccess || server.Security >= 100.0)
             return 0.0;
 
-        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
+        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.Skills.GetExperience(SkillKind.Hacking));
 
         var difficultyMultiplier = (100.0 - server.Security) / 100.0;
 
@@ -67,7 +67,7 @@ public sealed class ServerOperationFormulas
         if (server.Security >= 100.0)
             return 0.0;
 
-        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
+        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.Skills.GetExperience(SkillKind.Hacking));
 
         var difficultyMultiplier = (100.0 - server.Security) / 100.0;
 
@@ -104,7 +104,7 @@ public sealed class ServerOperationFormulas
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(server);
 
-        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
+        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.Skills.GetExperience(SkillKind.Hacking));
 
         var difficulty = server.RequiredHackingLevel * server.Security;
 
