@@ -7,22 +7,23 @@ public sealed class PlayerTests
     [Fact]
     public void Constructor_InitializesPlayer()
     {
+        var homeId = ServerId.New();
         var player = new Player(
-            homeHostname: "home",
+            homeServerId: homeId,
             startingMoney: 1_000,
             startingHackingExperience: 50);
 
-        Assert.Equal("home", player.HomeHostname);
-        Assert.Equal("home", player.CurrentHostname);
+        Assert.Equal(homeId, player.HomeServerId);
+        Assert.Equal(homeId, player.CurrentServerId);
         Assert.Equal(1_000, player.Money);
         Assert.Equal(50, player.HackingExperience);
-        Assert.Contains("home", player.DiscoveredHostnames);
+        Assert.Contains(homeId, player.DiscoveredServerIds);
     }
 
     [Fact]
     public void Constructor_WithDefaults_StartsWithZeroMoneyAndExperience()
     {
-        var player = new Player("home");
+        var player = new Player(ServerId.New());
 
         Assert.Equal(0, player.Money);
         Assert.Equal(0, player.HackingExperience);
@@ -46,7 +47,7 @@ public sealed class PlayerTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(
             () => new Player(
-                "home",
+                ServerId.New(),
                 startingMoney: startingMoney));
     }
 
@@ -59,7 +60,7 @@ public sealed class PlayerTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(
             () => new Player(
-                "home",
+                ServerId.New(),
                 startingHackingExperience:
                     startingHackingExperience));
     }
@@ -68,7 +69,7 @@ public sealed class PlayerTests
     public void AddHackingExperience_IncreasesExperience()
     {
         var player = new Player(
-            "home",
+            ServerId.New(),
             startingHackingExperience: 10);
 
         player.AddHackingExperience(25);
@@ -80,7 +81,7 @@ public sealed class PlayerTests
     public void AddHackingExperience_WithZero_DoesNotChangeExperience()
     {
         var player = new Player(
-            "home",
+            ServerId.New(),
             startingHackingExperience: 10);
 
         player.AddHackingExperience(0);
@@ -95,7 +96,7 @@ public sealed class PlayerTests
     public void AddHackingExperience_WithInvalidAmount_Throws(
         double amount)
     {
-        var player = new Player("home");
+        var player = new Player(ServerId.New());
 
         Assert.Throws<ArgumentOutOfRangeException>(
             () => player.AddHackingExperience(amount));
@@ -104,9 +105,9 @@ public sealed class PlayerTests
     [Fact]
     public void DiscoverServer_AddsServer()
     {
-        var player = new Player("home");
+        var player = new Player(ServerId.New());
 
-        var discovered = player.DiscoverServer("foodnstuff");
+        var discovered = player.DiscoverServer(ServerId.New());
 
         Assert.True(discovered);
         Assert.Contains(
@@ -117,12 +118,12 @@ public sealed class PlayerTests
     [Fact]
     public void DiscoverServer_WhenAlreadyDiscovered_ReturnsFalse()
     {
-        var player = new Player("home");
+        var player = new Player(ServerId.New());
 
-        player.DiscoverServer("foodnstuff");
+        player.DiscoverServer(ServerId.New());
 
         var discoveredAgain =
-            player.DiscoverServer("foodnstuff");
+            player.DiscoverServer(ServerId.New());
 
         Assert.False(discoveredAgain);
         Assert.Single(
@@ -136,12 +137,12 @@ public sealed class PlayerTests
     [Fact]
     public void DiscoverServer_IsCaseInsensitive()
     {
-        var player = new Player("home");
+        var player = new Player(ServerId.New());
 
-        player.DiscoverServer("FoodNStuff");
+        player.DiscoverServer(ServerId.New());
 
         var discoveredAgain =
-            player.DiscoverServer("foodnstuff");
+            player.DiscoverServer(ServerId.New());
 
         Assert.False(discoveredAgain);
     }
@@ -151,7 +152,7 @@ public sealed class PlayerTests
     [InlineData("   ")]
     public void DiscoverServer_WithInvalidHostname_Throws(string hostname)
     {
-        var player = new Player("home");
+        var player = new Player(ServerId.New());
 
         Assert.Throws<ArgumentException>(
             () => player.DiscoverServer(hostname));
