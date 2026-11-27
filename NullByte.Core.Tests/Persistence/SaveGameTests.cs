@@ -71,7 +71,6 @@ public class SaveGameTests
     private static string Describe(GameState state) => Serializer.Serialize(Capture(state));
 
     [Fact]
-    [Fact]
     public void New_game_starts_in_tutorial_mode_with_no_narrative_capabilities()
     {
         var state = CreateState();
