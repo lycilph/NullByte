@@ -1,5 +1,6 @@
 ﻿using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Services;
+using NullByte.Core.Narrative;
 
 namespace NullByte.ConsoleUI.Commands;
 
@@ -7,13 +8,15 @@ public sealed class CommandDispatcher
 {
     private readonly CommandRegistry registry;
     private readonly IGameOutput output;
+    private readonly NarrativeCoordinator? narrative;
 
-    public CommandDispatcher(CommandRegistry registry, IGameOutput output)
+    public CommandDispatcher(CommandRegistry registry, IGameOutput output, NarrativeCoordinator? narrative = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
 
         this.registry = registry;
         this.output = output;
+        this.narrative = narrative;
     }
 
     public async Task<bool> DispatchAsync(string commandLine)
@@ -37,6 +40,8 @@ public sealed class CommandDispatcher
         }
 
         await command.Handler(args);
+        if (command.Name.Equals("status", StringComparison.OrdinalIgnoreCase))
+            narrative?.StatusUsed();
         return true;
     }
 

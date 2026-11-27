@@ -1,5 +1,6 @@
 ﻿using NullByte.Core.Configuration;
 using NullByte.Core.Domain;
+using NullByte.Core.Narrative;
 using NullByte.Core.Formulas;
 using NullByte.Core.Persistence;
 using NullByte.Core.Randomness;
@@ -68,6 +69,7 @@ public sealed class GameSession : IAsyncDisposable
     public IGameClock Clock { get; }
     public IGameThread GameThread { get; }
     public GameServices Services { get; }
+    public NarrativeCoordinator Narrative { get; }
 
     internal GameSession(
         GameState state,
@@ -87,6 +89,7 @@ public sealed class GameSession : IAsyncDisposable
         Clock = clock;
         GameThread = loop;
         Services = services;
+        Narrative = new NarrativeCoordinator(state, services.Network, services.Actions);
     }
 
     public async Task StartAsync()

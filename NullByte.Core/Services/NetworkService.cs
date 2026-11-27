@@ -13,6 +13,10 @@ public sealed class NetworkService
     private readonly GameScheduler scheduler;
     private readonly NetworkFormulas networkFormulas;
 
+    public event Action<IReadOnlyList<string>>? ServersDiscovered;
+    public event Action<string>? ServerAnalyzed;
+    public event Action<string>? ServerConnected;
+
     public NetworkService(GameState gameState, GameScheduler scheduler, NetworkFormulas networkFormulas)
     {
         this.gameState = gameState
@@ -64,8 +68,16 @@ public sealed class NetworkService
 
         var neighbors = gameState.Network.GetNeighbors(server.Id);
 
+        var newlyDiscovered = neighbors
+            .Where(neighbor => !gameState.Player.DiscoveredServerIds.Contains(neighbor.Id))
+            .Select(neighbor => neighbor.Hostname)
+            .ToArray();
+
         foreach (var neighbor in neighbors)
             gameState.Player.DiscoverServer(neighbor.Id);
+
+        if (newlyDiscovered.Length > 0)
+            ServersDiscovered?.Invoke(newlyDiscovered);
 
         return neighbors;
     }
@@ -83,7 +95,7 @@ public sealed class NetworkService
         var duration = networkFormulas.CalculateAnalyzeDuration();
         await scheduler.DelayAsync(duration, cancellationToken);
 
-        return new NetworkAnalyzeResult(
+        var result = new NetworkAnalyzeResult(
             true,
             "",
             server.Hostname,
@@ -97,6 +109,9 @@ public sealed class NetworkService
             server.GrowthParameter,
             server.UsedRam,
             server.MaximumRam);
+
+        ServerAnalyzed?.Invoke(server.Hostname);
+        return result;
     }
 
     /// <summary>
@@ -118,6 +133,7 @@ public sealed class NetworkService
             return NetworkConnectionResult.Failure($"Server '{targetServer.Hostname}' is not directly connected to the current server.");
 
         SetCurrentServer(targetServer.Id);
+        ServerConnected?.Invoke(targetServer.Hostname);
 
         return NetworkConnectionResult.Success(targetServer);
     }

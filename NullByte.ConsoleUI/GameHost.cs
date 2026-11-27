@@ -268,7 +268,8 @@ public sealed class GameHost(
         var session = GameSession.Create(options);
 
         var registry = CommandSetup.Create(session, terminal, hostRequests, saveManager, ExternalEditorStatus, settings);
-        var dispatcher = new CommandDispatcher(registry, terminal);
+        var dispatcher = new CommandDispatcher(registry, terminal, session.Narrative);
+        session.Narrative.MessagePublished += message => terminal.WriteLine(message.Text);
         var completion = new CompletionCatalog(registry, session.State, session.Services.Activities.Catalog, saveManager);
         terminal.SetCompletionProvider(completion);
 
@@ -277,6 +278,7 @@ public sealed class GameHost(
         // Initialize the completion catalog
         await session.GameThread.InvokeAsync(() =>
         {
+            session.Narrative.Initialize();
             completion.Refresh();
             return Task.CompletedTask;
         });
@@ -314,9 +316,16 @@ public sealed class GameHost(
         terminal.WriteLine("Single-threaded simulation started.");
         terminal.WriteLine($"Game thread ready. Game time: {clock.Elapsed.TotalSeconds:F3}s");
         terminal.WriteLine();
-        terminal.WriteLine("Type 'help' to see available commands ('debug' for other commands).");
-        terminal.WriteLine("Tab completes commands and server names, Up/Down recalls earlier input.");
-        terminal.WriteLine("The game autosaves every few minutes; 'save' and 'load' manage your own saves.");
+        if (game!.Session.State.Narrative.IsFreeplay)
+        {
+            terminal.WriteLine("Type 'help' to see available commands ('debug' for other commands).");
+            terminal.WriteLine("Tab completes commands and server names, Up/Down recalls earlier input.");
+            terminal.WriteLine("The game autosaves every few minutes; 'save' and 'load' manage your own saves.");
+        }
+        else
+        {
+            terminal.WriteLine("SYSTEM initialization complete. Use 'status' to inspect your environment.");
+        }
         terminal.WriteLine();
     }
 
