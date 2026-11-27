@@ -31,4 +31,4 @@ See `DEVELOPMENT.md` for tests, the VS Code extension and platform notes.
 
 ## Misc stuff
 
-Run this in a powershell console (from the root folder) to find (and fix) formatting issues `.\Scripts\check-formatting.ps1`
+Run this in a powershell console (from the root folder) to find (and fix - for fixing add `-fix` flag) formatting issues `.\Scripts\check-formatting.ps1`

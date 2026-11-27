@@ -128,7 +128,7 @@ public sealed class NullByteApiTests
 
     private static void AssertSkill(
         ApiFixture fixture,
-        INullByteSkillApi skill,
+        SkillInfo skill,
         SkillKind kind)
     {
         var expectedExperience = fixture.World.Player.Skills.GetExperience(kind);

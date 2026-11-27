@@ -7,5 +7,5 @@ public interface INullBytePlayerApi
     double Money { get; }
 
     /// <summary>Gets the player's skills.</summary>
-    INullByteSkillsApi Skills { get; }
+    SkillsInfo Skills { get; }
 }

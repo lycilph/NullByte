@@ -11,9 +11,9 @@ public sealed class NullBytePlayerApi : INullBytePlayerApi
     public NullBytePlayerApi(Player player, SkillFormulas skillFormulas)
     {
         this.player = player ?? throw new ArgumentNullException(nameof(player));
-        Skills = new NullByteSkillsApi(player.Skills, skillFormulas);
+        Skills = new SkillsInfo(player.Skills, skillFormulas);
     }
 
     public double Money => player.Money;
-    public INullByteSkillsApi Skills { get; }
+    public SkillsInfo Skills { get; }
 }

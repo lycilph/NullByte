@@ -53,7 +53,7 @@ public class ScriptServicePathTests
     [Fact]
     public void GetScriptRam_finds_a_script_however_its_path_is_spelled()
     {
-        state.FileSystem.WriteFile("home", "tools/a.cx", "nb.GetHackingLevel();");
+        state.FileSystem.WriteFile("home", "tools/a.cx", "nb.Hack();");
 
         var ram = service.GetScriptRam("tools/a.cx", "home");
 

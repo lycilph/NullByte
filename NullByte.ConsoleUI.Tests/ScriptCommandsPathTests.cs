@@ -8,7 +8,7 @@ public class ScriptCommandsPathTests
     public async Task Mem_finds_the_script_however_its_path_is_spelled()
     {
         var game = ConsoleTestSetup.CreateHarness();
-        game.Files.WriteFile("home", "tools/a.cx", "nb.GetHackingLevel();");
+        game.Files.WriteFile("home", "tools/a.cx", "nb.Hack();");
         await game.RunAndCaptureAsync("cd tools");
 
         var relative = await game.RunAndCaptureAsync("mem a.cx");
