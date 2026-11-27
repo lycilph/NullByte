@@ -280,7 +280,7 @@ public sealed record BalanceConfig
     /// botnet's share of the economy without touching the cost curves.
     /// </summary>
     public double BotnetProductionMultiplier { get; init; } = 1.0;
-    
+
     /// <summary>
     /// Multiplier applied to botnet node and upgrade costs.
     /// </summary>
