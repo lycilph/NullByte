@@ -124,6 +124,7 @@ public sealed class ScriptUnloadTests
         public INullByteBotnetApi Botnet => throw new NotSupportedException();
         public INullByteActivitiesApi Activities => throw new NotSupportedException();
         public INullByteCloudApi Cloud => throw new NotSupportedException();
+        public INullBytePlayerApi Player => throw new NotSupportedException();
 
         public void Print(object? value) { }
         public Task Sleep(TimeSpan duration) => Task.CompletedTask;
@@ -134,7 +135,6 @@ public sealed class ScriptUnloadTests
         public double GetServerMaxMoney(string hostname) => throw new NotSupportedException();
         public double GetServerSecurityLevel(string hostname) => throw new NotSupportedException();
         public double GetServerMinSecurityLevel(string hostname) => throw new NotSupportedException();
-        public double GetHackingLevel() => throw new NotSupportedException();
         public int GetServerRequiredHackingLevel(string hostname) => throw new NotSupportedException();
         public double GetServerMaxRam(string hostname) => throw new NotSupportedException();
         public double GetServerUsedRam(string hostname) => throw new NotSupportedException();
