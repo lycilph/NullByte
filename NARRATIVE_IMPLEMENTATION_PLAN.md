@@ -116,7 +116,7 @@ Acceptance:
 
 ### Stage 4 — Capability gating across player interfaces
 
-**Status: Implemented on the feature branch; CI validation pending**
+**Status: Complete; CI green and manually play-tested**
 
 **Goal:** ensure story unlocks control actual player access, not just what the console advertises.
 
@@ -149,6 +149,8 @@ Acceptance:
 
 ### Stage 5 — Initial tutorial content and presentation
 
+**Status: Started; tutorial journal implemented**
+
 **Goal:** deliver the first playable narrative arc through the existing host.
 
 Tasks:
@@ -163,7 +165,7 @@ Tasks:
 Deliverables:
 - A playable initialization and expansion tutorial.
 - Narrative output through the current console host.
-- A documented route for reviewing essential instructions.
+- A `journal` command that reconstructs essential tutorial guidance from persistent capability state.
 
 Acceptance:
 - A new player can complete the initial arc without external documentation.
@@ -250,9 +252,9 @@ Keep the first implementation narrow.
 | 1 — Tutorial walkthrough and capability map | Complete (design draft) |
 | 2 — Narrative and capability state model | Implemented; tests added |
 | 3 — Event-driven narrative progression | Main-path foundation implemented; validation pending |
-| 4 — Capability gating across player interfaces | Implemented; CI validation pending |
-| 5 — Initial tutorial content and presentation | Not started |
+| 4 — Capability gating across player interfaces | Complete; CI green and play-tested |
+| 5 — Initial tutorial content and presentation | Started; tutorial journal implemented |
 | 6 — Activity-system narrative | Not started |
 | 7 — Review, balance and documentation | Not started |
 
-Stages 0 and 1 are complete as design work. Stage 2's Tutorial/Freeplay state, save-format migration and new-game mode selection are implemented. Stage 3 has a Core-owned coordinator, session bootstrap, host-neutral SYSTEM messages and event-driven main-path milestones. Stage 4 now filters console dispatch, help, aliases, subcommands and completion by capability, and enforces the corresponding rules at scripting API and script-start boundaries. Focused tests cover tutorial command visibility and runtime API denial. The remaining work is CI validation and a fresh-save playthrough.
+Stages 0 and 1 are complete as design work. Stage 2's Tutorial/Freeplay state, save-format migration and new-game mode selection are implemented. Stage 3 has a Core-owned coordinator, session bootstrap, host-neutral SYSTEM messages and event-driven main-path milestones. Stage 4 now filters console dispatch, help, aliases, subcommands and completion by capability, and enforces the corresponding rules at scripting API and script-start boundaries. Focused tests cover tutorial command visibility and runtime API denial. Stage 4 has been validated by CI and a fresh-save manual playthrough. Stage 5 has begun with the tutorial journal; richer SYSTEM content and the remaining tutorial presentation are next.
