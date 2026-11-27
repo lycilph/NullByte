@@ -62,9 +62,9 @@ public sealed class DebugCommands(
     private async Task CheatAsync(IReadOnlyList<string> arguments)
     {
         player.AddMoney(1000);
-        player.AddHackingExperience(1000);
+        player.Skills.AddExperience(SkillKind.Hacking, 1000);
 
-        output.WriteLine($"Player - money: {player.Money}, experience: {player.HackingExperience}");
+        output.WriteLine($"Player - money: {player.Money}, experience: {player.Skills.GetExperience(SkillKind.Hacking)}");
     }
 
     private async Task EditorAsync(IReadOnlyList<string> arguments)

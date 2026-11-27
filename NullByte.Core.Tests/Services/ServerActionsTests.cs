@@ -73,7 +73,7 @@ public sealed class ServerActionsTests
         const int threads = 5;
 
         var initialSecurity = fixture.Target.Security;
-        var initialExperience = fixture.Player.HackingExperience;
+        var initialExperience = fixture.Player.Skills.GetExperience(SkillKind.Hacking);
         var expectedSecurityIncrease = fixture.Formulas.CalculateHackSecurityIncrease(threads);
         var expectedExperience = fixture.Formulas.CalculateHackingExperience(fixture.Target, threads);
 
@@ -99,7 +99,7 @@ public sealed class ServerActionsTests
 
         Assert.Equal(
             initialExperience + expectedExperience,
-            fixture.Player.HackingExperience,
+            fixture.Player.Skills.GetExperience(SkillKind.Hacking),
             precision: 10);
     }
 
@@ -133,7 +133,7 @@ public sealed class ServerActionsTests
         var fixture = CreateFixture(randomValue: 0.75, startingSecurity: 2);
 
         var initialSecurity = fixture.Target.Security;
-        var initialExperience = fixture.Player.HackingExperience;
+        var initialExperience = fixture.Player.Skills.GetExperience(SkillKind.Hacking);
         var expectedSecurityIncrease = fixture.Formulas.CalculateHackSecurityIncrease();
         var expectedExperience = fixture.Formulas.CalculateHackingExperience(fixture.Target) * fixture.Formulas.GetFailedHackExperienceFactor();
 
@@ -151,7 +151,7 @@ public sealed class ServerActionsTests
 
         Assert.Equal(
             initialExperience + expectedExperience,
-            fixture.Player.HackingExperience,
+            fixture.Player.Skills.GetExperience(SkillKind.Hacking),
             precision: 2);
     }
 
@@ -248,7 +248,7 @@ public sealed class ServerActionsTests
 
         var initialMoney = fixture.Target.Money;
         var initialSecurity = fixture.Target.Security;
-        var initialExperience = fixture.Player.HackingExperience;
+        var initialExperience = fixture.Player.Skills.GetExperience(SkillKind.Hacking);
         var expectedGrowth = fixture.Formulas.CalculateGrowthAmount(fixture.Target, threads);
         var expectedSecurityIncrease = fixture.Formulas.CalculateGrowSecurityIncrease(threads);
         var expectedExperience = fixture.Formulas.CalculateHackingExperience(fixture.Target, threads);
@@ -275,7 +275,7 @@ public sealed class ServerActionsTests
 
         Assert.Equal(
             initialExperience + expectedExperience,
-            fixture.Player.HackingExperience,
+            fixture.Player.Skills.GetExperience(SkillKind.Hacking),
             precision: 10);
     }
 
@@ -331,7 +331,7 @@ public sealed class ServerActionsTests
 
         const int threads = 10;
 
-        var initialExperience = fixture.Player.HackingExperience;
+        var initialExperience = fixture.Player.Skills.GetExperience(SkillKind.Hacking);
         var expectedExperience = fixture.Formulas.CalculateHackingExperience(fixture.Target, threads);
 
         var action = fixture.Actions.WeakenAsync(fixture.Target.Hostname, threads, TestContext.Current.CancellationToken);
@@ -351,7 +351,7 @@ public sealed class ServerActionsTests
 
         Assert.Equal(
             initialExperience + expectedExperience,
-            fixture.Player.HackingExperience,
+            fixture.Player.Skills.GetExperience(SkillKind.Hacking),
             precision: 10);
     }
 
@@ -423,7 +423,7 @@ public sealed class ServerActionsTests
         var initialServerMoney = fixture.Target.Money;
         var initialPlayerMoney = fixture.Player.Money;
         var initialSecurity = fixture.Target.Security;
-        var initialExperience = fixture.Player.HackingExperience;
+        var initialExperience = fixture.Player.Skills.GetExperience(SkillKind.Hacking);
 
         var action = fixture.Actions.BackdoorAsync(fixture.Target.Hostname, TestContext.Current.CancellationToken);
         fixture.World.Advance(fixture.Formulas.CalculateBackdoorDuration(fixture.Player, fixture.Target));
@@ -432,7 +432,7 @@ public sealed class ServerActionsTests
         Assert.Equal(initialServerMoney, fixture.Target.Money);
         Assert.Equal(initialPlayerMoney, fixture.Player.Money);
         Assert.Equal(initialSecurity, fixture.Target.Security);
-        Assert.Equal(initialExperience, fixture.Player.HackingExperience);
+        Assert.Equal(initialExperience, fixture.Player.Skills.GetExperience(SkillKind.Hacking));
     }
 
     [Fact]
@@ -489,7 +489,7 @@ public sealed class ServerActionsTests
         var initialServerMoney = fixture.Target.Money;
         var initialPlayerMoney = fixture.Player.Money;
         var initialSecurity = fixture.Target.Security;
-        var initialExperience = fixture.Player.HackingExperience;
+        var initialExperience = fixture.Player.Skills.GetExperience(SkillKind.Hacking);
 
         using var cancellationSource = new CancellationTokenSource();
 
@@ -503,7 +503,7 @@ public sealed class ServerActionsTests
         Assert.Equal(initialServerMoney, fixture.Target.Money);
         Assert.Equal(initialPlayerMoney, fixture.Player.Money);
         Assert.Equal(initialSecurity, fixture.Target.Security);
-        Assert.Equal(initialExperience, fixture.Player.HackingExperience);
+        Assert.Equal(initialExperience, fixture.Player.Skills.GetExperience(SkillKind.Hacking));
         Assert.False(fixture.Target.HasBackdoor);
     }
 

@@ -39,7 +39,7 @@ internal sealed class ActivityTestWorld
     {
         var needed = new SkillFormulas(Balance).CalculateExperienceForLevel(SkillKind.Hacking, level);
 
-        Player.Skills.AddExperience(SkillKind.Hacking, Math.Max(0, needed - Player.HackingExperience));
+        Player.Skills.AddExperience(SkillKind.Hacking, Math.Max(0, needed - Player.Skills.GetExperience(SkillKind.Hacking)));
     }
 
     /// <summary>

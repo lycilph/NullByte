@@ -3,7 +3,7 @@
 namespace NullByte.Core.Domain;
 
 /// <summary>Represents the player's persistent game state.</summary>
-[DebuggerDisplay("Home: {HomeServerId}, Current: {CurrentServerId}, Money: {Money}, Experience: {HackingExperience}")]
+[DebuggerDisplay("Home: {HomeServerId}, Current: {CurrentServerId}, Money: {Money}")]
 public sealed class Player
 {
     private readonly HashSet<ServerId> discoveredServerIds = [];
@@ -32,10 +32,6 @@ public sealed class Player
     public string CurrentDirectory { get; internal set; } = "";
     public double Money { get; private set; }
     public PlayerSkills Skills { get; } = new();
-    public double HackingExperience => Skills.GetExperience(SkillKind.Hacking);
-
-    public void AddHackingExperience(double amount) => Skills.AddExperience(SkillKind.Hacking, amount);
-
     public void AddMoney(double amount)
     {
         if (!double.IsFinite(amount) || amount < 0)

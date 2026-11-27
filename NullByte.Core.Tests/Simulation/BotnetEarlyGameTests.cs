@@ -82,7 +82,7 @@ public sealed class BotnetEarlyGameTests
     private static Server ChooseHackTarget(GameState gameState, ServerOperationFormulas ops, SkillFormulas skills)
     {
         var player = gameState.Player;
-        var level = skills.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
+        var level = skills.CalculateLevel(SkillKind.Hacking, player.Skills.GetExperience(SkillKind.Hacking));
 
         Server? best = null;
         var bestValue = double.MinValue;

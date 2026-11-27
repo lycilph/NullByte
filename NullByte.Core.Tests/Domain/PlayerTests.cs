@@ -13,7 +13,7 @@ public sealed class PlayerTests
         Assert.Equal(homeId, player.HomeServerId);
         Assert.Equal(homeId, player.CurrentServerId);
         Assert.Equal(1_000, player.Money);
-        Assert.Equal(50, player.HackingExperience);
+        Assert.Equal(50, player.Skills.GetExperience(SkillKind.Hacking));
         Assert.Contains(homeId, player.DiscoveredServerIds);
     }
 
@@ -22,7 +22,7 @@ public sealed class PlayerTests
     {
         var player = new Player(ServerId.New());
         Assert.Equal(0, player.Money);
-        Assert.Equal(0, player.HackingExperience);
+        Assert.Equal(0, player.Skills.GetExperience(SkillKind.Hacking));
     }
 
     [Fact]
@@ -42,32 +42,6 @@ public sealed class PlayerTests
     [InlineData(double.PositiveInfinity)]
     public void Constructor_WithInvalidStartingHackingExperience_Throws(double startingHackingExperience)
         => Assert.Throws<ArgumentOutOfRangeException>(() => new Player(ServerId.New(), startingHackingExperience: startingHackingExperience));
-
-    [Fact]
-    public void AddHackingExperience_IncreasesExperience()
-    {
-        var player = new Player(ServerId.New(), startingHackingExperience: 10);
-        player.AddHackingExperience(25);
-        Assert.Equal(35, player.HackingExperience);
-    }
-
-    [Fact]
-    public void AddHackingExperience_WithZero_DoesNotChangeExperience()
-    {
-        var player = new Player(ServerId.New(), startingHackingExperience: 10);
-        player.AddHackingExperience(0);
-        Assert.Equal(10, player.HackingExperience);
-    }
-
-    [Theory]
-    [InlineData(-1)]
-    [InlineData(double.NaN)]
-    [InlineData(double.PositiveInfinity)]
-    public void AddHackingExperience_WithInvalidAmount_Throws(double amount)
-    {
-        var player = new Player(ServerId.New());
-        Assert.Throws<ArgumentOutOfRangeException>(() => player.AddHackingExperience(amount));
-    }
 
     [Fact]
     public void DiscoverServer_AddsServer()

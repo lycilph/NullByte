@@ -35,7 +35,7 @@ public sealed class ServerOperationFormulas
         if (!server.HasRootAccess || server.Security >= 100.0)
             return 0.0;
 
-        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
+        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.Skills.GetExperience(SkillKind.Hacking));
 
         var difficultyMultiplier = (100.0 - server.Security) / 100.0;
 
@@ -67,7 +67,7 @@ public sealed class ServerOperationFormulas
         if (server.Security >= 100.0)
             return 0.0;
 
-        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
+        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.Skills.GetExperience(SkillKind.Hacking));
 
         var difficultyMultiplier = (100.0 - server.Security) / 100.0;
 
@@ -104,7 +104,7 @@ public sealed class ServerOperationFormulas
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(server);
 
-        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.HackingExperience);
+        var hackingLevel = skills.CalculateLevel(SkillKind.Hacking, player.Skills.GetExperience(SkillKind.Hacking));
 
         var difficulty = server.RequiredHackingLevel * server.Security;
 
@@ -164,7 +164,7 @@ public sealed class ServerOperationFormulas
 
         var adjustedGrowthLog = Math.Log(1.0 + balance.ServerBaseGrowthIncrement / server.Security);
 
-        var maximumGrowthLog =Math.Log(balance.ServerMaximumGrowthRate);
+        var maximumGrowthLog = Math.Log(balance.ServerMaximumGrowthRate);
 
         adjustedGrowthLog = Math.Min(adjustedGrowthLog, maximumGrowthLog);
 
@@ -204,7 +204,7 @@ public sealed class ServerOperationFormulas
         // Bitburner adds one monetary unit per growth thread before
         // applying multiplicative growth. This lets an empty server
         // recover from zero money.
-        var targetMoney = (server.Money + threads)* growthFactor;
+        var targetMoney = (server.Money + threads) * growthFactor;
 
         var clampedTarget = Math.Min(targetMoney, server.MaximumMoney);
 
@@ -239,7 +239,7 @@ public sealed class ServerOperationFormulas
     {
         ValidateThreads(threads);
         ValidateCores(cores);
-        
+
         var coreBonus = 1.0 + (cores - 1.0) / 16.0;
 
         return balance.WeakenSecurityDecrease * threads * coreBonus;
@@ -248,11 +248,11 @@ public sealed class ServerOperationFormulas
     /// <summary>
     /// Calculates the hacking experience awarded for an operation.
     /// </summary>
-    public double CalculateHackingExperience(Server server,int threads = 1)
+    public double CalculateHackingExperience(Server server, int threads = 1)
     {
         ArgumentNullException.ThrowIfNull(server);
         ValidateThreads(threads);
-        
+
         if (server.BaseDifficulty <= 0)
             return 0.0;
 

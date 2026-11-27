@@ -84,7 +84,7 @@ public class SaveGameTests
         Assert.Equal(new[] { "weaken.cx", "hack.cx" }, restored.Processes.Select(p => p.Filename));
 
         Assert.Equal(0.1 + 0.2, restored.State.Player.Money);
-        Assert.Equal(1.0 / 3.0, restored.State.Player.HackingExperience);
+        Assert.Equal(1.0 / 3.0, restored.State.Player.Skills.GetExperience(SkillKind.Hacking));
         Assert.Equal("n00dles", restored.State.Network.GetServer(restored.State.Player.CurrentServerId).Hostname);
         Assert.True(restored.State.Network.GetServer("n00dles").HasRootAccess);
         Assert.Equal(2, restored.State.Botnet.NodeCount);
