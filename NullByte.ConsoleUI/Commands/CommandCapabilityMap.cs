@@ -9,7 +9,7 @@ internal static class CommandCapabilityMap
             ["help"] = "host.controls", ["exit"] = "host.controls", ["clear"] = "host.controls",
             ["vscode"] = "host.controls", ["save"] = "host.controls", ["load"] = "host.controls",
             ["saves"] = "host.controls", ["reset"] = "host.controls",
-            ["status"] = "player.inspect", ["money"] = "player.inspect", ["skills"] = "player.inspect",
+            ["status"] = "player.inspect", ["money"] = "player.profile", ["skills"] = "player.profile",
             ["scan"] = "network.scan", ["analyze"] = "network.analyze",
             ["connect"] = "network.connect", ["home"] = "network.connect",
             ["nuke"] = "server.root-access", ["backdoor"] = "server.backdoor",

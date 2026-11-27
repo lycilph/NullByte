@@ -16,7 +16,7 @@ public sealed class NullBytePlayerApi : INullBytePlayerApi
         skills = new SkillsInfo(player.Skills, skillFormulas);
     }
 
-    public double Money { get { narrative?.EnsureCapability("player.inspect"); return player.Money; } }
+    public double Money { get { narrative?.EnsureCapability("player.profile"); return player.Money; } }
     public SkillsInfo Skills { get { narrative?.EnsureCapability("player.inspect"); return skills; } }
     private readonly SkillsInfo skills;
 }

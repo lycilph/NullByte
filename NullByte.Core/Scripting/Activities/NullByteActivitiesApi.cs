@@ -123,7 +123,7 @@ public sealed class NullByteActivitiesApi : INullByteActivitiesApi
 
     public int GetSkillLevel(string skill)
     {
-        Require("player.inspect");
+        Require("player.profile");
         var kind = ParseSkill(skill);
 
         return skillFormulas.CalculateLevel(kind, gameState.Player.Skills.GetExperience(kind));

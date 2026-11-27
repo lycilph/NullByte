@@ -399,6 +399,7 @@ public sealed class ScriptServiceTests
             GameState = new GameState(
                 new Player(Home.Id),
                 network);
+            GameState.Narrative.Mode = NarrativeProgressionMode.Freeplay;
 
             Api = new TestNullByteApi();
             var apiFactory = new TestNullByteApiFactory(Api);
