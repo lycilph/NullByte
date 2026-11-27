@@ -127,7 +127,7 @@ public sealed class CloudServerServiceTests
 
         Assert.Equal(250, world.CloudServerService.GetPurchaseCost());
         Assert.True(world.CloudServerService.Purchase("cloud-one").Succeeded);
-        Assert.Equal(250, world.CloudServerService.GetPurchaseCost());
+        Assert.Equal(750, world.CloudServerService.GetPurchaseCost());
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public sealed class CloudServerServiceTests
         world.CloudServerService.Purchase("cloud-b");
         world.CloudServerService.Purchase("cloud-a");
 
-        Assert.Equal(["cloud-a", "cloud-b"], world.CloudServerService.GetServers().Select(server => server.Hostname));
+        Assert.Equal(new[] { "cloud-a", "cloud-b" }, world.CloudServerService.GetServers().Select(server => server.Hostname));
     }
 
     private static CoreTestWorld Create(double money, BalanceConfig? balance = null)
