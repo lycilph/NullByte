@@ -28,7 +28,7 @@ public sealed class NarrativeState
     public bool IsFreeplay => Mode == NarrativeProgressionMode.Freeplay;
 
     public bool HasCapability(string capability)
-        => UnlockedCapabilities.Contains(capability);
+        => IsFreeplay || UnlockedCapabilities.Contains(capability);
 
     public bool CompleteMilestone(string milestone)
         => CompletedMilestones.Add(milestone);
