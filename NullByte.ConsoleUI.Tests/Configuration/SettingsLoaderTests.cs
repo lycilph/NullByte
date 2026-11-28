@@ -144,6 +144,20 @@ public sealed class SettingsLoaderTests
             directory.GetPath("settings.json"));
 
         Assert.True(result.StartNewGame);
+        Assert.True(result.Freeplay);
+    }
+
+    [Fact]
+    public void Load_WithFreeplayWithoutNew_Throws()
+    {
+        using var directory = new TemporaryDirectory();
+
+        var exception = Assert.Throws<ArgumentException>(
+            () => SettingsLoader.Load(
+                ["--freeplay"],
+                directory.GetPath("settings.json")));
+
+        Assert.Contains("'--freeplay' requires '--new'", exception.Message);
     }
 
     [Fact]
