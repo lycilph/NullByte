@@ -10,6 +10,8 @@ namespace NullByte.Core.Narrative;
 public sealed class NarrativeCoordinator : IDisposable
 {
     private readonly GameState state;
+    private readonly NetworkService network;
+    private readonly ServerActions actions;
 
     public NarrativeCoordinator(GameState state, NetworkService network, ServerActions actions)
     {
@@ -18,6 +20,8 @@ public sealed class NarrativeCoordinator : IDisposable
         ArgumentNullException.ThrowIfNull(actions);
 
         this.state = state;
+        this.network = network;
+        this.actions = actions;
         network.ServersDiscovered += OnServersDiscovered;
         network.ServerAnalyzed += OnServerAnalyzed;
         network.ServerConnected += OnServerConnected;
