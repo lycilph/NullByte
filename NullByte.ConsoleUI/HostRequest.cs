@@ -21,5 +21,5 @@ public abstract record HostRequest
         public string Slot { get; }
     }
 
-    public sealed record Reset : HostRequest;
+    public sealed record Reset(bool Freeplay) : HostRequest;
 }
