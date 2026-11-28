@@ -1,6 +1,7 @@
 using NullByte.Core.Domain;
 using NullByte.Core.World;
 using NullByte.ConsoleUI.Tests.Infrastructure;
+using System.Text.RegularExpressions;
 
 namespace NullByte.ConsoleUI.Tests;
 
@@ -41,10 +42,12 @@ public sealed class NarrativeCapabilityCommandTests
 
         var output = await harness.RunAndCaptureAsync("journal");
 
-        Assert.Contains("SYSTEM JOURNAL", output);
-        Assert.Contains("STATUS", output);
-        Assert.Contains("NETWORK DISCOVERY", output);
-        Assert.DoesNotContain("SERVER OPERATIONS", output);
+        var normalizedOutput = Regex.Replace(output, @"\s+", " ").Trim();
+
+        Assert.Contains("SYSTEM JOURNAL", normalizedOutput);
+        Assert.Contains("STATUS", normalizedOutput);
+        Assert.Contains("NETWORK DISCOVERY", normalizedOutput);
+        Assert.DoesNotContain("SERVER OPERATIONS", normalizedOutput);
     }
 
     [Fact]
