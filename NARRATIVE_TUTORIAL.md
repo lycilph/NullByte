@@ -1,398 +1,87 @@
 # Narrative Tutorial and Capability Map
 
-## 1. Purpose and scope
+## Purpose
 
-This document records the first concrete mapping of the current player-facing command and scripting API surfaces to narrative capabilities. It also proposes a first playable tutorial walkthrough.
+This document describes the tutorial as it exists in the game: the current capability unlock sequence, the commands exposed at each point, and the practical guidance shown by `journal`.
 
-It is based on the current implementation on `feature/narrative-design-docs`. The mapping is a design proposal, not an implementation: all commands are currently registered and available independently of story progression.
+It is an implementation reference, not a script for the entire story. The broader narrative direction and long-term story arc are in [NARRATIVE.md](NARRATIVE.md). The progression coordinator and persistence details are in [NARRATIVE_PROGRESSION_DESIGN.md](NARRATIVE_PROGRESSION_DESIGN.md).
 
-The aim is to make the first hours of play legible and story-driven without inventing gameplay systems that do not exist.
+## 1. New-game modes
 
-## 2. Current implementation findings
+A new game can start in one of two modes:
 
-### 2.1 New-game state
+- **Tutorial** is the default. The player begins with a restricted command set and unlocks capabilities through successful actions.
+- **Freeplay** starts with all capabilities available and skips tutorial initialization and unlock messages.
 
-A new game is created by `InitialGameStateFactory`:
+Existing saves created before narrative progression are migrated to Freeplay so established players are not unexpectedly restricted.
 
-- Player starts on `home`.
-- Starting money is $1,000.
-- Hacking experience starts at zero; the current formula gives the player the starting hacking level.
-- The player has root access to `home`.
-- `home` is the only initially discovered server.
-- The initial network contains `home`, `n00dles`, `foodnstuff`, `sigma-cosmetics`, `joesguns`, `harbor`, `catalyst`, `datavault`, `phantom`, `neurocore`, `blackice` and `null`.
-- `home` is connected to `n00dles` and `foodnstuff`.
-- `n00dles` requires hacking level 1; `foodnstuff` requires level 5.
+Freeplay is selected explicitly when starting a new game (for example, `--new --freeplay`) or confirming a reset with the corresponding option. The `--freeplay` option is not a standalone startup mode.
 
-Therefore, "starts with nothing" can mean **no in-world gameplay commands**, but it does not currently mean an empty wallet, an empty home server or an absent network. Those starting resources are established game balance and should not be changed as part of narrative gating without a separate design decision.
+## 2. Tutorial sequence
 
-### 2.2 Command registration and dispatch
+The sequence below reflects the current `NarrativeCoordinator` implementation. Capability names are stable internal identifiers; command names are player-facing.
 
-Commands are registered by `CommandSetup.Create`, which creates the registry and registers the command groups. All normal command groups are currently registered immediately.
+| Step | Trigger | Capabilities unlocked | Player-facing result |
+|---|---|---|---|
+| Initialization | New Tutorial session | `player.inspect` | SYSTEM introduces NB-0001 and explicitly tells the player to use `status`. |
+| Runtime status | Successful `status` | `host.controls`, `network.scan`, `player.profile` | Host controls and network scanning become available. |
+| First scan | Successful scan discovers at least one new host | `network.analyze` | SYSTEM reports discovered hosts and introduces `analyze <host>`. |
+| First analysis | Successful analysis | `network.connect`, `network.inspect` | SYSTEM introduces `connect <host>` and `home`. |
+| First connection | Successful connection to a host | `server.root-access` | SYSTEM introduces `nuke <host>`. |
+| First root access | Root access is newly acquired | `server.operations`, `server.backdoor` | SYSTEM introduces `hack`, `grow`, `weaken` and `backdoor`. |
+| First successful hack | A hack succeeds | `files.navigation`, `files.read`, `files.manage`, `scripts.execute` | SYSTEM introduces file operations and `run <file>`. |
+| First script started | Script process starts successfully | `scripts.inspect`, `scripts.control`, botnet, cloud and activity capabilities | SYSTEM introduces process controls and the optional expansion systems. |
 
-The relevant behavior is:
+The first successful hack unlocks file operations and script execution. Root access does not unlock file operations. A failed hack does not advance this milestone.
 
-- `CommandRegistry.Commands` exposes the registered commands.
-- `CommandRegistry.TryResolve` resolves every registered command and alias.
-- `CommandDispatcher.DispatchAsync` resolves and invokes commands.
-- `SystemCommands.HelpAsync` lists all non-debug registered commands.
-- `CompletionCatalog.BuildCommands` exposes all registered commands and aliases to tab completion.
-- `CommandRegistry.Subcommands` is also used to show subcommand usage.
+The first script milestone currently unlocks these capability groups:
 
-Consequently, filtering only the help output would not implement hidden commands. The same capability policy must govern command resolution, aliases, help, subcommand usage and completion.
+- `botnet.inspect`, `botnet.purchase`, `botnet.upgrade`
+- `cloud.inspect`, `cloud.purchase`, `cloud.manage`
+- `activities.learn`, `activities.work`, `activities.crime`, `activities.manage`
 
-### 2.3 Existing boot sequence
+These unlocks expose existing systems; they do not make botnet, cloud or activities mandatory for the main narrative.
 
-The current `BootSequence` is a host startup animation. It prints generic machine startup messages, including "Command interpreter standing by", then "SYSTEM READY". It does not represent a narrative event or persistent game state.
+## 3. Command guidance
 
-The story initialization sequence should be introduced separately from this host startup behavior. We can revise the boot text later if it conflicts with the final opening, but the tutorial should not depend on the terminal animation as its narrative state machine.
+The `journal` command displays guidance derived from capabilities already unlocked. It is deliberately reconstructed from current state, so instructions remain available after save/load even though the full message history is not stored.
 
-### 2.4 Scripting API
-
-Every running script receives an `INullByteApi` instance through `NullByteApiFactory`. The API currently exposes all of its methods to every script. There is no capability check in the API implementations.
-
-This is an important second access surface. Hiding `hack` in the console while leaving `nb.Hack()` callable would let scripts bypass the story restriction once script execution is available.
-
-The script API is also broader than the console in some places and narrower in others. It does not currently provide direct equivalents for console `connect`, `home`, `analyze`, `backdoor`, `cat` or `edit`, for example. It does expose server queries and actions that accept a hostname directly.
-
-The script editor/compiler sees the full `INullByteApi` interface, so hiding API methods from IntelliSense is a separate problem from runtime authorization. The first implementation should at minimum enforce capabilities at runtime; whether editor completion must also conceal unavailable API members should be decided before the scripting phase.
-
-### 2.5 Persistence
-
-The current save format is version 7. `SaveGame` stores player, network, botnet, employment, activity, files and running processes, but has no narrative or capability state.
-
-A persistent narrative state therefore requires a save-format change and migration. The existing migrator upgrades older formats in sequence. The recommended compatibility policy is that a save made before narrative gating is introduced should load with all currently implemented capabilities unlocked, so an established player is never unexpectedly restricted.
-
-## 3. Recommended access model
-
-### 3.1 Literal zero-command start and host controls
-
-**Confirmed user decision:** a new game begins with absolutely no console commands available. This includes `help`, `exit`/`quit`, `clear`/`cls`, `save`, `load`, `saves`, `reset` and optional host integrations such as `vscode`.
-
-The opening is therefore not initiated by a command. SYSTEM's initialization sequence is emitted automatically after a new session starts. It explicitly authorizes `status`, which is the first available command. The player is not asked to guess or type an unknown command.
-
-After the player successfully executes `status`, a separate `host.controls` capability is granted. This makes the normal host/session commands available from then on. They are not in-world capabilities and should not be presented as discoveries made by NB-0001; they are simply withheld during the short initialization hand-off.
-
-The host application can still be closed using ordinary operating-system/window controls. Those are outside the in-game command interface.
-
-This means the initial state has no command allow-list entries at all. The first state transition grants `player.inspect`, exposing only `status`. The first successful `status` use grants `host.controls` and `network.scan`, starting the network tutorial.
-
-### 3.2 Capability identity
-
-Capabilities should have stable IDs independent of command spelling or localized text. The command registry should associate each command definition with one required capability, or explicitly mark it as a host command.
-
-The capability state should be owned by Core/game state, not by the console registry. The registry and dispatcher can then ask whether a capability is available, while the scripting API can use the same state.
-
-### 3.3 Unknown-command behavior
-
-A locked command should be treated exactly like an unknown command:
-
-- no "locked" or "not yet unlocked" explanation;
-- no suggestion of the hidden command name;
-- no usage text;
-- no subcommand list;
-- no tab-completion result.
-
-The same applies to aliases. A known command with a hidden alias must not leak through the alias.
-
-### 3.4 Suggested capability groups
-
-The following IDs are proposed stable identifiers. They group related functionality rather than individual command strings.
-
-| Capability ID | Console commands | Notes |
+| Guidance section | Capability | Main commands introduced |
 |---|---|---|
-| `player.inspect` | `status` | Inspect the initial runtime state |
-| `player.profile` | `money`, `skills` | Inspect player resources and skills; unlocked after the first successful server analysis |
-| `network.scan` | `scan` | Discover adjacent servers |
-| `network.analyze` | `analyze` | Inspect a discovered server; requires network discovery |
-| `network.connect` | `connect`, `home` | Navigate discovered network |
-| `server.root-access` | `nuke` | Gain root access when hacking level permits |
-| `server.backdoor` | `backdoor` | Install a backdoor on a rooted server |
-| `server.operations` | `hack`, `grow`, `weaken` | Perform operations on a rooted server |
-| `files.navigation` | `ls`, `cd`, `pwd` | Navigate the virtual file system |
-| `files.read` | `cat` | Read files |
-| `files.manage` | `rm`, `mkdir`, `rmdir`, `mv`, `scp`, `edit` | Create, modify, move, copy and remove files |
-| `scripts.execute` | `run` | Start a script |
-| `scripts.inspect` | `mem`, `free`, `ps` | Inspect script RAM and running processes |
-| `scripts.control` | `kill`, `killall` | Stop script processes |
-| `botnet.inspect` | `botnet` (also `botnet status`) | Inspect botnet state |
-| `botnet.purchase` | `botnet buy` | Purchase a node |
-| `botnet.upgrade` | `botnet upgrade` | Upgrade a node |
-| `cloud.inspect` | `cloud` (also `cloud list`) | Inspect cloud servers |
-| `cloud.purchase` | `cloud buy` | Purchase a cloud server |
-| `cloud.manage` | `cloud upgrade`, `cloud rename` | Manage owned cloud servers |
-| `activities.learn` | `study`, `train` | Study and train skills |
-| `activities.work` | `work` | Work for a company |
-| `activities.crime` | `crime` | Attempt crimes |
-| `activities.manage` | `stop`, `focus`, `activity` | Manage or inspect the current activity |
+| Status | `player.inspect` | `status`, `money`, `skills` |
+| Host controls | `host.controls` | `help`, `journal`, `save`, `load`, `saves`, `reset`, `clear`, `exit` |
+| Network discovery | `network.scan` | `scan` |
+| Network analysis | `network.analyze` | `analyze <host>` |
+| Network connection | `network.connect` | `connect <host>`, `home` |
+| Access | `server.root-access` | `nuke <host>` |
+| Server operations | `server.operations` | `hack`, `grow`, `weaken` |
+| Files | `files.navigation` | `ls`, `cd`, `pwd`, `cat`, `rm`, `mkdir`, `rmdir`, `mv`, `scp`, `edit` |
+| Automation | `scripts.execute` | `run <file>`, `mem`, `free`, `ps`, `kill`, `killall` |
+| Expansion | `botnet.inspect` | Botnet, cloud and activity commands |
 
-Host/session commands use the separate `host.controls` capability, granted only after the player successfully executes `status`:
+The journal text is concise guidance rather than a complete reference. Use `help` for the currently available command list and command-specific usage.
 
-| Command | Alias | Reason |
-|---|---|---|
-| `help` | — | Explains currently available commands |
-| `exit` | `quit` | Allows the player to leave |
-| `clear` | `cls` | Terminal presentation only |
-| `save` | — | Protects player progress |
-| `load` | — | Loads a saved game |
-| `saves` | — | Lists saved games |
-| `reset` | — | Starts a new game |
-| `vscode` | — | Optional host/editor integration; availability currently depends on settings |
+## 4. Capability enforcement
 
-Debug commands (`debug`, `time`, `cheat`, `editor`) are already marked as debug-only and should remain outside the normal player capability map.
+Tutorial access is enforced, not merely presented as a sequence of messages.
 
-The command groups `botnet` and `cloud` use multi-word command definitions and aliases. The access check must apply to the resolved definition, including the bare parent command and all registered subcommands.
+- Locked commands are not exposed through normal command resolution, help or completion.
+- A guessed locked command is treated like an unknown command.
+- Relevant scripting API operations use the same capability state so scripts cannot bypass tutorial restrictions.
+- Freeplay treats all capabilities as available, including capabilities added in later versions.
 
-## 4. Scripting API capability mapping
+The command registry and scripting API are the implementation sources of truth for exact command/API mapping. When commands or API methods change, update this document alongside the corresponding tests.
 
-The API should use the same capability IDs wherever a script method represents the same player-facing action. The table maps the current public API surface; it does not imply that every API method has a direct console equivalent.
+## 5. Current scope and known limitations
 
-| Capability ID | Script API surface |
-|---|---|
-| `scripts.execute` | `nb.Print`, `nb.Sleep`, and the ability to start scripts at all |
-| `network.scan` | `nb.Scan` |
-| `server.root-access` | `nb.Nuke` |
-| `server.operations` | `nb.Hack`, `nb.Grow`, `nb.Weaken` |
-| `network.inspect` | `nb.GetServerMoneyAvailable`, `nb.GetServerMaxMoney`, `nb.GetServerSecurityLevel`, `nb.GetServerMinSecurityLevel`, `nb.GetServerRequiredHackingLevel`, `nb.GetServerMaxRam`, `nb.GetServerUsedRam`, `nb.HasRootAccess` |
-| `scripts.inspect` | `nb.Ps`, `nb.ScriptRunning`, `nb.GetScriptRam` |
-| `scripts.execute` | `nb.RunAsync`, `nb.ExecAsync` |
-| `scripts.control` | `nb.Kill`, `nb.KillAll` |
-| `files.navigation` / `files.manage` | `nb.Files.List`, `nb.Files.Delete`, `nb.Files.Move`, `nb.Files.Copy` |
-| `botnet.inspect` | `nb.Botnet.NumberOfNodes`, `nb.Botnet.GetNodeStats`, `nb.Botnet.GetNextNodeCost`, and upgrade-cost queries |
-| `botnet.purchase` | `nb.Botnet.PurchaseNode` |
-| `botnet.upgrade` | `nb.Botnet.UpgradeLevel`, `nb.Botnet.UpgradeRam`, `nb.Botnet.UpgradeCore` |
-| `cloud.inspect` | `nb.Cloud.GetServers`, `nb.Cloud.GetServer`, `nb.Cloud.GetServerCost`, `nb.Cloud.GetUpgradeCost` |
-| `cloud.purchase` | `nb.Cloud.Purchase` |
-| `cloud.manage` | `nb.Cloud.Upgrade`, `nb.Cloud.Rename` |
-| `activities.learn` | `nb.Activities.Study`, `nb.Activities.Train`, `nb.Activities.GetCourses` |
-| `activities.work` | `nb.Activities.Work`, `nb.Activities.GetCompanies`, `nb.Activities.GetReputation`, `nb.Activities.GetJob` |
-| `activities.crime` | `nb.Activities.Crime`, `nb.Activities.GetCrimes`, `nb.Activities.GetCrimeChance` |
-| `activities.manage` | `nb.Activities.Stop`, `nb.Activities.GetStatus` |
-| `player.profile` | `nb.Player.Money`, `nb.Player.Skills`, `nb.Activities.GetSkillLevel` |
+The current implementation establishes the tutorial's opening and the main network-to-automation capability sequence. It does not yet implement the full five-act story.
 
-Important gaps and overlaps to resolve:
+Not yet implemented as narrative content:
 
-- `nb.Scan(hostname)` accepts a hostname. The underlying network service only scans a source server the player has already discovered, but API methods that query server properties resolve a hostname directly.
-- `nb.Nuke`, `nb.Hack`, `nb.Grow` and `nb.Weaken` accept a hostname and do not independently require that the target has been discovered; the action services enforce root access and/or hacking level as applicable.
-- The API has no direct equivalents for console `connect`, `home`, `analyze` or `backdoor`.
-- The files API has list/delete/move/copy operations, but no direct read/write method. File editing is currently a console-host operation.
-- Activity API calls always start work in the background, as documented on `INullByteActivitiesApi`; the console can start focused or background activities.
-- `nb.Player` exposes money and skills as read-only information. It uses `player.profile`, unlocked after the first successful server analysis; `status` remains the only initial `player.inspect` command.
+- recovered files and records that reveal the creator/project mystery;
+- longer conversations with SYSTEM;
+- a persistent archive of all story messages;
+- optional narrative discoveries for first botnet/cloud purchases or first activity use;
+- later-act progression and story conclusions.
 
-For the first pass, runtime API calls must check the same capability state as their corresponding console actions. The console registry applies the same checks to dispatch, aliases, help, subcommands and tab completion. Script startup is also checked in `ScriptService`, so callers cannot bypass the `run` command gate. The full interface remains visible to script compilation and editor tooling today; concealing members from IntelliSense may require a separate API-surface design and is not solved by runtime checks alone.
-
-## 5. Proposed first playable walkthrough
-
-This is a suggested opening sequence to validate through playtesting. It intentionally uses only current game systems.
-
-### Step 0 — No in-world commands
-
-The host completes its ordinary startup. The narrative layer then displays:
-
-~~~text
-SYSTEM INITIALIZATION
-
-Designation: NB-0001
-Environment integrity: 98.7%
-Local runtime: ACTIVE
-External network access: RESTRICTED
-
-Player capability profile: EMPTY
-
-Awaiting authorization.
-~~~
-
-No command is available yet—not even `help`, `save`, `load` or `exit`. The initialization sequence is displayed automatically; the player does not need to enter a command to begin.
-
-SYSTEM continues:
-
-~~~text
-A minimal diagnostic interface can be restored.
-
-One operation is available.
-Use: status
-~~~
-
-Unlock `player.inspect`. This is the only capability available at the first prompt, so `status` is the only accepted command.
-
-### Step 1 — Inspect the local environment
-
-Player enters:
-
-~~~text
-status
-~~~
-
-The existing command reports money, hacking level/experience, current server and root access. With a new game this should identify `home`, $1,000 and root access.
-
-SYSTEM:
-
-~~~text
-Local environment verified.
-
-Runtime controls are now available.
-A network interface is present.
-Its connection table is incomplete.
-
-I can restore a discovery operation.
-~~~
-
-Unlock `host.controls`, then `network.scan` and `network.analyze`. The `help`, `save`, `load`, `saves`, `reset`, `clear` and `exit` commands now become available alongside the network capabilities.
-
-### Step 2 — Discover adjacent systems
-
-Player enters:
-
-~~~text
-scan
-~~~
-
-The initial network reveals `n00dles` and `foodnstuff`. This is grounded in the current network definition: both are directly connected to `home`.
-
-SYSTEM:
-
-~~~text
-Two adjacent hosts detected.
-
-One is within your current capability profile.
-The other is not.
-
-This distinction may become relevant.
-~~~
-
-The first successful scan is a one-time narrative milestone. It should not repeat the message on every later scan.
-
-### Step 3 — Inspect a discovered host
-
-Player enters:
-
-~~~text
-analyze n00dles
-~~~
-
-The existing analyze output shows root access, backdoor status, required hacking level, money, security, growth and RAM. `n00dles` requires hacking level 1, while `foodnstuff` requires level 5.
-
-SYSTEM:
-
-~~~text
-The remote host is accessible through the network.
-
-Your current authorization is insufficient to modify it.
-A connection can be established.
-~~~
-
-Unlock `network.connect`. The player can use `connect n00dles` and `home`.
-
-### Step 4 — Gain access
-
-Player enters:
-
-~~~text
-connect n00dles
-nuke
-~~~
-
-The current `nuke` operation grants root access when the player's hacking level meets the target requirement. The initial `n00dles` host is designed for level 1.
-
-On successful root access, unlock `server.operations`.
-
-SYSTEM:
-
-~~~text
-Administrative access acquired.
-
-You have modified a system outside your assigned environment.
-No authorization record was found.
-
-Continue.
-~~~
-
-### Step 5 — Perform the first operation
-
-Player enters:
-
-~~~text
-hack
-~~~
-
-The current hack operation takes game time, attempts to steal money, grants hacking experience and increases server security on success. A failed attempt can still grant reduced experience.
-
-After the first completed hack attempt, SYSTEM acknowledges the first external effect. The exact message should distinguish success from failure rather than implying money was stolen when it was not.
-
-The `grow`, `weaken` and `backdoor` commands are already available with the same root-access milestone. File operations deliberately remain unavailable until the player has performed an external server operation.
-
-### Step 6 — Discover files and scripting
-
-After the first successful server operation, introduce the virtual file system:
-
-- Unlock `files.navigation`, `files.read` and `files.manage`.
-- The player can use `edit` to create a script and `ls`/ `cat` to inspect it.
-- Unlock `scripts.execute` so the player can start the script.
-
-The first script should be deliberately simple: print a message, wait using game time, and print again. It demonstrates that the player can create an autonomous process without requiring money, network access or a complicated script.
-
-The first script should not require any API action that has not separately been unlocked.
-
-On the first successful script execution, SYSTEM marks a major milestone:
-
-~~~text
-Autonomous process created.
-Execution context established.
-
-You have reproduced a limited subset of your own
-operational capabilities.
-
-Interesting.
-~~~
-
-### Step 7 — Expansion and optional systems
-
-Introduce botnet and cloud infrastructure as separate capability groups. Botnet ownership is a natural first expansion of distributed resources; cloud servers can follow when the player has sufficient money and has discovered the relevant infrastructure.
-
-Study/training, work and crime are introduced as optional branches as the narrative moves into human institutions. The main story must not require work or crime. Study/training can also remain optional unless a later, explicit design decision gives a specific skill milestone a narrative purpose.
-
-## 6. Suggested unlock order
-
-This is a first proposal, not a final balance decision.
-
-| Order | Capability | Trigger / prerequisite |
-|---:|---|---|
-| 0 | No commands | Initial new-game state; SYSTEM speaks automatically |
-| 1 | `player.inspect` | Explicitly granted during initialization; exposes `status` only |
-| 2 | `host.controls` | After the player successfully executes `status` |
-| 3 | `network.scan` | After the player successfully uses `status` |
-| 4 | `network.analyze` | After the first successful scan |
-| 5 | `network.connect` | After inspecting a discovered server |
-| 6 | `server.root-access` | After connecting to a suitable remote host |
-| 7 | `server.operations`, `server.backdoor` | After first successful root acquisition |
-| 8 | `files.navigation`, `files.read`, `files.manage`, `scripts.execute` | After the first successful server operation |
-| 9 | `scripts.inspect`, `scripts.control` | After the first script starts |
-| 11 | `botnet.inspect`, `botnet.purchase`, `botnet.upgrade` | Expansion milestone; exact trigger to be playtested |
-| 12 | `cloud.inspect`, `cloud.purchase`, `cloud.manage` | Later expansion milestone; exact trigger to be playtested |
-| 13 | `activities.learn`, `activities.manage` | Optional introduction to structured learning |
-| 14 | `activities.work` | Optional introduction to legitimate employment |
-| 15 | `activities.crime` | Optional introduction to unauthorized activity |
-
-The exact trigger for later systems should be selected from real game events. Do not require a player to buy a cloud server, commit a crime or take a particular job just to advance the main story.
-
-## 7. Implementation implications
-
-The current code suggests the following responsibilities:
-
-1. **Core state:** add durable narrative/capability state to the game model. It should be independent of ConsoleUI.
-2. **Persistence:** add a save-format migration. Current save format is v7; pre-narrative saves should load in Freeplay mode with all current and future capabilities available.
-3. **Command metadata:** associate each command definition with a capability requirement or an explicit host-control classification.
-4. **Registry/dispatch:** enforce availability for resolution, help, aliases and subcommand usage—not just help rendering.
-5. **Completion:** filter command names and aliases using the same capability state.
-6. **Script API:** guard each relevant API operation using the same capability state. Do not rely on console command hiding.
-7. **Narrative delivery:** provide host-neutral messages/events so the ConsoleUI can render SYSTEM output without owning progression.
-8. **Testing:** test direct command invocation, aliases, subcommands, help, completion, script API calls, save/load and Freeplay migration.
-
-The implementation should be designed around the actual game-thread and save/load lifecycle. In particular, scripts are restored after a saved session starts; their API instances must see the restored capability state.
-
-## 8. Confirmed access-scope decisions
-
-1. **Host controls:** literal zero-command start. No host/session commands are available before the player successfully executes `status`; they are then exposed through `host.controls`.
-2. **First unlock:** `status`, granted automatically by the initialization sequence.
-3. **Scripting API visibility:** enforce capability restrictions at runtime in the first iteration. The full API may remain visible in editor completion/IntelliSense.
-
-The state ownership, save model, version 7-to-8 migration and Freeplay-save policy are specified in [NARRATIVE_STATE_DESIGN.md](NARRATIVE_STATE_DESIGN.md).
+The `journal` is currently a capability-based tutorial guide, not a full narrative journal.
