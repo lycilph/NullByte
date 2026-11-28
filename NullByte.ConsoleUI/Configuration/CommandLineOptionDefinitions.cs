@@ -20,6 +20,8 @@ internal static class CommandLineOptionDefinitions
         new(["help", "--help"], null, "Display this help and exit.", IsHelp: true),
         new(["--new"], null, "Start a new game instead of resuming the latest save.",
             (options, _) => options.StartNewGame = true),
+        new(["--freeplay"], null, "Start a new game in Freeplay mode. Requires --new.",
+            (options, _) => options.Freeplay = true),
         new(["--write-default-settings"], null, "Write the default application settings file and exit.",
             (options, _) => options.WriteDefaultSettings = true),
         new(["--vscode"], null, "Enable the VS Code editor integration.",
@@ -65,6 +67,7 @@ internal static class CommandLineOptionDefinitions
 internal sealed class CommandLineOptionsBuilder
 {
     public bool StartNewGame { get; set; }
+    public bool Freeplay { get; set; }
     public bool WriteDefaultSettings { get; set; }
     public bool EnableEditor { get; set; }
     public int? EditorPort { get; set; }
