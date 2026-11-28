@@ -123,8 +123,8 @@ public sealed class GameHost(
                     shutdownRequested = true;
                     return;
 
-                case HostRequest.Reset:
-                    await ResetAsync();
+                case HostRequest.Reset reset:
+                    await ResetAsync(reset.Freeplay);
                     break;
 
                 case HostRequest.Load load:
@@ -163,7 +163,7 @@ public sealed class GameHost(
         await current.Session.DisposeAsync();
     }
 
-    private async Task ResetAsync()
+    private async Task ResetAsync(bool freeplay = false)
     {
         // Typed input would otherwise queue up and run in the new game.
         terminal.SetInputEnabled(false);
@@ -200,9 +200,11 @@ public sealed class GameHost(
             DetachActivityEndedHandler(old);
             await old.Session.DisposeAsync();
 
-            game = await StartGameAsync(restored: null);
+            game = await StartGameAsync(restored: null, freeplay);
 
-            terminal.WriteLine("A new game has started.");
+            terminal.WriteLine(freeplay
+                ? "A new Freeplay game has started."
+                : "A new game has started.");
             terminal.WriteLine($"Game time: {game.Session.Clock.Elapsed.TotalSeconds:F3}s");
         }
         finally
@@ -262,9 +264,11 @@ public sealed class GameHost(
         }
     }
 
-    private async Task<Game> StartGameAsync(RestoredGame? restored)
+    private async Task<Game> StartGameAsync(RestoredGame? restored, bool freeplay = false)
     {
-        var options = restored is null ? baseOptions : baseOptions.WithSave(restored);
+        var options = restored is null
+            ? baseOptions with { NarrativeMode = freeplay ? NarrativeProgressionMode.Freeplay : NarrativeProgressionMode.Tutorial }
+            : baseOptions.WithSave(restored);
         var session = GameSession.Create(options);
 
         var registry = CommandSetup.Create(session, terminal, hostRequests, saveManager, ExternalEditorStatus, settings);
