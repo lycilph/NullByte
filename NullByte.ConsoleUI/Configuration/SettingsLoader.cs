@@ -31,6 +31,7 @@ public static class SettingsLoader
         {
             Settings = settings,
             StartNewGame = commandLine.StartNewGame,
+            Freeplay = commandLine.Freeplay,
             WriteDefaultSettings = false
         };
     }
