@@ -102,7 +102,7 @@ public class FileCommandsTests
     [Fact]
     public async Task Cat_records_a_discovery_once_and_leaves_the_file_available()
     {
-        var catalog = new NarrativeContentCatalog([], 
+        var catalog = new NarrativeContentCatalog([],
         [new NarrativeDiscovery("project.archive-record", "home", "archive/project.log", NarrativeDiscoveryRequirement.Optional)]);
         var game = ConsoleTestSetup.CreateHarness(new ConsoleTestOptions
         {
