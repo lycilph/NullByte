@@ -10,6 +10,7 @@ public sealed class CommandLineParserTests
         var result = CommandLineParser.Parse([]);
 
         Assert.False(result.StartNewGame);
+        Assert.False(result.Freeplay);
         Assert.False(result.WriteDefaultSettings);
         Assert.False(result.EnableEditor);
         Assert.Null(result.EditorPort);
