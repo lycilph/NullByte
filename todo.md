@@ -25,6 +25,7 @@
 - Add debugdisplay to domain classes
 - print/tprint destinction (script output versus player terminal output)
 - Move base-cost of scripts (1.6 in ScriptRamAnalyzer) to the balance class
+- When adding the wpf part make it possible for the narrative to contain images
 - Script sandbox follow-ups (see `ARCHITECTURE.md`, Script sandbox and safety)
   - Move the script-facing API into its own assembly so the banned-namespace list for `NullByte.Core` is no longer needed
   - Memory and stack limits, or running scripts out of process, if the game is ever opened to untrusted scripts
