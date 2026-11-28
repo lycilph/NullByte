@@ -44,7 +44,7 @@ public sealed class GameHost(
         AutosaveService Autosave,
         Action<ActivityEndInfo> ActivityEndedHandler);
 
-    public async Task StartAsync(bool resumeAutosave)
+    public async Task StartAsync(bool resumeAutosave, bool freeplay = false)
     {
         if (resumeAutosave)
         {
@@ -58,7 +58,7 @@ public sealed class GameHost(
             }
         }
 
-        game = await StartGameAsync(restored: null);
+        game = await StartGameAsync(restored: null, freeplay);
         WriteStartupMessage();
     }
 
