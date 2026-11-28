@@ -78,6 +78,7 @@ internal sealed class CommandLineOptionsBuilder
     public CommandLineOptions Build() => new()
     {
         StartNewGame = StartNewGame,
+        Freeplay = Freeplay,
         WriteDefaultSettings = WriteDefaultSettings,
         EnableEditor = EnableEditor,
         EditorPort = EditorPort,
