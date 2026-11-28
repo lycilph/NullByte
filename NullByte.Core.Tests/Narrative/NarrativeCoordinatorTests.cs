@@ -76,6 +76,8 @@ public sealed class NarrativeCoordinatorTests
         Assert.True(world.State.Narrative.HasCapability("network.analyze"));
         Assert.Single(messages);
         Assert.Equal("system.network-discovered", messages[0].Id);
+        Assert.Contains("n00dles", messages[0].Text);
+        Assert.Contains("Network scan complete.", messages[0].Text);
     }
 
     [Fact]
@@ -96,6 +98,8 @@ public sealed class NarrativeCoordinatorTests
         Assert.False(world.State.Narrative.HasCapability("files.manage"));
         Assert.Single(messages);
         Assert.Equal("system.root-access", messages[0].Id);
+        Assert.Contains("n00dles", messages[0].Text);
+        Assert.Contains("Host security is now under your control.", messages[0].Text);
     }
 
     [Fact]

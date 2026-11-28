@@ -47,7 +47,7 @@ public class ActivitySubscriptionLifecycleTests
 
         AssertActivityEndedHandlerIsSubscribed(oldSession, oldHandler);
 
-        await InvokeHostMethodAsync(host, "ResetAsync");
+        await InvokeHostMethodAsync(host, "ResetAsync", false);
 
         Assert.NotSame(oldSession, host.Session);
         AssertActivityEndedHandlerIsNotSubscribed(oldSession, oldHandler);
@@ -117,7 +117,7 @@ public class ActivitySubscriptionLifecycleTests
         var session = host.Session!;
         var handler = GetHostActivityEndedHandler(host);
 
-        await InvokeHostMethodAsync(host, "ResetAsync");
+        await InvokeHostMethodAsync(host, "ResetAsync", false);
 
         Assert.Same(session, host.Session);
         AssertActivityEndedHandlerIsSubscribed(session, handler);

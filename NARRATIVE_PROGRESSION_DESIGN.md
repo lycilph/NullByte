@@ -12,6 +12,9 @@ Narrative progression is owned by Core and is driven by successful gameplay even
 
 - `GameState` owns the durable `NarrativeState`.
 - `NarrativeCoordinator` translates relevant gameplay events into milestones, capability unlocks and host-neutral `NarrativeMessage` instances.
+- `NarrativeContentCatalog` owns immutable authored entries, stable entry IDs, act metadata and milestone associations. The coordinator refers to entries by ID and supplies runtime values such as hostnames.
+- `NarrativeEntry` renders simple `{placeholder}` values; it does not contain branching or conditional logic.
+- `NarrativeAct` identifies the five high-level story acts. Act metadata is content organization, not a separately persisted progression counter.
 - Gameplay services report what happened; they do not contain story text.
 - The host subscribes to published messages and decides how to present them.
 - Console command and scripting API boundaries consult the same capability state.
@@ -61,7 +64,7 @@ The coordinator also exposes explicit entry points used by the host/session:
 
 Freeplay bypasses tutorial initialization and all tutorial unlock messages.
 
-The coordinator's current scope is intentionally narrow. It does not yet subscribe to botnet purchases, cloud purchases or activity events to produce optional story messages.
+The coordinator's current scope is intentionally narrow. It does not yet subscribe to botnet purchases, cloud purchases or activity events to produce optional story messages. The authored catalog currently contains the initial Act I milestones and the first script milestone in Act II; later acts are placeholders in the act taxonomy, not implemented content.
 
 ## 4. Idempotency and message delivery
 
@@ -105,6 +108,8 @@ The implementation should preserve these invariants:
 - Capability restrictions cannot be bypassed through the scripting API.
 - Session replacement disposes old coordinator subscriptions.
 - Narrative output is host-neutral and does not own gameplay state.
+- The default content catalog has unique entry and milestone IDs, and every implemented coordinator trigger resolves to a catalog entry.
+- Runtime placeholder values are rendered without mutating the authored catalog.
 
 Tests belong at the owning layer: domain/coordinator tests for progression, service tests for event semantics, command/API tests for enforcement, and persistence/session tests for save/load behavior.
 
@@ -112,9 +117,11 @@ Tests belong at the owning layer: domain/coordinator tests for progression, serv
 
 The current implementation is a tutorial progression foundation, not the complete story described in [NARRATIVE.md](NARRATIVE.md).
 
-The next content work should be incremental:
+N1 (content model) and N2 (initial Act I content) are implemented. The current catalog deliberately keeps the opening practical. Its first anomaly is a low-key inherited audit-retention note after the first successful external operation; the first-script message adds a slightly more unusual environment-profile observation.
 
-1. Add a small number of optional discoveries that fit existing systems, such as recovered logs or configuration records.
+Next content work should be incremental:
+
+1. Add optional discoveries that fit existing systems, such as recovered logs or configuration records.
 2. Let those discoveries hint at an earlier project or unexplained network entry without immediately explaining it.
 3. Expand SYSTEM's voice gradually while keeping most messages practical.
 4. Decide how recovered information is represented and discovered using the existing file/world model before adding new mechanics.

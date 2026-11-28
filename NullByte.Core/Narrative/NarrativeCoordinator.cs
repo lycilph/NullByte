@@ -45,11 +45,7 @@ public sealed class NarrativeCoordinator : IDisposable
         if (state.Narrative.IsFreeplay || state.Narrative.CompletedMilestones.Contains("tutorial.initialization.complete"))
             return;
 
-        Complete(
-            "tutorial.initialization.complete",
-            "system.initialization",
-            "SYSTEM INITIALIZATION\n\nDesignation: NB-0001\nEnvironment integrity: 98.7%\nLocal runtime: ACTIVE\nExternal network access: RESTRICTED\n\nPlayer capability profile: EMPTY\n\nA minimal diagnostic interface can be restored.\nOne operation is available. Use: status",
-            "player.inspect");
+        Complete("system.initialization", null, "player.inspect");
     }
 
     /// <summary>
@@ -83,13 +79,7 @@ public sealed class NarrativeCoordinator : IDisposable
 
     public void StatusUsed()
     {
-        Complete(
-            "tutorial.status.used",
-            "system.host-controls",
-            "Local environment verified.\n\nRuntime controls are now available.\nA network interface is present, but its connection table is incomplete.\n\nAvailable commands: help, journal, save, load, saves, reset, clear, exit (quit), scan, money, skills",
-            "host.controls",
-            "network.scan",
-            "player.profile");
+        Complete("system.host-controls", null, "host.controls", "network.scan", "player.profile");
     }
 
     private void OnServersDiscovered(IReadOnlyList<string> hostnames)
@@ -97,60 +87,36 @@ public sealed class NarrativeCoordinator : IDisposable
         if (hostnames.Count == 0)
             return;
 
-        Complete(
-            "tutorial.network.first-scan",
-            "system.network-discovered",
-            $"Two adjacent hosts detected.\n\nDiscovery confirmed: {string.Join(", ", hostnames)}.\nA remote system can now be inspected.\n\nAvailable command: analyze <host>",
-            "network.analyze");
+        Complete("system.network-discovered", new Dictionary<string, string>
+        {
+            ["hostnames"] = string.Join(", ", hostnames)
+        }, "network.analyze");
     }
 
     private void OnServerAnalyzed(string hostname)
     {
-        Complete(
-            "tutorial.network.first-analysis",
-            "system.network-analyzed",
-            $"Remote host {hostname} has been inspected.\nA connection can now be established.\n\nAvailable commands: connect <host>, home",
-            "network.connect",
-            "network.inspect");
+        Complete("system.network-analyzed", new Dictionary<string, string> { ["hostname"] = hostname },
+            "network.connect", "network.inspect");
     }
 
     private void OnServerConnected(string hostname)
     {
-        Complete(
-            "tutorial.network.first-connection",
-            "system.network-connected",
-            $"Connection established: {hostname}.\n\nThe remote host is within reach. Administrative access may be possible.\n\nAvailable command: nuke <host>",
+        Complete("system.network-connected", new Dictionary<string, string> { ["hostname"] = hostname },
             "server.root-access");
     }
 
     private void OnRootAccessGained(string hostname)
     {
-        Complete(
-            "tutorial.network.first-root",
-            "system.root-access",
-            $"Administrative access acquired on {hostname}.\n\nYou have modified a system outside your assigned environment. Continue.\n\nAvailable commands: hack, grow, weaken, backdoor",
-            "server.operations",
-            "server.backdoor");
+        Complete("system.root-access", new Dictionary<string, string> { ["hostname"] = hostname },
+            "server.operations", "server.backdoor");
     }
 
     public void ScriptStarted()
     {
-        Complete(
-            "tutorial.expansion.first-script",
-            "system.first-script",
-            "Autonomous process created.\nExecution context established.\n\nYou have reproduced a limited subset of your own operational capabilities.\n\nAvailable commands: mem, free, ps, kill, killall, botnet, botnet buy, botnet upgrade, cloud, cloud buy, cloud upgrade, cloud rename, study, train, work, crime, stop, focus, activity\n\nInteresting.",
-            "scripts.inspect",
-            "scripts.control",
-            "botnet.inspect",
-            "botnet.purchase",
-            "botnet.upgrade",
-            "cloud.inspect",
-            "cloud.purchase",
-            "cloud.manage",
-            "activities.learn",
-            "activities.work",
-            "activities.crime",
-            "activities.manage");
+        Complete("system.first-script", null,
+            "scripts.inspect", "scripts.control", "botnet.inspect", "botnet.purchase", "botnet.upgrade",
+            "cloud.inspect", "cloud.purchase", "cloud.manage", "activities.learn", "activities.work",
+            "activities.crime", "activities.manage");
     }
 
     private void OnHackCompleted(string hostname, bool succeeded)
@@ -158,33 +124,31 @@ public sealed class NarrativeCoordinator : IDisposable
         if (!succeeded)
             return;
 
-        Complete(
-            "tutorial.network.first-hack",
-            "system.first-external-action",
-            $"External operation completed on {hostname}.\n\nA boundary has been crossed. The result is now part of your operational history.\n\nThe remote filesystem is now accessible.\n\nAvailable commands: ls, cd, pwd, cat, rm, mkdir, rmdir, mv, scp, edit, run <file>",
-            "files.navigation",
-            "files.read",
-            "files.manage",
-            "scripts.execute");
+        Complete("system.first-external-action", new Dictionary<string, string> { ["hostname"] = hostname },
+            "files.navigation", "files.read", "files.manage", "scripts.execute");
     }
 
-    private void Complete(string milestoneId, string messageId, string text, params string[] capabilities)
+    private void Complete(string entryId, IReadOnlyDictionary<string, string>? values, params string[] capabilities)
     {
-        if (state.Narrative.IsFreeplay || state.Narrative.CompletedMilestones.Contains(milestoneId))
+        if (state.Narrative.IsFreeplay)
+            return;
+
+        var entry = NarrativeContentCatalog.Default.GetRequired(entryId);
+        if (state.Narrative.CompletedMilestones.Contains(entry.MilestoneId))
             return;
 
         foreach (var capability in capabilities)
             state.Narrative.UnlockCapability(capability);
 
-        state.Narrative.CompleteMilestone(milestoneId);
-        if (!state.Narrative.DeliverMessage(messageId))
+        state.Narrative.CompleteMilestone(entry.MilestoneId);
+        if (!state.Narrative.DeliverMessage(entry.Id))
             return;
 
         var handlers = MessagePublished;
         if (handlers is null)
             return;
 
-        var message = new NarrativeMessage(messageId, text);
+        var message = new NarrativeMessage(entry.Id, entry.Render(values));
         foreach (Action<NarrativeMessage> handler in handlers.GetInvocationList())
         {
             try
@@ -194,7 +158,7 @@ public sealed class NarrativeCoordinator : IDisposable
             catch (Exception exception)
             {
                 System.Diagnostics.Trace.TraceError(
-                    $"A narrative message observer failed for '{messageId}': {exception}");
+                    $"A narrative message observer failed for '{entry.Id}': {exception}");
             }
         }
     }

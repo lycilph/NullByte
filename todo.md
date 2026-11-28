@@ -1,9 +1,12 @@
 ﻿# In progress
 
+- Flesh out introduction
+
+- Messages (text files) on other servers (should be read-only)
+
 # Todo
 
 - Maybe: add cancel manual hack, weaken and grow (backdoor?)
-- Do the full solution format check
 
 # Future ideas
 
@@ -15,17 +18,13 @@
 	- Missing: Editor.Tests, Scripting.Tests, Shell.Tests
   - OR start over with new tests...
 
-- Make botnet and cloud servers unlockable
-  - Make a system to unlock features on a trigger
 - Do another cleanup round (see `AIPrompts.md`)
 - Change the editor integration to something that can be enabled/disabled while the game is running
 - Add options for Ram usage and compilation to the NanoEditor 
 - Align script method names and console commands
-- Later on extra servers would live in api.cloud.* etc.
 - Add debugdisplay to domain classes
 - print/tprint destinction (script output versus player terminal output)
 - Move base-cost of scripts (1.6 in ScriptRamAnalyzer) to the balance class
-- A tutorial
 - Script sandbox follow-ups (see `ARCHITECTURE.md`, Script sandbox and safety)
   - Move the script-facing API into its own assembly so the banned-namespace list for `NullByte.Core` is no longer needed
   - Memory and stack limits, or running scripts out of process, if the game is ever opened to untrusted scripts

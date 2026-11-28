@@ -50,7 +50,10 @@ public sealed class PersistenceCommands(
         {
             MinArgs = 0,
             MaxArgs = 2,
-            Completions = [new ArgumentCompletion { ArgumentIndex = 0, Values = ["--confirm", "--freeplay"] }]
+            Completions = [
+                new ArgumentCompletion { ArgumentIndex = 0, Values = ["--confirm"] },
+                new ArgumentCompletion { ArgumentIndex = 1, Values = ["--freeplay"] }
+            ]
         });
     }
 
