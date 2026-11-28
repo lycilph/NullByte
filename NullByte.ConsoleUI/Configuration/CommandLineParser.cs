@@ -29,6 +29,9 @@ public static class CommandLineParser
         if (options.WriteDefaultSettings && args.Length > 1)
             throw new ArgumentException("'--write-default-settings' cannot be combined with other command-line arguments.");
 
+        if (options.Freeplay && !options.StartNewGame)
+            throw new ArgumentException("'--freeplay' requires '--new'.");
+
         return options.Build();
     }
 
