@@ -48,16 +48,16 @@ public sealed class NarrativeCoordinator
     {
         var messages = new List<NarrativeMessage>();
 
-        AddIfAvailable(messages, "journal.status", "STATUS\nInspect the local runtime and player state with: status", "player.inspect");
-        AddIfAvailable(messages, "journal.host", "HOST CONTROLS\nUse help to see available commands. save and load manage your saves. exit leaves the game.", "host.controls");
-        AddIfAvailable(messages, "journal.scan", "NETWORK DISCOVERY\nUse scan to discover hosts connected to your current server.", "network.scan");
-        AddIfAvailable(messages, "journal.analyze", "NETWORK ANALYSIS\nUse analyze <host> to inspect a discovered server before connecting.", "network.analyze");
-        AddIfAvailable(messages, "journal.connect", "NETWORK CONNECTION\nUse connect <host> to move between discovered hosts. Use home to return to your home server.", "network.connect");
-        AddIfAvailable(messages, "journal.root", "ACCESS\nUse nuke <host> when your hacking level is sufficient to gain root access.", "server.root-access");
-        AddIfAvailable(messages, "journal.operations", "SERVER OPERATIONS\nOn a rooted server, hack, grow and weaken change its resources and security.", "server.operations");
-        AddIfAvailable(messages, "journal.files", "FILES\nUse ls, cd and pwd to navigate. Use cat to read files. edit can create or change files.", "files.navigation");
-        AddIfAvailable(messages, "journal.scripts", "AUTOMATION\nCreate a script with edit, then run <file> to start it. Use ps to inspect processes and kill to stop them.", "scripts.execute");
-        AddIfAvailable(messages, "journal.expansion", "EXPANSION\nYour operational profile now includes distributed resources and optional human systems. Use help to explore the commands that are currently available.", "botnet.inspect");
+        AddIfAvailable(messages, "journal.status", "STATUS\nInspect the local runtime and player state with: status\nAvailable command: status", "player.inspect");
+        AddIfAvailable(messages, "journal.host", "HOST CONTROLS\nUse help to see available commands. save and load manage your saves. exit leaves the game.\nAvailable commands: help, journal, save, load, saves, reset, clear, exit (quit)", "host.controls");
+        AddIfAvailable(messages, "journal.scan", "NETWORK DISCOVERY\nUse scan to discover hosts connected to your current server.\nAvailable command: scan", "network.scan");
+        AddIfAvailable(messages, "journal.analyze", "NETWORK ANALYSIS\nUse analyze <host> to inspect a discovered server before connecting.\nAvailable command: analyze <host>", "network.analyze");
+        AddIfAvailable(messages, "journal.connect", "NETWORK CONNECTION\nUse connect <host> to move between discovered hosts. Use home to return to your home server.\nAvailable commands: connect <host>, home", "network.connect");
+        AddIfAvailable(messages, "journal.root", "ACCESS\nUse nuke <host> when your hacking level is sufficient to gain root access.\nAvailable command: nuke <host>", "server.root-access");
+        AddIfAvailable(messages, "journal.operations", "SERVER OPERATIONS\nOn a rooted server, hack, grow and weaken change its resources and security.\nAvailable commands: hack, grow, weaken", "server.operations");
+        AddIfAvailable(messages, "journal.files", "FILES\nUse ls, cd and pwd to navigate. Use cat to read files. edit can create or change files.\nAvailable commands: ls, cd, pwd, cat, rm, mkdir, rmdir, mv, scp, edit", "files.navigation");
+        AddIfAvailable(messages, "journal.scripts", "AUTOMATION\nCreate a script with edit, then run <file> to start it. Use ps to inspect processes and kill to stop them.\nAvailable commands: run <file>, mem, free, ps, kill, killall", "scripts.execute");
+        AddIfAvailable(messages, "journal.expansion", "EXPANSION\nYour operational profile now includes distributed resources and optional human systems. Use help to explore the commands that are currently available.\nAvailable commands: botnet, botnet buy, botnet upgrade, cloud, cloud buy, cloud upgrade, cloud rename, study, train, work, crime, stop, focus, activity", "botnet.inspect");
 
         return messages;
     }
