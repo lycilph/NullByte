@@ -42,7 +42,10 @@ public sealed class NarrativeCapabilityCommandTests
 
         var output = await harness.RunAndCaptureAsync("journal");
 
-        var normalizedOutput = Regex.Replace(output, @"\s+", " ").Trim();
+        var normalizedOutput = output
+            .SelectMany(s => s.Split('\n'))
+            .Select(s => Regex.Replace(s, @"\s+", " ").Trim())
+            .ToList();
 
         Assert.Contains("SYSTEM JOURNAL", normalizedOutput);
         Assert.Contains("STATUS", normalizedOutput);
