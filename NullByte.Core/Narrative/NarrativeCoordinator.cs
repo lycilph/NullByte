@@ -48,14 +48,14 @@ public sealed class NarrativeCoordinator
     {
         var messages = new List<NarrativeMessage>();
 
-        AddIfAvailable(messages, "journal.status", "STATUS\nInspect the local runtime and player state with: status\nAvailable command: status", "player.inspect");
+        AddIfAvailable(messages, "journal.status", "STATUS\nInspect the local runtime and player state with: status\nAvailable commands: status, money, skills", "player.inspect");
         AddIfAvailable(messages, "journal.host", "HOST CONTROLS\nUse help to see available commands. save and load manage your saves. exit leaves the game.\nAvailable commands: help, journal, save, load, saves, reset, clear, exit (quit)", "host.controls");
         AddIfAvailable(messages, "journal.scan", "NETWORK DISCOVERY\nUse scan to discover hosts connected to your current server.\nAvailable command: scan", "network.scan");
         AddIfAvailable(messages, "journal.analyze", "NETWORK ANALYSIS\nUse analyze <host> to inspect a discovered server before connecting.\nAvailable command: analyze <host>", "network.analyze");
         AddIfAvailable(messages, "journal.connect", "NETWORK CONNECTION\nUse connect <host> to move between discovered hosts. Use home to return to your home server.\nAvailable commands: connect <host>, home", "network.connect");
         AddIfAvailable(messages, "journal.root", "ACCESS\nUse nuke <host> when your hacking level is sufficient to gain root access.\nAvailable command: nuke <host>", "server.root-access");
         AddIfAvailable(messages, "journal.operations", "SERVER OPERATIONS\nOn a rooted server, hack, grow and weaken change its resources and security.\nAvailable commands: hack, grow, weaken", "server.operations");
-        AddIfAvailable(messages, "journal.files", "FILES\nUse ls, cd and pwd to navigate. Use cat to read files. edit can create or change files.\nAvailable commands: ls, cd, pwd, cat, rm, mkdir, rmdir, mv, scp, edit", "files.navigation");
+        AddIfAvailable(messages, "journal.files", "FILES\nUse ls, cd and pwd to navigate. Use cat to read files. edit can create or change files.\nAvailable commands: ls, cd, pwd, cat, rm, mkdir, rmdir, mv, scp, edit (vscode if enabled)", "files.navigation");
         AddIfAvailable(messages, "journal.scripts", "AUTOMATION\nCreate a script with edit, then run <file> to start it. Use ps to inspect processes and kill to stop them.\nAvailable commands: run <file>, mem, free, ps, kill, killall", "scripts.execute");
         AddIfAvailable(messages, "journal.expansion", "EXPANSION\nYour operational profile now includes distributed resources and optional human systems. Use help to explore the commands that are currently available.\nAvailable commands: botnet, botnet buy, botnet upgrade, cloud, cloud buy, cloud upgrade, cloud rename, study, train, work, crime, stop, focus, activity", "botnet.inspect");
 
@@ -73,7 +73,7 @@ public sealed class NarrativeCoordinator
         Complete(
             "tutorial.status.used",
             "system.host-controls",
-            "Local environment verified.\n\nRuntime controls are now available.\nA network interface is present, but its connection table is incomplete.\n\nAvailable commands: help, journal, save, load, saves, reset, clear, exit (quit), scan",
+            "Local environment verified.\n\nRuntime controls are now available.\nA network interface is present, but its connection table is incomplete.\n\nAvailable commands: help, journal, save, load, saves, reset, clear, exit (quit), scan, money, skills",
             "host.controls",
             "network.scan", 
             "player.profile");
@@ -115,7 +115,7 @@ public sealed class NarrativeCoordinator
         Complete(
             "tutorial.network.first-root",
             "system.root-access",
-            $"Administrative access acquired on {hostname}.\n\nYou have modified a system outside your assigned environment. Continue.\n\nAvailable commands: hack, grow, weaken, backdoor, ls, cd, pwd, cat, rm, mkdir, rmdir, mv, scp, edit",
+            $"Administrative access acquired on {hostname}.\n\nYou have modified a system outside your assigned environment. Continue.\n\nAvailable commands: hack, grow, weaken, backdoor, ls, cd, pwd, cat, rm, mkdir, rmdir, mv, scp, edit (vscode if enabled)",
             "server.operations",
             "server.backdoor",
             "files.navigation",

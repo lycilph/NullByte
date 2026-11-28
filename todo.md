@@ -3,6 +3,10 @@
 - New milestone
   - Story/narrative, features are unlocked slowly
   - Add this as a new milestone (between 12 and 13)
+  - 
+
+- Gameplay
+  - Split up hack, grow, weaken, backdoor and all the file commands 
 	
 - Add a freeplay flag to the --new argument (in commandline parser) and the reset command
  
