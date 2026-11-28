@@ -67,7 +67,7 @@ public class SaveGameTests
 
     private static SaveGame Capture(GameState state) => SaveGameMapper.Capture(state, GameTime, Processes, SavedAt);
 
-    private static string CurrentVersionGolden => Serializer.Serialize(Serializer.Deserialize(GoldenSaves.V8));
+    private static string CurrentVersionGolden => GoldenSaves.V8;
 
     private static string Describe(GameState state) => Serializer.Serialize(Capture(state));
 
@@ -247,8 +247,8 @@ public class SaveGameTests
     {
         // If this fails you changed the save format. Bump SaveGame.CurrentVersion, add a migration,
         // and keep the old golden text as a test for that migration. Do not just edit the golden text.
-        var expected = CurrentVersionGolden;
-        var actual = Describe(CreateState(NarrativeProgressionMode.Freeplay));
+        var expected = Normalize(CurrentVersionGolden);
+        var actual = Normalize(Describe(CreateState(NarrativeProgressionMode.Freeplay)));
         Assert.Equal(expected, actual);
     }
 
@@ -259,8 +259,8 @@ public class SaveGameTests
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        var expected = CurrentVersionGolden;
-        var actual = again;
+        var expected = Normalize(CurrentVersionGolden);
+        var actual = Normalize(again);
         Assert.Equal(expected, actual);
     }
 
@@ -271,7 +271,9 @@ public class SaveGameTests
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(CurrentVersionGolden, again);
+        var expected = Normalize(CurrentVersionGolden);
+        var actual = Normalize(again);
+        Assert.Equal(expected, again);
     }
 
     [Fact]
