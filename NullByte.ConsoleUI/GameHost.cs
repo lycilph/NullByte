@@ -58,7 +58,7 @@ public sealed class GameHost(
             }
         }
 
-        game = await StartGameAsync(restored: null, freeplay);
+        game = await StartGameAsync(restored: null, freeplay: freeplay);
         WriteStartupMessage();
     }
 
