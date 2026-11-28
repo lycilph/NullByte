@@ -645,7 +645,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
             Console.CursorVisible = true;
     }
 
-    private List<string> BuildVisibleOutput(int usableWidth, int outputHeight)
+    private List<RenderedLine> BuildVisibleOutput(int usableWidth, int outputHeight)
     {
         if (outputHeight == 0)
             return [];
@@ -667,7 +667,7 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
 
     private static void WrapLine(HistoryLine line, int width, List<RenderedLine> destination)
     {
-        if (line.Length == 0)
+        if (line.Text.Length == 0)
         {
             destination.Add(new RenderedLine(string.Empty, line.Color));
             return;
@@ -675,9 +675,9 @@ public sealed class ThreadSafeConsoleTerminal : IGameTerminal, IGameOutput, IAsy
 
         var index = 0;
 
-        while (index < line.Length)
+        while (index < line.Text.Length)
         {
-            var length = Math.Min(width, line.Length - index);
+            var length = Math.Min(width, line.Text.Length - index);
             destination.Add(new RenderedLine(line.Text.Substring(index, length), line.Color));
             index += length;
         }
