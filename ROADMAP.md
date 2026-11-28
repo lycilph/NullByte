@@ -57,14 +57,30 @@ The editor workflow has been expanded with:
 
 See [Script sandbox and safety](ARCHITECTURE.md#script-sandbox-and-safety) for the security model and its limitations.
 
-## M13 — Progression and balance
+## M13 — Narrative progression and tutorial
+**Status: Completed**
+
+The first player-facing narrative progression system was introduced:
+
+- New Tutorial and Freeplay progression modes.
+- Tutorial capabilities are unlocked gradually through successful gameplay events.
+- Commands and scripting APIs are runtime-gated by narrative capabilities.
+- Narrative messages and the journal explain newly available capabilities.
+- Narrative progression is persisted and migrated safely for existing saves.
+- Tutorial presentation is visually distinguished from normal terminal output.
+- Existing players and players who prefer to skip the tutorial can use Freeplay mode.
+- Reset and new-game startup can explicitly choose Freeplay with `--freeplay`; the flag requires an explicit new-game request.
+
+The implementation also establishes the narrative coordinator and event-driven progression infrastructure that later story content can build on.
+
+## M14 — Progression and balance
 **Status: Planned**
 
 Planned work around progression, economy and balancing the available activities and hacking systems into a coherent player progression.
 
 The exact feature set should be shaped by playtesting rather than prematurely locking the implementation.
 
-## M14 — First playable release
+## M15 — First playable release
 **Status: Planned**
 
 Bring the currently implemented systems together into a coherent first release with enough content and balance for a complete gameplay loop.
