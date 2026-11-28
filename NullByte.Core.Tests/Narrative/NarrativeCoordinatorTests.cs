@@ -91,6 +91,9 @@ public sealed class NarrativeCoordinatorTests
 
         Assert.True(result.Succeeded);
         Assert.True(world.State.Narrative.HasCapability("server.operations"));
+        Assert.True(world.State.Narrative.HasCapability("server.backdoor"));
+        Assert.False(world.State.Narrative.HasCapability("files.navigation"));
+        Assert.False(world.State.Narrative.HasCapability("files.manage"));
         Assert.Single(messages);
         Assert.Equal("system.root-access", messages[0].Id);
     }
@@ -113,3 +116,24 @@ public sealed class NarrativeCoordinatorTests
         Assert.Contains("tutorial.network.first-scan", world.State.Narrative.CompletedMilestones);
     }
 }
+
+
+    [Fact]
+    public void Dispose_DetachesGameplayEventSubscriptions()
+    {
+        var target = TestServers.Create("n00dles", hasRootAccess: false);
+        var world = CoreTestSetup.CreateWorld(new CoreTestOptions
+        {
+            ProgressionMode = NarrativeProgressionMode.Tutorial,
+            Servers = [TestServers.Home(), target]
+        });
+        var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions);
+        var messages = new List<NarrativeMessage>();
+        coordinator.MessagePublished += messages.Add;
+
+        coordinator.Dispose();
+        world.ServerActions.Nuke(target.Hostname);
+
+        Assert.Empty(messages);
+        Assert.Empty(world.State.Narrative.CompletedMilestones);
+    }
