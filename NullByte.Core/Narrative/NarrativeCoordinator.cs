@@ -75,7 +75,7 @@ public sealed class NarrativeCoordinator
             "system.host-controls",
             "Local environment verified.\n\nRuntime controls are now available.\nA network interface is present, but its connection table is incomplete.\n\nAvailable commands: help, journal, save, load, saves, reset, clear, exit (quit), scan, money, skills",
             "host.controls",
-            "network.scan", 
+            "network.scan",
             "player.profile");
     }
 
