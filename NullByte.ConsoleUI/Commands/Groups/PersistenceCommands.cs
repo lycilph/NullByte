@@ -44,13 +44,13 @@ public sealed class PersistenceCommands(
 
         registry.Register(new CommandDefinition(
             "reset",
-            "reset [--confirm]",
+            "reset [--confirm] [--freeplay]",
             "Start a new game. All unsaved progress and game files are lost.",
             ResetAsync)
         {
             MinArgs = 0,
-            MaxArgs = 1,
-            Completions = [new ArgumentCompletion { ArgumentIndex = 0, Values = ["--confirm"] }]
+            MaxArgs = 2,
+            Completions = [new ArgumentCompletion { ArgumentIndex = 0, Values = ["--confirm", "--freeplay"] }]
         });
     }
 
@@ -107,19 +107,23 @@ public sealed class PersistenceCommands(
             terminal.WriteLine("All current progress, scripts and files will be lost.");
             terminal.WriteLine("Your named saves will not be deleted.");
             terminal.WriteLine();
-            terminal.WriteLine("Run 'reset --confirm' to continue.");
+            terminal.WriteLine("Run 'reset --confirm' to continue, or 'reset --confirm --freeplay' to start in Freeplay.");
 
             return Task.CompletedTask;
         }
 
-        if (arguments[0] != "--confirm")
+        if (arguments.Any(argument => argument is not "--confirm" and not "--freeplay")
+            || !arguments.Contains("--confirm"))
         {
-            terminal.WriteLine("Usage: reset [--confirm]");
+            terminal.WriteLine("Usage: reset [--confirm] [--freeplay]");
             return Task.CompletedTask;
         }
 
-        terminal.WriteLine("Resetting game...");
-        hostRequests.Request(new HostRequest.Reset());
+        var freeplay = arguments.Contains("--freeplay");
+        terminal.WriteLine(freeplay
+            ? "Resetting game in Freeplay mode..."
+            : "Resetting game...");
+        hostRequests.Request(new HostRequest.Reset(freeplay));
 
         return Task.CompletedTask;
     }
