@@ -150,7 +150,9 @@ public class Program
             if (editor is not null)
                 await StartEditorAsync(host, terminal, editor);
 
-            await host.StartAsync(resumeAutosave: !applicationOptions.StartNewGame);
+            await host.StartAsync(
+                resumeAutosave: !applicationOptions.StartNewGame,
+                freeplay: applicationOptions.Freeplay);
             await host.RunAsync();
         }
         finally
