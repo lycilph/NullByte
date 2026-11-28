@@ -73,7 +73,7 @@ public sealed class NarrativeCoordinator
         Complete(
             "tutorial.status.used",
             "system.host-controls",
-            "Local environment verified.\n\nRuntime controls are now available.\nA network interface is present, but its connection table is incomplete.",
+            "Local environment verified.\n\nRuntime controls are now available.\nA network interface is present, but its connection table is incomplete.\n\nAvailable commands: help, journal, save, load, saves, reset, clear, exit (quit), scan",
             "host.controls",
             "network.scan");
     }
@@ -86,7 +86,7 @@ public sealed class NarrativeCoordinator
         Complete(
             "tutorial.network.first-scan",
             "system.network-discovered",
-            $"Two adjacent hosts detected.\n\nDiscovery confirmed: {string.Join(", ", hostnames)}.\nA remote system can now be inspected.",
+            $"Two adjacent hosts detected.\n\nDiscovery confirmed: {string.Join(", ", hostnames)}.\nA remote system can now be inspected.\n\nAvailable command: analyze <host>",
             "network.analyze");
     }
 
@@ -95,7 +95,7 @@ public sealed class NarrativeCoordinator
         Complete(
             "tutorial.network.first-analysis",
             "system.network-analyzed",
-            $"Remote host {hostname} has been inspected.\nA connection can now be established.",
+            $"Remote host {hostname} has been inspected.\nA connection can now be established.\n\nAvailable commands: connect <host>, home",
             "network.connect",
             "network.inspect");
     }
@@ -105,7 +105,7 @@ public sealed class NarrativeCoordinator
         Complete(
             "tutorial.network.first-connection",
             "system.network-connected",
-            $"Connection established: {hostname}.\n\nThe remote host is within reach. Administrative access may be possible.",
+            $"Connection established: {hostname}.\n\nThe remote host is within reach. Administrative access may be possible.\n\nAvailable command: nuke <host>",
             "server.root-access");
     }
 
@@ -114,7 +114,7 @@ public sealed class NarrativeCoordinator
         Complete(
             "tutorial.network.first-root",
             "system.root-access",
-            $"Administrative access acquired on {hostname}.\n\nYou have modified a system outside your assigned environment. Continue.",
+            $"Administrative access acquired on {hostname}.\n\nYou have modified a system outside your assigned environment. Continue.\n\nAvailable commands: hack, grow, weaken, backdoor, ls, cd, pwd, cat, rm, mkdir, rmdir, mv, scp, edit",
             "server.operations",
             "server.backdoor",
             "files.navigation",
@@ -127,7 +127,7 @@ public sealed class NarrativeCoordinator
         Complete(
             "tutorial.expansion.first-script",
             "system.first-script",
-            "Autonomous process created.\nExecution context established.\n\nYou have reproduced a limited subset of your own operational capabilities.\n\nInteresting.",
+            "Autonomous process created.\nExecution context established.\n\nYou have reproduced a limited subset of your own operational capabilities.\n\nAvailable commands: mem, free, ps, kill, killall, botnet, botnet buy, botnet upgrade, cloud, cloud buy, cloud upgrade, cloud rename, study, train, work, crime, stop, focus, activity\n\nInteresting.",
             "scripts.inspect",
             "scripts.control",
             "botnet.inspect",
@@ -150,7 +150,7 @@ public sealed class NarrativeCoordinator
         Complete(
             "tutorial.network.first-hack",
             "system.first-external-action",
-            $"External operation completed on {hostname}.\n\nA boundary has been crossed. The result is now part of your operational history.",
+            $"External operation completed on {hostname}.\n\nA boundary has been crossed. The result is now part of your operational history.\n\nAvailable command: run <file>",
             "scripts.execute");
     }
 
