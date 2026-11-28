@@ -6,36 +6,40 @@ namespace NullByte.Core.Scripting;
 public sealed class NullByteCloudApi : INullByteCloudApi
 {
     private readonly CloudServerService cloudServerService;
+    private readonly NullByte.Core.Domain.NarrativeState? narrative;
 
-    public NullByteCloudApi(CloudServerService cloudServerService)
+    public NullByteCloudApi(CloudServerService cloudServerService, NullByte.Core.Domain.NarrativeState? narrative = null)
     {
         this.cloudServerService = cloudServerService ?? throw new ArgumentNullException(nameof(cloudServerService));
+        this.narrative = narrative;
     }
 
     public IReadOnlyList<CloudServerInfo> GetServers()
-        => cloudServerService.GetServers().Select(ToInfo).ToArray();
+    {
+        Require("cloud.inspect");
+        return cloudServerService.GetServers().Select(ToInfo).ToArray();
+    }
 
     public CloudServerInfo? GetServer(string hostname)
     {
+        Require("cloud.inspect");
         ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
         var server = cloudServerService.GetServers()
             .FirstOrDefault(server => string.Equals(server.Hostname, hostname, StringComparison.OrdinalIgnoreCase));
         return server is null ? null : ToInfo(server);
     }
 
-    public double GetServerCost(int ram = 8) => cloudServerService.GetServerCost(ram);
+    public double GetServerCost(int ram = 8) { Require("cloud.inspect"); return cloudServerService.GetServerCost(ram); }
 
-    public double? GetUpgradeCost(string hostname, int ram)
-        => cloudServerService.GetUpgradeCost(hostname, ram);
+    public double? GetUpgradeCost(string hostname, int ram) { Require("cloud.inspect"); return cloudServerService.GetUpgradeCost(hostname, ram); }
 
-    public CloudServerActionResult Purchase(string hostname, int ram = 8)
-        => ToResult(cloudServerService.Purchase(hostname, ram));
+    public CloudServerActionResult Purchase(string hostname, int ram = 8) { Require("cloud.purchase"); return ToResult(cloudServerService.Purchase(hostname, ram)); }
 
-    public CloudServerActionResult Upgrade(string hostname, int ram)
-        => ToResult(cloudServerService.Upgrade(hostname, ram));
+    public CloudServerActionResult Upgrade(string hostname, int ram) { Require("cloud.manage"); return ToResult(cloudServerService.Upgrade(hostname, ram)); }
 
-    public CloudServerActionResult Rename(string hostname, string newHostname)
-        => ToResult(cloudServerService.Rename(hostname, newHostname));
+    public CloudServerActionResult Rename(string hostname, string newHostname) { Require("cloud.manage"); return ToResult(cloudServerService.Rename(hostname, newHostname)); }
+
+    private void Require(string capability) => narrative?.EnsureCapability(capability);
 
     private static CloudServerActionResult ToResult(CloudServerOperationResult result)
         => new(result.Succeeded, result.FailureMessage, result.Cost,

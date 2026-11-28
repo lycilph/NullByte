@@ -5,6 +5,11 @@
     <File Path="CODEBASE.md" />
     <File Path="DECISIONS.md" />
     <File Path="DEVELOPMENT.md" />
+    <File Path="NARRATIVE.md" />
+    <File Path="NARRATIVE_IMPLEMENTATION_PLAN.md" />
+    <File Path="NARRATIVE_PROGRESSION_DESIGN.md" />
+    <File Path="NARRATIVE_STATE_DESIGN.md" />
+    <File Path="NARRATIVE_TUTORIAL.md" />
     <File Path="NullByte Game Design Document.md" />
     <File Path="README.md" />
     <File Path="ROADMAP.md" />

@@ -23,6 +23,30 @@ public sealed class CompletionCatalogTests
     }
 
     [Fact]
+    public void TutorialCompletion_OnlySuggestsUnlockedCommands()
+    {
+        var harness = ConsoleTestSetup.CreateHarness(new ConsoleTestOptions
+        {
+            ProgressionMode = NarrativeProgressionMode.Tutorial
+        });
+        var saveStore = Substitute.For<ISaveStore>();
+        saveStore.ListAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<SaveSlotInfo>>([]));
+        var saveManager = new SaveManager(saveStore, new SaveGameSerializer());
+        var catalog = new CompletionCatalog(
+            harness.Registry,
+            harness.State,
+            harness.Session.Services.Activities.Catalog,
+            saveManager);
+
+        catalog.Refresh();
+
+        Assert.Equal("status ", catalog.Complete("st", 2).Replacement);
+        Assert.False(catalog.Complete("he", 2).HasCandidates);
+        Assert.False(catalog.Complete("de", 2).HasCandidates);
+    }
+
+    [Fact]
     public void Study_OffersUniversityCoursesAndUniversities()
     {
         var fixture = CreateFixture();

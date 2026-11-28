@@ -27,6 +27,7 @@ public sealed class GameState
         Activity = new ActivityState();
         Employment = new Employment();
         FileSystem = new VirtualFileSystem(network);
+        Narrative = new NarrativeState(NarrativeProgressionMode.Tutorial);
     }
 
     public Player Player { get; }
@@ -35,4 +36,5 @@ public sealed class GameState
     public ActivityState Activity { get; }
     public Employment Employment { get; }
     public VirtualFileSystem FileSystem { get; }
+    public NarrativeState Narrative { get; }
 }

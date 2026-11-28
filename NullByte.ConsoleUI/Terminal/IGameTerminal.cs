@@ -23,5 +23,7 @@ public interface IGameTerminal : IGameOutput
 
     IAsyncEnumerable<string> ReadCommandsAsync(CancellationToken cancellationToken = default);
 
+    void WriteNarrativeLine(string message);
+
     void Clear();
 }

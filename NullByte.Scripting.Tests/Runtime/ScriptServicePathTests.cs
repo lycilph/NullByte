@@ -27,6 +27,7 @@ public class ScriptServicePathTests
             startingSecurity: 1, requiredHackingLevel: 1, growthParameter: 0, maximumRam: 8, hasRootAccess: true));
 
         state = new GameState(new Player(network.GetServer("home").Id, 0, 0), network);
+        state.Narrative.Mode = NarrativeProgressionMode.Freeplay;
         service = new ScriptService(
             state, new ScriptCompiler(), new ScriptRunner(new ScriptAssemblyLoader()),
             new ThrowingApiFactory(), processes);

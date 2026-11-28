@@ -85,13 +85,16 @@ public sealed class ServerActions
             player.Skills.AddExperience(SkillKind.Hacking, experienceGained * failedHackFactor);
         }
 
-        return new HackResult(
+        var result = new HackResult(
             Succeeded: succeeded,
             FailureMessage: succeeded ? string.Empty : "Hack failed. No money was stolen.",
             MoneyStolen: moneyStolen,
             ExperienceGained: experienceGained,
             SecurityIncrease: securityIncrease,
             Duration: duration);
+
+        HackCompleted?.Invoke(server.Hostname, succeeded);
+        return result;
     }
 
     /// <summary>
@@ -196,6 +199,9 @@ public sealed class ServerActions
             Duration: duration);
     }
 
+    public event Action<string>? RootAccessGained;
+    public event Action<string, bool>? HackCompleted;
+
     public NukeResult Nuke(string hostname)
     {
         var server = ResolveTarget(hostname);
@@ -208,6 +214,7 @@ public sealed class ServerActions
         if (!server.TryGainRootAccess(hackingLevel))
             return NukeResult.Failed($"Nuke failed: hacking level too low (required {server.RequiredHackingLevel}, yours {hackingLevel}).");
 
+        RootAccessGained?.Invoke(server.Hostname);
         return NukeResult.Success();
     }
 

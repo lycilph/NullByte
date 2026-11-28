@@ -6,10 +6,17 @@ public sealed class CommandRegistry
 {
     private readonly Dictionary<string, CommandDefinition> commands = new(StringComparer.OrdinalIgnoreCase);
     private int maxWords = 1;
+    private readonly NullByte.Core.Domain.NarrativeState? narrative;
+
+    public CommandRegistry(NullByte.Core.Domain.NarrativeState? narrative = null)
+    {
+        this.narrative = narrative;
+    }
 
     public IReadOnlyCollection<CommandDefinition> Commands =>
         commands.Values
             .Distinct()
+            .Where(IsAvailable)
             .OrderBy(command => command.Name)
             .ToArray();
 
@@ -22,7 +29,14 @@ public sealed class CommandRegistry
             RegisterName(alias, command);
     }
 
-    public bool TryGet(string name, out CommandDefinition? command) => commands.TryGetValue(name, out command);
+    public bool TryGet(string name, out CommandDefinition? command)
+    {
+        if (commands.TryGetValue(name, out command) && IsAvailable(command))
+            return true;
+
+        command = null;
+        return false;
+    }
 
     /// <summary>
     /// Finds the longest registered name that is a prefix of the typed tokens,
@@ -38,6 +52,13 @@ public sealed class CommandRegistry
             if (commands.TryGetValue(string.Join(' ', tokens.Take(n)), out command))
             {
                 wordsConsumed = n;
+                if (!IsAvailable(command))
+                {
+                    command = null;
+                    wordsConsumed = 0;
+                    return false;
+                }
+
                 return true;
             }
         }
@@ -50,6 +71,18 @@ public sealed class CommandRegistry
     /// <summary>Commands whose name extends this one: "botnet" -> "botnet buy", "botnet upgrade".</summary>
     public IEnumerable<CommandDefinition> Subcommands(CommandDefinition command)
         => Commands.Where(c => c.Name.StartsWith(command.Name + " ", StringComparison.OrdinalIgnoreCase));
+
+    private bool IsAvailable(CommandDefinition command)
+    {
+        if (narrative is null)
+            return true;
+
+        if (command.Debug)
+            return narrative.IsFreeplay;
+
+        var capability = CommandCapabilityMap.GetRequiredCapability(command.Name);
+        return narrative.HasCapability(capability);
+    }
 
     private void RegisterName(string name, CommandDefinition command)
     {

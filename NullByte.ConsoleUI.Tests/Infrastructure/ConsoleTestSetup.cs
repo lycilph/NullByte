@@ -22,6 +22,8 @@ internal sealed record ConsoleTestOptions
     public INullByteApiFactory? ApiFactory { get; init; }
 
     public FakeTerminal? Terminal { get; init; }
+
+    public NarrativeProgressionMode ProgressionMode { get; init; } = NarrativeProgressionMode.Freeplay;
 }
 
 /// <summary>
@@ -36,6 +38,7 @@ internal static class ConsoleTestSetup
 
         var terminal = options.Terminal ?? new FakeTerminal();
         var state = options.State ?? TestGameFactory.CreateGame(options.Money);
+        state.Narrative.Mode = options.ProgressionMode;
 
         var session = GameSession.Create(new GameSessionOptions
         {

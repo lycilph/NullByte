@@ -1,14 +1,20 @@
 ﻿# In progress
 
-- Add a player sub-api (get skills, money etc.)
+- New milestone
+  - Story/narrative, features are unlocked slowly
+  - Add this as a new milestone (between 12 and 13)
+  - Add message file, the next step in the narrative
+
+- Is the action subscriptions in NarrativeCoordinator safe when loading/saving/resetting?
+
+- Gameplay
+  - Split up hack, grow, weaken, backdoor and all the file commands 
+	
+- Add a freeplay flag to the --new argument (in commandline parser) and the reset command
  
 # Todo
 
-- New milestone
-  -  Story/narrative, features are unlocked slowly
-
 - Maybe: add cancel manual hack, weaken and grow (backdoor?)
-- Make the text in the terminal green (so it doesn't look like a normal console)
 - Do the full solution format check
 
 # Future ideas

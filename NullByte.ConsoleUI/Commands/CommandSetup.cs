@@ -18,14 +18,14 @@ public static class CommandSetup
         IExternalEditorStatus? externalEditorStatus = null,
         AppSettings? settings = null)
     {
-        var registry = new CommandRegistry();
+        var registry = new CommandRegistry(session.State.Narrative);
         var workingDirectory = new WorkingDirectory(session.State);
         var formulas = session.Services.Formulas;
 
         List<ICommandGroup> groups =
         [
             new DebugCommands(session.State.Player, session.Clock, registry, terminal, externalEditorStatus),
-            new SystemCommands(registry, terminal, hostRequests, settings),
+            new SystemCommands(registry, terminal, hostRequests, settings, session.Narrative),
             new PlayerCommands(session.State.Player, session.Services.Network, formulas.Skills, terminal),
             new NetworkCommands(session.Clock, session.Services.Network, formulas.Network, terminal),
             new FileCommands(session.State.FileSystem, session.Services.Network, workingDirectory, terminal),

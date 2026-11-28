@@ -41,6 +41,8 @@ internal sealed class FakeTerminal : IGameTerminal
             lines.Add(message);
     }
 
+    public void WriteNarrativeLine(string message) => WriteLine(message);
+
     public void WriteLine() => WriteLine(string.Empty);
 
     public void Clear()

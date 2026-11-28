@@ -60,6 +60,9 @@ public sealed class ScriptService : IScriptOperations, IScriptService
     /// </summary>
     public event Action<ScriptProcess>? ProcessCompleted;
 
+    /// <summary>Raised after process and API creation, before script code begins executing.</summary>
+    public event Action<ScriptProcess>? ProcessStarted;
+
     /// <summary>
     /// Compiles and starts a script stored in the virtual filesystem.
     /// This method returns immediately after starting the process.
@@ -75,6 +78,9 @@ public sealed class ScriptService : IScriptOperations, IScriptService
         ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
         ArgumentException.ThrowIfNullOrWhiteSpace(filename);
         ArgumentNullException.ThrowIfNull(args);
+
+        if (!gameState.Narrative.HasCapability("scripts.execute"))
+            return ScriptStartResult.Failure("Script execution is not available.");
 
         // "/tools/a.cx" and "tools/a.cx" are the same script. Use one spelling from here on,
         // so that the process list, ScriptRunning and the saved processes all agree.
@@ -154,6 +160,9 @@ public sealed class ScriptService : IScriptOperations, IScriptService
 
             // Create a distinct API instance for this process.
             var api = apiFactory.Create(this, process.HostServerId, process.Threads, process.Cancellation.Token);
+
+            // Publish process creation before script code can call APIs that this milestone unlocks.
+            NotifyProcessStarted(process);
 
             // Start execution without waiting for the script to finish.
             process.Execution = RunAndObserveAsync(process, compiledScript, api);
@@ -314,6 +323,25 @@ public sealed class ScriptService : IScriptOperations, IScriptService
         finally
         {
             ReleaseProcessRam(process);
+        }
+    }
+
+    private void NotifyProcessStarted(ScriptProcess process)
+    {
+        var handlers = ProcessStarted;
+        if (handlers is null)
+            return;
+
+        foreach (Action<ScriptProcess> handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                handler(process);
+            }
+            catch (Exception observerException)
+            {
+                ReportObserverFailure(nameof(ProcessStarted), process, observerException);
+            }
         }
     }
 

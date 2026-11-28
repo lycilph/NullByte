@@ -126,6 +126,28 @@ public sealed class NullByteApiTests
         Assert.NotNull(typeof(INullByteApi).GetProperty(nameof(INullByteApi.Player)));
     }
 
+    [Fact]
+    public void RuntimeApis_RejectOperationsUntilTheirCapabilitiesAreUnlocked()
+    {
+        var world = CoreTestSetup.CreateWorld(new CoreTestOptions
+        {
+            ProgressionMode = NarrativeProgressionMode.Tutorial,
+            Servers = [TestServers.Home(), TestServers.Create("n00dles")]
+        });
+        var api = world.CreateApi(Substitute.For<IScriptOperations>(), cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Throws<InvalidOperationException>(() => api.Scan());
+        Assert.Throws<InvalidOperationException>(() => _ = api.Player.Money);
+        Assert.Throws<InvalidOperationException>(() => api.Files.List());
+        Assert.Throws<InvalidOperationException>(() => api.Botnet.NumberOfNodes());
+        Assert.Throws<InvalidOperationException>(() => api.Cloud.GetServers());
+        Assert.Throws<InvalidOperationException>(() => api.Activities.GetCourses());
+
+        world.State.Narrative.UnlockCapability("network.scan");
+
+        Assert.Contains("n00dles", api.Scan());
+    }
+
     private static void AssertSkill(
         ApiFixture fixture,
         SkillInfo skill,

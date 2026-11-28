@@ -23,7 +23,7 @@ public class SaveGameTests
     ];
 
     /// <summary>A small game that has been played a bit: every kind of state the save has to carry.</summary>
-    internal static GameState CreateState()
+    internal static GameState CreateState(NarrativeProgressionMode mode = NarrativeProgressionMode.Tutorial)
     {
         var network = new Network();
         network.AddServer(new Server("home", 0, 0, 1, 1, 1, 1, 1, 8, hasRootAccess: true, id: ServerId.Parse(HomeServerId)));
@@ -45,6 +45,7 @@ public class SaveGameTests
         player.DiscoverServer(ServerId.Parse(FoodnstuffServerId));
 
         var state = new GameState(player, network);
+        state.Narrative.Mode = mode;
 
         network.GetServer("n00dles").GrantRootAccess();
         network.GetServer("n00dles").RemoveMoney(1.0 / 3.0);
@@ -66,9 +67,64 @@ public class SaveGameTests
 
     private static SaveGame Capture(GameState state) => SaveGameMapper.Capture(state, GameTime, Processes, SavedAt);
 
-    private static string CurrentVersionGolden => Serializer.Serialize(Serializer.Deserialize(GoldenSaves.V7));
+    private static string CurrentVersionGolden => Serializer.Serialize(Serializer.Deserialize(GoldenSaves.V8));
 
     private static string Describe(GameState state) => Serializer.Serialize(Capture(state));
+
+    [Fact]
+    public void New_game_starts_in_tutorial_mode_with_no_narrative_capabilities()
+    {
+        var state = CreateState();
+
+        Assert.Equal(NarrativeProgressionMode.Tutorial, state.Narrative.Mode);
+        Assert.Empty(state.Narrative.UnlockedCapabilities);
+        Assert.Empty(state.Narrative.CompletedMilestones);
+        Assert.Empty(state.Narrative.DeliveredMessages);
+    }
+
+    [Fact]
+    public void Narrative_state_survives_a_save_and_load()
+    {
+        var state = CreateState();
+        state.Narrative.UnlockCapability("player.inspect");
+        state.Narrative.CompleteMilestone("tutorial.initialization.complete");
+        state.Narrative.DeliverMessage("system.initialization");
+
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(Describe(state)));
+
+        Assert.Equal(NarrativeProgressionMode.Tutorial, restored.State.Narrative.Mode);
+        Assert.Contains("player.inspect", restored.State.Narrative.UnlockedCapabilities);
+        Assert.Contains("tutorial.initialization.complete", restored.State.Narrative.CompletedMilestones);
+        Assert.Contains("system.initialization", restored.State.Narrative.DeliveredMessages);
+    }
+
+    [Fact]
+    public void V8_save_migrates_to_freeplay_without_tutorial_state()
+    {
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V8));
+
+        Assert.Equal(NarrativeProgressionMode.Freeplay, restored.State.Narrative.Mode);
+        Assert.Empty(restored.State.Narrative.UnlockedCapabilities);
+        Assert.Empty(restored.State.Narrative.CompletedMilestones);
+        Assert.Empty(restored.State.Narrative.DeliveredMessages);
+    }
+
+    [Fact]
+    public void Freeplay_narrative_state_round_trips()
+    {
+        var state = CreateState();
+        state.Narrative.Mode = NarrativeProgressionMode.Freeplay;
+        state.Narrative.UnlockCapability("future.capability");
+        state.Narrative.CompleteMilestone("future.milestone");
+        state.Narrative.DeliverMessage("future.message");
+
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(Describe(state)));
+
+        Assert.Equal(NarrativeProgressionMode.Freeplay, restored.State.Narrative.Mode);
+        Assert.Contains("future.capability", restored.State.Narrative.UnlockedCapabilities);
+        Assert.Contains("future.milestone", restored.State.Narrative.CompletedMilestones);
+        Assert.Contains("future.message", restored.State.Narrative.DeliveredMessages);
+    }
 
     [Fact]
     public void Restore_reproduces_everything_that_was_saved()
@@ -141,18 +197,7 @@ public class SaveGameTests
                     "zero-day" => ZeroDayServerId,
                     _ => throw new InvalidOperationException($"Unexpected test server '{host}'.")
                 };
-                network.AddServer(new Server(
-                    host,
-                    1000,
-                    500,
-                    3,
-                    1,
-                    3,
-                    1,
-                    30,
-                    4,
-                    hasRootAccess: host == "home",
-                    id: ServerId.Parse(id)));
+                network.AddServer(new Server(host, 1000, 500, 3, 1, 3, 1, 30, 4, hasRootAccess: host == "home", id: ServerId.Parse(id)));
             }
             foreach (var (a, b) in edgeOrder)
                 network.Connect(a, b);
@@ -196,19 +241,21 @@ public class SaveGameTests
     {
         // If this fails you changed the save format. Bump SaveGame.CurrentVersion, add a migration,
         // and keep the old golden text as a test for that migration. Do not just edit the golden text.
-        string expected = CurrentVersionGolden;
-        string actual = Describe(CreateState());
+        var expected = CurrentVersionGolden;
+        var actual = Describe(CreateState(NarrativeProgressionMode.Freeplay));
         Assert.Equal(expected, actual);
     }
 
     [Fact]
     public void The_current_golden_file_loads_and_saves_back_unchanged()
     {
-        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V7));
+        var restored = SaveGameMapper.Restore(Serializer.Deserialize(GoldenSaves.V8));
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(CurrentVersionGolden, again);
+        var expected = CurrentVersionGolden;
+        var actual = again;
+        Assert.Equal(expected, actual);
     }
 
     [Fact]
@@ -218,7 +265,7 @@ public class SaveGameTests
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(Normalize(GoldenSaves.V7), again);
+        Assert.Equal(Normalize(GoldenSaves.V8), again);
     }
 
     [Fact]
