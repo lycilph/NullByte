@@ -3,6 +3,7 @@
 public sealed record CommandLineOptions
 {
     public bool StartNewGame { get; init; }
+    public bool Freeplay { get; init; }
     public bool WriteDefaultSettings { get; init; }
     public bool EnableEditor { get; init; }
     public int? EditorPort { get; init; }
