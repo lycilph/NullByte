@@ -7,7 +7,7 @@ namespace NullByte.Core.Narrative;
 /// Converts successful gameplay events into one-time tutorial milestones.
 /// All methods and subscribed events are expected to run on the game thread.
 /// </summary>
-public sealed class NarrativeCoordinator
+public sealed class NarrativeCoordinator : IDisposable
 {
     private readonly GameState state;
 
@@ -26,6 +26,15 @@ public sealed class NarrativeCoordinator
     }
 
     public event Action<NarrativeMessage>? MessagePublished;
+
+    public void Dispose()
+    {
+        network.ServersDiscovered -= OnServersDiscovered;
+        network.ServerAnalyzed -= OnServerAnalyzed;
+        network.ServerConnected -= OnServerConnected;
+        actions.RootAccessGained -= OnRootAccessGained;
+        actions.HackCompleted -= OnHackCompleted;
+    }
 
     public void Initialize()
     {
