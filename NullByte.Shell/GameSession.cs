@@ -164,6 +164,7 @@ public sealed class GameSession : IAsyncDisposable
         try { await StopAsync(); }
         catch { /* disposal must not throw; StopAsync is where you observe failures */ }
 
+        Narrative.Dispose();
         await loop.DisposeAsync();     // disposes the CancellationTokenSource etc.
                                        // dispose anything else the session owns (clock if it's disposable)
     }
