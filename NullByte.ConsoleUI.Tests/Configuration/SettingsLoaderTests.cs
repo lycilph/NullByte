@@ -144,6 +144,19 @@ public sealed class SettingsLoaderTests
             directory.GetPath("settings.json"));
 
         Assert.True(result.StartNewGame);
+        Assert.False(result.Freeplay);
+    }
+
+    [Fact]
+    public void Load_WithNewAndFreeplay_SetsBothLaunchInstructions()
+    {
+        using var directory = new TemporaryDirectory();
+
+        var result = SettingsLoader.Load(
+            ["--new", "--freeplay"],
+            directory.GetPath("settings.json"));
+
+        Assert.True(result.StartNewGame);
         Assert.True(result.Freeplay);
     }
 
