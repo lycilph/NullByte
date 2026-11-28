@@ -55,6 +55,21 @@ public class ActivitySubscriptionLifecycleTests
     }
 
     [Fact]
+    public async Task Reset_with_freeplay_starts_an_unrestricted_new_session()
+    {
+        var store = new InMemorySaveStore();
+        await using var terminal = new ThreadSafeConsoleTerminal();
+        var saves = new SaveManager(store, new SaveGameSerializer());
+
+        await using var host = CreateHost(terminal, saves);
+        await host.StartAsync(resumeAutosave: false);
+
+        await InvokeHostMethodAsync(host, "ResetAsync", true);
+
+        Assert.True(host.Session!.State.Narrative.IsFreeplay);
+    }
+
+    [Fact]
     public async Task Dispose_detaches_the_current_sessions_activity_handler()
     {
         var store = new InMemorySaveStore();
