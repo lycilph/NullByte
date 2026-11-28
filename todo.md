@@ -5,6 +5,8 @@
   - Add this as a new milestone (between 12 and 13)
   - Add message file, the next step in the narrative
 
+- Is the action subscriptions in NarrativeCoordinator safe when loading/saving/resetting?
+
 - Gameplay
   - Split up hack, grow, weaken, backdoor and all the file commands 
 	
