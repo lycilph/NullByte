@@ -40,7 +40,7 @@ public sealed class NarrativeContentCatalog
             : throw new KeyNotFoundException($"Narrative entry '{id}' was not found.");
     }
 
-    public IReadOnlyCollection<NarrativeEntry> Entries => entries.Values;
+    public IReadOnlyCollection<NarrativeEntry> Entries => entries.Values.ToArray();
 
     /// <summary>The initial authored content. Later acts can be added without changing progression logic.</summary>
     public static NarrativeContentCatalog Default { get; } = new(
