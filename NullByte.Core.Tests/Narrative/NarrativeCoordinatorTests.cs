@@ -115,8 +115,6 @@ public sealed class NarrativeCoordinatorTests
         Assert.True(world.State.Narrative.HasCapability("network.analyze"));
         Assert.Contains("tutorial.network.first-scan", world.State.Narrative.CompletedMilestones);
     }
-}
-
 
     [Fact]
     public void Dispose_DetachesGameplayEventSubscriptions()
@@ -137,3 +135,4 @@ public sealed class NarrativeCoordinatorTests
         Assert.Empty(messages);
         Assert.Empty(world.State.Narrative.CompletedMilestones);
     }
+}
