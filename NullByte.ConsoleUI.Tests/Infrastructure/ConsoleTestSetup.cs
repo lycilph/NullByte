@@ -26,7 +26,7 @@ internal sealed record ConsoleTestOptions
 
     public NarrativeProgressionMode ProgressionMode { get; init; } = NarrativeProgressionMode.Freeplay;
 
-    public NarrativeDiscoveryCatalog? NarrativeDiscoveries { get; init; }
+    public NarrativeContentCatalog? NarrativeDiscoveries { get; init; }
 }
 
 /// <summary>
