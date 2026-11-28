@@ -115,12 +115,9 @@ public sealed class NarrativeCoordinator
         Complete(
             "tutorial.network.first-root",
             "system.root-access",
-            $"Administrative access acquired on {hostname}.\n\nYou have modified a system outside your assigned environment. Continue.\n\nAvailable commands: hack, grow, weaken, backdoor, ls, cd, pwd, cat, rm, mkdir, rmdir, mv, scp, edit (vscode if enabled)",
+            $"Administrative access acquired on {hostname}.\n\nYou have modified a system outside your assigned environment. Continue.\n\nAvailable commands: hack, grow, weaken, backdoor",
             "server.operations",
-            "server.backdoor",
-            "files.navigation",
-            "files.read",
-            "files.manage");
+            "server.backdoor");
     }
 
     public void ScriptStarted()
@@ -151,7 +148,10 @@ public sealed class NarrativeCoordinator
         Complete(
             "tutorial.network.first-hack",
             "system.first-external-action",
-            $"External operation completed on {hostname}.\n\nA boundary has been crossed. The result is now part of your operational history.\n\nAvailable command: run <file>",
+            $"External operation completed on {hostname}.\n\nA boundary has been crossed. The result is now part of your operational history.\n\nThe remote filesystem is now accessible.\n\nAvailable commands: ls, cd, pwd, cat, rm, mkdir, rmdir, mv, scp, edit, run <file>",
+            "files.navigation",
+            "files.read",
+            "files.manage",
             "scripts.execute");
     }
 
