@@ -1,5 +1,6 @@
 ﻿using NullByte.ConsoleUI.Terminal;
 using NullByte.Core.Domain;
+using NullByte.Core.Narrative;
 using NullByte.Core.Services;
 
 namespace NullByte.ConsoleUI.Commands.Groups;
@@ -8,6 +9,7 @@ public sealed class FileCommands(
     VirtualFileSystem fileSystem,
     NetworkService networkService,
     WorkingDirectory workingDirectory,
+    NarrativeCoordinator narrative,
     IGameTerminal terminal) : ICommandGroup
 {
     public void Register(CommandRegistry registry)
@@ -187,7 +189,10 @@ public sealed class FileCommands(
             return Task.CompletedTask;
 
         if (fileSystem.TryReadFile(server.Hostname, path, out var content))
+        {
+            narrative.FileRead(server.Hostname, path);
             terminal.WriteLine(content!);
+        }
         else if (fileSystem.DirectoryExists(server.Hostname, path))
             terminal.WriteLine($"{typed} is a directory.");
         else

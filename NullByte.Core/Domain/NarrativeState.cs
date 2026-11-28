@@ -25,6 +25,9 @@ public sealed class NarrativeState
 
     public HashSet<string> DeliveredMessages { get; }
 
+    /// <summary>Stable IDs of narrative discoveries the player has read.</summary>
+    public HashSet<string> DiscoveredDiscoveries { get; } = new(StringComparer.Ordinal);
+
     public bool IsFreeplay => Mode == NarrativeProgressionMode.Freeplay;
 
     public bool HasCapability(string capability)
@@ -42,6 +45,12 @@ public sealed class NarrativeState
 
     public bool DeliverMessage(string message)
         => DeliveredMessages.Add(message);
+
+    public bool DiscoverDiscovery(string discoveryId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(discoveryId);
+        return DiscoveredDiscoveries.Add(discoveryId);
+    }
 
     public void UnlockCapability(string capability)
         => UnlockedCapabilities.Add(capability);

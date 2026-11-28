@@ -12,8 +12,9 @@ public sealed class NarrativeCoordinator : IDisposable
     private readonly GameState state;
     private readonly NetworkService network;
     private readonly ServerActions actions;
+    private readonly NarrativeDiscoveryCatalog discoveries;
 
-    public NarrativeCoordinator(GameState state, NetworkService network, ServerActions actions)
+    public NarrativeCoordinator(GameState state, NetworkService network, ServerActions actions, NarrativeDiscoveryCatalog? discoveries = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(network);
@@ -22,6 +23,7 @@ public sealed class NarrativeCoordinator : IDisposable
         this.state = state;
         this.network = network;
         this.actions = actions;
+        this.discoveries = discoveries ?? NarrativeDiscoveryCatalog.Default;
         network.ServersDiscovered += OnServersDiscovered;
         network.ServerAnalyzed += OnServerAnalyzed;
         network.ServerConnected += OnServerConnected;
@@ -30,6 +32,15 @@ public sealed class NarrativeCoordinator : IDisposable
     }
 
     public event Action<NarrativeMessage>? MessagePublished;
+
+    /// <summary>Records a registered discovery after the player successfully reads its file.</summary>
+    public bool FileRead(string hostname, string path)
+    {
+        if (!discoveries.TryGet(hostname, path, out var discovery) || discovery is null)
+            return false;
+
+        return state.Narrative.DiscoverDiscovery(discovery.Id);
+    }
 
     public void Dispose()
     {

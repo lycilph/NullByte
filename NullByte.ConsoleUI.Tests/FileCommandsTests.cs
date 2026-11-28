@@ -1,5 +1,7 @@
 ﻿using NullByte.ConsoleUI.Terminal;
 using NullByte.ConsoleUI.Tests.Infrastructure;
+using NullByte.Core.Domain;
+using NullByte.Core.Narrative;
 
 namespace NullByte.ConsoleUI.Tests;
 
@@ -95,6 +97,27 @@ public class FileCommandsTests
         Assert.Equal(new[] { "hello" }, await game.RunAndCaptureAsync("cat tools/a.cx"));
         Assert.Equal(new[] { "tools is a directory." }, await game.RunAndCaptureAsync("cat tools"));
         Assert.Equal(new[] { "File not found: nope.cx" }, await game.RunAndCaptureAsync("cat nope.cx"));
+    }
+
+    [Fact]
+    public async Task Cat_records_a_discovery_once_and_leaves_the_file_available()
+    {
+        var catalog = new NarrativeDiscoveryCatalog(
+        [new NarrativeDiscovery("project.archive-record", "home", "archive/project.log", NarrativeDiscoveryRequirement.Optional)]);
+        var game = ConsoleTestSetup.CreateHarness(new ConsoleTestOptions
+        {
+            ProgressionMode = NarrativeProgressionMode.Freeplay,
+            NarrativeDiscoveries = catalog
+        });
+        game.Files.WriteFile("home", "archive/project.log", "Recovered record");
+
+        Assert.Equal(new[] { "Recovered record" }, await game.RunAndCaptureAsync("cat archive/project.log"));
+        Assert.Equal(new[] { "Recovered record" }, await game.RunAndCaptureAsync("cat archive/project.log"));
+
+        Assert.Contains("project.archive-record", game.Session.State.Narrative.DiscoveredDiscoveries);
+        Assert.Empty(game.Session.State.Narrative.UnlockedCapabilities);
+        Assert.True(game.Files.TryReadFile("home", "archive/project.log", out var content));
+        Assert.Equal("Recovered record", content);
     }
 
     // ---- rm and rmdir ----

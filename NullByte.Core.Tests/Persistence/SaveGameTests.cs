@@ -80,6 +80,7 @@ public class SaveGameTests
         Assert.Empty(state.Narrative.UnlockedCapabilities);
         Assert.Empty(state.Narrative.CompletedMilestones);
         Assert.Empty(state.Narrative.DeliveredMessages);
+        Assert.Empty(state.Narrative.DiscoveredDiscoveries);
     }
 
     [Fact]
@@ -89,6 +90,7 @@ public class SaveGameTests
         state.Narrative.UnlockCapability("player.inspect");
         state.Narrative.CompleteMilestone("tutorial.initialization.complete");
         state.Narrative.DeliverMessage("system.initialization");
+        state.Narrative.DiscoverDiscovery("archive.project-record");
 
         var restored = SaveGameMapper.Restore(Serializer.Deserialize(Describe(state)));
 
@@ -96,6 +98,7 @@ public class SaveGameTests
         Assert.Contains("player.inspect", restored.State.Narrative.UnlockedCapabilities);
         Assert.Contains("tutorial.initialization.complete", restored.State.Narrative.CompletedMilestones);
         Assert.Contains("system.initialization", restored.State.Narrative.DeliveredMessages);
+        Assert.Contains("archive.project-record", restored.State.Narrative.DiscoveredDiscoveries);
     }
 
     [Fact]
@@ -107,6 +110,7 @@ public class SaveGameTests
         Assert.Empty(restored.State.Narrative.UnlockedCapabilities);
         Assert.Empty(restored.State.Narrative.CompletedMilestones);
         Assert.Empty(restored.State.Narrative.DeliveredMessages);
+        Assert.Empty(restored.State.Narrative.DiscoveredDiscoveries);
     }
 
     [Fact]
@@ -117,6 +121,7 @@ public class SaveGameTests
         state.Narrative.UnlockCapability("future.capability");
         state.Narrative.CompleteMilestone("future.milestone");
         state.Narrative.DeliverMessage("future.message");
+        state.Narrative.DiscoverDiscovery("future.discovery");
 
         var restored = SaveGameMapper.Restore(Serializer.Deserialize(Describe(state)));
 
@@ -124,6 +129,7 @@ public class SaveGameTests
         Assert.Contains("future.capability", restored.State.Narrative.UnlockedCapabilities);
         Assert.Contains("future.milestone", restored.State.Narrative.CompletedMilestones);
         Assert.Contains("future.message", restored.State.Narrative.DeliveredMessages);
+        Assert.Contains("future.discovery", restored.State.Narrative.DiscoveredDiscoveries);
     }
 
     [Fact]
@@ -265,7 +271,7 @@ public class SaveGameTests
 
         var again = Serializer.Serialize(SaveGameMapper.Capture(restored.State, restored.GameTime, restored.Processes, SavedAt));
 
-        Assert.Equal(Normalize(GoldenSaves.V8), again);
+        Assert.Equal(CurrentVersionGolden, again);
     }
 
     [Fact]

@@ -139,4 +139,40 @@ public sealed class NarrativeCoordinatorTests
         Assert.Empty(messages);
         Assert.Empty(world.State.Narrative.CompletedMilestones);
     }
+
+    [Fact]
+    public void FileRead_RecordsOptionalAndRequiredDiscoveriesOnceWithoutUnlockingCapabilities()
+    {
+        var world = CoreTestSetup.CreateWorld(new CoreTestOptions { ProgressionMode = NarrativeProgressionMode.Tutorial });
+        var catalog = new NarrativeDiscoveryCatalog(
+        [
+            new NarrativeDiscovery("archive.optional", "home", "archive/optional.log", NarrativeDiscoveryRequirement.Optional),
+            new NarrativeDiscovery("archive.required", "home", "archive/required.log", NarrativeDiscoveryRequirement.Required)
+        ]);
+        var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions, catalog);
+
+        Assert.True(coordinator.FileRead("home", "archive/optional.log"));
+        Assert.False(coordinator.FileRead("home", "/archive/optional.log"));
+        Assert.True(coordinator.FileRead("home", "archive/required.log"));
+
+        Assert.Contains("archive.optional", world.State.Narrative.DiscoveredDiscoveries);
+        Assert.Contains("archive.required", world.State.Narrative.DiscoveredDiscoveries);
+        Assert.Empty(world.State.Narrative.UnlockedCapabilities);
+        Assert.Empty(world.State.Narrative.CompletedMilestones);
+    }
+
+    [Fact]
+    public void FileRead_AlsoRecordsDiscoveriesInFreeplay()
+    {
+        var world = CoreTestSetup.CreateWorld(new CoreTestOptions { ProgressionMode = NarrativeProgressionMode.Tutorial });
+        world.State.Narrative.Mode = NarrativeProgressionMode.Freeplay;
+        var catalog = new NarrativeDiscoveryCatalog(
+        [new NarrativeDiscovery("archive.record", "home", "archive/record.log", NarrativeDiscoveryRequirement.Optional)]);
+        var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions, catalog);
+
+        Assert.True(coordinator.FileRead("home", "archive/record.log"));
+        Assert.Contains("archive.record", world.State.Narrative.DiscoveredDiscoveries);
+        Assert.Empty(world.State.Narrative.CompletedMilestones);
+    }
+
 }

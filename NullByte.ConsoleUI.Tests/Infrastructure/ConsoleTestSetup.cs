@@ -1,6 +1,7 @@
 using NullByte.ConsoleUI.Commands;
 using NullByte.Core.Configuration;
 using NullByte.Core.Domain;
+using NullByte.Core.Narrative;
 using NullByte.Core.Scripting;
 using NullByte.Core.Time;
 using NullByte.Shell;
@@ -24,6 +25,8 @@ internal sealed record ConsoleTestOptions
     public FakeTerminal? Terminal { get; init; }
 
     public NarrativeProgressionMode ProgressionMode { get; init; } = NarrativeProgressionMode.Freeplay;
+
+    public NarrativeDiscoveryCatalog? NarrativeDiscoveries { get; init; }
 }
 
 /// <summary>
@@ -46,7 +49,8 @@ internal static class ConsoleTestSetup
             State = state,
             Balance = options.Balance ?? new BalanceConfig(),
             Clock = new FakeGameClock(),
-            ApiFactory = options.ApiFactory
+            ApiFactory = options.ApiFactory,
+            NarrativeDiscoveries = options.NarrativeDiscoveries
         });
 
         var registry = CommandSetup.Create(session, terminal, new HostRequestMailbox());

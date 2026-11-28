@@ -110,7 +110,8 @@ public static class SaveGameMapper
                 Mode = state.Narrative.Mode,
                 UnlockedCapabilities = state.Narrative.UnlockedCapabilities.Order(StringComparer.Ordinal).ToArray(),
                 CompletedMilestones = state.Narrative.CompletedMilestones.Order(StringComparer.Ordinal).ToArray(),
-                DeliveredMessages = state.Narrative.DeliveredMessages.Order(StringComparer.Ordinal).ToArray()
+                DeliveredMessages = state.Narrative.DeliveredMessages.Order(StringComparer.Ordinal).ToArray(),
+                DiscoveredDiscoveries = state.Narrative.DiscoveredDiscoveries.Order(StringComparer.Ordinal).ToArray()
             }
         };
     }
@@ -336,6 +337,14 @@ public static class SaveGameMapper
                 throw new InvalidDataException("A narrative message ID is empty.");
 
             narrative.DeliverMessage(message);
+        }
+
+        foreach (var discovery in saved.DiscoveredDiscoveries)
+        {
+            if (string.IsNullOrWhiteSpace(discovery))
+                throw new InvalidDataException("A narrative discovery ID is empty.");
+
+            narrative.DiscoverDiscovery(discovery);
         }
     }
 

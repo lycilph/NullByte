@@ -14,7 +14,7 @@ namespace NullByte.Core.Persistence;
 public sealed record SaveGame
 {
     /// <summary>The format version this build writes, and the newest one it can read.</summary>
-    public const int CurrentVersion = 8;
+    public const int CurrentVersion = 9;
 
     public required int Version { get; init; }
     public required DateTimeOffset SavedAtUtc { get; init; }
@@ -33,7 +33,7 @@ public sealed record SaveGame
     public required IReadOnlyList<FileSave> Files { get; init; }
     /// <summary>Scripts that were running. They are started again on load.</summary>
     public required IReadOnlyList<ProcessSave> Processes { get; init; }
-    /// <summary>Narrative progression and command-access state. Added in version 8.</summary>
+    /// <summary>Narrative progression and command-access state. Added in version 8; discovered entries in version 9.</summary>
     public required NarrativeSave Narrative { get; init; }
 }
 

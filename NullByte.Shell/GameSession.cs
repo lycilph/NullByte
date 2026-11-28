@@ -24,7 +24,8 @@ public sealed record GameSessionOptions
     public TimeSpan InitialGameTime { get; init; } = TimeSpan.Zero;             // Used when loading a saved game
     public IReadOnlyList<ProcessSave> ProcessesToRestart { get; init; } = [];   // Used when loading a saved game
     public GameState? State { get; init; }                                      // null = new game; a loaded game passes its restored state
-    public NarrativeProgressionMode NarrativeMode { get; init; } = NarrativeProgressionMode.Tutorial; // new games may explicitly skip the tutorial                                      // null = new game; a loaded game passes its restored state
+    public NarrativeProgressionMode NarrativeMode { get; init; } = NarrativeProgressionMode.Tutorial; // new games may explicitly skip the tutorial
+    public NarrativeDiscoveryCatalog? NarrativeDiscoveries { get; init; }
     public IGameClock? Clock { get; init; }                                     // tests pass FakeGameClock
     public IRandomSource? Random { get; init; }                                 // tests pass a fixed source
     public INullByteApiFactory? ApiFactory { get; init; }                       // tests pass a fake api factory
@@ -78,7 +79,8 @@ public sealed class GameSession : IAsyncDisposable
         GameServices services,
         IGameOutput output,
         IScriptCompiler compiler,
-        IReadOnlyList<ProcessSave>? processesToRestart = null)
+        IReadOnlyList<ProcessSave>? processesToRestart = null,
+        NarrativeDiscoveryCatalog? narrativeDiscoveries = null)
     {
         this.loop = loop;
         this.output = output;
@@ -89,7 +91,7 @@ public sealed class GameSession : IAsyncDisposable
         Clock = clock;
         GameThread = loop;
         Services = services;
-        Narrative = new NarrativeCoordinator(state, services.Network, services.Actions);
+        Narrative = new NarrativeCoordinator(state, services.Network, services.Actions, narrativeDiscoveries);
         services.Scripts.ProcessStarted += _ => Narrative.ScriptStarted();
     }
 
@@ -217,6 +219,6 @@ public sealed class GameSession : IAsyncDisposable
         scriptService.ProcessFailed += (proc, exception) => options.Output.WriteLine($"Process {proc.Pid} failed: {exception.Message}");
         gameLoop.UnhandledException += exception => options.Output.WriteLine($"Unhandled error on the game thread: {exception.Message}");
 
-        return new GameSession(state, clock, gameLoop, services, options.Output, scriptCompiler, options.ProcessesToRestart);
+        return new GameSession(state, clock, gameLoop, services, options.Output, scriptCompiler, options.ProcessesToRestart, options.NarrativeDiscoveries);
     }
 }

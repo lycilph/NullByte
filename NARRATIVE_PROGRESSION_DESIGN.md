@@ -24,7 +24,7 @@ The coordinator is session-scoped and unsubscribes from service events when disp
 
 ## 2. Durable state and persistence
 
-The current save format is version 8. The narrative save object contains:
+The current save format is version 9. Version 9 adds persisted discovered-discovery IDs; version 8 introduced narrative progression. The narrative save object contains:
 
 | Field | Meaning |
 |---|---|
@@ -32,6 +32,7 @@ The current save format is version 8. The narrative save object contains:
 | `UnlockedCapabilities` | Stable capability IDs explicitly unlocked in Tutorial mode |
 | `CompletedMilestones` | Stable IDs for one-time progression triggers |
 | `DeliveredMessages` | Stable IDs preventing one-time SYSTEM messages from repeating |
+| `DiscoveredDiscoveries` | Stable IDs for optional or required narrative discoveries the player has read (added in version 9) |
 
 Capability, milestone and message IDs are stable namespaced identifiers, not command strings, display text, enum ordinals or array positions. Renaming an ID requires an explicit migration or compatibility handling.
 
@@ -65,6 +66,14 @@ The coordinator also exposes explicit entry points used by the host/session:
 Freeplay bypasses tutorial initialization and all tutorial unlock messages.
 
 The coordinator's current scope is intentionally narrow. It does not yet subscribe to botnet purchases, cloud purchases or activity events to produce optional story messages. The authored catalog currently contains the initial Act I milestones and the first script milestone in Act II; later acts are placeholders in the act taxonomy, not implemented content.
+
+### File-based discoveries
+
+Optional story material is registered separately from tutorial milestones in `NarrativeDiscoveryCatalog`. Each discovery has a stable ID, a server hostname and normalized virtual-file path, plus an `Optional` or `Required` classification. The catalog is content metadata; it does not own gameplay state.
+
+A successful player-facing `cat` read is reported to `NarrativeCoordinator.FileRead`. A matching discovery ID is recorded once in `NarrativeState.DiscoveredDiscoveries`. Reading the same file again does not repeat the discovery, and the file remains in the virtual filesystem so the player can revisit its contents at any time. Editor previews and internal file reads do not count as player discoveries.
+
+Optional and required are narrative-content classifications only. Neither type unlocks or gates gameplay capabilities. Freeplay skips tutorial progression but still records discoveries. The default discovery catalog is currently empty; N4 will add the first recovered files and their registrations.
 
 ## 4. Idempotency and message delivery
 
@@ -121,8 +130,8 @@ N1 (content model) and N2 (initial Act I content) are implemented. The current c
 
 Next content work should be incremental:
 
-1. Add optional discoveries that fit existing systems, such as recovered logs or configuration records.
-2. Let those discoveries hint at an earlier project or unexplained network entry without immediately explaining it.
+1. N3 provides the persisted file-discovery foundation: stable IDs, optional/required classification and one-time registration on player reads.
+2. N4 adds the first recovered files and uses them to hint at an earlier project or unexplained network entry without immediately explaining it.
 3. Expand SYSTEM's voice gradually while keeping most messages practical.
 4. Decide how recovered information is represented and discovered using the existing file/world model before adding new mechanics.
 5. Extend the journal only when there is actual story content to index; preserve its current role as a reliable tutorial guide.
