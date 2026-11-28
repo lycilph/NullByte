@@ -7,7 +7,7 @@ public sealed class NarrativeContentCatalogDiscoveryTests
     [Fact]
     public void TryGet_NormalizesPathsAndMatchesHostnamesWithoutCaseSensitivity()
     {
-        var catalog = new NarrativeContentCatalog([], 
+        var catalog = new NarrativeContentCatalog([],
         [new NarrativeDiscovery("archive.record", "home", "archive/record.log", NarrativeDiscoveryRequirement.Optional)]);
 
         Assert.True(catalog.TryGetDiscovery("HOME", "/archive/record.log", out var discovery));

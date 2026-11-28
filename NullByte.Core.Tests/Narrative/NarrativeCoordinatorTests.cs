@@ -158,7 +158,7 @@ public sealed class NarrativeCoordinatorTests
     public void FileRead_RecordsOptionalAndRequiredDiscoveriesOnceWithoutUnlockingCapabilities()
     {
         var world = CoreTestSetup.CreateWorld(new CoreTestOptions { ProgressionMode = NarrativeProgressionMode.Tutorial });
-        var catalog = new NarrativeContentCatalog([], 
+        var catalog = new NarrativeContentCatalog([],
         [
             new NarrativeDiscovery("archive.optional", "home", "archive/optional.log", NarrativeDiscoveryRequirement.Optional),
             new NarrativeDiscovery("archive.required", "home", "archive/required.log", NarrativeDiscoveryRequirement.Required)
@@ -180,7 +180,7 @@ public sealed class NarrativeCoordinatorTests
     {
         var world = CoreTestSetup.CreateWorld(new CoreTestOptions { ProgressionMode = NarrativeProgressionMode.Tutorial });
         world.State.Narrative.Mode = NarrativeProgressionMode.Freeplay;
-        var catalog = new NarrativeContentCatalog([], 
+        var catalog = new NarrativeContentCatalog([],
         [new NarrativeDiscovery("archive.record", "home", "archive/record.log", NarrativeDiscoveryRequirement.Optional)]);
         var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions, catalog);
 
