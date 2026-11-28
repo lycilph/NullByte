@@ -318,17 +318,17 @@ The current hack operation takes game time, attempts to steal money, grants hack
 
 After the first completed hack attempt, SYSTEM acknowledges the first external effect. The exact message should distinguish success from failure rather than implying money was stolen when it was not.
 
-The `grow` and `weaken` commands can be introduced with the same `server.operations` capability. `backdoor` remains a separate later capability because it changes network navigation by enabling direct connections.
+The `grow`, `weaken` and `backdoor` commands are already available with the same root-access milestone. File operations deliberately remain unavailable until the player has performed an external server operation.
 
 ### Step 6 — Discover files and scripting
 
-After the player returns to `home`, introduce the virtual file system:
+After the first successful server operation, introduce the virtual file system:
 
-- Unlock `files.navigation` and `files.read`.
-- Unlock `files.manage` when the player is ready to create a script file.
+- Unlock `files.navigation`, `files.read` and `files.manage`.
 - The player can use `edit` to create a script and `ls`/ `cat` to inspect it.
+- Unlock `scripts.execute` so the player can start the script.
 
-Then unlock `scripts.execute` and `scripts.inspect`. The first script should be deliberately simple: print a message, wait using game time, and print again. It demonstrates that the player can create an autonomous process without requiring money, network access or a complicated script.
+The first script should be deliberately simple: print a message, wait using game time, and print again. It demonstrates that the player can create an autonomous process without requiring money, network access or a complicated script.
 
 The first script should not require any API action that has not separately been unlocked.
 
@@ -363,16 +363,14 @@ This is a first proposal, not a final balance decision.
 | 4 | `network.analyze` | After the first successful scan |
 | 5 | `network.connect` | After inspecting a discovered server |
 | 6 | `server.root-access` | After connecting to a suitable remote host |
-| 7 | `server.operations` | After first successful root acquisition |
-| 8 | `files.navigation`, `files.read` | After the first remote operation / return to home |
-| 9 | `files.manage` | When the player is ready to create a script |
-| 10 | `scripts.execute`, `scripts.inspect`, `scripts.control` | After a script file is created |
+| 7 | `server.operations`, `server.backdoor` | After first successful root acquisition |
+| 8 | `files.navigation`, `files.read`, `files.manage`, `scripts.execute` | After the first successful server operation |
+| 9 | `scripts.inspect`, `scripts.control` | After the first script starts |
 | 11 | `botnet.inspect`, `botnet.purchase`, `botnet.upgrade` | Expansion milestone; exact trigger to be playtested |
 | 12 | `cloud.inspect`, `cloud.purchase`, `cloud.manage` | Later expansion milestone; exact trigger to be playtested |
-| 13 | `server.backdoor` | After the player has encountered a suitable rooted host |
-| 14 | `activities.learn`, `activities.manage` | Optional introduction to structured learning |
-| 15 | `activities.work` | Optional introduction to legitimate employment |
-| 16 | `activities.crime` | Optional introduction to unauthorized activity |
+| 13 | `activities.learn`, `activities.manage` | Optional introduction to structured learning |
+| 14 | `activities.work` | Optional introduction to legitimate employment |
+| 15 | `activities.crime` | Optional introduction to unauthorized activity |
 
 The exact trigger for later systems should be selected from real game events. Do not require a player to buy a cloud server, commit a crime or take a particular job just to advance the main story.
 
