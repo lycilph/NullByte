@@ -1,18 +1,25 @@
+using NullByte.Core.Domain;
+
 namespace NullByte.Core.Narrative;
 
 /// <summary>
-/// Immutable authored narrative content. Gameplay code refers to entries by stable ID;
-/// the catalog owns the association between an entry and its progression milestone.
+/// Immutable authored narrative content. Gameplay code refers to entries and discoveries by stable ID;
+/// the catalog owns the association between content and its progression or discovery metadata.
 /// </summary>
 public sealed class NarrativeContentCatalog
 {
     private readonly IReadOnlyDictionary<string, NarrativeEntry> entries;
+    private readonly IReadOnlyDictionary<string, NarrativeDiscovery> discoveriesByFile;
+    private readonly IReadOnlyCollection<NarrativeDiscovery> discoveries;
 
-    public NarrativeContentCatalog(IEnumerable<NarrativeEntry> entries)
+    public NarrativeContentCatalog(
+        IEnumerable<NarrativeEntry> entries,
+        IEnumerable<NarrativeDiscovery>? discoveries = null)
     {
         ArgumentNullException.ThrowIfNull(entries);
 
         var byId = new Dictionary<string, NarrativeEntry>(StringComparer.Ordinal);
+        var contentIds = new HashSet<string>(StringComparer.Ordinal);
         var milestones = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var entry in entries)
@@ -22,14 +29,40 @@ public sealed class NarrativeContentCatalog
             ArgumentException.ThrowIfNullOrWhiteSpace(entry.MilestoneId);
             ArgumentException.ThrowIfNullOrWhiteSpace(entry.Text);
 
-            if (!byId.TryAdd(entry.Id, entry))
-                throw new ArgumentException($"Duplicate narrative entry ID '{entry.Id}'.", nameof(entries));
+            if (!contentIds.Add(entry.Id))
+                throw new ArgumentException($"Duplicate narrative content ID '{entry.Id}'.", nameof(entries));
 
             if (!milestones.Add(entry.MilestoneId))
                 throw new ArgumentException($"Duplicate narrative milestone ID '{entry.MilestoneId}'.", nameof(entries));
+
+            byId.Add(entry.Id, entry);
+        }
+
+        var byFile = new Dictionary<string, NarrativeDiscovery>(StringComparer.Ordinal);
+        var discoveryList = new List<NarrativeDiscovery>();
+
+        foreach (var discovery in discoveries ?? [])
+        {
+            ArgumentNullException.ThrowIfNull(discovery);
+            ArgumentException.ThrowIfNullOrWhiteSpace(discovery.Id);
+            ArgumentException.ThrowIfNullOrWhiteSpace(discovery.Hostname);
+            if (discovery.Requirement is not NarrativeDiscoveryRequirement.Optional and not NarrativeDiscoveryRequirement.Required)
+                throw new ArgumentOutOfRangeException(nameof(discoveries), discovery.Requirement, "Unknown narrative discovery requirement.");
+
+            var normalized = discovery with { Path = VirtualPath.NormalizeFile(discovery.Path) };
+            if (!contentIds.Add(normalized.Id))
+                throw new ArgumentException($"Duplicate narrative content ID '{normalized.Id}'.", nameof(discoveries));
+
+            var key = GetKey(normalized.Hostname, normalized.Path);
+            if (!byFile.TryAdd(key, normalized))
+                throw new ArgumentException($"More than one narrative discovery is registered for '{normalized.Hostname}:{normalized.Path}'.", nameof(discoveries));
+
+            discoveryList.Add(normalized);
         }
 
         this.entries = byId;
+        discoveriesByFile = byFile;
+        this.discoveries = discoveryList;
     }
 
     public NarrativeEntry GetRequired(string id)
@@ -40,7 +73,15 @@ public sealed class NarrativeContentCatalog
             : throw new KeyNotFoundException($"Narrative entry '{id}' was not found.");
     }
 
+    public bool TryGetDiscovery(string hostname, string path, out NarrativeDiscovery? discovery)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
+        var normalizedPath = VirtualPath.NormalizeFile(path);
+        return discoveriesByFile.TryGetValue(GetKey(hostname, normalizedPath), out discovery);
+    }
+
     public IReadOnlyCollection<NarrativeEntry> Entries => entries.Values.ToArray();
+    public IReadOnlyCollection<NarrativeDiscovery> Discoveries => discoveries;
 
     /// <summary>The initial authored content. Later acts can be added without changing progression logic.</summary>
     public static NarrativeContentCatalog Default { get; } = new(
@@ -119,5 +160,11 @@ public sealed class NarrativeContentCatalog
 
             Process monitor note: this execution pattern is not present in the standard environment profile.
             """)
+    ],
+    [
+        new("archive.project-profile", "n00dles", "etc/system/profile.cfg", NarrativeDiscoveryRequirement.Optional)
     ]);
+
+    private static string GetKey(string hostname, string path)
+        => hostname.ToUpperInvariant() + "\0" + path;
 }

@@ -24,6 +24,19 @@ public sealed class InitialGameStateFactoryIntegrationTests
     }
 
     [Fact]
+    public void Create_SeedsFirstNarrativeDiscoveryFile()
+    {
+        var gameState = InitialGameStateFactory.Create();
+
+        Assert.True(gameState.FileSystem.TryReadFile(
+            "n00dles",
+            "etc/system/profile.cfg",
+            out var content));
+        Assert.Contains("project=NX-17", content);
+        Assert.Contains("runtime=NB-0001", content);
+    }
+
+    [Fact]
     public void Create_CreatesValidExpandedWorld()
     {
         // Act

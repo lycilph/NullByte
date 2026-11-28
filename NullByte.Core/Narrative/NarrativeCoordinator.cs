@@ -12,9 +12,9 @@ public sealed class NarrativeCoordinator : IDisposable
     private readonly GameState state;
     private readonly NetworkService network;
     private readonly ServerActions actions;
-    private readonly NarrativeDiscoveryCatalog discoveries;
+    private readonly NarrativeContentCatalog content;
 
-    public NarrativeCoordinator(GameState state, NetworkService network, ServerActions actions, NarrativeDiscoveryCatalog? discoveries = null)
+    public NarrativeCoordinator(GameState state, NetworkService network, ServerActions actions, NarrativeContentCatalog? content = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(network);
@@ -23,7 +23,7 @@ public sealed class NarrativeCoordinator : IDisposable
         this.state = state;
         this.network = network;
         this.actions = actions;
-        this.discoveries = discoveries ?? NarrativeDiscoveryCatalog.Default;
+        this.content = content ?? NarrativeContentCatalog.Default;
         network.ServersDiscovered += OnServersDiscovered;
         network.ServerAnalyzed += OnServerAnalyzed;
         network.ServerConnected += OnServerConnected;
@@ -36,7 +36,7 @@ public sealed class NarrativeCoordinator : IDisposable
     /// <summary>Records a registered discovery after the player successfully reads its file.</summary>
     public bool FileRead(string hostname, string path)
     {
-        if (!discoveries.TryGet(hostname, path, out var discovery) || discovery is null)
+        if (!content.TryGetDiscovery(hostname, path, out var discovery) || discovery is null)
             return false;
 
         return state.Narrative.DiscoverDiscovery(discovery.Id);
@@ -144,7 +144,7 @@ public sealed class NarrativeCoordinator : IDisposable
         if (state.Narrative.IsFreeplay)
             return;
 
-        var entry = NarrativeContentCatalog.Default.GetRequired(entryId);
+        var entry = content.GetRequired(entryId);
         if (state.Narrative.CompletedMilestones.Contains(entry.MilestoneId))
             return;
 

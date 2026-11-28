@@ -12,7 +12,7 @@ Narrative progression is owned by Core and is driven by successful gameplay even
 
 - `GameState` owns the durable `NarrativeState`.
 - `NarrativeCoordinator` translates relevant gameplay events into milestones, capability unlocks and host-neutral `NarrativeMessage` instances.
-- `NarrativeContentCatalog` owns immutable authored entries, stable entry IDs, act metadata and milestone associations. The coordinator refers to entries by ID and supplies runtime values such as hostnames.
+- `NarrativeContentCatalog` owns immutable authored entries and discoveries, stable content IDs, act metadata, milestone associations and discovery-file mappings. The coordinator refers to entries by ID and supplies runtime values such as hostnames.
 - `NarrativeEntry` renders simple `{placeholder}` values; it does not contain branching or conditional logic.
 - `NarrativeAct` identifies the five high-level story acts. Act metadata is content organization, not a separately persisted progression counter.
 - Gameplay services report what happened; they do not contain story text.
@@ -69,11 +69,11 @@ The coordinator's current scope is intentionally narrow. It does not yet subscri
 
 ### File-based discoveries
 
-Optional story material is registered separately from tutorial milestones in `NarrativeDiscoveryCatalog`. Each discovery has a stable ID, a server hostname and normalized virtual-file path, plus an `Optional` or `Required` classification. The catalog is content metadata; it does not own gameplay state.
+Optional story material is registered alongside tutorial milestones in `NarrativeContentCatalog`. Each discovery has a stable ID, a server hostname and normalized virtual-file path, plus an `Optional` or `Required` classification. The catalog is content metadata; it does not own gameplay state.
 
 A successful player-facing `cat` read is reported to `NarrativeCoordinator.FileRead`. A matching discovery ID is recorded once in `NarrativeState.DiscoveredDiscoveries`. Reading the same file again does not repeat the discovery, and the file remains in the virtual filesystem so the player can revisit its contents at any time. Editor previews and internal file reads do not count as player discoveries.
 
-Optional and required are narrative-content classifications only. Neither type unlocks or gates gameplay capabilities. Freeplay skips tutorial progression but still records discoveries. The default discovery catalog is currently empty; N4 will add the first recovered files and their registrations.
+Optional and required are narrative-content classifications only. Neither type unlocks or gates gameplay capabilities. Freeplay skips tutorial progression but still records discoveries. The default content catalog now contains the first recovered file registration from N4.
 
 ## 4. Idempotency and message delivery
 
@@ -126,12 +126,12 @@ Tests belong at the owning layer: domain/coordinator tests for progression, serv
 
 The current implementation is a tutorial progression foundation, not the complete story described in [NARRATIVE.md](NARRATIVE.md).
 
-N1 (content model) and N2 (initial Act I content) are implemented. The current catalog deliberately keeps the opening practical. Its first anomaly is a low-key inherited audit-retention note after the first successful external operation; the first-script message adds a slightly more unusual environment-profile observation.
+N1 (content model), N2 (initial Act I content), N3 (discovery persistence) and N4 (first recovered file) are implemented. The current catalog deliberately keeps the opening practical. Its first anomaly is a low-key inherited audit-retention note after the first successful external operation; the first-script message adds a slightly more unusual environment-profile observation.
 
 Next content work should be incremental:
 
 1. N3 provides the persisted file-discovery foundation: stable IDs, optional/required classification and one-time registration on player reads.
-2. N4 adds the first recovered files and uses them to hint at an earlier project or unexplained network entry without immediately explaining it.
+2. N4 adds the first recovered file and uses it to hint at an earlier project without immediately explaining it.
 3. Expand SYSTEM's voice gradually while keeping most messages practical.
 4. Decide how recovered information is represented and discovered using the existing file/world model before adding new mechanics.
 5. Extend the journal only when there is actual story content to index; preserve its current role as a reliable tutorial guide.

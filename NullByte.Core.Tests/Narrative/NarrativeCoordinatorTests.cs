@@ -141,10 +141,24 @@ public sealed class NarrativeCoordinatorTests
     }
 
     [Fact]
+    public void FileRead_DefaultCatalogRecordsFirstRecoveredDiscovery()
+    {
+        var world = CoreTestSetup.CreateWorld(new CoreTestOptions { ProgressionMode = NarrativeProgressionMode.Tutorial });
+        var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions);
+
+        Assert.True(coordinator.FileRead("N00DLES", "/etc/system/profile.cfg"));
+        Assert.False(coordinator.FileRead("n00dles", "etc/system/profile.cfg"));
+
+        Assert.Contains("archive.project-profile", world.State.Narrative.DiscoveredDiscoveries);
+        Assert.Empty(world.State.Narrative.UnlockedCapabilities);
+        Assert.Empty(world.State.Narrative.CompletedMilestones);
+    }
+
+    [Fact]
     public void FileRead_RecordsOptionalAndRequiredDiscoveriesOnceWithoutUnlockingCapabilities()
     {
         var world = CoreTestSetup.CreateWorld(new CoreTestOptions { ProgressionMode = NarrativeProgressionMode.Tutorial });
-        var catalog = new NarrativeDiscoveryCatalog(
+        var catalog = new NarrativeContentCatalog([], 
         [
             new NarrativeDiscovery("archive.optional", "home", "archive/optional.log", NarrativeDiscoveryRequirement.Optional),
             new NarrativeDiscovery("archive.required", "home", "archive/required.log", NarrativeDiscoveryRequirement.Required)
@@ -166,7 +180,7 @@ public sealed class NarrativeCoordinatorTests
     {
         var world = CoreTestSetup.CreateWorld(new CoreTestOptions { ProgressionMode = NarrativeProgressionMode.Tutorial });
         world.State.Narrative.Mode = NarrativeProgressionMode.Freeplay;
-        var catalog = new NarrativeDiscoveryCatalog(
+        var catalog = new NarrativeContentCatalog([], 
         [new NarrativeDiscovery("archive.record", "home", "archive/record.log", NarrativeDiscoveryRequirement.Optional)]);
         var coordinator = new NarrativeCoordinator(world.State, world.NetworkService, world.ServerActions, catalog);
 

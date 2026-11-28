@@ -5,6 +5,14 @@ namespace NullByte.Core.Tests.Narrative;
 public sealed class NarrativeContentCatalogTests
 {
     [Fact]
+    public void Default_ContainsFirstRecoveredDiscovery()
+    {
+        Assert.True(NarrativeContentCatalog.Default.TryGetDiscovery("N00DLES", "/etc/system/profile.cfg", out var discovery));
+        Assert.Equal("archive.project-profile", discovery!.Id);
+        Assert.Equal(NarrativeDiscoveryRequirement.Optional, discovery.Requirement);
+    }
+
+    [Fact]
     public void Default_ContainsEveryImplementedTutorialMilestone()
     {
         var expected = new[]
@@ -20,6 +28,21 @@ public sealed class NarrativeContentCatalogTests
         };
 
         Assert.Equal(expected.Order(), NarrativeContentCatalog.Default.Entries.Select(entry => entry.MilestoneId).Order());
+    }
+
+    [Fact]
+    public void Constructor_RejectsDuplicateContentIds()
+    {
+        var entries = new[]
+        {
+            new NarrativeEntry("same", NarrativeAct.Initialization, "milestone.one", "First")
+        };
+        var discoveries = new[]
+        {
+            new NarrativeDiscovery("same", "home", "one.log", NarrativeDiscoveryRequirement.Optional)
+        };
+
+        Assert.Throws<ArgumentException>(() => new NarrativeContentCatalog(entries, discoveries));
     }
 
     [Fact]

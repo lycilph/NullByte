@@ -21,6 +21,23 @@ public static class InitialGameStateFactory
 
         var state = new GameState(player, network);
         state.Narrative.Mode = narrativeMode;
+
+        // Initial narrative files are part of the shipped world, not player-created files.
+        state.FileSystem.WriteFile(
+            "n00dles",
+            "etc/system/profile.cfg",
+            """
+            [environment]
+            profile=isolated-runtime
+            runtime=NB-0001
+            project=NX-17
+            network=restricted
+
+            [provisioning]
+            status=archived
+            owner=unlisted
+            """);
+
         return state;
     }
 
