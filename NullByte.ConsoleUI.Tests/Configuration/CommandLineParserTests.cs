@@ -24,6 +24,25 @@ public sealed class CommandLineParserTests
         var result = CommandLineParser.Parse(["--new"]);
 
         Assert.True(result.StartNewGame);
+        Assert.False(result.Freeplay);
+    }
+
+    [Fact]
+    public void Parse_WithNewAndFreeplay_SetsBothFlags()
+    {
+        var result = CommandLineParser.Parse(["--new", "--freeplay"]);
+
+        Assert.True(result.StartNewGame);
+        Assert.True(result.Freeplay);
+    }
+
+    [Fact]
+    public void Parse_WithFreeplayWithoutNew_Throws()
+    {
+        var exception = Assert.Throws<ArgumentException>(
+            () => CommandLineParser.Parse(["--freeplay"]));
+
+        Assert.Contains("'--freeplay' requires '--new'", exception.Message);
     }
 
     [Fact]
