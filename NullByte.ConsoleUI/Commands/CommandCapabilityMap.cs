@@ -10,7 +10,6 @@ internal static class CommandCapabilityMap
             ["journal"] = "host.controls",
             ["exit"] = "host.controls",
             ["clear"] = "host.controls",
-            ["vscode"] = "host.controls",
             ["save"] = "host.controls",
             ["load"] = "host.controls",
             ["saves"] = "host.controls",
@@ -41,6 +40,7 @@ internal static class CommandCapabilityMap
             ["mv"] = "files.manage",
             ["scp"] = "files.manage",
             ["edit"] = "files.manage",
+            ["vscode"] = "files.manage",
 
             ["run"] = "scripts.execute",
             ["mem"] = "scripts.inspect",
