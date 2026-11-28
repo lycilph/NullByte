@@ -1,540 +1,121 @@
 ﻿using System.Reflection;
 using System.Runtime.Loader;
 using NullByte.Scripting.Compilation;
+using NullByte.Scripting.Tests.Infrastructure;
 
 namespace NullByte.Scripting.Tests.Compilation;
 
+/// <summary>
+/// The compile pipeline as a whole: what compiles, what the result contains, and how bad input is
+/// reported. The analyzer rules, diagnostic positions, RAM costs and includes have their own test classes.
+/// </summary>
 public sealed class ScriptCompilerTests
 {
-    private readonly ScriptCompiler compiler = new();
-
-    [Fact]
-    public void Compile_WithSimpleTopLevelScript_Succeeds()
+    public static TheoryData<string> ValidScripts => new()
     {
-        const string source = """
-            var answer = 42;
-            nb.Print(answer);
-            """;
+        "var answer = 42;\nnb.Print(answer);",
+        "var target = args[0];\nnb.Print(target);",
+        """
+        var target = args[0];
 
-        var result = compiler.Compile(source, "simple.cx");
+        nb.Print($"Target: {target}");
 
-        AssertCompilationSucceeded(result);
-        Assert.NotNull(result.Script);
-        Assert.DoesNotContain(
-            result.Diagnostics,
-            diagnostic => diagnostic.Severity == ScriptDiagnosticSeverity.Error);
-    }
+        var money = nb.GetServerMoneyAvailable(target);
+        var maximumMoney = nb.GetServerMaxMoney(target);
+        var security = nb.GetServerSecurityLevel(target);
+        var minimumSecurity = nb.GetServerMinSecurityLevel(target);
 
-    [Fact]
-    public void Compile_WithRoslynGeneratedArgs_Succeeds()
+        nb.Print($"{money}/{maximumMoney}, {security}/{minimumSecurity}");
+        """,
+        """
+        var money = nb.Player.Money;
+        var hackingExperience = nb.Player.Skills.Hacking.Experience;
+        var hackingLevel = nb.Player.Skills.Hacking.Level;
+        var charismaLevel = nb.Player.Skills.Charisma.Level;
+        nb.Print($"{money}/{hackingExperience}/{hackingLevel}/{charismaLevel}");
+        """,
+        "TimeSpan delay = TimeSpan.FromSeconds(1);\nnb.Print(delay);",
+        "await nb.Sleep(TimeSpan.FromSeconds(1));\nnb.Print(\"Finished\");",
+        "await Task.Delay(TimeSpan.FromMilliseconds(1));",
+        "var target = args[0];\nawait nb.Hack(target);\nawait nb.Grow(target);\nawait nb.Weaken(target);",
+        "using System.Globalization;\n\nvar value = 12.5;\n\nnb.Print(value.ToString(CultureInfo.InvariantCulture));"
+    };
+
+    [Theory]
+    [MemberData(nameof(ValidScripts))]
+    public void Compile_WithValidScript_Succeeds(string source)
     {
-        const string source = """
-            var target = args[0];
-            nb.Print(target);
-            """;
+        var result = TestScripts.Compile(source);
 
-        var result = compiler.Compile(source, "args.cx");
-
-        AssertCompilationSucceeded(result);
-        Assert.NotNull(result.Script);
-    }
-
-    [Fact]
-    public void Compile_WithInjectedNullByteApi_Succeeds()
-    {
-        const string source = """
-            var target = args[0];
-
-            nb.Print($"Target: {target}");
-
-            var money = nb.GetServerMoneyAvailable(target);
-            var maximumMoney = nb.GetServerMaxMoney(target);
-            var security = nb.GetServerSecurityLevel(target);
-            var minimumSecurity = nb.GetServerMinSecurityLevel(target);
-
-            nb.Print($"{money}/{maximumMoney}, {security}/{minimumSecurity}");
-            """;
-
-        var result = compiler.Compile(source, "api.cx");
-
-        AssertCompilationSucceeded(result);
-        Assert.NotNull(result.Script);
-    }
-
-    [Fact]
-    public void Compile_WithPlayerApi_Succeeds()
-    {
-        const string source = """
-            var money = nb.Player.Money;
-            var hackingExperience = nb.Player.Skills.Hacking.Experience;
-            var hackingLevel = nb.Player.Skills.Hacking.Level;
-            var charismaLevel = nb.Player.Skills.Charisma.Level;
-            nb.Print($"{money}/{hackingExperience}/{hackingLevel}/{charismaLevel}");
-            """;
-
-        var result = compiler.Compile(source, "player-api.cx");
-
-        AssertCompilationSucceeded(result);
-        Assert.NotNull(result.Script);
-    }
-
-    [Fact]
-    public void Compile_WithRemovedGetHackingLevel_Fails()
-    {
-        var result = compiler.Compile("nb.GetHackingLevel();", "removed-api.cx");
-
-        Assert.False(result.Succeeded);
-        Assert.Null(result.Script);
-        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "CS1061");
-    }
-
-    [Fact]
-    public void Compile_ProvidesDefaultSystemUsing()
-    {
-        const string source = """
-        TimeSpan delay = TimeSpan.FromSeconds(1);
-        nb.Print(delay);
-        """;
-
-        var result = compiler.Compile(source, "default-system-using.cx");
-
-        AssertCompilationSucceeded(result);
-    }
-
-    [Fact]
-    public void Compile_WithTopLevelAwait_Succeeds()
-    {
-        const string source = """
-            await nb.Sleep(TimeSpan.FromSeconds(1));
-            nb.Print("Finished");
-            """;
-
-        var result = compiler.Compile(source, "await.cx");
-
-        AssertCompilationSucceeded(result);
-        Assert.NotNull(result.Script);
-    }
-
-    [Fact]
-    public void Compile_WithServerActions_Succeeds()
-    {
-        const string source = """
-            var target = args[0];
-
-            await nb.Hack(target);
-            await nb.Grow(target);
-            await nb.Weaken(target);
-            """;
-
-        var result = compiler.Compile(source, "actions.cx");
-
-        AssertCompilationSucceeded(result);
-        Assert.NotNull(result.Script);
-    }
-
-    [Fact]
-    public void Compile_WithAutomationScript_Succeeds()
-    {
-        const string source = """
-            var target = args[0];
-
-            while (true)
-            {
-                if (nb.GetServerSecurityLevel(target) > nb.GetServerMinSecurityLevel(target) + 5)
-                    await nb.Weaken(target);
-                else if (nb.GetServerMoneyAvailable(target) < nb.GetServerMaxMoney(target) * 0.75)
-                    await nb.Grow(target);
-                else
-                    await nb.Hack(target);
-            }
-            """;
-
-        var result = compiler.Compile(source, "early-hack.cx");
-
-        AssertCompilationSucceeded(result);
-        Assert.NotNull(result.Script);
+        CompileAssert.Succeeds(result);
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Severity == ScriptDiagnosticSeverity.Error);
     }
 
     [Theory]
-    [InlineData("while (true) { nb.Print(\"loop\"); }")]
-    [InlineData("for (;;) { nb.Print(\"loop\"); }")]
-    [InlineData("do { nb.Print(\"loop\"); } while (true);")]
-    [InlineData("for (var i = 0; true; i++) { nb.Print(i); }")]
-    [InlineData("while (nb.HasRootAccess()) { nb.Print(\"loop\"); }")]
-    [InlineData("var i = 0; while (i < 3) { i++; }")]
-    public void Compile_WithUnboundedLoopWithoutAwait_Fails(string source)
-    {
-        var result = compiler.Compile(source, "synchronous-loop.cx");
-
-        Assert.False(result.Succeeded);
-        Assert.Null(result.Script);
-        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1009");
-    }
-
-    [Theory]
-    [InlineData("foreach (var value in new[] { 1, 2, 3 }) { nb.Print(value); }")]
-    [InlineData("foreach (var host in nb.Scan()) { nb.Print(host); }")]
-    [InlineData("for (var i = 0; i < 3; i++) { nb.Print(i); }")]
-    public void Compile_WithBoundedLoopWithoutAwait_Succeeds(string source)
-    {
-        var result = compiler.Compile(source, "bounded-loop.cx");
-
-        AssertCompilationSucceeded(result);
-    }
-
-    [Theory]
-    [InlineData("while (true) { await Task.CompletedTask; }")]
-    [InlineData("while (true) { await Task.FromResult(1); }")]
-    public void Compile_WithLoopAwaitingACompletedTask_Fails(string source)
-    {
-        var result = compiler.Compile(source, "completed-task-loop.cx");
-
-        Assert.False(result.Succeeded);
-        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1009");
-    }
-
-    [Fact]
-    public void Compile_WithAwaitForeachInLoopBody_Succeeds()
-    {
-        const string source = """
-            async IAsyncEnumerable<int> Numbers()
-            {
-                yield return 1;
-                await Task.Delay(1);
-            }
-
-            while (true)
-            {
-                await foreach (var value in Numbers())
-                    nb.Print(value);
-            }
-            """;
-
-        var result = compiler.Compile(source, "await-foreach.cx");
-
-        AssertCompilationSucceeded(result);
-    }
-
-    [Fact]
-    public void Compile_WithLoopAwaitingInBody_Succeeds()
-    {
-        const string source = """
-            while (true)
-            {
-                await nb.Sleep(TimeSpan.FromMilliseconds(1));
-            }
-            """;
-
-        var result = compiler.Compile(source, "cooperative-loop.cx");
-
-        AssertCompilationSucceeded(result);
-    }
-
-    [Fact]
-    public void Compile_WithAwaitOnlyInsideLocalFunction_DoesNotMakeLoopCooperative()
-    {
-        const string source = """
-            async Task WaitAsync() => await Task.Delay(1);
-
-            while (true)
-            {
-                WaitAsync();
-            }
-            """;
-
-        var result = compiler.Compile(source, "nested-await.cx");
-
-        Assert.False(result.Succeeded);
-        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1009");
-    }
-
-    [Theory]
-    [InlineData("var value = System.Environment.GetEnvironmentVariable(\"HOME\");")]
-    [InlineData("var thread = new System.Threading.Thread(() => { });")]
-    [InlineData("var name = typeof(string).Assembly.GetName();")]
-    [InlineData("var error = System.Runtime.InteropServices.Marshal.GetLastWin32Error();")]
-    [InlineData("var value = System.IO.File.ReadAllText(\"file.txt\");")]
-    [InlineData("var task = Task.Run(() => { });")]
-    [InlineData("var factory = Task.Factory;")]
-    [InlineData("var timer = new System.Threading.Timer(_ => { }, null, 0, 1000);")]
-    [InlineData("var type = Type.GetType(\"System.IO.File\");")]
-    [InlineData("var method = typeof(string).GetMethod(\"Trim\", Type.EmptyTypes);")]
-    [InlineData("var instance = Activator.CreateInstance(typeof(object));")]
-    [InlineData("var reader = Delegate.CreateDelegate(typeof(Func<string, string>), Type.GetType(\"System.IO.File\")!.GetMethod(\"ReadAllText\", new[] { typeof(string) })!);")]
-    [InlineData("GC.Collect();")]
-    [InlineData("var type = typeof(System.Runtime.Loader.AssemblyLoadContext);")]
-    [InlineData("var type = typeof(NullByte.Core.Domain.GameState);")]
-    [InlineData("NullByte.Core.Services.ServerActions? actions = null;")]
-    [InlineData("var concrete = (NullByte.Core.Scripting.NullByteApi)nb;")]
-    public void Compile_WithBannedApiUsage_Fails(string source)
-    {
-        var result = compiler.Compile(source, "security.cx");
-
-        Assert.False(result.Succeeded);
-        Assert.Null(result.Script);
-        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1007");
-    }
-
-    [Fact]
-    public void Compile_WithBannedApiUsage_ReportsOneDiagnosticPerUsage()
-    {
-        var result = compiler.Compile("var value = System.IO.File.ReadAllText(\"file.txt\");", "single-usage.cx");
-
-        Assert.False(result.Succeeded);
-        Assert.Single(result.Diagnostics, diagnostic => diagnostic.Id == "NB1007");
-    }
-
-    [Theory]
-    [InlineData("var process = new System.Diagnostics.Process();", "CS0234")]
+    [InlineData("nb.GetHackingLevel();", "CS1061")]                                       // an API member that was removed
+    [InlineData("var process = new System.Diagnostics.Process();", "CS0234")]             // not part of the script references
     [InlineData("var client = new System.Net.Http.HttpClient();", "CS0234")]
-    public void Compile_WithUnavailableHostApiReference_Fails(string source, string diagnosticId)
+    public void Compile_WithUnavailableApi_ReportsCompilerError(string source, string diagnosticId)
     {
-        var result = compiler.Compile(source, "unavailable-host-api.cx");
-
-        Assert.False(result.Succeeded);
-        Assert.Null(result.Script);
-        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == diagnosticId);
-    }
-
-    [Theory]
-    [InlineData("Task.Delay(TimeSpan.FromMilliseconds(1)).Wait();")]
-    [InlineData("Task.WaitAll(Task.Delay(1));")]
-    [InlineData("var task = Task.FromResult(42); var value = task.Result;")]
-    [InlineData("var valueTask = new ValueTask<int>(42); var value = valueTask.Result;")]
-    [InlineData("System.Threading.Monitor.Wait(new object());")]
-    [InlineData("new System.Threading.SemaphoreSlim(0).Wait();")]
-    [InlineData("new System.Threading.ManualResetEventSlim().Wait();")]
-    [InlineData("new System.Threading.CountdownEvent(1).Wait();")]
-    [InlineData("new System.Threading.Barrier(1).SignalAndWait();")]
-    [InlineData("System.Threading.SpinWait.SpinUntil(() => true);")]
-    [InlineData("Task.Delay(1).GetAwaiter().GetResult();")]
-    public void Compile_WithSynchronousBlockingApiUsage_Fails(string source)
-    {
-        var result = compiler.Compile(source, "blocking-api.cx");
-
-        Assert.False(result.Succeeded);
-        Assert.Null(result.Script);
-        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "NB1008");
-    }
-
-    [Fact]
-    public void Compile_WithAsynchronousWaiting_Succeeds()
-    {
-        const string source = "await Task.Delay(TimeSpan.FromMilliseconds(1)); await nb.Sleep(TimeSpan.FromSeconds(1));";
-
-        var result = compiler.Compile(source, "async-waiting.cx");
-
-        AssertCompilationSucceeded(result);
-    }
-
-    [Fact]
-    public void Compile_WithBannedNamespaceUsingButNoApiUsage_Succeeds()
-    {
-        const string source = "using System.IO; var value = 42; nb.Print(value);";
-
-        var result = compiler.Compile(source, "unused-namespace.cx");
-
-        AssertCompilationSucceeded(result);
-    }
-
-    [Fact]
-    public void Compile_WithTaskAwait_Succeeds()
-    {
-        const string source = "await Task.Delay(TimeSpan.FromMilliseconds(1));";
-
-        var result = compiler.Compile(source, "task.cx");
-
-        AssertCompilationSucceeded(result);
-    }
-
-    [Fact]
-    public void Compile_WithUsingDirective_Succeeds()
-    {
-        const string source = """
-            using System.Globalization;
-
-            var value = 12.5;
-
-            nb.Print(value.ToString(CultureInfo.InvariantCulture));
-            """;
-
-        var result = compiler.Compile(source, "using.cx");
-
-        AssertCompilationSucceeded(result);
-        Assert.NotNull(result.Script);
+        CompileAssert.FailsWith(TestScripts.Compile(source), diagnosticId);
     }
 
     [Fact]
     public void Compile_WithSyntaxError_Fails()
     {
-        const string source = """
-            var target = args[0]
-            nb.Print(target);
-            """;
-
-        var result = compiler.Compile(source, "syntax-error.cx");
+        var result = TestScripts.Compile("var target = args[0]\nnb.Print(target);");
 
         Assert.False(result.Succeeded);
         Assert.Null(result.Script);
-        Assert.Contains(
-            result.Diagnostics,
-            diagnostic => diagnostic.Severity == ScriptDiagnosticSeverity.Error);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Severity == ScriptDiagnosticSeverity.Error);
     }
 
     [Fact]
-    public void Compile_WithMissingToken_ReportsEmptyRange()
+    public void Compile_WithSemanticError_ReportsTheErrorAndTheUnknownName()
     {
-        const string source = "var target = args[0]";
+        var result = TestScripts.Compile("var target = args[0];\nnb.Print(missingValue);");
 
-        var result = compiler.Compile(source, "missing-token.cx");
-
-        var diagnostic = Assert.Single(result.Diagnostics, d => d.Id == "CS1002");
-
-        Assert.Equal(diagnostic.Line, diagnostic.EndLine);
-        Assert.Equal(diagnostic.Column, diagnostic.EndColumn);
-    }
-
-    [Fact]
-    public void Compile_WithSemanticError_Fails()
-    {
-        const string source = """
-            var target = args[0];
-            nb.Print(missingValue);
-            """;
-
-        var result = compiler.Compile(source, "semantic-error.cx");
-
-        Assert.False(result.Succeeded);
-        Assert.Null(result.Script);
-
-        var diagnostic = Assert.Single(
-            result.Diagnostics,
-            diagnostic => diagnostic.Id == "CS0103");
+        var diagnostic = CompileAssert.FailsWith(result, "CS0103");
 
         Assert.Equal(ScriptDiagnosticSeverity.Error, diagnostic.Severity);
         Assert.Contains("missingValue", diagnostic.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Compile_WithSemanticError_ReportsPlayerLineAndColumn()
+    public void Compile_WithWarning_SucceedsAndReturnsTheWarning()
     {
-        const string source = """
-            var target = args[0];
-            nb.Print(target);
-            nb.Print(missingValue);
-            """;
+        var result = TestScripts.Compile("var unused = 42;\nnb.Print(\"Running\");");
 
-        var result = compiler.Compile(source, "line-mapping.cx");
+        CompileAssert.Succeeds(result);
 
-        var diagnostic = Assert.Single(
-            result.Diagnostics,
-            diagnostic => diagnostic.Id == "CS0103");
-
-        Assert.Equal(3, diagnostic.Line);
-        Assert.Equal(10, diagnostic.Column);
-        Assert.Equal(3, diagnostic.EndLine);
-        Assert.Equal(22, diagnostic.EndColumn);
-    }
-
-    [Fact]
-    public void Compile_WithUsingDirective_ReportsPlayerLine()
-    {
-        const string source = """
-            using System.Globalization;
-
-            var target = args[0];
-            nb.Print(missingValue);
-            """;
-
-        var result = compiler.Compile(source, "using-mapping.cx");
-
-        var diagnostic = Assert.Single(
-            result.Diagnostics,
-            diagnostic => diagnostic.Id == "CS0103");
-
-        Assert.Equal(4, diagnostic.Line);
-        Assert.Equal(10, diagnostic.Column);
-    }
-
-    [Fact]
-    public void Compile_WithSyntaxError_ReportsPlayerLine()
-    {
-        const string source = """
-            var target = args[0];
-
-            if (target ==)
-            {
-                nb.Print(target);
-            }
-            """;
-
-        var result = compiler.Compile(source, "syntax-location.cx");
-
-        Assert.False(result.Succeeded);
-        Assert.Contains(
-            result.Diagnostics,
-            diagnostic =>
-                diagnostic.Severity == ScriptDiagnosticSeverity.Error &&
-                diagnostic.Line == 3);
-    }
-
-    [Fact]
-    public void Compile_WithWarning_SucceedsAndReturnsWarning()
-    {
-        const string source = """
-            var unused = 42;
-            nb.Print("Running");
-            """;
-
-        var result = compiler.Compile(source, "warning.cx");
-
-        AssertCompilationSucceeded(result);
-        Assert.NotNull(result.Script);
-        var warning = Assert.Single(
-            result.Diagnostics,
-            diagnostic => diagnostic.Severity == ScriptDiagnosticSeverity.Warning);
+        var warning = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Severity == ScriptDiagnosticSeverity.Warning);
 
         Assert.Equal(warning.Line, warning.EndLine);
         Assert.True(warning.EndColumn > warning.Column);
     }
 
     [Fact]
-    public void Compile_ProducesAssemblyAndPortableSymbols()
+    public void Compile_WithValidScript_ProducesAssemblyAndPortableSymbols()
     {
-        const string source = """
-            nb.Print("Hello");
-            """;
-
-        var result = compiler.Compile(source, "output.cx");
-
-        AssertCompilationSucceeded(result);
-
-        var script = Assert.IsType<CompiledScript>(result.Script);
+        var script = CompileAssert.Succeeds(TestScripts.Compile("nb.Print(\"Hello\");"));
 
         Assert.NotEmpty(script.Assembly);
         Assert.NotEmpty(script.Symbols);
     }
 
     [Fact]
-    public void Compile_CalledTwice_ProducesDistinctAssemblies()
+    public void Compile_CalledTwice_ProducesAssembliesWithDistinctNames()
     {
-        const string source = """
-            nb.Print("Hello");
-            """;
-
-        var firstResult = compiler.Compile(source, "first.cx");
-        var secondResult = compiler.Compile(source, "second.cx");
-
-        var firstScript = Assert.IsType<CompiledScript>(firstResult.Script);
-        var secondScript = Assert.IsType<CompiledScript>(secondResult.Script);
+        var first = TestScripts.CompileOrFail("nb.Print(\"Hello\");", "first.cx");
+        var second = TestScripts.CompileOrFail("nb.Print(\"Hello\");", "second.cx");
 
         var firstContext = new TestLoadContext();
         var secondContext = new TestLoadContext();
 
         try
         {
-            var firstAssembly = LoadAssembly(firstContext, firstScript);
-            var secondAssembly = LoadAssembly(secondContext, secondScript);
+            var firstAssembly = LoadAssembly(firstContext, first);
+            var secondAssembly = LoadAssembly(secondContext, second);
 
             Assert.NotEqual(firstAssembly.GetName().Name, secondAssembly.GetName().Name);
         }
@@ -548,7 +129,7 @@ public sealed class ScriptCompilerTests
     [Fact]
     public void Compile_WithNullSource_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => compiler.Compile(null!, "null.cx"));
+        Assert.Throws<ArgumentNullException>(() => TestScripts.Compile(null!));
     }
 
     [Theory]
@@ -557,89 +138,7 @@ public sealed class ScriptCompilerTests
     [InlineData("\t")]
     public void Compile_WithInvalidFileName_Throws(string fileName)
     {
-        Assert.Throws<ArgumentException>(() => compiler.Compile("nb.Print(\"Hello\");", fileName));
-    }
-
-    [Fact]
-    public void Compile_ReportsBaseRamCostForScriptWithoutApiCalls()
-    {
-        const string source = """
-        var value = 42;
-        """;
-
-        var result = compiler.Compile(source, "ram.cx");
-
-        AssertCompilationSucceeded(result);
-
-        var script = Assert.IsType<CompiledScript>(result.Script);
-
-        Assert.Equal(1.6, script.RamCost);
-    }
-
-    [Fact]
-    public void Compile_AddsRamCostForApiMethod()
-    {
-        const string source = """
-        nb.Print("Hello");
-        """;
-
-        var result = compiler.Compile(source, "ram.cx");
-
-        AssertCompilationSucceeded(result);
-
-        var script = Assert.IsType<CompiledScript>(result.Script);
-
-        Assert.Equal(1.7, script.RamCost, 4);
-    }
-
-    [Fact]
-    public void Compile_CountsEachApiMethodOnlyOnce()
-    {
-        const string source = """
-        nb.Print("One");
-        nb.Print("Two");
-        nb.Print("Three");
-        """;
-
-        var result = compiler.Compile(source, "ram.cx");
-
-        AssertCompilationSucceeded(result);
-
-        var script = Assert.IsType<CompiledScript>(result.Script);
-
-        Assert.Equal(1.7, script.RamCost, 4);
-    }
-
-    [Fact]
-    public void Compile_AddsDistinctApiMethods()
-    {
-        const string source = """
-        nb.Print("Starting");
-        await nb.Hack("n00dles");
-        await nb.Hack("n00dles");
-        await nb.Weaken("n00dles");
-        """;
-
-        var result = compiler.Compile(source, "ram.cx");
-
-        AssertCompilationSucceeded(result);
-
-        var script = Assert.IsType<CompiledScript>(result.Script);
-
-        Assert.Equal(5.1, script.RamCost);
-    }
-
-    private static void AssertCompilationSucceeded(ScriptCompilationResult result)
-    {
-        var diagnostics = string.Join(
-            Environment.NewLine,
-            result.Diagnostics.Select(
-                diagnostic =>
-                    $"{diagnostic.Id} " +
-                    $"({diagnostic.Line},{diagnostic.Column}): " +
-                    diagnostic.Message));
-
-        Assert.True(result.Succeeded, diagnostics);
+        Assert.Throws<ArgumentException>(() => TestScripts.Compile("nb.Print(\"Hello\");", fileName));
     }
 
     private static Assembly LoadAssembly(AssemblyLoadContext loadContext, CompiledScript script)

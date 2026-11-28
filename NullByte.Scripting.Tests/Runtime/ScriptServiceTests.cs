@@ -1,537 +1,309 @@
 ﻿using NullByte.Core.Domain;
 using NullByte.Core.Scripting;
-using NullByte.Core.Scripting.Activities;
-using NullByte.Core.Services;
 using NullByte.Scripting.Compilation;
-using NullByte.Scripting.Loading;
 using NullByte.Scripting.Runtime;
+using NullByte.Scripting.Tests.Infrastructure;
 
 namespace NullByte.Scripting.Tests.Runtime;
 
+/// <summary>Starting scripts and following their life cycle. Paths and save/restore have their own classes.</summary>
 public sealed class ScriptServiceTests
 {
+    // Starting a script
+
     [Fact]
-    public void UsesIncludes_OnlyForWellFormedDirectives()
+    public async Task Start_WithExistingScript_ExecutesIt()
     {
-        Assert.True(SourceSnapshot.UsesIncludes("#include \"lib.cx\"\nvar x = 1;"));
-        Assert.False(SourceSnapshot.UsesIncludes("var x = 1;"));
-        Assert.False(SourceSnapshot.UsesIncludes("// #include \"lib.cx\""));
+        var world = ScriptTestSetup.CreateWorld();
+        world.WriteScript("hello.cx", "nb.Print(\"Hello from script\");");
+
+        var process = await world.StartSucceedingAsync("hello.cx");
+        await world.FinishedAsync(process);
+
+        Assert.Equal(["Hello from script"], world.Probe.Output);
+    }
+
+    [Fact]
+    public async Task Start_PassesTheArgumentsToTheScript()
+    {
+        var world = ScriptTestSetup.CreateWorld();
+        world.WriteScript("args.cx", "nb.Print(args[0]);\nnb.Print(args[1]);");
+
+        var process = await world.StartSucceedingAsync("args.cx", "n00dles", "second");
+        await world.FinishedAsync(process);
+
+        Assert.Equal(["n00dles", "second"], world.Probe.Output);
+    }
+
+    [Fact]
+    public async Task Start_SnapshotsTheArguments()
+    {
+        var world = ScriptTestSetup.CreateWorld();
+        world.WriteScript("args.cx", "await nb.Sleep(TimeSpan.FromSeconds(1));\nnb.Print(args[0]);");
+
+        var args = new List<string> { "n00dles" };
+        var result = await world.Service.Start(world.Home.Hostname, "args.cx", args);
+
+        Assert.True(result.Succeeded, result.FailureMessage);
+
+        await world.Probe.WaitUntilSleepRequestedAsync();
+
+        args[0] = "changed";
+        world.Probe.CompleteSleep();
+
+        await world.FinishedAsync(world.Process(result.Pid));
+
+        Assert.Equal(["n00dles"], world.Probe.Output);
     }
 
     [Fact]
     public async Task Start_InTutorialModeWithoutCapability_IsRejectedBeforeCompilation()
     {
-        var fixture = new Fixture();
-        fixture.GameState.Narrative.Mode = NarrativeProgressionMode.Tutorial;
-        fixture.WriteScript("hello.cx", """nb.Print("Hello");""");
+        var world = ScriptTestSetup.CreateWorld();
+        world.State.Narrative.Mode = NarrativeProgressionMode.Tutorial;
+        world.WriteScript("hello.cx", "nb.Print(\"Hello\");");
 
-        var result = await fixture.Service.Start(fixture.Home.Hostname, "hello.cx", []);
+        var result = await world.StartAsync("hello.cx");
 
         Assert.False(result.Succeeded);
         Assert.Contains("not available", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Empty(fixture.Service.Processes);
-        Assert.Equal(0, fixture.Home.UsedRam);
+        Assert.Empty(world.Service.Processes);
+        Assert.Equal(0, world.Home.UsedRam);
     }
 
     [Fact]
-    public async Task Start_WithExistingScript_ExecutesScript()
+    public async Task Start_WithMissingScript_Fails()
     {
-        var fixture = new Fixture();
+        var world = ScriptTestSetup.CreateWorld();
 
-        fixture.WriteScript(
-            "hello.cx",
-            """
-            nb.Print("Hello from script");
-            """);
-
-        var result = await fixture.Service.Start(fixture.Home.Hostname, "hello.cx", []);
-
-        Assert.True(result.Succeeded, result.FailureMessage);
-
-        await fixture.WaitForCompletionAsync();
-
-        Assert.Equal(["Hello from script"], fixture.Api.Output);
-    }
-
-    [Fact]
-    public async Task Start_WithMissingScript_FailsAsync()
-    {
-        var fixture = new Fixture();
-
-        var result = await fixture.Service.Start(
-            fixture.Home.Hostname,
-            "missing.cx",
-            []);
+        var result = await world.StartAsync("missing.cx");
 
         Assert.False(result.Succeeded);
         Assert.Contains("File not found", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("missing.cx", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(result.Diagnostics);
-        Assert.False(fixture.Service.HasRunningProcesses);
+        Assert.False(world.Service.HasRunningProcesses);
     }
 
     [Fact]
-    public async Task Start_WithCompilationError_ReturnsDiagnosticsAsync()
+    public async Task Start_WithCompilationError_ReturnsTheDiagnostics()
     {
-        var fixture = new Fixture();
+        var world = ScriptTestSetup.CreateWorld();
+        world.WriteScript("broken.cx", "nb.Print(missingValue);");
 
-        fixture.WriteScript(
-            "broken.cx",
-            """
-            nb.Print(missingValue);
-            """);
-
-        var result = await fixture.Service.Start(fixture.Home.Hostname, "broken.cx", []);
+        var result = await world.StartAsync("broken.cx");
 
         Assert.False(result.Succeeded);
         Assert.Contains("Compilation failed", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
 
-        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Id == "CS0103");
+        var diagnostic = Assert.Single(result.Diagnostics, d => d.Id == "CS0103");
+
         Assert.Equal(ScriptDiagnosticSeverity.Error, diagnostic.Severity);
-
         Assert.Equal(1, diagnostic.Line);
-        Assert.False(fixture.Service.HasRunningProcesses);
+        Assert.False(world.Service.HasRunningProcesses);
     }
 
     [Fact]
-    public async Task Start_PassesArgumentsToScript()
+    public async Task Start_WithWarnings_StillStartsAndReturnsThem()
     {
-        var fixture = new Fixture();
+        var world = ScriptTestSetup.CreateWorld();
+        world.WriteScript("warning.cx", "var unused = 42;\nnb.Print(\"Running\");");
 
-        fixture.WriteScript(
-            "args.cx",
-            """
-            nb.Print(args[0]);
-            nb.Print(args[1]);
-            """);
-
-        var result = await fixture.Service.Start(fixture.Home.Hostname, "args.cx", ["n00dles", "second"]);
+        var result = await world.StartAsync("warning.cx");
 
         Assert.True(result.Succeeded, result.FailureMessage);
-
-        await fixture.WaitForCompletionAsync();
-
-        Assert.Equal(["n00dles", "second"], fixture.Api.Output);
+        Assert.Contains(result.Diagnostics, d => d.Severity == ScriptDiagnosticSeverity.Warning);
     }
 
     [Fact]
-    public async Task Start_SnapshotsArguments()
+    public async Task Start_WithUnknownServer_Fails()
     {
-        var fixture = new Fixture();
+        var world = ScriptTestSetup.CreateWorld();
 
-        fixture.WriteScript(
-            "args.cx",
-            """
-            await nb.Sleep(TimeSpan.FromSeconds(1));
-            nb.Print(args[0]);
-            """);
-
-        var args = new List<string> { "n00dles" };
-        var result = await fixture.Service.Start(fixture.Home.Hostname, "args.cx", args);
-
-        Assert.True(result.Succeeded, result.FailureMessage);
-
-        await fixture.Api.WaitUntilSleepRequestedAsync();
-
-        args[0] = "changed";
-
-        fixture.Api.CompleteSleep();
-
-        await fixture.WaitForCompletionAsync();
-
-        Assert.Equal(["n00dles"], fixture.Api.Output);
-    }
-
-    [Fact]
-    public async Task CompletedScript_AllowsAnotherScriptToStart()
-    {
-        var fixture = new Fixture();
-
-        fixture.WriteScript(
-            "first.cx",
-            """
-            nb.Print("First");
-            """);
-
-        fixture.WriteScript(
-            "second.cx",
-            """
-            nb.Print("Second");
-            """);
-
-        var firstResult = await fixture.Service.Start(fixture.Home.Hostname, "first.cx", []);
-
-        Assert.True(firstResult.Succeeded, firstResult.FailureMessage);
-
-        await fixture.WaitForCompletionAsync();
-
-        var secondResult = await fixture.Service.Start(fixture.Home.Hostname, "second.cx", []);
-
-        Assert.True(secondResult.Succeeded, secondResult.FailureMessage);
-
-        await fixture.WaitForCompletionAsync();
-
-        Assert.Equal(["First", "Second"], fixture.Api.Output);
-    }
-
-    [Fact]
-    public async Task CompletedScript_RaisesScriptCompleted()
-    {
-        var fixture = new Fixture();
-
-        fixture.WriteScript(
-            "complete.cx",
-            """
-            nb.Print("Finished");
-            """);
-
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        fixture.Service.ProcessCompleted += (_) => completed.TrySetResult();
-
-        var result = await fixture.Service.Start(fixture.Home.Hostname, "complete.cx", []);
-
-        Assert.True(result.Succeeded, result.FailureMessage);
-
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-
-        Assert.False(fixture.Service.HasRunningProcesses);
-    }
-
-    [Fact]
-    public async Task FailedScript_RaisesScriptFailed()
-    {
-        var fixture = new Fixture();
-
-        fixture.WriteScript(
-            "failure.cx",
-            """
-            throw new InvalidOperationException("Script failed.");
-            """);
-
-        var failed = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        fixture.Service.ProcessFailed += (proc, exception) => failed.TrySetResult(exception);
-
-        var result = await fixture.Service.Start(fixture.Home.Hostname, "failure.cx", []);
-
-        Assert.True(result.Succeeded, result.FailureMessage);
-
-        var exception = await failed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-
-        Assert.IsType<InvalidOperationException>(exception);
-        Assert.Equal("Script failed.", exception.Message);
-
-        Assert.False(fixture.Service.HasRunningProcesses);
-    }
-
-    [Fact]
-    public async Task FailedScript_RecordsFailureAndReleasesRam()
-    {
-        var fixture = new Fixture();
-        fixture.WriteScript(
-            "failure.cx",
-            """
-            throw new InvalidOperationException("Contained failure.");
-            """);
-
-        var failed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        ScriptProcess? failedProcess = null;
-        fixture.Service.ProcessFailed += (process, _) =>
-        {
-            failedProcess = process;
-            failed.TrySetResult();
-        };
-
-        var result = await fixture.Service.Start(fixture.Home.Hostname, "failure.cx", []);
-
-        Assert.True(result.Succeeded, result.FailureMessage);
-        await failed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-        await failedProcess!.Execution!;
-
-        Assert.Equal(ScriptProcessState.Failed, failedProcess.State);
-        Assert.Equal("Contained failure.", failedProcess.Failure?.Message);
-        Assert.True(failedProcess.RamReleased);
-        Assert.Equal(0, fixture.Home.UsedRam);
-    }
-
-    [Fact]
-    public async Task CompletedScript_ThrowingObserverDoesNotChangeProcessOutcome()
-    {
-        var fixture = new Fixture();
-        fixture.WriteScript("complete.cx", """nb.Print("Completed");""");
-
-        var completed = new TaskCompletionSource<ScriptProcess>(TaskCreationOptions.RunContinuationsAsynchronously);
-        fixture.Service.ProcessCompleted += _ => throw new InvalidOperationException("Observer failed.");
-        fixture.Service.ProcessCompleted += process => completed.TrySetResult(process);
-
-        var result = await fixture.Service.Start(fixture.Home.Hostname, "complete.cx", []);
-
-        Assert.True(result.Succeeded, result.FailureMessage);
-        var process = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-        await process.Execution!;
-
-        Assert.Equal(ScriptProcessState.Completed, process.State);
-        Assert.Null(process.Failure);
-        Assert.True(process.RamReleased);
-        Assert.Equal(0, fixture.Home.UsedRam);
-    }
-
-    [Fact]
-    public async Task FailedScript_ThrowingObserverDoesNotPreventOtherObservers()
-    {
-        var fixture = new Fixture();
-        fixture.WriteScript(
-            "failure.cx",
-            """throw new InvalidOperationException("Script failed.");""");
-
-        var failed = new TaskCompletionSource<ScriptProcess>(TaskCreationOptions.RunContinuationsAsynchronously);
-        fixture.Service.ProcessFailed += (_, _) => throw new InvalidOperationException("Observer failed.");
-        fixture.Service.ProcessFailed += (process, _) => failed.TrySetResult(process);
-
-        var result = await fixture.Service.Start(fixture.Home.Hostname, "failure.cx", []);
-
-        Assert.True(result.Succeeded, result.FailureMessage);
-        var process = await failed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-        await process.Execution!;
-
-        Assert.Equal(ScriptProcessState.Failed, process.State);
-        Assert.Equal("Script failed.", process.Failure?.Message);
-        Assert.True(process.RamReleased);
-        Assert.Equal(0, fixture.Home.UsedRam);
-    }
-
-    [Fact]
-    public async Task FailedScript_AllowsAnotherScriptToStart()
-    {
-        var fixture = new Fixture();
-
-        fixture.WriteScript(
-            "failure.cx",
-            """
-            throw new InvalidOperationException("Boom");
-            """);
-
-        fixture.WriteScript(
-            "recovery.cx",
-            """
-            nb.Print("Recovered");
-            """);
-
-        var failed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        fixture.Service.ProcessFailed += (_, _) => failed.TrySetResult();
-
-        var firstResult = await fixture.Service.Start(fixture.Home.Hostname, "failure.cx", []);
-
-        Assert.True(firstResult.Succeeded, firstResult.FailureMessage);
-
-        await failed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-
-        var secondResult = await fixture.Service.Start(fixture.Home.Hostname, "recovery.cx", []);
-
-        Assert.True(secondResult.Succeeded, secondResult.FailureMessage);
-
-        await fixture.WaitForCompletionAsync();
-
-        Assert.Contains("Recovered", fixture.Api.Output);
-    }
-
-    [Fact]
-    public async Task Start_PreservesCompilerWarningsAsync()
-    {
-        var fixture = new Fixture();
-
-        fixture.WriteScript(
-            "warning.cx",
-            """
-            var unused = 42;
-            nb.Print("Running");
-            """);
-
-        var result = await fixture.Service.Start(fixture.Home.Hostname, "warning.cx", []);
-
-        Assert.True(result.Succeeded, result.FailureMessage);
-        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Severity == ScriptDiagnosticSeverity.Warning);
-    }
-
-    [Fact]
-    public async Task Start_WithInvalidServer_ThrowsAsync()
-    {
-        var fixture = new Fixture();
-
-        var result = await fixture.Service.Start("missing-server", "script.cx", []);
+        var result = await world.Service.Start("missing-server", "script.cx", []);
 
         Assert.False(result.Succeeded);
         Assert.Contains("Unknown server: missing-server", result.FailureMessage);
     }
 
     [Fact]
+    public async Task Start_OnAServerWithoutRootAccess_Fails()
+    {
+        var world = ScriptTestSetup.CreateWorld();
+        var locked = world.AddServer(TestServers.Create("locked", hasRootAccess: false));
+
+        var result = await world.Service.Start(locked.Hostname, "script.cx", []);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("root access", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Start_WithZeroThreads_Fails()
+    {
+        var world = ScriptTestSetup.CreateWorld();
+        world.WriteScript("script.cx", "nb.Print(\"Hello\");");
+
+        var result = await world.Service.Start(world.Home.Hostname, "script.cx", [], threads: 0);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("Thread count", result.FailureMessage);
+    }
+
+    [Fact]
+    public async Task Start_WhenTheServerHasTooLittleRam_FailsWithoutReservingAnything()
+    {
+        var world = ScriptTestSetup.CreateWorld(homeRam: 1);
+        world.WriteScript("big.cx", "var x = 1;");   // the base cost alone is more than 1 GB
+
+        var result = await world.StartAsync("big.cx");
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("Not enough RAM", result.FailureMessage);
+        Assert.Equal(0, world.Home.UsedRam);
+        Assert.Empty(world.Service.Processes);
+    }
+
+    [Fact]
     public async Task Start_WithInvalidFileName_Throws()
     {
-        var fixture = new Fixture();
+        var world = ScriptTestSetup.CreateWorld();
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => fixture.Service.Start(fixture.Home.Hostname, "", []));
+        await Assert.ThrowsAsync<ArgumentException>(() => world.Service.Start(world.Home.Hostname, "", []));
     }
 
     [Fact]
     public async Task Start_WithNullArguments_Throws()
     {
-        var fixture = new Fixture();
+        var world = ScriptTestSetup.CreateWorld();
+        world.WriteScript("script.cx", "nb.Print(\"Hello\");");
 
-        fixture.WriteScript(
-            "script.cx",
-            """
-            nb.Print("Hello");
-            """);
-
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => fixture.Service.Start(fixture.Home.Hostname, "script.cx", null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => world.Service.Start(world.Home.Hostname, "script.cx", null!));
     }
 
-    private sealed class Fixture
+    [Fact]
+    public async Task StartSimple_ReturnsThePidWhenTheScriptStarts_AndZeroWhenItDoesNot()
     {
-        private readonly TaskCompletionSource scriptFinished = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var world = ScriptTestSetup.CreateWorld();
+        world.WriteScript("ok.cx", "nb.Print(\"Hello\");");
 
-        public Fixture()
-        {
-            Home = new Server(
-                hostname: "home",
-                maximumMoney: 0,
-                startingMoney: 0,
-                baseDifficulty: 1,
-                minimumSecurity: 1,
-                startingSecurity: 1,
-                requiredHackingLevel: 1,
-                growthParameter: 0,
-                maximumRam: 8,
-                hasRootAccess: true);
-
-            var network = new Network();
-            network.AddServer(Home);
-
-            GameState = new GameState(
-                new Player(Home.Id),
-                network);
-            GameState.Narrative.Mode = NarrativeProgressionMode.Freeplay;
-            GameState.Narrative.Mode = NarrativeProgressionMode.Freeplay;
-
-            Api = new TestNullByteApi();
-            var apiFactory = new TestNullByteApiFactory(Api);
-
-            var compiler = new ScriptCompiler();
-            var loader = new ScriptAssemblyLoader();
-            var runner = new ScriptRunner(loader);
-            var manager = new ScriptProcessManager();
-
-            Service = new ScriptService(
-                GameState,
-                compiler,
-                runner,
-                apiFactory,
-                manager);
-
-            Service.ProcessCompleted += _ => scriptFinished.TrySetResult();
-
-            Service.ProcessFailed += (_, _) => scriptFinished.TrySetResult();
-        }
-
-        public Server Home { get; }
-
-        public GameState GameState { get; }
-
-        public TestNullByteApi Api { get; }
-
-        public ScriptService Service { get; }
-
-        public void WriteScript(string fileName, string source)
-        {
-            GameState.FileSystem.WriteFile(Home.Hostname, fileName, source);
-        }
-
-        public Task WaitForCompletionAsync()
-        {
-            return scriptFinished.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        }
+        Assert.True(await world.Service.StartSimple(world.Home.Hostname, "ok.cx", []) > 0);
+        Assert.Equal(0, await world.Service.StartSimple(world.Home.Hostname, "missing.cx", []));
     }
 
-    private sealed class TestNullByteApiFactory(TestNullByteApi api) : INullByteApiFactory
+    // Life cycle
+
+    [Fact]
+    public async Task RunningScript_HoldsItsRamUntilItFinishes()
     {
-        public INullByteApi Create(IScriptOperations scriptOperations, ServerId hostServerId, int threads, CancellationToken cancellationToken) => api;
+        var world = ScriptTestSetup.CreateWorld();
+        world.WriteScript("sleepy.cx", "await nb.Sleep(TimeSpan.FromSeconds(1));");
+
+        var process = await world.StartSucceedingAsync("sleepy.cx");
+        await world.Probe.WaitUntilSleepRequestedAsync();
+
+        Assert.True(world.Service.HasRunningProcesses);
+        Assert.True(process.RamCost > 0);
+        Assert.Equal(process.RamCost, world.Home.UsedRam, precision: 4);
+
+        world.Probe.CompleteSleep();
+        await world.FinishedAsync(process);
+
+        Assert.Equal(0, world.Home.UsedRam);
+        Assert.False(world.Service.HasRunningProcesses);
     }
 
-    private sealed class TestNullByteApi : INullByteApi
+    [Fact]
+    public async Task CompletedScript_RaisesProcessCompleted_AndReleasesItsRam()
     {
-        private readonly TaskCompletionSource sleepRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly TaskCompletionSource sleepCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly CancellationToken cancellationToken = new();
+        var world = ScriptTestSetup.CreateWorld();
+        world.WriteScript("complete.cx", "nb.Print(\"Finished\");");
 
-        public List<string> Output { get; } = [];
+        ScriptProcess? completed = null;
+        world.Service.ProcessCompleted += p => completed = p;
 
-        public void Print(object? value) => Output.Add(value?.ToString() ?? string.Empty);
+        var process = await world.StartSucceedingAsync("complete.cx");
+        await world.FinishedAsync(process);
 
-        public Task Sleep(TimeSpan duration)
-        {
-            sleepRequested.TrySetResult();
-            return sleepCompletion.Task.WaitAsync(cancellationToken);
-        }
+        Assert.Same(process, completed);
+        Assert.Equal(ScriptProcessState.Completed, process.State);
+        Assert.True(process.RamReleased);
+        Assert.Equal(0, world.Home.UsedRam);
+    }
 
-        public INullByteFilesApi Files => throw new NotSupportedException();
-        public INullByteBotnetApi Botnet => throw new NotSupportedException();
-        public INullByteActivitiesApi Activities => throw new NotSupportedException();
-        public INullByteCloudApi Cloud => throw new NotSupportedException();
-        public INullBytePlayerApi Player => throw new NotSupportedException();
-        public Task<HackResult> Hack(string hostname) => throw new NotSupportedException();
-        public Task<GrowResult> Grow(string hostname) => throw new NotSupportedException();
-        public Task<WeakenResult> Weaken(string hostname) => throw new NotSupportedException();
-        public double GetServerMoneyAvailable(string hostname) => throw new NotSupportedException();
-        public double GetServerMaxMoney(string hostname) => throw new NotSupportedException();
-        public double GetServerSecurityLevel(string hostname) => throw new NotSupportedException();
-        public double GetServerMinSecurityLevel(string hostname) => throw new NotSupportedException();
-        public int GetServerRequiredHackingLevel(string hostname) => throw new NotSupportedException();
-        public double GetServerMaxRam(string hostname) => throw new NotSupportedException();
-        public double GetServerUsedRam(string hostname) => throw new NotSupportedException();
-        public bool HasRootAccess(string hostname) => throw new NotSupportedException();
-        public NukeResult Nuke(string hostname) => throw new NotSupportedException();
-        public IReadOnlyList<string> Scan(string hostname) => throw new NotSupportedException();
+    [Fact]
+    public async Task FailedScript_RaisesProcessFailed_RecordsTheFailureAndReleasesItsRam()
+    {
+        var world = ScriptTestSetup.CreateWorld();
+        world.WriteScript("failure.cx", "throw new InvalidOperationException(\"Script failed.\");");
 
-        public Task WaitUntilSleepRequestedAsync() => sleepRequested.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        public void CompleteSleep() => sleepCompletion.TrySetResult();
+        Exception? raised = null;
+        world.Service.ProcessFailed += (_, exception) => raised = exception;
 
-        public IReadOnlyList<ScriptProcessInfo> Ps(string hostname = "")
-        {
-            throw new NotImplementedException();
-        }
+        var process = await world.StartSucceedingAsync("failure.cx");
+        await world.FinishedAsync(process);
 
-        public Task<int> RunAsync(string filename, params string[] args)
-        {
-            throw new NotImplementedException();
-        }
+        var exception = Assert.IsType<InvalidOperationException>(raised);
 
-        public Task<int> ExecAsync(string filename, string hostname, params string[] args)
-        {
-            throw new NotImplementedException();
-        }
+        Assert.Equal("Script failed.", exception.Message);
+        Assert.Equal(ScriptProcessState.Failed, process.State);
+        Assert.Equal("Script failed.", process.Failure?.Message);
+        Assert.True(process.RamReleased);
+        Assert.Equal(0, world.Home.UsedRam);
+    }
 
-        public bool Kill(int pid)
-        {
-            throw new NotImplementedException();
-        }
+    [Fact]
+    public async Task CompletedScript_WithAThrowingObserver_KeepsItsOutcome()
+    {
+        var world = ScriptTestSetup.CreateWorld();
+        world.WriteScript("complete.cx", "nb.Print(\"Completed\");");
 
-        public int KillAll()
-        {
-            throw new NotImplementedException();
-        }
+        ScriptProcess? observed = null;
+        world.Service.ProcessCompleted += _ => throw new InvalidOperationException("Observer failed.");
+        world.Service.ProcessCompleted += p => observed = p;
 
-        public bool ScriptRunning(string filename, string hostname = "")
-        {
-            throw new NotImplementedException();
-        }
+        var process = await world.StartSucceedingAsync("complete.cx");
+        await world.FinishedAsync(process);
 
-        public double GetScriptRam(string filename, string hostname = "")
-        {
-            throw new NotImplementedException();
-        }
+        Assert.Same(process, observed);
+        Assert.Equal(ScriptProcessState.Completed, process.State);
+        Assert.Null(process.Failure);
+        Assert.True(process.RamReleased);
+        Assert.Equal(0, world.Home.UsedRam);
+    }
+
+    [Fact]
+    public async Task FailedScript_WithAThrowingObserver_StillNotifiesTheOtherObservers()
+    {
+        var world = ScriptTestSetup.CreateWorld();
+        world.WriteScript("failure.cx", "throw new InvalidOperationException(\"Script failed.\");");
+
+        ScriptProcess? observed = null;
+        world.Service.ProcessFailed += (_, _) => throw new InvalidOperationException("Observer failed.");
+        world.Service.ProcessFailed += (p, _) => observed = p;
+
+        var process = await world.StartSucceedingAsync("failure.cx");
+        await world.FinishedAsync(process);
+
+        Assert.Same(process, observed);
+        Assert.Equal(ScriptProcessState.Failed, process.State);
+        Assert.Equal("Script failed.", process.Failure?.Message);
+        Assert.True(process.RamReleased);
+        Assert.Equal(0, world.Home.UsedRam);
+    }
+
+    [Theory]
+    [InlineData("nb.Print(\"First\");")]                                   // finishes normally
+    [InlineData("throw new InvalidOperationException(\"Boom\");")]         // fails
+    public async Task Start_AfterAFinishedScript_AllowsAnotherScriptToStart(string firstScript)
+    {
+        var world = ScriptTestSetup.CreateWorld();
+        world.WriteScript("first.cx", firstScript);
+        world.WriteScript("second.cx", "nb.Print(\"Second\");");
+
+        await world.FinishedAsync(await world.StartSucceedingAsync("first.cx"));
+        await world.FinishedAsync(await world.StartSucceedingAsync("second.cx"));
+
+        Assert.Contains("Second", world.Probe.Output);
     }
 }

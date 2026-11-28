@@ -1,45 +1,21 @@
 ﻿using NullByte.Scripting.Compilation;
 using NullByte.Scripting.Loading;
+using NullByte.Scripting.Tests.Infrastructure;
 
 namespace NullByte.Scripting.Tests.Loading;
 
 public sealed class ScriptAssemblyLoaderTests
 {
-    private readonly ScriptCompiler compiler = new();
     private readonly ScriptAssemblyLoader loader = new();
 
     [Fact]
-    public void Load_LoadsCompiledAssembly()
+    public void Load_ReturnsTheAssemblyInACollectibleContext()
     {
-        var compiled = Compile(
-            """
-            nb.Print("Hello");
-            """);
-
-        var loaded = loader.Load(compiled);
+        var loaded = loader.Load(TestScripts.CompileOrFail("nb.Print(\"Hello\");"));
 
         try
         {
             Assert.NotNull(loaded.Assembly);
-        }
-        finally
-        {
-            loader.Unload(loaded);
-        }
-    }
-
-    [Fact]
-    public void Load_UsesCollectibleContext()
-    {
-        var compiled = Compile(
-            """
-            nb.Print("Hello");
-            """);
-
-        var loaded = loader.Load(compiled);
-
-        try
-        {
             Assert.True(loaded.LoadContext.IsCollectible);
         }
         finally
@@ -49,23 +25,10 @@ public sealed class ScriptAssemblyLoaderTests
     }
 
     [Fact]
-    public void Load_WithInvalidAssembly_Throws()
+    public void Load_WithAnInvalidAssembly_Throws()
     {
         var compiled = new CompiledScript([1, 2, 3, 4], [], 1.0);
 
         Assert.Throws<BadImageFormatException>(() => loader.Load(compiled));
-    }
-
-    private CompiledScript Compile(string source)
-    {
-        var result = compiler.Compile(source, "test.cx");
-
-        Assert.True(
-            result.Succeeded,
-            string.Join(
-                Environment.NewLine,
-                result.Diagnostics.Select(diagnostic => $"{diagnostic.Id}: " + diagnostic.Message)));
-
-        return Assert.IsType<CompiledScript>(result.Script);
     }
 }

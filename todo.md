@@ -23,8 +23,8 @@
   - Consolidate startup/fixture/infrastructure code in a shared class
   - Use Mocks where appropriate
   - Look at the tests themselves
-	- Done: ConsoleUI.Tests, Core.Tests
-	- Missing: Editor.Tests, Scripting.Tests, Shell.Tests
+	- Done: ConsoleUI.Tests, Core.Tests, Scripting.Tests
+	- Missing: Editor.Tests, Shell.Tests
   - OR start over with new tests...
 
 - Make botnet and cloud servers unlockable

@@ -1,78 +1,52 @@
-﻿using NullByte.Core.Domain;
-using NullByte.Core.Scripting;
-using NullByte.Scripting.Compilation;
-using NullByte.Scripting.Loading;
-using NullByte.Scripting.Runtime;
+﻿using NullByte.Scripting.Tests.Infrastructure;
 
-namespace NullByte.Scripting.Tests;
+namespace NullByte.Scripting.Tests.Runtime;
 
-internal sealed class ThrowingApiFactory : INullByteApiFactory
+/// <summary>"/tools/a.cx" and "tools/a.cx" are the same script; bad paths are reported, not thrown.</summary>
+public sealed class ScriptServicePathTests
 {
-    public INullByteApi Create(
-        IScriptOperations scriptOperations, ServerId processHostServerId, int threads, CancellationToken cancellationToken)
-        => throw new NotSupportedException("These tests never get as far as running a script.");
-}
-
-public class ScriptServicePathTests
-{
-    private readonly GameState state;
-    private readonly ScriptProcessManager processes = new();
-    private readonly ScriptService service;
-
-    public ScriptServicePathTests()
-    {
-        var network = new Network();
-        network.AddServer(new Server(
-            "home", maximumMoney: 0, startingMoney: 0, baseDifficulty: 1, minimumSecurity: 1,
-            startingSecurity: 1, requiredHackingLevel: 1, growthParameter: 0, maximumRam: 8, hasRootAccess: true));
-
-        state = new GameState(new Player(network.GetServer("home").Id, 0, 0), network);
-        state.Narrative.Mode = NarrativeProgressionMode.Freeplay;
-        service = new ScriptService(
-            state, new ScriptCompiler(), new ScriptRunner(new ScriptAssemblyLoader()),
-            new ThrowingApiFactory(), processes);
-    }
+    private readonly ScriptWorld world = ScriptTestSetup.CreateWorld();
 
     [Fact]
-    public async Task Start_reports_an_invalid_path_instead_of_throwing()
+    public async Task Start_WithAnInvalidPath_ReportsAFailureInsteadOfThrowing()
     {
-        var result = await service.Start("home", "a//b", [], 1);
+        var result = await world.StartAsync("a//b");
 
         Assert.False(result.Succeeded);
         Assert.StartsWith("Invalid file name 'a//b': ", result.FailureMessage);
     }
 
     [Fact]
-    public async Task Start_names_directories_and_missing_files_by_their_normalized_path()
+    public async Task Start_WithADirectoryOrAMissingFile_NamesTheNormalizedPath()
     {
-        state.FileSystem.WriteFile("home", "tools/a.cx", "nb.GetHackingLevel();");
+        world.WriteScript("tools/a.cx", "nb.GetHackingLevel();");
 
-        Assert.Equal("tools is a directory.", (await service.Start("home", "/tools", [], 1)).FailureMessage);
-        Assert.Equal("File not found: tools/nope.cx", (await service.Start("home", "/tools/nope.cx", [], 1)).FailureMessage);
+        Assert.Equal("tools is a directory.", (await world.StartAsync("/tools")).FailureMessage);
+        Assert.Equal("File not found: tools/nope.cx", (await world.StartAsync("/tools/nope.cx")).FailureMessage);
     }
 
     [Fact]
-    public void GetScriptRam_finds_a_script_however_its_path_is_spelled()
+    public void GetScriptRam_WithDifferentlySpelledPaths_FindsTheScript()
     {
-        state.FileSystem.WriteFile("home", "tools/a.cx", "nb.Hack();");
+        world.WriteScript("tools/a.cx", "nb.Hack();");
 
-        var ram = service.GetScriptRam("tools/a.cx", "home");
+        var ram = world.Service.GetScriptRam("tools/a.cx", "home");
 
         Assert.True(ram > 0);
-        Assert.Equal(ram, service.GetScriptRam("/tools/a.cx", "home"));
-        Assert.Equal(0.0, service.GetScriptRam("tools/nope.cx", "home"));
-        Assert.Equal(0.0, service.GetScriptRam("a//b", "home"));
+        Assert.Equal(ram, world.Service.GetScriptRam("/tools/a.cx", "home"));
+        Assert.Equal(0.0, world.Service.GetScriptRam("tools/nope.cx", "home"));
+        Assert.Equal(0.0, world.Service.GetScriptRam("a//b", "home"));
     }
 
     [Fact]
-    public void ScriptRunning_treats_differently_spelled_paths_as_the_same_script()
+    public void ScriptRunning_WithDifferentlySpelledPaths_MatchesTheSameScript()
     {
-        processes.Create("tools/a.cx", state.Network.GetServer("home").Id, [], 1, 0);
+        world.Processes.Create("tools/a.cx", world.Home.Id, [], 1, 0);
 
-        Assert.True(service.ScriptRunning("tools/a.cx", "home"));
-        Assert.True(service.ScriptRunning("/tools/a.cx", "home"));
-        Assert.False(service.ScriptRunning("TOOLS/a.cx", "home"));   // paths are case-sensitive
-        Assert.False(service.ScriptRunning("tools/b.cx", "home"));
-        Assert.False(service.ScriptRunning("a//b", "home"));
+        Assert.True(world.Service.ScriptRunning("tools/a.cx", "home"));
+        Assert.True(world.Service.ScriptRunning("/tools/a.cx", "home"));
+        Assert.False(world.Service.ScriptRunning("TOOLS/a.cx", "home"));   // paths are case-sensitive
+        Assert.False(world.Service.ScriptRunning("tools/b.cx", "home"));
+        Assert.False(world.Service.ScriptRunning("a//b", "home"));
     }
 }
